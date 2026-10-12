@@ -53,6 +53,8 @@ export type EffortProgress =
       available: true;
       closedPoints: number;
       openPoints: number;
+      /** In-scope stories still open, each of them scored. */
+      openStories: number;
       /** Closed stories with no estimate, counted at the scored closed mean. */
       assumedClosed: number;
       scoredMean: number;
@@ -156,6 +158,7 @@ export function progress(items: BoardItem[], today: string): Progress {
       available: true,
       closedPoints: closed.reduce((sum, item) => sum + points(item), 0),
       openPoints: open.reduce((sum, item) => sum + points(item), 0),
+      openStories: open.length,
       assumedClosed: closed.length - scoredClosed.length,
       scoredMean,
       pace: perDay(closed, days, points),
@@ -165,6 +168,10 @@ export function progress(items: BoardItem[], today: string): Progress {
 
 const plural = (n: number, word: string): string =>
   `${String(n)} ${word}${n === 1 ? '' : 's'}`;
+
+/** `n` stories of a kind: `1 open story`, `2 closed stories`. */
+const stories = (n: number, kind: string): string =>
+  `${String(n)} ${kind} ${n === 1 ? 'story' : 'stories'}`;
 
 const sumOf = (pace: number[]): number => pace.reduce((a, b) => a + b, 0);
 
@@ -204,9 +211,10 @@ export function formatLines(p: Progress, today: string): [string, string] {
   const assumed =
     e.assumedClosed === 0
       ? ''
-      : `; ${plural(e.assumedClosed, 'closed story')} unscored, counted at the scored mean of ${e.scoredMean.toFixed(1)} points (assumed)`;
+      : `; ${stories(e.assumedClosed, 'closed')} unscored, counted at the scored mean of ${e.scoredMean.toFixed(1)} points (assumed)`;
+  // Points remaining, never a percentage (global rule, 2026-10-12; #567).
   const effort =
-    `By effort: ${String(Math.round((100 * e.closedPoints) / total))}% complete ` +
+    `By effort: ${plural(Math.round(e.openPoints), 'point')} remaining across ${stories(e.openStories, 'open')} ` +
     `(${String(Math.round(e.closedPoints))} of ${String(Math.round(total))} points closed${assumed}). ` +
     `Measured pace ${(sumOf(e.pace) / e.pace.length).toFixed(2)} points a day over the last ${plural(e.pace.length, 'day')} ` +
     `(${e.pace.map((n) => String(Math.round(n))).join(', ')}). ` +
