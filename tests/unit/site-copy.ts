@@ -334,16 +334,49 @@ export const attestedFigure = (
     figureTokens(text).some((found) => valueOf(found) === valueOf(token)),
   );
 
-/** Whether a source names the name, as a whole word, case and all. */
+const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+
+/** Whether the code point that ends just before `at` is a letter or a digit. */
+const wordBefore = (text: string, at: number): boolean => {
+  if (at === 0) return false;
+  // A code point past U+FFFF takes two code units: the pair before `at`.
+  const pair = at >= 2 ? text.codePointAt(at - 2) : undefined;
+  const point =
+    pair !== undefined && pair > 0xffff ? pair : text.charCodeAt(at - 1);
+  return LETTER_OR_DIGIT.test(String.fromCodePoint(point));
+};
+
+/** Whether the code point that starts at `at` is a letter or a digit. */
+const wordAt = (text: string, at: number): boolean => {
+  const point = text.codePointAt(at);
+  return (
+    point !== undefined && LETTER_OR_DIGIT.test(String.fromCodePoint(point))
+  );
+};
+
+/**
+ * Whether a source names the name, as a whole word, case and all. Each
+ * place the name appears is checked for a letter or digit on either side,
+ * rather than by a pattern built for each name: compiling one Unicode
+ * pattern per name cost 43 ms of CPU cold for the copy's 84 names (#544).
+ */
 export const attestedName = (
   token: string,
   texts: readonly string[],
 ): boolean => {
-  const whole = new RegExp(
-    String.raw`(?<![\p{L}\p{N}])${escape(token)}(?![\p{L}\p{N}])`,
-    'u',
-  );
-  return texts.some((text) => whole.test(text));
+  if (token === '') throw new RangeError('a name to attest is blank');
+  return texts.some((text) => {
+    for (
+      let at = text.indexOf(token);
+      at !== -1;
+      at = text.indexOf(token, at + 1)
+    ) {
+      if (!wordBefore(text, at) && !wordAt(text, at + token.length)) {
+        return true;
+      }
+    }
+    return false;
+  });
 };
 
 const FIGURE_CALLS = new Set([

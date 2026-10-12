@@ -50,6 +50,7 @@ function run(
     returnsPracticeOnly: [],
     insane: [],
     events: 5_000,
+    views: 1,
     cpuMs: 1,
     ...extra,
   };

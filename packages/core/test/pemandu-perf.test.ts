@@ -12,39 +12,16 @@ import { advance } from '../src/sim';
 import type { GameState } from '../src/state';
 
 /**
- * A 72 h offline return with Pemandu at 1 s over the synthetic course
- * (#33 AC5): under 1,000 ms, and the time it took is printed.
- *
- * The bound is on the CPU time of the vitest worker, a forked process that
- * runs this file alone, not on the wall clock: the suite runs its files in
- * parallel, and under that load the same return measured 335 ms alone and
- * 1,403 ms and 1,670 ms of wall time beside the rest (#33), a figure for
- * the machine's load rather than for this code. Wall time is printed too.
- *
- * The player (`regionOneReturn`) has finished region 1 and stands at
- * region 2's first
- * destination: every word of region 1 and of that destination held, each
- * reviewed twice at its own time over the last 20 days, every Encounter of
- * region 1 owned and a few of region 2's. 259,200 ticks fall in the return.
+ * Pemandu's returns, on short stand-ins (#544). The 72 h return under
+ * 1,000 ms (#33 AC5) and the late-game catch-up's cost a purchase (#297
+ * AC3) cost more than a unit test's 0.1 s of CPU on a busy laptop, so they
+ * are timed in the pacing suite, `packages/bots/pacing/pemandu-perf.test.ts`.
+ * Here the same fixtures make shorter returns, and what each return does is
+ * checked without a clock.
  */
 
-// Core's tsconfig sees ECMAScript alone, no DOM and no Node types, so the
-// host APIs this timing uses under vitest are declared here as Node has
-// them, rather than widening what every core file may name.
-declare const performance: { now(): number };
-declare const console: { log(message: string): void };
-declare const process: {
-  /** Microseconds of CPU this process has used, since `previous` if given. */
-  cpuUsage(previous?: { user: number; system: number }): {
-    user: number;
-    system: number;
-  };
-  /** The same for this thread alone: no compiler or GC helper threads. */
-  threadCpuUsage(previous?: { user: number; system: number }): {
-    user: number;
-    system: number;
-  };
-};
+/** A minute: the stand-in for the 72 h return. */
+const MINUTE_MS = HOUR_MS / 60;
 
 let builtCourse: Course | undefined;
 
@@ -61,76 +38,23 @@ function units(state: GameState): number {
   return Object.values(state.owned).reduce((a, b) => a + b, 0);
 }
 
-describe('a 72 h return with Pemandu at 1 s (AC5)', () => {
-  it('is credited in full and buys on the way, in under 1,000 ms', () => {
+describe('a 1-minute return with Pemandu at 1 s (stand-in for #33 AC5)', () => {
+  it('is credited in full and buys once a tick', () => {
     const s = regionOneReturn(course());
-    const wallStart = performance.now();
-    const cpuStart = process.cpuUsage();
-    const { state, summary } = advance(
-      course(),
-      s,
-      wallMs(s.wall + 72 * HOUR_MS),
-    );
-    const cpu = process.cpuUsage(cpuStart);
-    const ms = (cpu.user + cpu.system) / 1000;
-    const wall = performance.now() - wallStart;
-    const bought = units(state) - units(s);
-    console.log(
-      `#33 AC5: a 72 h return at 1 s took ${ms.toFixed(1)} ms of CPU (${wall.toFixed(1)} ms of wall time) and bought ${String(bought)} units`,
-    );
-    expect(summary.creditedMs).toBe(72 * HOUR_MS);
+    const { state, summary } = advance(course(), s, wallMs(s.wall + MINUTE_MS));
+    expect(summary.creditedMs).toBe(60_000);
     expect(summary.clipped).toBe(false);
-    // Measured 1,638 units on #35's tuned balance (1,683 on #33's), less
-    // one: the return really buys.
-    expect(bought).toBeGreaterThan(1_637);
-    expect(ms).toBeLessThan(1_000);
+    // Measured: one unit at each of the minute's 60 ticks. A 15-minute
+    // return cost up to 61 ms of CPU cold in the unit suite (#544).
+    expect(units(state) - units(s)).toBe(60);
   });
 });
 
-/**
- * A late-game player's 1 h catch-up (#297 AC3): every region reached, all
- * 450 words held, Understanding banked, so Pemandu buys densely. Before
- * #297 it cost 75.0 / 74.9 µs of CPU a purchase (AC1, `npm run
- * bench:pemandu`, load about 5). AC3's tenth is measured there, beside the
- * old code, and recorded on #297; this test guards a slide back
- * (operator, 2026-10-08: "Generous CI ceiling", then "40 µs in the runner",
- * then "100 µs" once 40 failed on CI).
- *
- * Inside vitest the same code runs about 2.5x slower than bundled, and the
- * process's CPU counts V8's compiler and GC threads, busy in a fresh worker
- * (measured: 15 to 89 µs a purchase by process, 15 to 41 by this thread).
- * So the figure is this thread's CPU, the fastest of a few catch-ups, each
- * on a fresh course so no memo carries. Measured 2026-10-08 on the laptop at
- * load 4: about 15 µs; the code before #297, about 119 µs. CI runners are
- * about 2x slower and vary: seven CI runs gave 18.2, 24.6, 27.3, 27.6, 32.9,
- * 35.0 and 48.4 µs, and 48.4 failed a 40 µs ceiling. 100 µs is about twice
- * the slowest CI figure and, by the laptop's 8x, under half the old code's
- * cost on CI (estimated about 240 µs, not measured there).
- */
-const CATCH_UPS = 6;
-const CEILING_US = 100;
-
-describe('a late-game catch-up with Pemandu at 1 s (#297 AC3)', () => {
-  it(`buys at under ${String(CEILING_US)} µs of CPU a purchase, the fastest of ${String(CATCH_UPS)}`, () => {
-    const costs: number[] = [];
-    // one scenario: the fastest of a few runs of one catch-up, for the
-    // machine's load, not a population of cases.
-    for (let run = 0; run < CATCH_UPS; run += 1) {
-      const fresh = syntheticCourse(1);
-      const from = lateGameReturn(fresh);
-      const cpuStart = process.threadCpuUsage();
-      const { state } = advance(fresh, from, returnsAt(from, 1));
-      const cpu = process.threadCpuUsage(cpuStart);
-      const bought = units(state) - units(from);
-      // The catch-up the figures were measured on.
-      expect(bought).toBe(428);
-      costs.push((cpu.user + cpu.system) / bought);
-    }
-    const fastest = Math.min(...costs);
-    console.log(
-      `#297 AC3: a late-game 1 h catch-up took ${fastest.toFixed(2)} µs of this thread's CPU a purchase at its fastest of ${String(CATCH_UPS)} (${costs.map((c) => c.toFixed(1)).join(', ')})`,
-    );
-    expect(fastest).toBeLessThan(CEILING_US);
+describe('a late-game 3-minute catch-up with Pemandu at 1 s (stand-in for #297 AC3)', () => {
+  it('buys the 138 units it was measured to buy', () => {
+    const from = lateGameReturn(course());
+    const { state } = advance(course(), from, returnsAt(from, 0.05));
+    expect(units(state) - units(from)).toBe(138);
   });
 });
 
