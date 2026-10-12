@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   judgeShopAlong,
   SHOP_KINDS,
+  SHOP_READ_BEFORE,
   shopCounts,
   type ShopCount,
   type ShopKind,
@@ -13,8 +14,9 @@ import {
   golden,
   REGENERATE,
   sliceOf,
+  SHOP_FREE_ROWS,
+  SHOP_ROWS,
   startOf,
-  UNIT_ROWS,
   type SliceRow,
 } from '../golden';
 import { searched } from '../searched';
@@ -55,11 +57,16 @@ const KINDS = [
   'practice',
 ] as const satisfies readonly ShopKind[];
 
-/** The slices this suite judges; the heavy ones are the pacing suite's. */
-const UNIT: readonly SliceRow[] = [...UNIT_ROWS];
+/**
+ * The slices this suite judges: the heavy ones are the pacing suite's, and
+ * the shop-free ones are proven so below (#553).
+ */
+const UNIT: readonly SliceRow[] = [...SHOP_ROWS];
+/** The slices that read no shop, known before the run: one test each. */
+const SHOP_FREE: readonly SliceRow[] = [...SHOP_FREE_ROWS];
 /** Every unit slice with every kind: one test each. */
-const SLICE_KINDS = UNIT.flatMap(([n, day, open]) =>
-  KINDS.map((kind) => [n, day, open, kind] as const),
+const SLICE_KINDS = UNIT.flatMap(([n, day, open, part]) =>
+  KINDS.map((kind) => [n, day, open, part, kind] as const),
 );
 
 const judged = new Map<number, Record<ShopKind, ShopTally>>();
@@ -91,8 +98,8 @@ function total(kind: ShopKind): ShopCount {
 
 describe('the shop agrees with apply along the golden log, slice by slice (AC3, #479, #542)', () => {
   it.each(SLICE_KINDS)(
-    'slice %i (day %i, open %i): every %s offer’s affordable is apply’s answer',
-    (n, _day, _open, kind) => {
+    'slice %i (day %i, open %i, part %i): every %s offer’s affordable is apply’s answer',
+    (n, _day, _open, _part, kind) => {
       const tally = judgedSlice(n)[kind];
       const offers = tally.accepted + tally.refused;
       expect(
@@ -107,6 +114,30 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
       expect(
         floorBreach(`shop-agreement/slice ${String(n)}/${kind}`, offers),
       ).toBeUndefined();
+    },
+  );
+
+  it.each(SHOP_FREE)(
+    'slice %i (day %i, open %i, part %i) reads no shop: none of its events is one the shop is read before (#553)',
+    (n) => {
+      const { events } = eventsOf(n);
+      expect(
+        searched(
+          events.filter((event) => SHOP_READ_BEFORE.has(event.type)),
+          { of: events, what: `slice ${String(n)}'s events` },
+        ),
+      ).toEqual([]);
+      expect(
+        floorBreach(
+          `shop-agreement/shop-free slice ${String(n)}`,
+          events.length,
+        ),
+      ).toBeUndefined();
+      expect(sliceOf(n).shop, REGENERATE).toEqual(
+        Object.fromEntries(
+          KINDS.map((kind) => [kind, { accepted: 0, refused: 0 }]),
+        ),
+      );
     },
   );
 

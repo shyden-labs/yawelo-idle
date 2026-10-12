@@ -41,7 +41,7 @@ export interface ShopTally {
 }
 
 /** The events before which the shop is read: every open and every purchase. */
-const READ_BEFORE: ReadonlySet<GameEvent['type']> = new Set([
+export const SHOP_READ_BEFORE: ReadonlySet<GameEvent['type']> = new Set([
   'resume',
   'buyEncounter',
   'pickUpWord',
@@ -157,7 +157,7 @@ export function judgeShopAlong(
   };
   let state = start;
   for (const event of events) {
-    if (READ_BEFORE.has(event.type)) {
+    if (SHOP_READ_BEFORE.has(event.type)) {
       const at = advance(course, state, event.wallMs).state;
       const { shop } = view(course, at, event.wallMs);
       judgeShop(course, at, event.wallMs, shop, tallies);

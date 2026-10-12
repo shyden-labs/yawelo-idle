@@ -17,6 +17,7 @@ import { apply, replay } from '../../core/src/log';
 import type { GameState } from '../../core/src/state';
 import { floorBreach } from '../../../tests/floors';
 import {
+  allEvents,
   eventsOf,
   golden,
   HEAVY_ROWS,
@@ -54,8 +55,8 @@ const KINDS = [
 /** The heavy slices: one test each. */
 const HEAVY: readonly SliceRow[] = [...HEAVY_ROWS];
 /** Every heavy slice with every kind: one test each. */
-const HEAVY_KINDS = HEAVY.flatMap(([n, day, open]) =>
-  KINDS.map((kind) => [n, day, open, kind] as const),
+const HEAVY_KINDS = HEAVY.flatMap(([n, day, open, part]) =>
+  KINDS.map((kind) => [n, day, open, part, kind] as const),
 );
 
 /** Walk events from a state with `apply`, keeping what is accepted. */
@@ -88,14 +89,14 @@ let wholeJudged: Record<ShopKind, ShopTally> | undefined;
 
 /** The whole log judged from the first state, once for all the kinds' tests. */
 function judgedWhole(): Record<ShopKind, ShopTally> {
-  const { course, initial, events } = golden();
-  wholeJudged ??= judgeShopAlong(course, initial, events);
+  const { course, initial } = golden();
+  wholeJudged ??= judgeShopAlong(course, initial, allEvents());
   return wholeJudged;
 }
 
 describe('each heavy slice, from its start (#542)', () => {
   it.each(HEAVY)(
-    'slice %i (day %i, open %i): is heavy, its resume buying the Encounters recorded',
+    'slice %i (day %i, open %i, part %i): is heavy, its resume buying the Encounters recorded',
     (n) => {
       const slice = sliceOf(n);
       const [first] = eventsOf(n).events;
@@ -108,7 +109,7 @@ describe('each heavy slice, from its start (#542)', () => {
   );
 
   it.each(HEAVY)(
-    'slice %i (day %i, open %i): the policy, resumed at its start, writes exactly its events and ends where the next slice starts',
+    'slice %i (day %i, open %i, part %i): the policy, resumed at its start, writes exactly its events and ends where the next slice starts',
     (n) => {
       const slice = sliceOf(n);
       const { events, lines } = eventsOf(n);
@@ -128,7 +129,7 @@ describe('each heavy slice, from its start (#542)', () => {
   );
 
   it.each(HEAVY)(
-    'slice %i (day %i, open %i): replay of its events from its start reaches where the next slice starts',
+    'slice %i (day %i, open %i, part %i): replay of its events from its start reaches where the next slice starts',
     (n) => {
       const replayed = replay(
         golden().course,
@@ -141,7 +142,7 @@ describe('each heavy slice, from its start (#542)', () => {
   );
 
   it.each(HEAVY)(
-    'slice %i (day %i, open %i): a walk of its events with apply reaches where the next slice starts',
+    'slice %i (day %i, open %i, part %i): a walk of its events with apply reaches where the next slice starts',
     (n) => {
       expect(walk(startOf(n).state, n), REGENERATE).toEqual(
         startOf(n + 1).state,
@@ -150,8 +151,8 @@ describe('each heavy slice, from its start (#542)', () => {
   );
 
   it.each(HEAVY_KINDS)(
-    'slice %i (day %i, open %i): every %s offer’s affordable is apply’s answer',
-    (n, _day, _open, kind) => {
+    'slice %i (day %i, open %i, part %i): every %s offer’s affordable is apply’s answer',
+    (n, _day, _open, _part, kind) => {
       const tally = judgedSlice(n)[kind];
       const offers = tally.accepted + tally.refused;
       expect(
@@ -177,8 +178,8 @@ describe('the whole golden log, from the first state (#542 AC4)', () => {
   });
 
   it('replay of the whole log reaches the live hash, refusing what the slices recorded', () => {
-    const { course, initial, events, header } = golden();
-    const replayed = replay(course, initial, events);
+    const { course, initial, header } = golden();
+    const replayed = replay(course, initial, allEvents());
     expect(stateHash(replayed.state), REGENERATE).toBe(header.liveHash);
     expect(replayed.refused).toHaveLength(total(totals('refused')));
   });
