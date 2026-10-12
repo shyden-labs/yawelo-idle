@@ -64,8 +64,10 @@ export interface CollectionScan {
    * Every call the walk met, as `line N: callee (what it did)`: `judged`; a
    * test, hook or describe `registration`; or `in a function` the walk does
    * not enter where it is written (a test or hook callback, a declared helper,
-   * a callback run later). A helper's calls are judged again through the call
-   * that runs it. The population an empty `refused` is read against (#371).
+   * a callback run later); or `in an entry point`, a script's
+   * `if (import.meta.main)` branch, which a test's import never runs (#554).
+   * A helper's calls are judged again through the call that runs it. The
+   * population an empty `refused` is read against (#371).
    */
   readonly calls: readonly string[];
   /** Every judged call that can reach workspace code. */
@@ -146,6 +148,22 @@ const CALLBACK_RUNNERS = new Set([
   'catch',
   'finally',
 ]);
+
+/**
+ * Whether a condition is exactly `import.meta.main`: a script's entry point,
+ * false when a test imports the script, so its branch never runs at
+ * collection (#554). Any other spelling is judged as code that runs.
+ */
+const isEntryPoint = (condition: ts.Expression): boolean => {
+  const at = unwrap(condition);
+  return (
+    ts.isPropertyAccessExpression(at) &&
+    at.name.text === 'main' &&
+    ts.isMetaProperty(at.expression) &&
+    at.expression.keywordToken === ts.SyntaxKind.ImportKeyword &&
+    at.expression.name.text === 'meta'
+  );
+};
 
 /** Brands from the clock module: each is one integer check and calls nothing else. */
 const CLOCK_BRANDS = new Set(['simMs', 'wallMs']);
@@ -439,6 +457,8 @@ interface Sink {
   registration(call: ts.CallExpression): void;
   /** A function the walk does not enter where it is written. */
   passed(fn: ts.Node): void;
+  /** A script's entry point, which a test's import never runs (#554). */
+  entry(branch: ts.Node): void;
   stopped(): boolean;
 }
 
@@ -499,6 +519,11 @@ export function scanCollection(
     }
     if (isCallLike(node)) {
       walkCall(node, scope, sink);
+      return;
+    }
+    if (ts.isIfStatement(node) && isEntryPoint(node.expression)) {
+      sink.entry(node.thenStatement);
+      if (node.elseStatement) walk(node.elseStatement, scope, sink);
       return;
     }
     ts.forEachChild(node, (child) => {
@@ -602,6 +627,7 @@ export function scanCollection(
       describe: () => undefined,
       registration: () => undefined,
       passed: () => undefined,
+      entry: () => undefined,
       stopped: () => found !== null,
     });
     return found;
@@ -700,6 +726,13 @@ export function scanCollection(
         ts.forEachChild(node, visit);
       };
       ts.forEachChild(fn, visit);
+    },
+    entry: (branch) => {
+      const visit = (node: ts.Node): void => {
+        if (isCallLike(node)) met(node, 'in an entry point');
+        ts.forEachChild(node, visit);
+      };
+      visit(branch);
     },
     stopped: () => false,
   });
