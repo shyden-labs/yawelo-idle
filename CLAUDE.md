@@ -23,7 +23,7 @@ The global `~/.claude/CLAUDE.md` rules all apply here. This file adds what is sp
 - One test per case: a population known before the run is generated as one test each, never looped inside a test body. `tests/guards/one-test-per-case.test.ts` (the guards suite, #515) refuses the loop unless it carries `// runtime population: <why>` or `// one scenario: <why>`, and its `BURN_DOWN` list only shrinks (#58).
 - Write `Refs #N` in commit messages and PR bodies, never close/fix/resolve next to an issue number unless you mean it.
 - Floors are recorded in CI only (#547). To record them, label the pull request `record-floors`, wait for that run, then run `npm run floors:fetch <run-id>` here, commit and push. The fetch refuses unless the run recorded this branch's HEAD. `npm run floors:record` refuses everywhere but that workflow.
-- The pre-push hook runs the ci-scripts check, format, lint and typecheck, and no test suite. This departs from the global rule's "format + typecheck + unit" (Shyden, 2026-10-12: "No unit in pre-push"): a branch that adds floors fails the unit suite until CI records them. Run the unit suite yourself before each push.
+- The pre-push hook runs the ci-scripts check, format, lint and typecheck, and no test suite, as the global rule now says (Shyden, 2026-10-12: "No unit in pre-push", made global the same day): a branch that adds floors fails the unit suite until CI records them. Run the unit suite yourself before each push.
 
 ## Progress at close-out
 
