@@ -25,8 +25,11 @@
  * engines, the web smoke suite), so each suite is
  * asked for its own file list rather than the recorder copying their globs.
  *
- * CI never records: a run that can rewrite the figure it checks against
- * asserts nothing. Imports are Node's own, TypeScript's parser, which finds
+ * It records in CI only, in the record-floors workflow, which a pull
+ * request's `record-floors` label starts (#547): the laptop runs no suite but
+ * the unit suite (global rule 2026-10-09), and a run that checks the figures
+ * never records, since a run that can rewrite the figure it checks against
+ * asserts nothing. `npm run floors:fetch <run>` writes what it recorded here. Imports are Node's own, TypeScript's parser, which finds
  * the callers (#448), and the repository's one file walk.
  */
 import { spawnSync } from 'node:child_process';
@@ -342,13 +345,24 @@ export const runRefusal = (
       ? undefined
       : `the ${name} failed (exit ${String(status)}): nothing recorded`;
 
-/** Why this environment must not record, or nothing. */
-export const ciRefusal = (
+/** The switch only the record-floors workflow sets, to its own name (#547). */
+export const RECORD_JOB_ENV = 'FLOORS_RECORD_JOB';
+
+/**
+ * Why this environment must not record, or nothing (#547). Floors are
+ * recorded in CI only, by the record-floors workflow (global rule
+ * 2026-10-09): never on the laptop, which runs no suite but the unit suite,
+ * and never in a run that checks the figures, which could rewrite what it
+ * checks against.
+ */
+export const recordRefusal = (
   environment: Readonly<Record<string, string | undefined>>,
 ): string | undefined =>
-  environment['CI'] === undefined || environment['CI'] === ''
+  environment['CI'] !== undefined &&
+  environment['CI'] !== '' &&
+  environment[RECORD_JOB_ENV] === 'record-floors'
     ? undefined
-    : 'CI never records floors: run npm run floors:record locally';
+    : 'floors are recorded in CI only, by the record-floors workflow: label the pull request record-floors (#547)';
 
 /**
  * The next figures, and every reason not to write them. The caller writes
@@ -748,8 +762,8 @@ const recordPass = (): Pass => {
  * pass creates nothing new, since it writes only the guards the first did.
  */
 const main = (): void => {
-  const ci = ciRefusal(process.env);
-  if (ci !== undefined) die(ci);
+  const refusal = recordRefusal(process.env);
+  if (refusal !== undefined) die(refusal);
 
   const original = existsSync(FLOORS_DIR) ? readFloorsDir(FLOORS_DIR) : {};
   let pass = recordPass();

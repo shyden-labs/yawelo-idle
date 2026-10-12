@@ -11,7 +11,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import {
   SUITES,
-  ciRefusal,
   decideRecord,
   describeMoves,
   findFloorCallers,
@@ -19,6 +18,8 @@ import {
   floorsText,
   planRecord,
   playwrightListed,
+  RECORD_JOB_ENV,
+  recordRefusal,
   readFloorCaller,
   readFloorsDir,
   runRefusal,
@@ -431,18 +432,34 @@ describe('findFloorCallers (#448 AC3)', () => {
   });
 });
 
-describe('ciRefusal', () => {
-  it('refuses to record in CI', () => {
-    expect(ciRefusal({ CI: 'true' })).toBe(
-      'CI never records floors: run npm run floors:record locally',
-    );
+describe('recordRefusal (#547)', () => {
+  const REFUSED =
+    'floors are recorded in CI only, by the record-floors workflow: label the pull request record-floors (#547)';
+
+  it('refuses a record on the laptop', () => {
+    expect(recordRefusal({})).toBe(REFUSED);
   });
 
-  it.each([
-    ['unset', undefined],
-    ['empty', ''],
-  ])('allows a record where CI is %s', (_what, value) => {
-    expect(ciRefusal({ CI: value })).toBeUndefined();
+  it('refuses a record in a CI run that checks the figures', () => {
+    expect(recordRefusal({ CI: 'true' })).toBe(REFUSED);
+  });
+
+  it('refuses the workflow’s switch outside CI', () => {
+    expect(recordRefusal({ [RECORD_JOB_ENV]: 'record-floors' })).toBe(REFUSED);
+  });
+
+  it('refuses the switch set to anything but the workflow’s name', () => {
+    expect(recordRefusal({ CI: 'true', [RECORD_JOB_ENV]: '1' })).toBe(REFUSED);
+  });
+
+  it('records in the record-floors workflow', () => {
+    expect(
+      recordRefusal({ CI: 'true', [RECORD_JOB_ENV]: 'record-floors' }),
+    ).toBeUndefined();
+  });
+
+  it('names the switch FLOORS_RECORD_JOB', () => {
+    expect(RECORD_JOB_ENV).toBe('FLOORS_RECORD_JOB');
   });
 });
 
@@ -552,7 +569,7 @@ describe('planRecord', () => {
 });
 
 describe('the recorder over this repository', () => {
-  it('runs from no CI workflow step', () => {
+  it('runs from no CI workflow step but the record-floors workflow’s (#547)', () => {
     const steps = readdirSync('.github/workflows')
       .filter((file) => /\.ya?ml$/.test(file))
       .flatMap((file) => {
@@ -566,9 +583,17 @@ describe('the recorder over this repository', () => {
     const recording = steps.filter(({ run }) =>
       /floors:record|record-floors/.test(run),
     );
-    expect(searched(recording, { of: steps, what: 'workflow steps' })).toEqual(
-      [],
-    );
+    // The reader finds the one workflow allowed to record (liveness).
+    expect(recording).toContainEqual({
+      file: 'record-floors.yml',
+      run: 'npm run floors:record',
+    });
+    expect(
+      searched(
+        recording.filter(({ file }) => file !== 'record-floors.yml'),
+        { of: steps, what: 'workflow steps' },
+      ),
+    ).toEqual([]);
     expect(
       floorBreach('record-floors/workflow-steps', steps.length),
     ).toBeUndefined();
