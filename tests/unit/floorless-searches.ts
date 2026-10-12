@@ -91,7 +91,7 @@ const WRAPPERS = [SEARCHED, CONTROLLED];
 const EXPECT = 'expect';
 const FLOOR = 'floorBreach';
 
-/** Matchers whose argument says "empty": `[]` or `{}`. */
+/** Matchers whose argument says "empty": `[]`, `{}`, or an object of empties (#558). */
 const EQUALITY = new Set(['toEqual', 'toStrictEqual']);
 /** Matchers that, negated, say "no such member". */
 const MEMBERSHIP = new Set(['toContain', 'toContainEqual', 'toMatch']);
@@ -152,10 +152,7 @@ const isEmptyInput = (node: ts.Expression): boolean =>
   ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
     node.text === '') ||
   isEmptyLiteral(node) ||
-  (ts.isNewExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    ['Map', 'Set'].includes(node.expression.text) &&
-    (node.arguments ?? []).length === 0);
+  isEmptyCollection(node);
 
 /** The initializer of `name:` in an object literal, or undefined. */
 function propertyOf(
@@ -242,6 +239,32 @@ const isEmptyLiteral = (node: ts.Node | undefined): boolean =>
 const isZero = (node: ts.Node | undefined): boolean =>
   node !== undefined && ts.isNumericLiteral(node) && node.text === '0';
 
+/** `new Set()` or `new Map()` with nothing in it. */
+const isEmptyCollection = (node: ts.Node): boolean =>
+  ts.isNewExpression(node) &&
+  ts.isIdentifier(node.expression) &&
+  ['Map', 'Set'].includes(node.expression.text) &&
+  (node.arguments ?? []).length === 0;
+
+/**
+ * An object literal whose every value says "empty": `[]`, `{}`, an empty
+ * `Set` or `Map`, `0`, or such an object nested (#558). It asserts the same
+ * as `toEqual([])`, nothing found, with no population beside it. A spread
+ * or a shorthand value is not read as empty.
+ */
+const isEmptyRecord = (node: ts.Node | undefined): boolean =>
+  node !== undefined &&
+  ts.isObjectLiteralExpression(node) &&
+  node.properties.length > 0 &&
+  node.properties.every(
+    (member) =>
+      ts.isPropertyAssignment(member) &&
+      (isEmptyLiteral(member.initializer) ||
+        isEmptyCollection(member.initializer) ||
+        isZero(member.initializer) ||
+        isEmptyRecord(member.initializer)),
+  );
+
 /**
  * The absence form a matcher call asserts, or undefined: the bare forms only.
  * `subject` is what `expect` was handed.
@@ -253,7 +276,11 @@ function bareForm(
   negated: boolean,
 ): Form | undefined {
   if (negated) return MEMBERSHIP.has(name) ? 'not-contained' : undefined;
-  if (EQUALITY.has(name) && isEmptyLiteral(argument)) return 'empty';
+  if (
+    EQUALITY.has(name) &&
+    (isEmptyLiteral(argument) || isEmptyRecord(argument))
+  )
+    return 'empty';
   if (name === 'toHaveLength' && isZero(argument)) return 'empty';
   if (
     (name === 'toBe' || EQUALITY.has(name)) &&

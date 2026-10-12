@@ -133,8 +133,13 @@ describe('gitWalks', () => {
     expect(
       gitWalks(
         ELSEWHERE,
-        `// spawnSync('git', ['grep', 'x']);\n/* execFileSync('git', ['ls-files']) */`,
+        `// spawnSync('git', ['grep', 'x']);\n/* execFileSync('git', ['ls-files']) */\nspawnSync('git', ['status']);`,
       ),
-    ).toEqual({ programCalls: 0, calls: [], findings: [], unclassified: [] });
+    ).toEqual({
+      programCalls: 1,
+      calls: ['line 3: git status'],
+      findings: [],
+      unclassified: [],
+    });
   });
 });

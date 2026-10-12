@@ -225,6 +225,14 @@ describe('searchSitesIn: bare absence forms', () => {
     ['expect(text).not.toContain("<");', 'not-contained'],
     ['expect(xs).not.toContainEqual({ a: 1 });', 'not-contained'],
     ['expect(text).not.toMatch(/main/);', 'not-contained'],
+    // An object whose every value is empty is the same claim (#558).
+    ['expect(r).toEqual({ a: [], b: [] });', 'empty'],
+    ['expect(r).toStrictEqual({ a: [], b: new Set() });', 'empty'],
+    ['expect(r).toEqual({ a: {}, b: new Map() });', 'empty'],
+    ['expect(r).toEqual({ outer: { inner: [] } });', 'empty'],
+    ['expect(r).toEqual({ count: 0, xs: [] });', 'empty'],
+    ['expect(r).toEqual({\n  a: [],\n  b: [],\n});', 'empty'],
+    ['expect.soft(r).toEqual({ a: [] });', 'empty'],
   ])('reads %s as a bare %s site, never proved', (assertion, form) => {
     expect(read(`it('t', () => {\n${assertion}\n});`)).toEqual(one({ form }));
   });
@@ -242,6 +250,19 @@ describe('searchSitesIn: bare absence forms', () => {
       'an empty equality on a resolved promise',
       'await expect(p).resolves.toEqual([]);',
     ],
+    [
+      'an object holding a population beside an empty finding (#558)',
+      'expect(r).toEqual({ seen: [1], found: [] });',
+    ],
+    [
+      'an object with a spread (#558)',
+      'expect(r).toEqual({ ...base, found: [] });',
+    ],
+    [
+      'an object with a shorthand value (#558)',
+      'expect(r).toEqual({ found });',
+    ],
+    ['a set with members (#558)', 'expect(r).toEqual({ a: new Set([1]) });'],
   ])('reads %s as no site', (_what, assertion) => {
     expect(read(`it('t', () => {\n${assertion}\n});`)).toEqual({
       sites: [],
@@ -470,11 +491,11 @@ describe('searchSitesIn: refusal checks and refusals', () => {
   it('reads nothing a comment or a string spells', () => {
     expect(
       read(
-        `// it('t', () => { ${SEARCH} });\nconst s = "searched(f, { of: p })";`,
+        `// it('t', () => { ${SEARCH} });\nconst s = "searched(f, { of: p })";\nit('live', () => {});`,
       ),
     ).toEqual({
       sites: [],
-      tests: [],
+      tests: ['live'],
       refusalChecks: 0,
       unplaced: 0,
       refused: [],
@@ -484,11 +505,11 @@ describe('searchSitesIn: refusal checks and refusals', () => {
   it('reads the definitions and their imports as no site', () => {
     expect(
       read(
-        "import { againstControl, searched } from '../searched';\nexport function searched<T>(f: T[]) { return f; }\nexport function againstControl() {}",
+        "import { againstControl, searched } from '../searched';\nexport function searched<T>(f: T[]) { return f; }\nexport function againstControl() {}\nit('live', () => {});",
       ),
     ).toEqual({
       sites: [],
-      tests: [],
+      tests: ['live'],
       refusalChecks: 0,
       unplaced: 0,
       refused: [],

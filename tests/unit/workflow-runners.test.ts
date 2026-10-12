@@ -70,9 +70,14 @@ describe('scanRunners', () => {
     expect(
       scanRunners(
         'w.yml',
-        workflow('  a:\n    uses: ./.github/workflows/ci.yml\n'),
+        workflow(
+          '  a:\n    uses: ./.github/workflows/ci.yml\n  b:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo\n',
+        ),
       ),
-    ).toEqual({ labels: [], findings: [] });
+    ).toEqual({
+      labels: ['w.yml: jobs.b: ubuntu-24.04'],
+      findings: [],
+    });
   });
 
   it('is not satisfied or tripped by a comment', () => {
