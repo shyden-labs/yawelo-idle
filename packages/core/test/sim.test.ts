@@ -1,15 +1,36 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import fc from 'fast-check';
-import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Encounter } from '../src/course';
+import { HOUR_MS, simMs, wallMs } from '../src/clock';
 import { encounterOutput, purchaseCost } from '../src/encounters';
-import { Num, type NumTuple } from '../src/num';
+import { Num } from '../src/num';
 import { encounterRate, understandingNow } from '../src/production';
 import { advance, buyEncounter, integrate, listen } from '../src/sim';
 import { view } from '../src/view';
 import { createStreams } from '../src/rng';
 import { initialState, ownedCount, type GameState } from '../src/state';
-import { floorBreach } from '../../../tests/floors';
+import {
+  DAY_MS,
+  CAP_MS,
+  tea,
+  market,
+  odd,
+  course,
+  START,
+  deepFreeze,
+  stateWith,
+  u,
+  json,
+  relativeError,
+  checkLinear,
+  checkSequence,
+  checkSplit,
+  countSplit,
+  gapFrom,
+  stateOf,
+  type Gap,
+  type Split,
+  type StateRecord,
+  type Step,
+} from './sim-laws';
 
 /**
  * The time model and the Encounter actions (#27 AC1, AC4 to AC9).
@@ -17,73 +38,6 @@ import { floorBreach } from '../../../tests/floors';
  * The course is declared here rather than imported, so it is checked against
  * the `Course` contract instead of sharing it.
  */
-
-const DAY_MS = 24 * HOUR_MS;
-const CAP_MS = DAY_MS;
-
-const tea: Encounter = { id: 'tea', tags: ['food'], c0: 10, p0: 0.1 };
-const market: Encounter = { id: 'market', tags: ['food'], c0: 100, p0: 1 };
-/** An id that is also an `Object.prototype` member. */
-const odd: Encounter = { id: 'toString', tags: ['food'], c0: 5, p0: 0.5 };
-
-const course: Course = {
-  id: 'test-course',
-  tags: ['food'],
-  regions: [
-    {
-      id: 'r0',
-      destinations: [],
-      encounters: [tea, market, odd],
-      cardSets: [],
-      cultureCards: [],
-      grammarNodes: [],
-    },
-  ],
-};
-
-const START: WallMs = wallMs(Date.UTC(2027, 0, 4));
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null) {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
-
-function stateWith(
-  owned: Record<string, number>,
-  understanding: number,
-  leadMs = 0,
-): GameState {
-  const base = initialState(START, 1);
-  return deepFreeze({
-    ...base,
-    sim: simMs(leadMs),
-    wall: wallMs(START + leadMs),
-    anchor: {
-      sim: simMs(0),
-      understanding: Num.toTuple(Num.from(understanding)),
-    },
-    owned,
-  });
-}
-
-function u(state: GameState): NumTuple {
-  return Num.toTuple(understandingNow(course, state));
-}
-
-function units(state: GameState): number {
-  return Object.values(state.owned).reduce((a, b) => a + b, 0);
-}
-
-function json(state: GameState): string {
-  return JSON.stringify(state);
-}
-
-function relativeError(got: Num, want: Num): number {
-  return Math.abs(Num.toNumber(Num.div(Num.sub(got, want), want)));
-}
 
 describe('initialState', () => {
   it('starts with nothing at simulated time 0', () => {
@@ -218,214 +172,87 @@ describe('encounterRate (AC3)', () => {
 });
 
 describe('production inside an hour (AC5)', () => {
-  it('is linear at the Encounter rate between any two times', () => {
-    const s = stateWith({ tea: 37, market: 4, toString: 2 }, 0);
-    const rate = encounterRate(course, s);
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: HOUR_MS - 2 }),
-        fc.integer({ min: 1, max: HOUR_MS - 1 }),
-        (from, span) => {
-          const to = Math.min(from + span, HOUR_MS - 1);
-          fc.pre(to > from);
-          const a = understandingNow(course, integrate(course, s, from));
-          const b = understandingNow(course, integrate(course, s, to));
-          const perSecond = Num.div(
-            Num.mul(Num.sub(b, a), Num.from(1000)),
-            Num.from(to - from),
-          );
-          expect(relativeError(perSecond, rate)).toBeLessThan(1e-9);
-        },
-      ),
-    );
+  // Stand-ins of the random times (properties/sim.test.ts, #543): the
+  // hour's first millisecond, the whole hour, its last two and one between.
+  it.each([
+    [0, 1],
+    [0, HOUR_MS - 1],
+    [HOUR_MS - 2, 1],
+    [1_234_567, 600_000],
+  ])('is linear at the Encounter rate from %i ms over %i ms', (from, span) => {
+    checkLinear(from, span);
   });
 });
 
-const arbState = fc
-  .record({
-    tea: fc.integer({ min: 0, max: 300 }),
-    market: fc.integer({ min: 0, max: 300 }),
-    understanding: fc.double({ min: 0, max: 1e15, noNaN: true }),
-    anchorSim: fc.integer({ min: 0, max: 1e12 }),
-    lead: fc.integer({ min: 0, max: 72 * HOUR_MS }),
-    wall: fc.integer({ min: 1.7e12, max: 1.9e12 }),
-    stampsEarned: fc.integer({ min: 0, max: 20 }),
-    phrasebook: fc.boolean(),
-  })
-  .map((r): GameState => ({
-    sim: simMs(r.anchorSim + r.lead),
-    wall: wallMs(r.wall),
-    anchor: {
-      sim: simMs(r.anchorSim),
-      understanding: Num.toTuple(Num.from(r.understanding)),
-    },
-    owned: { tea: r.tea, market: r.market },
-    insight: Num.toTuple(Num.from(0)),
-    words: {},
-    memorySince: simMs(r.anchorSim),
-    stamps: 0,
-    stampsEarned: r.stampsEarned,
-    upgrades: r.phrasebook ? { 'phrasebook:food': 1 } : {},
-    rng: createStreams(1, ['cards']),
-    journeys: [null, null, null],
-    cards: [],
-    tutorialJourneyUsed: false,
-    destination: 0,
-    reached: 0,
-    finale: false,
-    replays: {},
-    runSpent: Num.toTuple(Num.from(0)),
-    playableRegions: 3,
-    grammar: [],
-    automation: { enabled: false, intervalMs: 10_000 },
-    seq: 0,
-  }));
-
-/**
- * A gap of simulated time: none, any length up to `maxHours`, or one that ends on
- * an hour edge or a millisecond either side of it, `hours` edges further on.
- * Uniform lengths almost never end on an edge, and an edge is where a split
- * can go wrong: it is where a production bucket and every Pemandu grid
- * (10 s, 5 s, 2 s and 1 s all divide an hour) change (#474).
- */
-type Gap =
-  | { readonly ms: number }
-  | { readonly hours: number; readonly nudge: -1 | 0 | 1 };
-
-function arbGap(maxHours: number): fc.Arbitrary<Gap> {
-  return fc.oneof(
-    { arbitrary: fc.constant({ ms: 0 }), weight: 1 },
-    {
-      arbitrary: fc.record({
-        ms: fc.integer({ min: 0, max: maxHours * HOUR_MS }),
-      }),
-      weight: 4,
-    },
-    {
-      arbitrary: fc.record({
-        hours: fc.integer({ min: 0, max: maxHours - 1 }),
-        nudge: fc.constantFrom(-1 as const, 0 as const, 1 as const),
-      }),
-      weight: 3,
-    },
-  );
-}
-
-/** The gap's length in ms when it starts at `from`. */
-function gapFrom(from: number, gap: Gap): number {
-  if ('ms' in gap) return gap.ms;
-  const edge = from - (from % HOUR_MS) + (gap.hours + 1) * HOUR_MS;
-  return edge + gap.nudge - from;
-}
-
-/** What a split reached: a zero part, and where the split fell against an hour edge. */
-const SPLITS = ['zero-part', 'on-edge', 'beside-edge'] as const;
-type Split = Record<(typeof SPLITS)[number], number>;
-
-function countSplit(seen: Split, s: GameState, a: number, b: number): void {
-  if (a === 0 || b === 0) seen['zero-part']++;
-  const at = (s.sim + a) % HOUR_MS;
-  if (at === 0) seen['on-edge']++;
-  if (at === 1 || at === HOUR_MS - 1) seen['beside-edge']++;
-}
-
-/**
- * Splits `s`'s next `a + b` ms at `a` and checks the two halves land where
- * the whole does: the state deep-equal, and Understanding read back equal,
- * since a memo keyed wrongly could answer two equal states differently.
- */
-function checkSplit(s: GameState, a: number, b: number): GameState {
-  const split = integrate(course, integrate(course, s, a), b);
-  const whole = integrate(course, s, a + b);
-  expect(split).toEqual(whole);
-  expect(u(split)).toEqual(u(whole));
-  return whole;
-}
-
 describe('integrate (AC6)', () => {
-  let plain: Split | undefined;
+  // Stand-ins of the seeded random splits (properties/sim.test.ts, #543):
+  // a split with a zero part, one on an hour edge, one a millisecond before
+  // one, and two gaps of up to 72 h, each from a drawn state. Which kinds of
+  // split each is, is checked too.
+  const STATE: StateRecord = {
+    tea: 150,
+    market: 20,
+    understanding: 1e9,
+    anchorSim: 123_456_789,
+    lead: 5 * HOUR_MS + 1_234,
+    wall: 1.8e12,
+    stampsEarned: 7,
+    phrasebook: true,
+  };
+  const SPLIT_CASES: [string, StateRecord, Gap, Gap, Split][] = [
+    [
+      'a zero part',
+      { ...STATE, phrasebook: false },
+      { ms: 0 },
+      { ms: 90 * 60_000 },
+      { 'zero-part': 1, 'on-edge': 0, 'beside-edge': 0 },
+    ],
+    [
+      'on an hour edge',
+      STATE,
+      { hours: 2, nudge: 0 },
+      { ms: 72 * HOUR_MS },
+      { 'zero-part': 0, 'on-edge': 1, 'beside-edge': 0 },
+    ],
+    [
+      'beside an hour edge',
+      { ...STATE, tea: 0, market: 300, stampsEarned: 20 },
+      { hours: 0, nudge: -1 },
+      { hours: 71, nudge: 1 },
+      { 'zero-part': 0, 'on-edge': 0, 'beside-edge': 1 },
+    ],
+    [
+      'two long gaps from nothing owned',
+      { ...STATE, tea: 0, market: 0, understanding: 0, anchorSim: 0, lead: 0 },
+      { ms: 72 * HOUR_MS - 7 },
+      { ms: 33 * HOUR_MS + 17 },
+      { 'zero-part': 0, 'on-edge': 0, 'beside-edge': 0 },
+    ],
+  ];
 
-  /**
-   * 90 seeded splits over spans of up to 144 h, 37 of them on or beside an
-   * hour edge (#474). 1,000 uniform splits took 1.5 s of CPU, and a uniform
-   * split ends on an edge about once in 3.6 million.
-   */
-  function playPlain(): Split {
-    if (plain !== undefined) return plain;
-    const seen: Split = { 'zero-part': 0, 'on-edge': 0, 'beside-edge': 0 };
-    const gap = arbGap(72);
-    fc.assert(
-      fc.property(arbState, gap, gap, (s, ga, gb) => {
-        const a = gapFrom(s.sim, ga);
-        const b = gapFrom(s.sim + a, gb);
-        countSplit(seen, s, a, b);
-        checkSplit(s, a, b);
-      }),
-      { seed: 474, numRuns: 90 },
-    );
-    plain = seen;
-    return seen;
-  }
-
-  it('integrate(integrate(s, a), b) deep-equals integrate(s, a + b), bit for bit', () => {
-    expect(Object.keys(playPlain())).toEqual([...SPLITS]);
-  });
-
-  it.each(SPLITS)('the splits reach %s as often as recorded', (name) => {
-    expect(
-      floorBreach(`core-sim/split-${name}`, playPlain()[name]),
-    ).toBeUndefined();
-  });
-
-  const PEMANDU = [...SPLITS, 'bought'] as const;
-  type PemanduSplit = Record<(typeof PEMANDU)[number], number>;
-  let pemandu: PemanduSplit | undefined;
-
-  /**
-   * With Pemandu buying, every purchase is replayed three times over, so
-   * this plays 15 shorter splits, up to 12 h a side, in which Pemandu buys
-   * 3,544 units (#474; 300 splits of up to 144 h took 2.3 s of CPU).
-   */
-  function playPemandu(): PemanduSplit {
-    if (pemandu !== undefined) return pemandu;
-    const seen: PemanduSplit = {
-      'zero-part': 0,
-      'on-edge': 0,
-      'beside-edge': 0,
-      bought: 0,
+  for (const [label, record, ga, gb, kinds] of SPLIT_CASES) {
+    const play = (s: GameState): Split => {
+      const seen: Split = { 'zero-part': 0, 'on-edge': 0, 'beside-edge': 0 };
+      const a = gapFrom(s.sim, ga);
+      const b = gapFrom(s.sim + a, gb);
+      countSplit(seen, s, a, b);
+      checkSplit(s, a, b);
+      return seen;
     };
-    const gap = arbGap(12);
-    const buying = fc
-      .tuple(arbState, fc.constantFrom(10_000, 5_000, 2_000, 1_000))
-      .map(([s, intervalMs]): GameState => ({
-        ...s,
-        automation: { enabled: true, intervalMs },
-      }));
-    fc.assert(
-      fc.property(buying, gap, gap, (s, ga, gb) => {
-        const a = gapFrom(s.sim, ga);
-        const b = gapFrom(s.sim + a, gb);
-        countSplit(seen, s, a, b);
-        seen.bought += units(checkSplit(s, a, b)) - units(s);
-      }),
-      { seed: 474, numRuns: 15 },
-    );
-    pemandu = seen;
-    return seen;
+
+    it(`integrate(integrate(s, a), b) deep-equals integrate(s, a + b), bit for bit, at ${label}`, () => {
+      expect(play(stateOf(record))).toEqual(kinds);
+    });
+
+    for (const intervalMs of [10_000, 1_000])
+      it(`integrate(integrate(s, a), b) deep-equals integrate(s, a + b) with Pemandu buying every ${String(intervalMs)} ms (#33 AC4), at ${label}`, () => {
+        const s: GameState = {
+          ...stateOf(record),
+          automation: { enabled: true, intervalMs },
+        };
+        expect(play(s)).toEqual(kinds);
+      });
   }
-
-  it('integrate(integrate(s, a), b) deep-equals integrate(s, a + b) with Pemandu buying (#33 AC4)', () => {
-    expect(Object.keys(playPemandu())).toEqual([...PEMANDU]);
-  });
-
-  it.each(PEMANDU)(
-    'the splits with Pemandu buying reach %s as often as recorded',
-    (name) => {
-      expect(
-        floorBreach(`core-sim/pemandu-${name}`, playPemandu()[name]),
-      ).toBeUndefined();
-    },
-  );
 
   it('moves both clocks by the same amount', () => {
     const s = stateWith({ tea: 1 }, 0, 500);
@@ -517,130 +344,33 @@ describe('advance (AC7)', () => {
   });
 });
 
-/**
- * Every way `state` breaks AC8, and how many values were checked: thrown as
- * one error rather than an `expect` a field (#474). The count is a recorded
- * floor, so a check that stops reading the state fails.
- */
-function faults(state: GameState): { checked: number; found: string[] } {
-  const found: string[] = [];
-  let checked = 0;
-  const times = { sim: state.sim, wall: state.wall, anchor: state.anchor.sim };
-  for (const [name, t] of Object.entries(times)) {
-    checked++;
-    if (!Number.isSafeInteger(t) || t < 0)
-      found.push(`${name} time ${String(t)}`);
-  }
-  checked++;
-  if (state.anchor.sim > state.sim) found.push('anchor after sim');
-  const values = {
-    held: Num.fromTuple(state.anchor.understanding),
-    now: understandingNow(course, state),
-  };
-  for (const [name, n] of Object.entries(values)) {
-    checked++;
-    if (!Number.isFinite(n.mantissa) || n.mantissa < 0)
-      found.push(`${name} ${String(n.mantissa)}`);
-  }
-  for (const [id, n] of Object.entries(state.owned)) {
-    checked++;
-    if (!Number.isSafeInteger(n) || n < 0)
-      found.push(`owns ${String(n)} ${id}`);
-  }
-  return { checked, found };
-}
-
 describe('no reachable state holds NaN, a negative or an infinite value (AC8)', () => {
-  type Step =
-    | { readonly kind: 'listen' }
-    | { readonly kind: 'buy'; readonly id: string; readonly count: number }
-    | { readonly kind: 'advance'; readonly deltaMs: number };
+  // Stand-ins of the seeded random sequences (properties/sim.test.ts,
+  // #543): a game that listens, buys within its means and beyond, steps its
+  // clock back and is away past the cap. What it reached is pinned.
+  const STEPS: Step[] = [
+    ...Array.from({ length: 40 }, (): Step => ({ kind: 'listen' })),
+    { kind: 'buy', id: 'tea', count: 1 },
+    { kind: 'buy', id: 'market', count: 20 },
+    { kind: 'advance', deltaMs: -DAY_MS },
+    { kind: 'listen' },
+    { kind: 'buy', id: 'toString', count: 1 },
+    { kind: 'advance', deltaMs: 40 * DAY_MS },
+    { kind: 'buy', id: 'tea', count: 20 },
+    { kind: 'buy', id: 'market', count: 3 },
+    { kind: 'advance', deltaMs: 3 * HOUR_MS + 1 },
+    { kind: 'listen' },
+  ];
 
-  const step: fc.Arbitrary<Step> = fc.oneof(
-    { arbitrary: fc.constant({ kind: 'listen' as const }), weight: 5 },
-    {
-      arbitrary: fc.record({
-        kind: fc.constant('buy' as const),
-        id: fc.constantFrom('tea', 'market', 'toString'),
-        count: fc.integer({ min: 1, max: 20 }),
-      }),
-      weight: 3,
-    },
-    {
-      arbitrary: fc.record({
-        kind: fc.constant('advance' as const),
-        deltaMs: fc.integer({ min: -DAY_MS, max: 40 * DAY_MS }),
-      }),
-      weight: 2,
-    },
-  );
-
-  // What the sequences reached (#474), each a recorded floor: purchases
-  // made and refused, a clock stepped back, an absence the cap clipped, and
-  // the values checked.
-  const REACHED = [
-    'bought',
-    'buy-refused',
-    'clock-back',
-    'clipped',
-    'checked',
-  ] as const;
-  type Reached = Record<(typeof REACHED)[number], number>;
-  let played: Reached | undefined;
-
-  /** 100 seeded games of 20 to 120 steps (#474): 500 unseeded took 1.4 s of CPU. */
-  function play(): Reached {
-    if (played !== undefined) return played;
-    const reached: Reached = {
-      bought: 0,
-      'buy-refused': 0,
-      'clock-back': 0,
-      clipped: 0,
-      checked: 0,
-    };
-    fc.assert(
-      fc.property(
-        fc.array(step, { minLength: 20, maxLength: 120, size: 'max' }),
-        (steps) => {
-          let s = initialState(START, 1);
-          // one scenario: each step plays on from the state the last one left
-          for (const e of steps) {
-            if (e.kind === 'listen') s = listen(course, s);
-            if (e.kind === 'buy') {
-              const r = buyEncounter(course, s, e.id, e.count);
-              reached[r.ok ? 'bought' : 'buy-refused']++;
-              if (r.ok) s = r.state;
-            }
-            if (e.kind === 'advance') {
-              const moved = advance(course, s, wallMs(s.wall + e.deltaMs));
-              if (e.deltaMs < 0) reached['clock-back']++;
-              if (moved.summary.clipped) reached.clipped++;
-              s = moved.state;
-            }
-            const { checked, found } = faults(s);
-            reached.checked += checked;
-            if (found.length > 0) throw new Error(found.join('; '));
-          }
-        },
-      ),
-      { seed: 474, numRuns: 100 },
-    );
-    played = reached;
-    return reached;
-  }
-
-  it('over random sequences of listens, purchases and returns', () => {
-    expect(Object.keys(play())).toEqual([...REACHED]);
+  it('over a sequence of listens, purchases and returns', () => {
+    expect(checkSequence(STEPS)).toEqual({
+      bought: 3,
+      'buy-refused': 2,
+      'clock-back': 1,
+      clipped: 1,
+      checked: 313,
+    });
   });
-
-  it.each(REACHED)(
-    'the random sequences reach %s as often as recorded',
-    (name) => {
-      expect(
-        floorBreach(`core-sim/sequence-${name}`, play()[name]),
-      ).toBeUndefined();
-    },
-  );
 });
 
 describe('buyEncounter (AC9)', () => {

@@ -1,23 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
-import { DAY_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Destination } from '../src/course';
-import { collectJourney, startJourney } from '../src/journeys';
-import { isDue } from '../src/memory';
+import { DAY_MS, wallMs } from '../src/clock';
+import { collectJourney } from '../src/journeys';
 import { Num } from '../src/num';
-import { setSail } from '../src/sail';
-import {
-  answerReview,
-  buyEncounter,
-  buyUpgrade,
-  integrate,
-  listen,
-  pickUpWord,
-  type Result,
-} from '../src/sim';
+import { answerReview, buyUpgrade, pickUpWord } from '../src/sim';
 import { view } from '../src/view';
 import { initialState, type GameState } from '../src/state';
 import { UNFOLD_FLAGS, unfold, type UnfoldFlag } from '../src/unfold';
+import {
+  checkWalk,
+  course,
+  GOAL_U,
+  GOAL_WORDS,
+  holding,
+  journeyAfter,
+  nearGoal,
+  ok,
+  sailed,
+  START,
+  TUTORIAL_MS,
+  tutorialAfter,
+  type Step,
+  type Walked,
+} from './unfold-laws';
 
 /**
  * Unfolding (#31 AC6, DN7): parent §4.1's reveal flags, derived from state
@@ -25,100 +29,9 @@ import { UNFOLD_FLAGS, unfold, type UnfoldFlag } from '../src/unfold';
  * state just after. Journeys unfold with Review, and the goal with Culture
  * or once it can be met (operator, 2026-10-03).
  *
- * The course is declared here, so it is checked against the `Course`
- * contract rather than sharing it.
+ * The course is declared in unfold-laws.ts, so it is checked against the
+ * `Course` contract rather than sharing it.
  */
-
-const START: WallMs = wallMs(Date.UTC(2027, 0, 4));
-/** The tutorial word falls due this long after pick-up (parent §4.1). */
-const TUTORIAL_MS = 240_000;
-/** Destination 0's goal: 10,000 Understanding and 8 words (design §5). */
-const GOAL_U = 2_120_000_000;
-const GOAL_WORDS = 8;
-
-function destination(d: number): Destination {
-  return {
-    id: `d${String(d)}`,
-    lexicon: Array.from({ length: 12 }, (_, k) => ({
-      id: `d${String(d)}w${String(k)}`,
-      tags: ['food'],
-      cefr: 'A1' as const,
-    })),
-  };
-}
-
-const course: Course = {
-  id: 'unfold-course',
-  tags: ['food'],
-  regions: [
-    {
-      id: 'r0',
-      destinations: [destination(0), destination(1)],
-      encounters: [{ id: 'e0', tags: ['food'], c0: 10, p0: 1 }],
-      cardSets: [{ id: 's0', bonus: 0.1 }],
-      cultureCards: [
-        { id: 'c0', setId: 's0', tags: ['food'], bonus: 0.05, phrasePack: [] },
-      ],
-      grammarNodes: [],
-    },
-  ],
-};
-
-function ok(result: Result): GameState {
-  if (!result.ok) throw new Error(`refused: ${JSON.stringify(result)}`);
-  return result.state;
-}
-
-/** A new game holding `understanding`. */
-function holding(understanding: number): GameState {
-  const base = initialState(START, 1);
-  return {
-    ...base,
-    anchor: {
-      sim: simMs(0),
-      understanding: Num.toTuple(Num.from(understanding)),
-    },
-  };
-}
-
-/** A game whose first word was picked up `ms` ago. */
-function tutorialAfter(ms: number): GameState {
-  return integrate(course, ok(pickUpWord(course, holding(20))), ms);
-}
-
-/** A game whose tutorial Journey left at START, `ms` later. */
-function journeyAfter(ms: number): GameState {
-  return integrate(
-    course,
-    ok(startJourney(course, holding(0), 0, 'tutorial')),
-    ms,
-  );
-}
-
-/** A game at destination 0 holding its 8 words and `understanding`. */
-function nearGoal(understanding: number): GameState {
-  let s = holding(1e6);
-  for (let k = 0; k < GOAL_WORDS; k++) s = ok(pickUpWord(course, s));
-  return {
-    ...s,
-    anchor: {
-      sim: s.sim,
-      understanding: Num.toTuple(Num.from(understanding)),
-    },
-    runSpent: Num.toTuple(Num.from(0)),
-  };
-}
-
-/** A game that has sailed once, its Understanding and words reset to none. */
-function sailed(): GameState {
-  return {
-    ...holding(0),
-    destination: 1,
-    reached: 1,
-    stamps: 3,
-    stampsEarned: 3,
-  };
-}
 
 const off = (flag: UnfoldFlag, s: GameState): void => {
   expect(unfold(course, s)[flag]).toBe(false);
@@ -307,129 +220,81 @@ describe('each flag just before and just after it turns on (AC6)', () => {
 });
 
 describe('no flag ever turns off', () => {
-  type Step =
-    | { readonly kind: 'listen'; readonly taps: number }
-    | { readonly kind: 'wait'; readonly ms: number }
-    | { readonly kind: 'buy' }
-    | { readonly kind: 'pickUp' }
-    | { readonly kind: 'review' }
-    | { readonly kind: 'start'; readonly duration: 'tutorial' | '2h' }
-    | { readonly kind: 'collect' }
-    | { readonly kind: 'sail' };
-
-  const step: fc.Arbitrary<Step> = fc.oneof(
-    fc.record({
-      kind: fc.constant('listen'),
-      taps: fc.integer({ min: 1, max: 80 }),
-    }),
-    fc.record({
-      kind: fc.constant('wait'),
-      ms: fc.integer({ min: 1, max: DAY_MS }),
-    }),
-    fc.constant({ kind: 'buy' } as const),
-    fc.constant({ kind: 'pickUp' } as const),
-    fc.constant({ kind: 'review' } as const),
-    fc.record({
-      kind: fc.constant('start'),
-      duration: fc.constantFrom('tutorial' as const, '2h' as const),
-    }),
-    fc.constant({ kind: 'collect' } as const),
-    fc.constant({ kind: 'sail' } as const),
-  );
-
-  /** The state after `s`, or `s` itself when the action is refused. */
-  function act(s: GameState, a: Step): GameState {
-    const kept = (r: Result): GameState => (r.ok ? r.state : s);
-    switch (a.kind) {
-      case 'listen': {
-        let next = s;
-        // one scenario: a burst of taps is one action.
-        for (let k = 0; k < a.taps; k++) next = listen(course, next);
-        return next;
-      }
-      case 'wait':
-        return integrate(course, s, a.ms);
-      case 'buy':
-        return kept(buyEncounter(course, s, 'e0', 1));
-      case 'pickUp':
-        return kept(pickUpWord(course, s));
-      case 'review': {
-        const due = Object.keys(s.words).find((id) => {
-          const word = s.words[id];
-          return word !== undefined && isDue(word, s.wall);
-        });
-        return due === undefined ? s : kept(answerReview(course, s, due, true));
-      }
-      case 'start':
-        return kept(startJourney(course, s, 0, a.duration));
-      case 'collect':
-        return kept(collectJourney(course, s, 0));
-      case 'sail':
-        return kept(setSail(course, s));
-    }
-  }
-
-  /**
-   * Walks in which each flag turned on, and steps that began with it on (the
-   * steps the check judges), measured at seed 31 over 300 walks (1,886
-   * steps); Listen is on from the first state. Re-measured in #35, when a tap
-   * became 0.5 Understanding and the walk's taps per step doubled to 40, and
-   * again when it became 0.25 and they doubled to 80, to keep its
-   * Understanding per step. Lower one only when the walk is changed
-   * on purpose.
-   */
-  const TURNED_ON: Readonly<Record<UnfoldFlag, number>> = {
-    listen: 0,
-    encounters: 55,
-    words: 6,
-    review: 2,
-    upgrades: 60,
-    journeys: 2,
-    culture: 46,
-    goal: 60,
+  // Stand-ins of the seeded random walks (properties/unfold.test.ts, #543):
+  // a new game played through every action to its first sail, and a game
+  // near its goal that buys, waits and sails. What each walk sees of each
+  // flag is pinned, so a walk that stops reaching a flag fails.
+  const WALKS: Record<'a new game' | 'near the goal', [boolean, Step[]]> = {
+    'a new game': [
+      false,
+      [
+        { kind: 'listen', taps: 80 },
+        { kind: 'listen', taps: 80 },
+        { kind: 'listen', taps: 80 },
+        { kind: 'buy' },
+        { kind: 'listen', taps: 80 },
+        { kind: 'buy' },
+        { kind: 'buy' },
+        { kind: 'wait', ms: 3_600_000 },
+        { kind: 'pickUp' },
+        { kind: 'pickUp' },
+        { kind: 'wait', ms: DAY_MS },
+        { kind: 'review' },
+        { kind: 'start', duration: 'tutorial' },
+        { kind: 'wait', ms: 240_000 },
+        { kind: 'collect' },
+        { kind: 'start', duration: '2h' },
+        { kind: 'wait', ms: 7_200_000 },
+        { kind: 'collect' },
+        { kind: 'listen', taps: 80 },
+        { kind: 'sail' },
+      ],
+    ],
+    'near the goal': [
+      true,
+      [
+        { kind: 'listen', taps: 80 },
+        { kind: 'buy' },
+        { kind: 'wait', ms: DAY_MS },
+        { kind: 'sail' },
+        { kind: 'listen', taps: 1 },
+        { kind: 'review' },
+      ],
+    ],
   };
-  const JUDGED: Readonly<Record<UnfoldFlag, number>> = {
-    listen: 1886,
-    encounters: 1054,
-    words: 852,
-    review: 843,
-    upgrades: 253,
-    journeys: 843,
-    culture: 136,
-    goal: 189,
+
+  // Measured 2026-10-12: every flag but Listen, on from the start, turns on
+  // in the new game's walk.
+  const SEEN: Record<keyof typeof WALKS, Record<UnfoldFlag, Walked>> = {
+    'a new game': {
+      listen: { steps: 20, judged: 20, turnedOn: 0 },
+      encounters: { steps: 20, judged: 19, turnedOn: 1 },
+      words: { steps: 20, judged: 11, turnedOn: 1 },
+      review: { steps: 20, judged: 10, turnedOn: 1 },
+      upgrades: { steps: 20, judged: 8, turnedOn: 1 },
+      journeys: { steps: 20, judged: 10, turnedOn: 1 },
+      culture: { steps: 20, judged: 3, turnedOn: 1 },
+      goal: { steps: 20, judged: 3, turnedOn: 1 },
+    },
+    'near the goal': {
+      listen: { steps: 6, judged: 6, turnedOn: 0 },
+      encounters: { steps: 6, judged: 6, turnedOn: 0 },
+      words: { steps: 6, judged: 6, turnedOn: 0 },
+      review: { steps: 6, judged: 6, turnedOn: 0 },
+      upgrades: { steps: 6, judged: 2, turnedOn: 1 },
+      journeys: { steps: 6, judged: 6, turnedOn: 0 },
+      culture: { steps: 6, judged: 0, turnedOn: 0 },
+      goal: { steps: 6, judged: 3, turnedOn: 1 },
+    },
   };
 
   for (const flag of UNFOLD_FLAGS)
-    it(`${flag} never turns off over seeded walks from a new game and from one near its goal`, () => {
-      let turnedOn = 0;
-      let stepsChecked = 0;
-      let judged = 0;
-      fc.assert(
-        fc.property(
-          fc.boolean(),
-          fc.array(step, { minLength: 1, maxLength: 40 }),
-          (startNearGoal, steps) => {
-            let s = startNearGoal ? nearGoal(GOAL_U - 100) : holding(0);
-            // one scenario: a generated walk, checked after every step.
-            for (const a of steps) {
-              const before = unfold(course, s)[flag];
-              s = act(s, a);
-              const after = unfold(course, s)[flag];
-              stepsChecked += 1;
-              if (before) {
-                judged += 1;
-                expect(after).toBe(true);
-              }
-              if (!before && after) turnedOn += 1;
-            }
-          },
-        ),
-        { seed: 31, numRuns: 300 },
-      );
-      expect(stepsChecked).toBeGreaterThan(1885);
-      expect(turnedOn).toBeGreaterThan(TURNED_ON[flag] - 1);
-      expect(judged).toBeGreaterThan(JUDGED[flag] - 1);
-    });
+    for (const [walk, [nearTheGoal, steps]] of Object.entries(WALKS))
+      it(`${flag} never turns off over a walk from ${walk}`, () => {
+        expect(checkWalk(flag, nearTheGoal, steps)).toEqual(
+          SEEN[walk as keyof typeof WALKS][flag],
+        );
+      });
 });
 
 describe('the fixtures', () => {

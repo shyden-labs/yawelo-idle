@@ -1,27 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
-import { nextGridTick, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Destination, Encounter, Region } from '../src/course';
+import { simMs, wallMs } from '../src/clock';
 import {
   automationOpensAt,
   automationUnlocked,
   bestPayback,
 } from '../src/automation';
-import { newWordMemory, review, type WordMemory } from '../src/memory';
-import { Num, type NumTuple } from '../src/num';
+import { newWordMemory, review } from '../src/memory';
+import { Num } from '../src/num';
 import { rateBreakdown, rateGain, understandingNow } from '../src/production';
 import { setSail } from '../src/sail';
-import {
-  advance,
-  buyEncounter,
-  integrate,
-  setAutomation,
-  type Rejection,
-  type Result,
-} from '../src/sim';
+import { advance, integrate, setAutomation } from '../src/sim';
 import { initialState, type GameState } from '../src/state';
 import { encounterPrice } from '../src/upgrades';
-import { floorBreach } from '../../../tests/floors';
+import {
+  START,
+  course,
+  oneRegion,
+  hollow,
+  tuple,
+  at,
+  ok,
+  refused,
+  EARLY,
+  ALL_TIERS,
+  pemandu,
+  unitsOwned,
+  checkTickByTick,
+  shop,
+  SHOP_ENCOUNTERS,
+  twins,
+  TEA,
+  type PemanduGame,
+} from './automation-laws';
 
 /**
  * Pemandu automation (#33): the unlock and the setting (AC1), the choice
@@ -34,99 +44,6 @@ import { floorBreach } from '../../../tests/floors';
  * intervals are written out as literals, so a change to `BALANCE.automation`
  * fails here as well as in its own pin.
  */
-
-const START: WallMs = wallMs(Date.UTC(2027, 0, 4));
-
-function destination(r: number, d: number): Destination {
-  const id = `r${String(r)}-d${String(d)}`;
-  return {
-    id,
-    lexicon: Array.from({ length: 20 }, (_, k) => ({
-      id: `${id}-w${String(k)}`,
-      tags: ['food'],
-      cefr: 'A1' as const,
-    })),
-  };
-}
-
-function region(r: number): Region {
-  return {
-    id: `r${String(r)}`,
-    destinations: [0, 1, 2, 3].map((d) => destination(r, d)),
-    encounters: [
-      { id: `tea${String(r)}`, tags: ['food'], c0: 10, p0: 1 },
-      { id: `market${String(r)}`, tags: ['food'], c0: 100, p0: 8 },
-    ],
-    cardSets: [],
-    cultureCards: [],
-    grammarNodes: [],
-  };
-}
-
-const course: Course = {
-  id: 'automation-course',
-  tags: ['food'],
-  regions: [region(0), region(1), region(2)],
-};
-
-/** Region 1 only: Pemandu never opens on it. */
-const oneRegion: Course = { ...course, regions: [region(0)] };
-
-/** Region 2 has no destinations, so the first one past region 1 is region 3's. */
-const hollow: Course = {
-  ...course,
-  regions: [region(0), { ...region(1), destinations: [] }, region(2)],
-};
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null) {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
-
-function tuple(x: number): NumTuple {
-  return Num.toTuple(Num.from(x));
-}
-
-interface At {
-  readonly upgrades?: Readonly<Record<string, number>>;
-  readonly owned?: Readonly<Record<string, number>>;
-  readonly held?: number;
-  readonly simMs?: number;
-  readonly words?: Readonly<Record<string, WordMemory>>;
-}
-
-/** A game that has reached destination `reached` and stands there. */
-function at(reached: number, opts: At = {}): GameState {
-  const base = initialState(START, 1);
-  const sim = simMs(opts.simMs ?? 0);
-  return deepFreeze({
-    ...base,
-    sim,
-    wall: wallMs(START + sim),
-    anchor: { sim: simMs(0), understanding: tuple(opts.held ?? 0) },
-    owned: opts.owned ?? {},
-    upgrades: opts.upgrades ?? {},
-    words: opts.words ?? {},
-    destination: reached,
-    reached,
-  });
-}
-
-function ok(result: Result): GameState {
-  if (!result.ok) throw new Error(`refused: ${JSON.stringify(result)}`);
-  return result.state;
-}
-
-function refused(result: Result): Rejection {
-  if (result.ok) throw new Error('expected a rejection');
-  return result.rejection;
-}
-
-const EARLY = { pemanduEarly: 1 };
-const ALL_TIERS = { pemanduFaster1: 1, pemanduFaster2: 1, pemanduFaster3: 1 };
 
 describe('the automation setting in state (AC1)', () => {
   it('a new game has Pemandu off at the starting 10 s interval', () => {
@@ -289,46 +206,6 @@ describe('setAutomation (AC1)', () => {
   });
 });
 
-/**
- * The choice (AC2): with nothing owned, no words and no stamps, an
- * Encounter's first unit adds exactly its p0, so cost / Δrate is c0 / p0:
- * tea 10, inn 5, market 6.67, palace 50, and region 2's ferry 0.1.
- */
-const TEA: Encounter = { id: 'tea', tags: ['food'], c0: 10, p0: 1 };
-
-function shopRegion(r: number): Region {
-  const encounters =
-    r === 0
-      ? [
-          TEA,
-          { id: 'inn', tags: ['travel'], c0: 50, p0: 10 },
-          { id: 'market', tags: ['food'], c0: 100, p0: 15 },
-          { id: 'palace', tags: ['travel'], c0: 10_000, p0: 200 },
-        ]
-      : [{ id: `ferry${String(r)}`, tags: ['travel'], c0: 10, p0: 100 }];
-  return { ...region(r), encounters };
-}
-
-const shop: Course = {
-  id: 'shop-course',
-  tags: ['food', 'travel'],
-  regions: [shopRegion(0), shopRegion(1), shopRegion(2)],
-};
-
-/** Two Encounters alike in all but id: 'Zed' sorts before 'apple' by code unit. */
-const twins: Course = {
-  ...shop,
-  regions: [
-    {
-      ...region(0),
-      encounters: [
-        { id: 'apple', tags: ['food'], c0: 10, p0: 1 },
-        { id: 'Zed', tags: ['food'], c0: 10, p0: 1 },
-      ],
-    },
-  ],
-};
-
 describe('rateGain (AC2)', () => {
   /**
    * Words reviewed two days before the game, so each word's bonus depends on
@@ -349,9 +226,7 @@ describe('rateGain (AC2)', () => {
       simMs: 5 * 3_600_000 + 17,
     });
   }
-  const reachable = shop.regions.flatMap((r) => r.encounters);
-
-  it.each(reachable.map((e) => [e.id, e] as const))(
+  it.each(SHOP_ENCOUNTERS)(
     '%s: its rate with one more, less its rate now, bit for bit',
     (_id, encounter) => {
       const s = gainState();
@@ -422,31 +297,6 @@ describe('bestPayback (AC2)', () => {
 });
 
 /** Pemandu on at `intervalMs` from the state's own time, by the real action. */
-function pemandu(state: GameState, intervalMs = 10_000): GameState {
-  return ok(setAutomation(course, state, true, intervalMs));
-}
-
-function unitsOwned(state: GameState): number {
-  return Object.values(state.owned).reduce((a, b) => a + b, 0);
-}
-
-/** The reference: every tick in (anchor, sim + elapsed], one at a time. */
-function tickByTick(c: Course, s: GameState, elapsed: number): GameState {
-  const until = s.sim + elapsed;
-  const every = s.automation.intervalMs;
-  let x = s;
-  for (
-    let t = nextGridTick(s.anchor.sim, every);
-    t <= until;
-    t = simMs(t + every)
-  ) {
-    const here = { ...x, sim: t, wall: wallMs(x.wall + t - x.sim) };
-    const id = bestPayback(c, here);
-    if (id !== undefined) x = ok(buyEncounter(c, here, id, 1));
-  }
-  return { ...x, sim: simMs(until), wall: wallMs(s.wall + elapsed) };
-}
-
 describe('integrate with Pemandu (AC2)', () => {
   const RICH = { held: 1e9, owned: { tea0: 1 } };
 
@@ -490,70 +340,87 @@ describe('integrate with Pemandu (AC2)', () => {
     expect(Num.toNumber(Num.fromTuple(later.runSpent))).toBeCloseTo(9.5, 12);
   });
 
-  it('equals buying tick by tick with bestPayback and buyEncounter, over generated states', () => {
-    // 45 seeded states (#474: 300 took 0.9 s of CPU). Floors: the units
-    // bought, and the states in which nothing was bought.
-    let bought = 0;
-    let idle = 0;
-    fc.assert(
-      fc.property(
-        fc.record({
-          interval: fc.constantFrom(10_000, 5_000, 2_000, 1_000),
-          reached: fc.constantFrom(3, 4, 8),
-          tea0: fc.integer({ min: 0, max: 40 }),
-          market0: fc.integer({ min: 0, max: 20 }),
-          tea1: fc.integer({ min: 0, max: 10 }),
-          held: fc.integer({ min: 0, max: 5_000 }),
-          sim: fc.integer({ min: 0, max: 30 * 3_600_000 }),
-          ticks: fc.integer({ min: 0, max: 150 }),
-          discount: fc.integer({ min: 0, max: 2 }),
-          phrasebook: fc.boolean(),
-          reviewed: fc.integer({ min: 0, max: 5 }),
-        }),
-        (r) => {
-          // Reviewed words make each bonus hang on the wall clock, so a
-          // tick bought at the wrong skew between the clocks pays wrong.
-          // Each review falls before the anchor at 0, as every review in
-          // a real game falls at or before `memorySince`.
-          const words = Object.fromEntries(
-            Array.from({ length: r.reviewed }, (_, k) => {
-              const when = wallMs(START - (k + 1) * 86_400_000);
-              return [
-                `r0-d0-w${String(k)}`,
-                review(newWordMemory(when), when, true),
-              ];
-            }),
-          );
-          const s = pemandu(
-            at(r.reached, {
-              held: r.held,
-              simMs: r.sim,
-              words,
-              owned: { tea0: r.tea0, market0: r.market0, tea1: r.tea1 },
-              upgrades: {
-                ...ALL_TIERS,
-                ...EARLY,
-                ...(r.discount > 0 ? { encounterDiscount: r.discount } : {}),
-                ...(r.phrasebook ? { 'phrasebook:food': 1 } : {}),
-              },
-            }),
-            r.interval,
-          );
-          const elapsed = r.ticks * r.interval;
-          const got = integrate(course, s, elapsed);
-          expect(got).toEqual(tickByTick(course, s, elapsed));
-          const units = unitsOwned(got) - unitsOwned(s);
-          bought += units;
-          if (units === 0) idle += 1;
-        },
-      ),
-      { numRuns: 45, seed: 33 },
-    );
-    expect({
-      bought: floorBreach('core-automation/tick-by-tick-bought', bought),
-      idle: floorBreach('core-automation/tick-by-tick-idle', idle),
-    }).toEqual({ bought: undefined, idle: undefined });
-  });
+  // Stand-ins of the seeded random games (properties/automation.test.ts,
+  // #543): rich with nothing owned, broke, every field at its largest drawn,
+  // and one between. The units each buys are pinned, so the idle game and
+  // the buying ones stay what they stand in for.
+  const GAMES: [string, PemanduGame, number][] = [
+    [
+      'a rich game owning nothing',
+      {
+        interval: 10_000,
+        reached: 4,
+        tea0: 0,
+        market0: 0,
+        tea1: 0,
+        held: 5_000,
+        sim: 0,
+        ticks: 150,
+        discount: 0,
+        phrasebook: false,
+        reviewed: 0,
+      },
+      150,
+    ],
+    [
+      'a broke game owning nothing',
+      {
+        interval: 1_000,
+        reached: 3,
+        tea0: 0,
+        market0: 0,
+        tea1: 0,
+        held: 0,
+        sim: 0,
+        ticks: 150,
+        discount: 0,
+        phrasebook: false,
+        reviewed: 0,
+      },
+      0,
+    ],
+    [
+      'every field at its largest',
+      {
+        interval: 2_000,
+        reached: 8,
+        tea0: 40,
+        market0: 20,
+        tea1: 10,
+        held: 5_000,
+        sim: 30 * 3_600_000,
+        ticks: 150,
+        discount: 2,
+        phrasebook: true,
+        reviewed: 5,
+      },
+      150,
+    ],
+    [
+      'a game between',
+      {
+        interval: 5_000,
+        reached: 4,
+        tea0: 7,
+        market0: 3,
+        tea1: 0,
+        held: 1_234,
+        sim: 1_234_567,
+        ticks: 60,
+        discount: 1,
+        phrasebook: false,
+        reviewed: 2,
+      },
+      60,
+    ],
+  ];
+
+  it.each(GAMES)(
+    'equals buying tick by tick with bestPayback and buyEncounter, in %s',
+    (_label, game, units) => {
+      expect(checkTickByTick(game)).toBe(units);
+    },
+  );
 });
 
 describe('advance with Pemandu (AC2)', () => {

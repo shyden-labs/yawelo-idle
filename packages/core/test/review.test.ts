@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import { fsrs, generatorParameters, Rating, State } from 'ts-fsrs';
 import type { Rank } from '../src/balance';
-import { DAY_MS, wallMs, type WallMs } from '../src/clock';
+import { DAY_MS, wallMs } from '../src/clock';
 import {
   insightFor,
   isDue,
@@ -16,6 +15,7 @@ import {
   type MemoryCard,
   type WordMemory,
 } from '../src/memory';
+import { checkHistory, T0, type ReviewStep } from './review-laws';
 
 /**
  * Ranks, FSRS reviews, the review queue and Insight (#28 AC5, AC6, AC7).
@@ -26,7 +26,6 @@ import {
  * rank band; each test also checks the band it relies on.
  */
 
-const T0: WallMs = wallMs(Date.UTC(2027, 0, 4, 9));
 const MINUTE_MS = 60_000;
 
 /** A card in the Review state, last reviewed `stability` days before T0 (R = 0.9). */
@@ -201,45 +200,41 @@ describe('a review (AC5)', () => {
     });
   });
 
-  it('never lowers a rank on a correct answer, over random review histories', () => {
-    let correctSteps = 0;
-    fc.assert(
-      fc.property(
-        fc.array(
-          fc.record({
-            correct: fc.boolean(),
-            lateMs: fc.integer({ min: 0, max: 60 * DAY_MS }),
-          }),
-          { minLength: 5, maxLength: 40, size: 'max' },
-        ),
-        (steps) => {
-          let w = newWordMemory(T0);
-          // one scenario: each step reviews the word the step before left.
-          for (const step of steps) {
-            const now = wallMs(w.card.due + step.lateMs);
-            const next = review(w, now, step.correct);
-            const before = RANKS.indexOf(w.rank);
-            const after = RANKS.indexOf(next.rank);
-            if (step.correct) {
-              correctSteps++;
-              expect(after).toBeGreaterThanOrEqual(before);
-              expect(after).toBe(
-                Math.max(
-                  before,
-                  RANKS.indexOf(rankForStability(next.card.stability)),
-                ),
-              );
-            } else {
-              expect(after).toBe(Math.max(before - 1, 0));
-            }
-            w = next;
-          }
-        },
-      ),
-      { numRuns: 300 },
-    );
-    expect(correctSteps).toBeGreaterThan(1000);
-  });
+  // Stand-ins of the random histories (properties/review.test.ts, #543): ten
+  // right answers on time, five wrong ones, and right and wrong answers
+  // mixed, each up to the 60 days late a history draws.
+  const HISTORIES: [string, ReviewStep[]][] = [
+    [
+      'ten right answers on time',
+      Array.from({ length: 10 }, () => ({ correct: true, lateMs: 0 })),
+    ],
+    [
+      'five wrong answers',
+      Array.from({ length: 5 }, () => ({ correct: false, lateMs: 0 })),
+    ],
+    [
+      'right and wrong answers, late and on time',
+      [
+        { correct: true, lateMs: 60 * DAY_MS },
+        { correct: true, lateMs: 0 },
+        { correct: false, lateMs: 0 },
+        { correct: true, lateMs: 30 * DAY_MS },
+        { correct: false, lateMs: 60 * DAY_MS },
+        { correct: false, lateMs: 0 },
+        { correct: true, lateMs: DAY_MS },
+        { correct: true, lateMs: 0 },
+      ],
+    ],
+  ];
+
+  it.each(HISTORIES)(
+    'never lowers a rank on a correct answer, over %s',
+    (_label, steps) => {
+      expect(checkHistory(steps)).toBe(
+        steps.filter((step) => step.correct).length,
+      );
+    },
+  );
 });
 
 describe('Insight for a correct due answer (AC7)', () => {

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import { syntheticCourse } from '../fixtures/synthetic-course';
 import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
 import type { Course } from '../src/course';
@@ -9,6 +8,7 @@ import { replay } from '../src/log';
 import { newWordMemory } from '../src/memory';
 import { Num } from '../src/num';
 import { initialState, type GameState } from '../src/state';
+import { checkHashOfStateAlone } from './hash-laws';
 
 /**
  * `stateHash` (#34 AC4, design §4): SHA-256 of a canonical serialisation
@@ -264,24 +264,18 @@ describe('stateHash (AC4)', () => {
     );
   });
 
-  it('is a function of the state alone, for any seed and wall time', () => {
-    let reached = 0;
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 2 ** 31 }),
-        fc.integer({ min: 0, max: 2 ** 45 }),
-        (seed, wall) => {
-          reached += 1;
-          const state = initialState(wallMs(wall), seed);
-          expect(stateHash(state)).toBe(
-            stateHash(initialState(wallMs(wall), seed)),
-          );
-        },
-      ),
-      { seed: 34, numRuns: 200 },
-    );
-    expect(reached).toBe(200);
-  });
+  // Stand-ins of the random seeds and wall times (properties/hash.test.ts,
+  // #543): each bound of the range drawn, and one between.
+  it.each([
+    [0, 0],
+    [2 ** 31, 2 ** 45],
+    [34, 1_800_000_000_000],
+  ])(
+    'is a function of the state alone, for seed %s at wall time %s',
+    (seed, wall) => {
+      checkHashOfStateAlone(seed, wall);
+    },
+  );
 });
 
 /**

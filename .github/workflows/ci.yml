@@ -94,6 +94,13 @@ jobs:
         timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:integration
+      # Every fast-check property at its count from before any cut to fit the
+      # unit limit, drawing fresh cases on every run (#543). A red property is
+      # a real defect, never a re-run. One measured limit.
+      - name: Properties (every property at its full count)
+        timeout-minutes: 2
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:properties
       # The personas play the real core and the spec's pacing targets are
       # checked (#35). AC7 asked for under 5 minutes; its one measured limit
       # is 2 (#476: slowest 40 s of 15 runs, 2026-10-09).

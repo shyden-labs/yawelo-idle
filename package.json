@@ -21,6 +21,7 @@
     "floors:record": "node scripts/record-floors.ts",
     "test:worker": "npm run test --workspace @yawelo-idle/sync-worker --workspace @yawelo-idle/web --workspace @yawelo-idle/site --workspace @yawelo-idle/dev-hosts",
     "test:pacing": "vitest run -c vitest.pacing.config.ts",
+    "test:properties": "vitest run -c vitest.properties.config.ts",
     "test:engines": "playwright test -c playwright.engines.config.ts",
     "test:web": "npm run build --workspace @yawelo-idle/web && playwright test -c playwright.web.config.ts",
     "test:web:dev": "playwright test -c playwright.web.config.ts",

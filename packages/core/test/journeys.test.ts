@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import { JOURNEY_DURATION_IDS } from '../src/balance';
 import { heldCards } from '../src/cards';
-import { DAY_MS, HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type {
-  Course,
-  CultureCard,
-  Encounter,
-  LexiconItem,
-} from '../src/course';
+import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock';
+import type { Course, LexiconItem } from '../src/course';
 import { collectJourney, journeyStatus, startJourney } from '../src/journeys';
 import { Num } from '../src/num';
 import { rateAt, rateBreakdown, understandingNow } from '../src/production';
@@ -21,84 +15,30 @@ import {
   type Rejection,
   type Result,
 } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
+import type { GameState } from '../src/state';
 import { pickUpPool } from '../src/words';
+import {
+  checkJourneySplit,
+  course,
+  FEAST_END,
+  FEAST_START,
+  game,
+  inFlight,
+  ok,
+  pool,
+  solo,
+  START,
+  tea,
+  courseWith,
+} from './journeys-laws';
 
 /**
  * Journeys (#30 AC1 to AC3, AC5 to AC7): slots, durations, the return, the
  * seeded draw with repeats, collection and the repeat reward.
  *
- * The courses are declared here, so they are checked against the
- * `Course` contract rather than sharing it.
+ * The courses are declared in journeys-laws.ts and below, so they are
+ * checked against the `Course` contract rather than sharing it.
  */
-
-const START: WallMs = wallMs(Date.UTC(2027, 0, 4));
-const FEAST_START = START + 14 * DAY_MS;
-const FEAST_END = FEAST_START + 7 * DAY_MS;
-
-const tea: Encounter = { id: 'tea', tags: ['food'], c0: 10, p0: 1 };
-
-function card(id: string, setId: string, extra: Partial<CultureCard> = {}) {
-  return {
-    id,
-    setId,
-    tags: ['food'],
-    bonus: 0.05,
-    phrasePack: [],
-    ...extra,
-  } satisfies CultureCard;
-}
-
-const pool = [
-  card('satay', 'eats'),
-  card('rendang', 'eats'),
-  card('becak', 'rides', { tags: ['transport'] }),
-  card('lebaran', 'rides', {
-    festival: {
-      windows: [{ startWallMs: FEAST_START, endWallMs: FEAST_END }],
-    },
-  }),
-];
-
-function courseWith(cards: readonly CultureCard[]): Course {
-  return {
-    id: 'journeys-course',
-    tags: ['food', 'transport'],
-    regions: [
-      {
-        id: 'r0',
-        destinations: [],
-        encounters: [tea],
-        cardSets: [
-          { id: 'eats', bonus: 0.25 },
-          { id: 'rides', bonus: 0.5 },
-        ],
-        cultureCards: cards,
-        grammarNodes: [],
-      },
-    ],
-  };
-}
-
-const course = courseWith(pool);
-/** Every Journey brings back the same card. */
-const solo = courseWith([card('solo', 'eats')]);
-
-/** A game from `seed` owning 5 tea, with upgrade levels `upgrades`. */
-function game(
-  seed = 1,
-  upgrades: Readonly<Record<string, number>> = {},
-  wall: number = START,
-): GameState {
-  return { ...initialState(wallMs(wall), seed), owned: { tea: 5 }, upgrades };
-}
-
-function ok(result: Result): GameState {
-  if (!result.ok) {
-    throw new Error(`refused: ${JSON.stringify(result.rejection)}`);
-  }
-  return result.state;
-}
 
 function refusal(result: Result): Rejection {
   if (result.ok) throw new Error('expected a rejection');
@@ -267,28 +207,20 @@ describe('the return (AC2)', () => {
     );
   });
 
-  it('falls at the same time however integrate is split, with Journeys in flight', () => {
-    const three = game(1, { journeySlot2: 1, journeySlot3: 1 });
-    let s = ok(startJourney(course, three, 0, '2h'));
-    s = ok(startJourney(course, integrate(course, s, 1_234), 1, '8h'));
-    s = ok(startJourney(course, s, 2, '24h'));
-    const out = s;
-    const gap = fc.integer({ min: 0, max: 30 * HOUR_MS });
-    fc.assert(
-      fc.property(gap, gap, (a, b) => {
-        const split = integrate(course, integrate(course, out, a), b);
-        const whole = integrate(course, out, a + b);
-        expect(split).toEqual(whole);
-        expect([0, 1, 2].map((slot) => journeyStatus(split, slot))).toEqual(
-          [0, 1, 2].map((slot) => journeyStatus(whole, slot)),
-        );
-        expect(understandingNow(course, split)).toEqual(
-          understandingNow(course, whole),
-        );
-      }),
-      { numRuns: 300 },
-    );
-  });
+  // Stand-ins of the random splits (properties/journeys.test.ts, #543): no
+  // time, the largest gaps drawn, a split on the 2 h Journey's return, and a
+  // whole that ends on the 8 h one's.
+  it.each([
+    [0, 0],
+    [30 * HOUR_MS, 30 * HOUR_MS],
+    [2 * HOUR_MS - 1_234, 0],
+    [2 * HOUR_MS - 1_234, 6 * HOUR_MS],
+  ])(
+    'falls at the same time however integrate is split, with Journeys in flight: %i ms then %i ms',
+    (a, b) => {
+      checkJourneySplit(inFlight(), a, b);
+    },
+  );
 
   it('is counted by advance in the time it credits', () => {
     let s = ok(startJourney(course, game(1, { journeySlot2: 1 }), 0, '2h'));
@@ -493,9 +425,13 @@ const packCourse: Course = {
       encounters: [tea],
       cardSets: [{ id: 'eats', bonus: 0.25 }],
       cultureCards: [
-        card('gado', 'eats', {
+        {
+          id: 'gado',
+          setId: 'eats',
+          tags: ['food'],
+          bonus: 0.05,
           phrasePack: [word('p-a2', 'A2'), word('p-a1', 'A1')],
-        }),
+        },
       ],
       grammarNodes: [],
     },

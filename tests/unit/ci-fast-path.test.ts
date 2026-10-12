@@ -58,6 +58,7 @@ const ORDER = [
   'Unit tests',
   'Guards (whole-repo checks)',
   'Integration tests',
+  'Properties (every property at its full count)',
   'Pacing bots (under 2 minutes)',
   'Upload the pacing report',
   'Worker tests (sync in workerd + local D1, site and game through the asset router)',
@@ -83,6 +84,7 @@ const SKIPPED: Record<string, string> = {
   'Lint (zero warnings)': `\${{ ${SKIP} }}`,
   'Typecheck (tsc, svelte-check)': `\${{ ${SKIP} }}`,
   'Integration tests': `\${{ ${SKIP} }}`,
+  'Properties (every property at its full count)': `\${{ ${SKIP} }}`,
   'Pacing bots (under 2 minutes)': `\${{ ${SKIP} }}`,
   // The report uploads after a pacing run that passed or failed, but never on
   // docs-only, where nothing wrote it, nor when the pacing step never started
