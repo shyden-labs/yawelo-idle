@@ -114,7 +114,11 @@ describe('scanModule leaves a package import out of the graph', () => {
     ['a scoped package', "import pow from '@stdlib/math-base-special-pow';"],
     ['a package re-export', "export { z } from 'zod';"],
   ])('%s', (_label, source) => {
-    expect(scanModule('a.ts', source)).toEqual({ imports: [], refused: [] });
+    // Beside a relative import, so the result holds what the scan found.
+    expect(scanModule('a.ts', `${source}\nimport { c } from './c';`)).toEqual({
+      imports: [{ specifier: './c', value: true }],
+      refused: [],
+    });
   });
 });
 
@@ -169,8 +173,11 @@ describe('scanModule refuses what it cannot place in the graph, by name', () => 
 
   it('is not misled by a comment or a string naming import()', () => {
     const source =
-      "// import('./b') would be refused\nexport const s = \"require('./b')\";";
-    expect(scanModule('a.ts', source)).toEqual({ imports: [], refused: [] });
+      "// import('./b') would be refused\nexport const s = \"require('./b')\";\nimport { c } from './c';";
+    expect(scanModule('a.ts', source)).toEqual({
+      imports: [{ specifier: './c', value: true }],
+      refused: [],
+    });
   });
 });
 
