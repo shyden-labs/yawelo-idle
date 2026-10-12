@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
-import Decimal from 'decimal.js';
 import { BALANCE, type Rank } from '../src/balance';
-import {
-  DAY_MS,
-  HOUR_MS,
-  bucketStart,
-  simMs,
-  wallMs,
-  type WallMs,
-} from '../src/clock';
-import type { Course, Encounter, LexiconItem } from '../src/course';
+import { DAY_MS, HOUR_MS, bucketStart, simMs, wallMs } from '../src/clock';
+import type { Course } from '../src/course';
 import { encounterOutput } from '../src/encounters';
 import {
   insightFor,
@@ -34,15 +25,34 @@ import {
   answerReview,
   buyEncounter,
   integrate,
-  listen,
   pickUpWord,
-  type Result,
 } from '../src/sim';
 import { view } from '../src/view';
-import { initialState, pickedWord, type GameState } from '../src/state';
+import { pickedWord } from '../src/state';
 import { pickUpCost, wordBonus } from '../src/words';
-import { exactMean, exactR } from './fsrs-reference';
-import { floorBreach } from '../../../tests/floors';
+import {
+  tea,
+  bus,
+  stall,
+  lexicon,
+  CURRICULUM,
+  course,
+  START,
+  D,
+  rich,
+  ok,
+  held,
+  at,
+  played,
+  exactWordR,
+  FLOOR,
+  continuous,
+  relative,
+  checkAbsence,
+  checkPractice,
+  checkSequence,
+  type Step,
+} from './words-laws';
 
 /**
  * Words, ranks and FSRS review in the game (#28 AC1, AC2, AC4 to AC9).
@@ -52,168 +62,6 @@ import { floorBreach } from '../../../tests/floors';
  * out of CEFR order on purpose, and holds an id that is an
  * `Object.prototype` member.
  */
-
-const tea: Encounter = { id: 'tea', tags: ['food'], c0: 10, p0: 1 };
-const bus: Encounter = { id: 'bus', tags: ['transport'], c0: 10, p0: 2 };
-/** Shares both of `both`'s tags. */
-const stall: Encounter = {
-  id: 'stall',
-  tags: ['food', 'transport'],
-  c0: 10,
-  p0: 3,
-};
-
-const lexicon: readonly LexiconItem[] = [
-  { id: 'b1-food', tags: ['food'], cefr: 'B1' },
-  { id: 'a1-food', tags: ['food'], cefr: 'A1' },
-  { id: 'both', tags: ['food', 'transport'], cefr: 'A2' },
-  { id: 'a1-bus', tags: ['transport'], cefr: 'A1' },
-  { id: 'toString', tags: ['market'], cefr: 'A2' },
-];
-const CURRICULUM = ['a1-food', 'a1-bus', 'both', 'toString', 'b1-food'];
-
-const course: Course = {
-  id: 'words-course',
-  tags: ['food', 'transport', 'market'],
-  regions: [
-    {
-      id: 'r0',
-      destinations: [
-        { id: 'd0', lexicon },
-        { id: 'd1', lexicon: [{ id: 'later', tags: ['food'], cefr: 'A1' }] },
-      ],
-      encounters: [tea, bus, stall],
-      cardSets: [],
-      cultureCards: [],
-      grammarNodes: [],
-    },
-  ],
-};
-
-const START: WallMs = wallMs(Date.UTC(2027, 0, 4));
-const D = Decimal.clone({ precision: 50 });
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null) {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
-
-/** A new game holding `understanding` and owning `owned`. */
-function rich(
-  understanding: number,
-  owned: Record<string, number> = {},
-): GameState {
-  const base = initialState(START, 1);
-  return deepFreeze({
-    ...base,
-    anchor: {
-      ...base.anchor,
-      understanding: Num.toTuple(Num.from(understanding)),
-    },
-    owned,
-  });
-}
-
-function ok(result: Result): GameState {
-  if (!result.ok) {
-    throw new Error(`rejected: ${JSON.stringify(result.rejection)}`);
-  }
-  return deepFreeze(result.state);
-}
-
-function held(state: GameState): number {
-  return Num.toNumber(understandingNow(course, state));
-}
-
-function at(state: GameState, deltaMs: number): GameState {
-  return deepFreeze(advance(course, state, wallMs(state.wall + deltaMs)).state);
-}
-
-/**
- * A played game: all five words picked up, Encounters owned, the first
- * three words reviewed correctly at different times, then left alone. The
- * first answer waits the 4 minutes until the tutorial word is due.
- */
-function played(): GameState {
-  let s = rich(1e6, { tea: 3, bus: 2, stall: 1 });
-  for (let k = 0; k < 5; k++) s = ok(pickUpWord(course, s));
-  s = at(s, 240_000);
-  s = ok(answerReview(course, s, 'a1-food', true));
-  s = at(s, 7 * HOUR_MS + 123_457);
-  s = ok(answerReview(course, s, 'a1-bus', true));
-  s = at(s, 3 * DAY_MS);
-  s = ok(answerReview(course, s, 'both', true));
-  s = ok(answerReview(course, s, 'a1-food', true));
-  return at(s, 5 * HOUR_MS + 999);
-}
-
-/** Exact R of a word at wall time `wall`, straight from the curve. */
-function exactWordR(word: WordMemory, wall: Decimal): Decimal {
-  const { lastReview, stability } = word.card;
-  if (lastReview === null) return new D(0);
-  return exactR(stability, wall.minus(lastReview).div(DAY_MS));
-}
-
-/**
- * The floor share, written out from spec §3.3 (four fifths since #35) rather
- * than read from `BALANCE`, so the model and the engine cannot move together.
- */
-const FLOOR = 0.8;
-
-/**
- * The continuous model's Understanding over sim [from, to), in decimal:
- * for each owned Encounter, output x (1 + sum of rankBonus x (F + (1 - F) R))
- * over the words sharing a tag, R taken on the wall clock (sim + skew), F the
- * floor share. The rate is linear in each word's R, so the integral is exact:
- * each Encounter's output times the span, plus, per word sharing a tag, its
- * bonus times F of the span and 1 - F of R's integral, which is closed form.
- *
- * Measured for #76: the 60-digit result agrees with a 120-digit run in all
- * 45 digits compared, and the Simpson's rule over 2,000 panels it replaces
- * to 4.5e-23 or better. Each of the four tests that call it takes
- * 6 to 11 ms alone, against 2.8 to 4.6 s with Simpson's rule, and up to
- * 118 ms over ten full-suite runs, so they run under the global timeout.
- */
-function continuous(state: GameState, from: number, to: number): Decimal {
-  const skew = state.wall - state.sim;
-  const span = new D(to - from);
-  // Each word's term is integrated once and shared by every Encounter.
-  const terms = Object.entries(state.words).map(([id, word]) => {
-    const { lastReview, stability } = word.card;
-    const integralOfR =
-      lastReview === null
-        ? new D(0)
-        : exactMean(
-            stability,
-            new D(from + skew - lastReview).div(DAY_MS),
-            span.div(DAY_MS),
-          ).mul(span);
-    return {
-      tags: lexicon.find((x) => x.id === id)?.tags ?? [],
-      value: new D(BALANCE.words.rankBonus[word.rank]).mul(
-        span.mul(FLOOR).plus(integralOfR.mul(new D(1).minus(FLOOR))),
-      ),
-    };
-  });
-  let total = new D(0);
-  for (const e of [tea, bus, stall]) {
-    const owned = state.owned[e.id] ?? 0;
-    if (owned === 0) continue;
-    let m = span;
-    for (const { tags, value } of terms) {
-      if (tags.some((g) => e.tags.includes(g))) m = m.plus(value);
-    }
-    total = total.plus(new D(Num.toNumber(encounterOutput(e, owned))).mul(m));
-  }
-  return total.div(1000);
-}
-
-function relative(got: number, want: Decimal): number {
-  return new D(got).minus(want).div(want).abs().toNumber();
-}
 
 describe('picking up a word (AC1)', () => {
   it('takes the destination’s items in CEFR order, then course order', () => {
@@ -489,18 +337,14 @@ describe('the floor (AC4)', () => {
     );
   });
 
-  it('ranks and memory never change through absence', () => {
-    const s = played();
-    fc.assert(
-      fc.property(fc.integer({ min: -DAY_MS, max: 400 * DAY_MS }), (delta) => {
-        expect(advance(course, s, wallMs(s.wall + delta)).state.words).toEqual(
-          s.words,
-        );
-        expect(integrate(course, s, Math.max(delta, 0)).words).toEqual(s.words);
-      }),
-      { numRuns: 200 },
-    );
-  });
+  // Stand-ins of the random absences (properties/words.test.ts, #543): a
+  // clock a day back, none, 400 days on, and one between.
+  it.each([-DAY_MS, 0, 400 * DAY_MS, 12_345_678])(
+    'ranks and memory never change through %i ms of absence',
+    (delta) => {
+      checkAbsence(delta);
+    },
+  );
 });
 
 describe('answering a review (AC5, AC7)', () => {
@@ -587,19 +431,14 @@ describe('practice (AC8)', () => {
       expect(r.ok && r.state).toEqual(s);
     });
 
-  it('is open at any time, due or not, over random states', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 60 * DAY_MS }),
-        fc.constantFrom(...CURRICULUM),
-        (delta, id) => {
-          const s = at(played(), delta);
-          const r = answerPractice(s, id);
-          expect(r).toEqual({ ok: true, state: s });
-        },
-      ),
-      { numRuns: 100 },
-    );
+  // Stand-ins of the random times and words (properties/words.test.ts,
+  // #543): at once, a day on and 60 days on, on words due and not.
+  it.each([
+    [0, 'a1-food'],
+    [DAY_MS, 'both'],
+    [60 * DAY_MS, 'toString'],
+  ])('is open %i ms on, due or not, on %s', (delta, id) => {
+    checkPractice(delta, id);
   });
 
   it('refuses a word not picked up', () => {
@@ -737,196 +576,50 @@ describe('memory ages on the wall clock (AC9)', () => {
 });
 
 describe('no reachable state holds NaN, a negative or an infinite value', () => {
-  type Step =
-    | { readonly kind: 'listen' }
-    | { readonly kind: 'buy'; readonly id: string; readonly count: number }
-    | { readonly kind: 'pick' }
-    | {
-        readonly kind: 'answer';
-        readonly pick: number;
-        readonly correct: boolean;
-      }
-    | { readonly kind: 'advance'; readonly deltaMs: number };
+  // A stand-in of the seeded random sequences (properties/words.test.ts,
+  // #543): a game that picks up every word, answers right and wrong and with
+  // nothing due, buys within its means and beyond, steps its clock back and
+  // is away past the cap. What it reached is pinned.
+  const STEPS: Step[] = [
+    { kind: 'pick' },
+    { kind: 'answer', pick: 0, correct: true },
+    { kind: 'pick' },
+    { kind: 'pick' },
+    { kind: 'buy', id: 'tea', count: 1 },
+    { kind: 'buy', id: 'stall', count: 60 },
+    { kind: 'listen' },
+    { kind: 'advance', deltaMs: DAY_MS },
+    { kind: 'answer', pick: 1, correct: true },
+    { kind: 'answer', pick: 7, correct: false },
+    { kind: 'pick' },
+    { kind: 'pick' },
+    { kind: 'advance', deltaMs: -DAY_MS },
+    { kind: 'buy', id: 'bus', count: 2 },
+    { kind: 'advance', deltaMs: 40 * DAY_MS },
+    { kind: 'answer', pick: 3, correct: true },
+    { kind: 'answer', pick: 0, correct: false },
+    { kind: 'pick' },
+    { kind: 'listen' },
+    { kind: 'answer', pick: 2, correct: true },
+  ];
 
-  const step: fc.Arbitrary<Step> = fc.oneof(
-    { arbitrary: fc.constant({ kind: 'listen' as const }), weight: 2 },
-    {
-      arbitrary: fc.record({
-        kind: fc.constant('buy' as const),
-        id: fc.constantFrom('tea', 'bus', 'stall'),
-        // Up to 60 at once, so some purchases cost more than is held.
-        count: fc.integer({ min: 1, max: 60 }),
-      }),
-      weight: 2,
-    },
-    { arbitrary: fc.constant({ kind: 'pick' as const }), weight: 2 },
-    {
-      arbitrary: fc.record({
-        kind: fc.constant('answer' as const),
-        pick: fc.nat(),
-        correct: fc.boolean(),
-      }),
-      weight: 4,
-    },
-    {
-      arbitrary: fc.record({
-        kind: fc.constant('advance' as const),
-        deltaMs: fc.integer({ min: -DAY_MS, max: 40 * DAY_MS }),
-      }),
-      weight: 3,
-    },
-  );
-
-  /**
-   * Every way `s` breaks the property, and how many values were checked.
-   * Thrown as one error rather than asserted field by field: about 30
-   * `expect` calls a step took a quarter of the time (#474). The count is a
-   * recorded floor, so a check that stops reading the state fails.
-   */
-  function faults(s: GameState): { checked: number; found: string[] } {
-    const found: string[] = [];
-    let checked = 0;
-    const times = {
-      sim: s.sim,
-      wall: s.wall,
-      anchor: s.anchor.sim,
-      memory: s.memorySince,
-    };
-    for (const [name, t] of Object.entries(times)) {
-      checked++;
-      if (!Number.isSafeInteger(t) || t < 0)
-        found.push(`${name} time ${String(t)}`);
-    }
-    checked += 2;
-    if (s.memorySince > s.anchor.sim)
-      found.push('memorySince after the anchor');
-    if (s.anchor.sim > s.sim) found.push('anchor after sim');
-    const values = {
-      insight: Num.fromTuple(s.insight),
-      understanding: understandingNow(course, s),
-      rate: rateAt(course, s, s.sim),
-    };
-    for (const [name, n] of Object.entries(values)) {
-      checked++;
-      if (!Number.isFinite(n.mantissa) || n.mantissa < 0)
-        found.push(`${name} ${String(n.mantissa)}`);
-    }
-    for (const [id, w] of Object.entries(s.words)) {
-      const { due, stability, difficulty, reps, lapses } = w.card;
-      const card = { due, stability, difficulty, reps, lapses };
-      for (const [name, x] of Object.entries(card)) {
-        checked++;
-        if (!Number.isFinite(x) || x < 0)
-          found.push(`${id} ${name} ${String(x)}`);
-      }
-      checked++;
-      if (w.card.lastReview !== null && w.card.lastReview > s.wall)
-        found.push(`${id} reviewed after the wall clock`);
-    }
-    return { checked, found };
-  }
-
-  // What the property reached (#474): picks taken and refused, purchases
-  // made and refused, right and wrong answers, an answer with nothing due, a
-  // clock stepped back, an absence clipped by the cap, and games that picked
-  // up every word of the destination, and the values checked. Each is a
-  // recorded floor.
-  const REACHED = [
-    'picked',
-    'pick-refused',
-    'bought',
-    'buy-refused',
-    'right',
-    'wrong',
-    'nothing-due',
-    'clock-back',
-    'clipped',
-    'every-word',
-    'checked',
-  ] as const;
-  type Reached = Record<(typeof REACHED)[number], number>;
-
-  let played: Reached | undefined;
-
-  /**
-   * Plays the seeded games once and keeps what they reached, so the property
-   * and each floor below share one play (#474). 25 runs of 20 to 120 steps:
-   * 300 unseeded runs took 4.2 s of CPU.
-   */
-  function play(): Reached {
-    if (played !== undefined) return played;
-    const reached: Reached = {
-      picked: 0,
-      'pick-refused': 0,
-      bought: 0,
-      'buy-refused': 0,
-      right: 0,
-      wrong: 0,
-      'nothing-due': 0,
-      'clock-back': 0,
-      clipped: 0,
-      'every-word': 0,
-      checked: 0,
-    };
-    fc.assert(
-      fc.property(
-        fc.array(step, { minLength: 20, maxLength: 120, size: 'max' }),
-        (steps) => {
-          let s = rich(500);
-          // one scenario: each step plays on from the state the last one left
-          for (const e of steps) {
-            let r: Result | undefined;
-            if (e.kind === 'listen') s = listen(course, s);
-            if (e.kind === 'buy') {
-              r = buyEncounter(course, s, e.id, e.count);
-              reached[r.ok ? 'bought' : 'buy-refused']++;
-            }
-            if (e.kind === 'pick') {
-              r = pickUpWord(course, s);
-              reached[r.ok ? 'picked' : 'pick-refused']++;
-            }
-            if (e.kind === 'answer') {
-              const due = reviewQueue(s.words, s.wall);
-              const q = due[e.pick % Math.max(due.length, 1)];
-              if (q === undefined) reached['nothing-due']++;
-              else {
-                r = answerReview(course, s, q.itemId, e.correct);
-                if (r.ok) reached[e.correct ? 'right' : 'wrong']++;
-              }
-            }
-            if (e.kind === 'advance') {
-              const moved = advance(course, s, wallMs(s.wall + e.deltaMs));
-              if (e.deltaMs < 0) reached['clock-back']++;
-              if (moved.summary.clipped) reached.clipped++;
-              s = moved.state;
-            }
-            if (r?.ok === true) s = r.state;
-            const { checked, found } = faults(s);
-            reached.checked += checked;
-            if (found.length > 0) throw new Error(found.join('; '));
-          }
-          if (lexicon.every((x) => x.id in s.words)) reached['every-word']++;
-        },
-      ),
-      { seed: 474, numRuns: 25 },
-    );
-    played = reached;
-    return reached;
-  }
-
-  it('over random sequences of pick-ups, answers, purchases and returns', () => {
-    expect(Object.keys(play())).toEqual([...REACHED]);
+  it('over a sequence of pick-ups, answers, purchases and returns', () => {
+    expect(checkSequence(STEPS)).toEqual({
+      picked: 5,
+      'pick-refused': 1,
+      bought: 2,
+      'buy-refused': 1,
+      right: 3,
+      wrong: 2,
+      'nothing-due': 1,
+      'clock-back': 1,
+      clipped: 1,
+      'every-word': 1,
+      checked: 624,
+    });
   });
-
-  it.each(REACHED)(
-    'the random sequences reach %s as often as recorded',
-    (name) => {
-      expect(floorBreach(`core-words/${name}`, play()[name])).toBeUndefined();
-    },
-  );
 });
 
-/** Not an AC: the bucket helpers the tests rely on behave as stated. */
 describe('test fixtures', () => {
   it('played() picks all five words and reviews three, at a sim time mid-hour', () => {
     const s = played();

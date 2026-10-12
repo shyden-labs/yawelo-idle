@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import Decimal from 'decimal.js';
 import { generatorParameters } from 'ts-fsrs';
 import { DAY_MS } from '../src/clock';
@@ -10,6 +9,7 @@ import {
   retrievability,
 } from '../src/memory';
 import { exactMean } from './fsrs-reference';
+import { checkMeanBetween } from './memory-laws';
 import { MEAN_R_REFERENCE } from './mean-r-reference';
 
 /**
@@ -107,41 +107,28 @@ describe('the mean retrievability over a window (AC3)', () => {
     });
   }
 
-  // The mean lies between R at the window's ends exactly; the computed values
-  // meet that to the accuracy AC3 pins, since over a window of nanoseconds
-  // R(from), the mean and R(from + span) agree to an ulp or two.
-  const ROUNDING = 1e-14;
-
-  it('lies between R at the window’s end and R at its start', () => {
-    fc.assert(
-      fc.property(
-        fc.double({ min: 0.001, max: 36_500, noNaN: true }),
-        fc.double({ min: 0, max: 1e5, noNaN: true }),
-        fc.double({ min: 1e-9, max: 1e5, noNaN: true }),
-        (s, from, span) => {
-          const mean = meanRetrievability(s, from, span);
-          expect(mean).toBeLessThanOrEqual(
-            retrievability(s, from) * (1 + ROUNDING),
-          );
-          expect(mean).toBeGreaterThanOrEqual(
-            retrievability(s, from + span) * (1 - ROUNDING),
-          );
-        },
-      ),
-      { numRuns: 2000 },
-    );
-  });
+  // Stand-ins of the random windows (the properties suite runs them at the
+  // full count, #543): each bound of the stability, start and span drawn,
+  // and a mid-range window. The counterexample the property found is the
+  // test after these.
+  it.each([
+    [0.001, 0, 1e-9],
+    [36_500, 1e5, 1e5],
+    [2.3, 10, 1],
+  ])(
+    'lies between R at the window’s end and R at its start, for S %s from %s over %s',
+    (s, from, span) => {
+      checkMeanBetween(s, from, span);
+    },
+  );
 
   it('lies between them over a 1 ns window 100,000 days out, where R barely moves', () => {
-    // Found by the property above (6 in 2,000,000 runs, 2026-10-02).
+    // Found by the property (properties/memory.test.ts), 6 in 2,000,000
+    // runs, 2026-10-02.
     const [s, from, span] = [
       0.002616681480501123, 99999.99999999977, 1.0000000000000034e-9,
     ];
-    const mean = meanRetrievability(s, from, span);
-    expect(mean).toBeLessThanOrEqual(retrievability(s, from) * (1 + ROUNDING));
-    expect(mean).toBeGreaterThanOrEqual(
-      retrievability(s, from + span) * (1 - ROUNDING),
-    );
+    checkMeanBetween(s, from, span);
   });
 
   for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY])

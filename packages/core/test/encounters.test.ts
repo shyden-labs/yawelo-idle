@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import Decimal from 'decimal.js';
 import type { Encounter } from '../src/course';
 import {
@@ -8,7 +7,17 @@ import {
   purchaseCost,
 } from '../src/encounters';
 import { BALANCE } from '../src/balance';
-import { Num as NumOf, type Num, type NumTuple } from '../src/num';
+import { Num as NumOf, type NumTuple } from '../src/num';
+import {
+  checkBulkIsSingles,
+  checkClosedForm,
+  costBound,
+  D,
+  exact,
+  exactCost,
+  relativeError,
+  tea,
+} from './encounters-laws';
 
 /**
  * Encounter costs, bulk buy and milestones (#27 AC2, AC3).
@@ -23,31 +32,6 @@ import { Num as NumOf, type Num, type NumTuple } from '../src/num';
  * Measured worst over n <= 1000, k <= 300: 1.07e-13 against the reference,
  * 2.9e-14 between a bulk buy and the same purchases made singly.
  */
-
-const D = Decimal.clone({ precision: 60 });
-const GROWTH = new D('1.15');
-
-const tea: Encounter = { id: 'tea', tags: ['food'], c0: 10, p0: 0.1 };
-
-function exact(n: Num): Decimal {
-  return new D(n.mantissa).mul(new D(10).pow(n.exponent));
-}
-
-function relativeError(got: Num, want: Decimal): number {
-  return exact(got).sub(want).div(want).abs().toNumber();
-}
-
-function costBound(owned: number, count: number, cost: Decimal): number {
-  const log10 = Math.abs(cost.log(10).toNumber());
-  return 8 * 6e-16 * (owned + count + log10 + 4);
-}
-
-function exactCost(c0: number, owned: number, count: number): Decimal {
-  return new D(c0)
-    .mul(GROWTH.pow(owned))
-    .mul(GROWTH.pow(count).sub(1))
-    .div(GROWTH.sub(1));
-}
 
 describe('purchaseCost (AC2)', () => {
   it.each([
@@ -68,45 +52,30 @@ describe('purchaseCost (AC2)', () => {
       expect(relativeError(got, want)).toBeLessThan(costBound(owned, 1, want));
     });
 
-  it('buying k uses the geometric series closed form', () => {
-    // 280 random purchases a run against 60-digit decimal.js (#474: 1,000
-    // took 0.7 s of CPU), and every run draws 280 new ones.
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 2000 }),
-        fc.integer({ min: 1, max: 500 }),
-        fc.integer({ min: 1, max: 1_000_000 }),
-        (owned, count, c0) => {
-          const encounter = { ...tea, c0 };
-          const want = exactCost(c0, owned, count);
-          const got = purchaseCost(encounter, owned, count);
-          expect(relativeError(got, want)).toBeLessThan(
-            costBound(owned, count, want),
-          );
-        },
-      ),
-      { numRuns: 280 },
-    );
-  });
+  // Stand-ins of the random purchases (properties/encounters.test.ts, #543):
+  // each bound of owned, count and c0 drawn, and one between.
+  it.each([
+    [0, 1, 1],
+    [2000, 500, 1_000_000],
+    [1999, 1, 7],
+    [137, 42, 10],
+  ])(
+    'buying k uses the geometric series closed form: %i owned, %i bought, c0 %i',
+    (owned, count, c0) => {
+      checkClosedForm(owned, count, c0);
+    },
+  );
 
-  it('buying k at once costs what k single purchases cost', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 1000 }),
-        fc.integer({ min: 1, max: 200 }),
-        (owned, count) => {
-          const bulk = exact(purchaseCost(tea, owned, count));
-          let singles = new D(0);
-          for (let i = 0; i < count; i++) {
-            singles = singles.add(exact(purchaseCost(tea, owned + i, 1)));
-          }
-          const difference = bulk.sub(singles).div(singles).abs().toNumber();
-          expect(difference).toBeLessThan(2 * costBound(owned, count, singles));
-        },
-      ),
-      { numRuns: 200 },
-    );
-  });
+  it.each([
+    [0, 1],
+    [1000, 200],
+    [500, 37],
+  ])(
+    'buying k at once costs what k single purchases cost: %i owned, %i bought',
+    (owned, count) => {
+      checkBulkIsSingles(owned, count);
+    },
+  );
 
   it.each([
     [-1, 1],

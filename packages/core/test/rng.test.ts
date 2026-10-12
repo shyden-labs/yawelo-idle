@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import {
   createStreams,
   drawFrom,
@@ -10,6 +9,14 @@ import {
   seedRng,
   type RngState,
 } from '../src/rng';
+import {
+  checkFloatRange,
+  checkIndependent,
+  checkIntRange,
+  checkJsonRoundTrip,
+  NAMES,
+  take,
+} from './rng-laws';
 
 /**
  * The seeded PRNG (M1 design §3, #26 AC6): xoshiro128** on four 32-bit words,
@@ -19,17 +26,6 @@ import {
  * and splitmix64.c), compiled and run on 2026-10-01, never from this module:
  * a vector produced by the code under test could not disagree with it.
  */
-
-function take(state: RngState, n: number): number[] {
-  const out: number[] = [];
-  let s = state;
-  for (let i = 0; i < n; i++) {
-    const r = nextU32(s);
-    out.push(r.value);
-    s = r.state;
-  }
-  return out;
-}
 
 describe('xoshiro128**', () => {
   it('matches the reference C from state {1, 2, 3, 4}', () => {
@@ -58,20 +54,16 @@ describe('xoshiro128**', () => {
     expect(state).toEqual({ s: [1, 2, 3, 4] });
   });
 
-  it('round-trips through JSON and continues the same sequence', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER }),
-        fc.integer({ min: 0, max: 50 }),
-        (seed, skip) => {
-          let s = seedRng(seed);
-          for (let i = 0; i < skip; i++) s = nextU32(s).state;
-          const revived = JSON.parse(JSON.stringify(s)) as RngState;
-          expect(take(revived, 8)).toEqual(take(s, 8));
-        },
-      ),
-    );
-  });
+  it.each([
+    [0, 0],
+    [42, 7],
+    [Number.MAX_SAFE_INTEGER, 50],
+  ])(
+    'round-trips through JSON from seed %s after %s draws, and continues the same sequence',
+    (seed, skip) => {
+      checkJsonRoundTrip(seed, skip);
+    },
+  );
 
   it.each([-1, 1.5, NaN, 2 ** 53])('refuses seed %s', (seed) => {
     expect(() => seedRng(seed)).toThrow(RangeError);
@@ -86,25 +78,22 @@ describe('derived draws', () => {
   it('nextFloat is u32 / 2^32, in [0, 1)', () => {
     const s = seedRng(42);
     expect(nextFloat(s).value).toBe(1776835114 / 4294967296);
-    fc.assert(
-      fc.property(fc.integer({ min: 0, max: 1e9 }), (seed) => {
-        const v = nextFloat(seedRng(seed)).value;
-        expect(v >= 0 && v < 1).toBe(true);
-      }),
-    );
   });
 
-  it('nextInt(n) stays in [0, n) and rejects the biased tail', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 1e9 }),
-        fc.integer({ min: 1, max: 2 ** 32 }),
-        (seed, n) => {
-          const v = nextInt(seedRng(seed), n).value;
-          expect(Number.isInteger(v) && v >= 0 && v < n).toBe(true);
-        },
-      ),
-    );
+  it.each([0, 42, 1e9])('nextFloat from seed %s is in [0, 1)', (seed) => {
+    checkFloatRange(seed);
+  });
+
+  it.each([
+    [0, 1],
+    [42, 3],
+    [7, 3 * 2 ** 30],
+    [1e9, 2 ** 32],
+  ])('nextInt from seed %s stays in [0, %s)', (seed, n) => {
+    checkIntRange(seed, n);
+  });
+
+  it('nextInt(n) rejects the biased tail', () => {
     // n = 3 * 2^30: the top quarter of u32 values is the biased tail. From
     // state {1, 2, 3, 4} the outputs are 11520, ... so the first is accepted.
     expect(nextInt({ s: [1, 2, 3, 4] }, 3 * 2 ** 30).value).toBe(11520);
@@ -123,8 +112,6 @@ describe('derived draws', () => {
 });
 
 describe('named sub-streams', () => {
-  const NAMES = ['recall', 'latency', 'opens'];
-
   it('intFrom draws nextInt from one stream and leaves the others as they were', () => {
     const streams = createStreams(7, NAMES);
     const latency = streams['latency'];
@@ -153,39 +140,36 @@ describe('named sub-streams', () => {
     expect(createStreams(8, NAMES)).not.toEqual(a);
   });
 
-  // Each stream's values equal drawing that stream alone, whatever the
-  // interleaving with the others: one property per stream.
+  // Stand-ins of the random interleavings: none, the stream alone, and one
+  // of 13 draws that takes each stream first, between and last.
+  const ORDERS: [string, string[]][] = [
+    ['no draws', []],
+    ['one draw of each', ['opens', 'recall', 'latency']],
+    [
+      '13 interleaved draws',
+      [
+        'opens',
+        'recall',
+        'latency',
+        'recall',
+        'recall',
+        'opens',
+        'latency',
+        'latency',
+        'recall',
+        'opens',
+        'opens',
+        'recall',
+        'latency',
+      ],
+    ],
+  ];
+
   for (const name of NAMES)
-    it(`are independent: drawing the others never changes ${name}`, () => {
-      let longest = 0;
-      fc.assert(
-        fc.property(
-          fc.array(fc.constantFrom(...NAMES), { maxLength: 60, size: 'max' }),
-          (order) => {
-            longest = Math.max(longest, order.length);
-            let streams = createStreams(7, NAMES);
-            const seen: number[] = [];
-            for (const drawn of order) {
-              const r = drawFrom(streams, drawn);
-              if (drawn === name) seen.push(r.value);
-              streams = r.streams;
-            }
-            let alone = createStreams(7, NAMES);
-            const solo: number[] = [];
-            for (let i = 0; i < seen.length; i++) {
-              const r = drawFrom(alone, name);
-              solo.push(r.value);
-              alone = r.streams;
-            }
-            expect(seen).toEqual(solo);
-          },
-        ),
-      );
-      // fast-check's default size never generates more than 10 elements
-      // (measured, #27), whatever maxLength says: the property must reach
-      // longer interleavings than that.
-      expect(longest).toBeGreaterThan(10);
-    });
+    for (const [label, order] of ORDERS)
+      it(`are independent: drawing the others never changes ${name}, over ${label}`, () => {
+        checkIndependent(name, order);
+      });
 
   it('refuse an unknown name, a duplicate and a name outside [a-z0-9-]', () => {
     expect(() => drawFrom(createStreams(1, NAMES), 'missing')).toThrow(
