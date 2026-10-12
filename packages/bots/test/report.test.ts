@@ -19,6 +19,7 @@ const run: PersonaRun = {
   returnsPracticeOnly: [8.40249],
   insane: ['rate'],
   events: 1234,
+  views: 2,
   cpuMs: 4567.89,
 };
 

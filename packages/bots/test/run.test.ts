@@ -5,21 +5,25 @@ import {
   view,
   wallMs,
   type Course,
+  type GameEvent,
+  type GameState,
   type View,
 } from '@yawelo-idle/core';
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
 } from '@yawelo-idle/core/fixtures/synthetic-course';
+import type { QuickReturn, Watcher } from '../src/player';
 import { persona } from '../src/personas';
 import {
   insaneValues,
   reachedAt,
   runPersona,
   SailLog,
-  type PersonaRun,
+  type RunPlayer,
 } from '../src/run';
-import { QUICK_RETURN_MS } from '../src/schedule';
+import { DAY_MS, dayOpens, QUICK_RETURN_MS, WAKE_MS } from '../src/schedule';
+import { Streams } from '../src/streams';
 
 /** A run, measured (#35 AC4 (h), AC6). */
 
@@ -93,85 +97,168 @@ describe('insaneValues', () => {
   });
 });
 
-describe('runPersona', () => {
-  // The run's bookkeeping is the same for every persona, so these tests play
-  // the cheapest one that reaches each case: the Capped buyer's first day
-  // (3 opens, a sail at its second, about 130 ms of CPU cold) is played once
-  // and shared (#475). Which personas meet the pacing targets is the pacing
-  // suite's question.
-  let cappedDay: PersonaRun | undefined;
-  function cappedFirstDay(): PersonaRun {
-    cappedDay ??= runPersona(course(), persona('capped'), BOT_EPOCH_WALL_MS, 1);
-    return cappedDay;
+describe('runPersona, played by a stand-in', () => {
+  // The run's bookkeeping, with a scripted stand-in for the Player: the real
+  // Capped buyer's first day costs about 50 ms of CPU warm, past the unit
+  // limit on a busy laptop, so it is played in the pacing suite
+  // (packages/bots/pacing/run.test.ts, #544).
+
+  /** One open of the stand-in. */
+  interface Scripted {
+    /** Applies a Set Sail a minute in, reaching the finale if `finale`. */
+    readonly sails?: boolean;
+    readonly finale?: boolean;
+    /** Whether the open offered a decision. */
+    readonly decided?: boolean;
+    /** What a quick return after the open finds. */
+    readonly returns?: QuickReturn;
+    /** The view it decides from, in place of the game's. */
+    readonly sees?: View;
   }
 
-  it('plays the Capped buyer’s first day: 3 opens, sails timed from the first open', () => {
-    const run = cappedFirstDay();
+  /**
+   * A player that plays `script`, one entry an open: it sees a view and
+   * applies a Listen at each open's start, and a Set Sail where scripted.
+   */
+  function scripted(script: readonly Scripted[]) {
+    return (initial: GameState, watcher: Watcher): RunPlayer => {
+      let state = initial;
+      let now: number = initial.wall;
+      let opened = -1;
+      let seq = 0;
+      const applied = (event: GameEvent) => {
+        watcher.applied?.(event, state);
+      };
+      return {
+        get state() {
+          return state;
+        },
+        get now() {
+          return now;
+        },
+        open(startMs, lengthMs) {
+          opened += 1;
+          const step = script[opened] ?? {};
+          now = startMs;
+          watcher.saw?.(step.sees ?? view(course(), state, wallMs(now)));
+          applied({ type: 'listen', seq: (seq += 1), wallMs: wallMs(now) });
+          if (step.sails === true) {
+            now += 60_000;
+            state = {
+              ...state,
+              destination: state.destination + 1,
+              finale: step.finale === true,
+            };
+            applied({ type: 'setSail', seq: (seq += 1), wallMs: wallMs(now) });
+          }
+          now = startMs + lengthMs;
+          return step.decided ?? true;
+        },
+        returnAfter() {
+          return script[opened]?.returns ?? 'decision';
+        },
+      };
+    };
+  }
+
+  const capped = () => persona('capped');
+  const firstOpenMs = BOT_EPOCH_WALL_MS + WAKE_MS;
+  /** The Capped buyer's first day of opens, as the schedule draws them. */
+  const firstDay = () =>
+    dayOpens(capped(), BOT_EPOCH_WALL_MS, 0, new Streams(capped().seed));
+  const play = (script: readonly Scripted[], stopAfterSails?: number) =>
+    runPersona(course(), capped(), BOT_EPOCH_WALL_MS, 1, {
+      player: scripted(script),
+      ...(stopAfterSails === undefined ? {} : { stopAfterSails }),
+    });
+
+  it('records the day each open starts, from the first open', () => {
+    const opens = firstDay();
+    const run = play([{}, {}, {}]);
     expect(run.persona).toBe('capped');
+    expect(run.openDays).toEqual(
+      opens.map((o) => (o.startMs - firstOpenMs) / DAY_MS),
+    );
     expect(run.openDays).toHaveLength(3);
     expect(run.openDays[0]).toBe(0);
-    expect(run.openDays).toEqual([...run.openDays].sort((a, b) => a - b));
-    expect(run.openDays.filter((d) => d < 0 || d >= 1)).toEqual([]);
-    expect(run.events).toBeGreaterThan(100);
-    expect(run.cpuMs).toBeGreaterThan(0);
-    expect(run.insane).toEqual([]);
-    expect(run.sails.length).toBeGreaterThan(0);
-    const days = run.sails.map((s) => s.day);
-    expect(days.filter((d) => d <= 0 || d >= 1)).toEqual([]);
-    expect(days).toEqual([...days].sort((a, b) => a - b));
-    expect(run.sails.map((s) => s.destination)).toEqual(
-      run.sails.map((_, i) => i + 1),
-    );
+  });
+
+  it('counts every event applied and every view seen', () => {
+    const run = play([{}, { sails: true }, {}]);
+    expect(run.events).toBe(4);
+    expect(run.views).toBe(3);
+    expect(run.cpuMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('times each sail by the day it was applied, numbering the destinations', () => {
+    const run = play([{}, { sails: true }, {}]);
+    const [sail] = run.sails;
+    if (sail === undefined) throw new Error('the run never sailed');
+    expect(run.sails).toHaveLength(1);
+    // A new game stands at destination 0: the first sail is to route 1.
+    expect(sail.destination).toBe(1);
+    expect(sail.day).toBeCloseTo((run.openDays[1] ?? NaN) + 60_000 / DAY_MS);
+    expect(sail.reachedDay).toBeLessThanOrEqual(sail.day);
   });
 
   it('ends after the open in which the asked-for sails landed', () => {
-    const full = cappedFirstDay();
-    const stopped = runPersona(
-      course(),
-      persona('capped'),
-      BOT_EPOCH_WALL_MS,
-      1,
-      { stopAfterSails: 1 },
-    );
-    const [sail] = stopped.sails;
-    if (sail === undefined) throw new Error('the stopped run never sailed');
-    expect(stopped.sails).toEqual(full.sails.slice(0, stopped.sails.length));
-    expect(stopped.openDays).toEqual(
-      full.openDays.slice(0, stopped.openDays.length),
-    );
-    // The last open played is the one the sail landed in: it began before the
-    // sail, and the full run's next open begins after it.
-    const last = stopped.openDays.length - 1;
-    expect(stopped.openDays[last]).toBeLessThanOrEqual(sail.day);
-    expect(full.openDays[last + 1]).toBeGreaterThan(sail.day);
+    const script = [{}, { sails: true }, {}];
+    const full = play(script);
+    const stopped = play(script, 1);
+    expect(full.openDays).toHaveLength(3);
+    expect(stopped.openDays).toEqual(full.openDays.slice(0, 2));
+    expect(stopped.sails).toEqual(full.sails);
   });
 
-  it('judges a return 15 minutes after each of the first day’s 3 opens', () => {
-    const run = cappedFirstDay();
+  it('judges a return after each open, recording one that found nothing or only Practice', () => {
+    const run = play([
+      { returns: 'nothing' },
+      { returns: 'practice' },
+      { returns: 'decision' },
+    ]);
+    const opens = firstDay();
+    // A return is judged a quick return after the open ends.
+    const returnDay = (i: number) => {
+      const open = opens[i];
+      if (open === undefined) throw new RangeError(`no open ${String(i)}`);
+      return (
+        (open.startMs + open.lengthMs + QUICK_RETURN_MS - firstOpenMs) / DAY_MS
+      );
+    };
     expect(run.returnsJudged).toBe(3);
-    expect(run.returnsUndecided).toEqual([]);
-    expect(run.returnsPracticeOnly).toEqual([]);
+    expect(run.returnsUndecided).toHaveLength(1);
+    expect(run.returnsUndecided[0]).toBeCloseTo(returnDay(0));
+    expect(run.returnsPracticeOnly).toHaveLength(1);
+    expect(run.returnsPracticeOnly[0]).toBeCloseTo(returnDay(1));
   });
 
-  it('times a goal from when the Understanding earned that run reached it: no later than its sail, and hours before an open lets the Capped buyer sail', () => {
-    // A second sail costs over 0.3 s of CPU in every persona (measured, #475),
-    // so the clock's restart at each sail is SailLog's test below.
-    const { sails } = cappedFirstDay();
-    expect(sails.filter((s) => !Number.isFinite(s.reachedDay))).toEqual([]);
-    const outOfOrder = sails.filter(
-      (s) => s.reachedDay > s.day || s.reachedDay <= 0,
-    );
-    expect(outOfOrder).toEqual([]);
-    const waitedHours = sails.map((s) => (s.day - s.reachedDay) * 24);
-    expect(Math.max(...waitedHours)).toBeGreaterThan(1);
+  it('records an open that offered no decision', () => {
+    const run = play([{}, { decided: false }, {}]);
+    expect(run.undecided).toEqual([run.openDays[1]]);
+  });
+
+  it('stops at the finale, judging no return after it', () => {
+    const run = play([{}, { sails: true, finale: true }, {}]);
+    expect(run.openDays).toHaveLength(2);
+    expect(run.finaleDay).toBe(run.sails[0]?.day);
+    expect(run.returnsJudged).toBe(1);
+  });
+
+  it('records no finale when the run ends first', () => {
+    expect(play([{}, { sails: true }, {}]).finaleDay).toBeUndefined();
+  });
+
+  it('keeps what it saw that was not a sane value', () => {
+    const run = play([
+      {},
+      { sees: { ...cleanView(), understanding: forged(NaN, 0) } },
+      {},
+    ]);
+    expect(run.insane).toEqual(['understanding']);
   });
 
   it('waits 15 minutes for a quick return (operator, 2026-10-04)', () => {
     expect(QUICK_RETURN_MS).toBe(900_000);
-  });
-
-  it('records no finale when the run ends first', () => {
-    expect(cappedFirstDay().finaleDay).toBeUndefined();
   });
 });
 

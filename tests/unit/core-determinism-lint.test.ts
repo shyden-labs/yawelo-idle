@@ -35,6 +35,12 @@ const eslint = new ESLint({
   ],
 });
 
+// ESLint's first lint compiles each rule's option schema and warms the
+// parser: 37 ms of CPU on a quiet laptop and 122-176 ms on a busy one, which
+// fell on whichever ban ran first (#544). It runs with the file instead,
+// under #541's load limit.
+await eslint.lintText('export {};\n', { filePath: CORE_FIXTURE });
+
 async function lint(
   code: string,
   filePath: string,

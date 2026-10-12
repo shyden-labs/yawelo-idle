@@ -3,86 +3,43 @@ import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import {
   bestPayback,
-  initialState,
   Num,
   pickUpWord,
   upgradeCatalogue,
   view,
   wallMs,
-  type Course,
   type GameEvent,
   type GameState,
 } from '@yawelo-idle/core';
-import {
-  BOT_EPOCH_WALL_MS,
-  syntheticCourse,
-} from '@yawelo-idle/core/fixtures/synthetic-course';
-import { Player, STEP_MS } from '../src/player';
+import { Player } from '../src/player';
 import { persona } from '../src/personas';
 import { QUICK_RETURN_MS } from '../src/schedule';
 import { Streams } from '../src/streams';
+import {
+  buys,
+  course,
+  fresh,
+  HOUR_MS,
+  holding,
+  ONE_CHECK,
+  play,
+  shopAfter,
+  withWords,
+} from './open';
 
 /**
  * The policy (#35 AC3, M1 design §6): what a persona does at an open,
  * decided from `view` alone and sent through `apply`.
  */
 
-const HOUR_MS = 3_600_000;
-const FIRST_OPEN = BOT_EPOCH_WALL_MS + 8 * HOUR_MS;
 /** The route number of region 1's first destination, where Pemandu opens. */
 const REGION_1 = 4;
-/** An open long enough for its opening actions and exactly one check. */
-const ONE_CHECK = 25_000;
-
-let built: Course | undefined;
-function course(): Course {
-  built ??= syntheticCourse(1);
-  return built;
-}
-
-function fresh(): GameState {
-  return initialState(wallMs(FIRST_OPEN), 35);
-}
-
-/** `state` holding exactly `understanding`, anchored at its simulated time. */
-function holding(state: GameState, understanding: number): GameState {
-  return {
-    ...state,
-    anchor: {
-      sim: state.sim,
-      understanding: Num.toTuple(Num.from(understanding)),
-    },
-    runSpent: Num.toTuple(Num.from(0)),
-  };
-}
-
-/** `state` with `n` words of the pool picked up, due at once. */
-function withWords(state: GameState, n: number): GameState {
-  let s = holding(state, 1e30);
-  // one scenario: picking up n words is one player's run of pick-ups.
-  for (let k = 0; k < n; k += 1) {
-    const r = pickUpWord(course(), s);
-    if (!r.ok) throw new Error(JSON.stringify(r.rejection));
-    s = r.state;
-  }
-  return s;
-}
-
-/** Play one open of `lengthMs` on `state` as `name`; every accepted event, in order. */
-function play(
-  name: string,
-  state: GameState,
-  lengthMs: number,
-  nextOpenMs: number = state.wall + 8 * HOUR_MS,
-): { events: GameEvent[]; player: Player; decision: boolean } {
-  const events: GameEvent[] = [];
-  const p = persona(name);
-  const player = new Player(course(), p, state, new Streams(p.seed), {
-    applied: (event) => events.push(event),
-  });
-  const decision = player.open(state.wall, lengthMs, nextOpenMs);
-  return { events, player, decision };
-}
+/**
+ * Understanding for about 30 purchases in one check: enough for every
+ * buying style to show itself. 1e7 bought 220 at 25 to 40 ms of CPU, past
+ * the unit limit on a busy laptop, and buys by the same loop (#544).
+ */
+const RICH = 3_000;
 
 /** An Idler's player on a state with nothing affordable, due, free or available. */
 function idlePlayer(
@@ -99,16 +56,7 @@ function idlePlayer(
   return new Player(course(), p, idle, new Streams(p.seed));
 }
 
-/** What the shop offered just after the open's last action, before the clock moved on. */
-function shopAfter(player: Player, events: readonly GameEvent[]) {
-  const last = events.at(-1);
-  if (last === undefined) throw new Error('the open sent nothing');
-  return view(course(), player.state, wallMs(last.wallMs + STEP_MS)).shop;
-}
-
 const types = (events: readonly GameEvent[]) => events.map((e) => e.type);
-const buys = (events: readonly GameEvent[]) =>
-  events.filter((e) => e.type === 'buyEncounter' || e.type === 'pickUpWord');
 
 describe('the player reads nothing but view (AC3)', () => {
   /** The value imports of a bots module, by module specifier. */
@@ -184,7 +132,7 @@ describe('an open', () => {
   it('buys until nothing is affordable', () => {
     const { player, events } = play(
       'casual',
-      holding(withWords(fresh(), 3), 1e7),
+      holding(withWords(fresh(), 3), RICH),
       ONE_CHECK,
     );
     const shop = shopAfter(player, events);
@@ -210,7 +158,7 @@ describe('an open', () => {
   });
 
   it('the Capped Buyer makes 5 purchases in a check where the Casual Learner makes more', () => {
-    const rich = holding(withWords(fresh(), 3), 1e7);
+    const rich = holding(withWords(fresh(), 3), RICH);
     expect(buys(play('capped', rich, ONE_CHECK).events)).toHaveLength(5);
     expect(buys(play('casual', rich, ONE_CHECK).events).length).toBeGreaterThan(
       5,
@@ -218,7 +166,7 @@ describe('an open', () => {
   });
 
   it('the Random Buyer buys until nothing is affordable, in its own order', () => {
-    const rich = holding(withWords(fresh(), 3), 1e7);
+    const rich = holding(withWords(fresh(), 3), RICH);
     const random = play('random', rich, ONE_CHECK);
     const greedy = play('casual', rich, ONE_CHECK);
     const shop = shopAfter(random.player, random.events);

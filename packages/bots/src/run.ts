@@ -16,7 +16,7 @@ import {
   type View,
   view,
 } from '@yawelo-idle/core';
-import { Player } from './player';
+import { Player, type QuickReturn, type Watcher } from './player';
 import type { Persona } from './personas';
 import { dayOpens, DAY_MS, QUICK_RETURN_MS, WAKE_MS } from './schedule';
 import { Streams } from './streams';
@@ -52,6 +52,8 @@ export interface PersonaRun {
   readonly returnsPracticeOnly: readonly number[];
   /** The first values on the path that were NaN, negative or infinite. */
   readonly insane: readonly string[];
+  /** How many views the player decided from: what `insane` was judged over. */
+  readonly views: number;
   readonly events: number;
   /** Process CPU time the run took, in milliseconds. */
   readonly cpuMs: number;
@@ -108,9 +110,23 @@ function holdsMastered(state: GameState): boolean {
   return Object.values(state.words).some((w) => w.rank === 'mastered');
 }
 
+/** What a run asks of its player: the real `Player`, or a stand-in. */
+export interface RunPlayer {
+  readonly state: GameState;
+  readonly now: number;
+  open(startMs: number, lengthMs: number, nextOpenMs: number): boolean;
+  returnAfter(ms: number): QuickReturn;
+}
+
 export interface RunOptions {
   /** End the run after the open in which this many sails have landed (the calibration tool's early exit). */
   readonly stopAfterSails?: number;
+  /**
+   * Plays in place of the real `Player`, from the run's first state, telling
+   * `watcher` what it does: the unit suite's stand-in, which checks the
+   * run's bookkeeping without the game's cost (#544).
+   */
+  readonly player?: (initial: GameState, watcher: Watcher) => RunPlayer;
 }
 
 /** Whether the Understanding earned this run meets the sail's goal at `atMs`, nothing done meanwhile. */
@@ -237,6 +253,7 @@ export function runPersona(
   let firstMasteredDay: number | undefined;
   let finaleDay: number | undefined;
   let events = 0;
+  let views = 0;
   const streams = new Streams(persona.seed);
   const initial = initialState(wallMs(epochMs), persona.seed);
   const log = new SailLog<GameState>(
@@ -245,8 +262,9 @@ export function runPersona(
     dayOf,
   );
   const { sails } = log;
-  const player = new Player(course, persona, initial, streams, {
+  const watcher: Watcher = {
     saw: (v) => {
+      views += 1;
       if (insane.length < INSANE_KEPT) {
         insane.push(...insaneValues(v).slice(0, INSANE_KEPT - insane.length));
       }
@@ -264,7 +282,10 @@ export function runPersona(
         firstMasteredDay = dayOf(event.wallMs);
       }
     },
-  });
+  };
+  const player =
+    options.player?.(initial, watcher) ??
+    new Player(course, persona, initial, streams, watcher);
   const openDays: number[] = [];
   const undecided: number[] = [];
   let returnsJudged = 0;
@@ -309,6 +330,7 @@ export function runPersona(
     returnsUndecided,
     returnsPracticeOnly,
     insane,
+    views,
     events,
     cpuMs: (used.user + used.system) / 1_000,
   };

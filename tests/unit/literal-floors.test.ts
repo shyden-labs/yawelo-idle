@@ -505,11 +505,11 @@ describe('the meta-guard sees every form planted in every kind of file', () => {
 
 /**
  * The burn-down list's size: 71 sites in 58 scopes when the meta-guard landed
- * (#378), lowered with each conversion (#474: 57 in 51; #475: 55 in 50). It
- * only shrinks.
+ * (#378), lowered with each conversion (#474: 57 in 51; #475: 55 in 50;
+ * #544: 53 in 48). It only shrinks.
  */
-const CEILING_SITES = 55;
-const CEILING_SCOPES = 50;
+const CEILING_SITES = 52;
+const CEILING_SCOPES = 47;
 
 describe('every literal minimum of two or more is recorded, or listed (#378)', () => {
   it('only shrinks the burn-down list', () => {

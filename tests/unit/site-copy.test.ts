@@ -395,8 +395,31 @@ describe('attestedName', () => {
     ['Bali', 'Balinese script', false],
     ['Ctrl+D', '(⌘D / Ctrl+D; on iPhone', true],
     ['Insight', 'insight', false],
+    ['Jawa', 'Jawa', true],
+    ['Jawa', 'see Jawa.', true],
+    ['Jawa', 'Jawanese', false],
+    ['Jawa', 'Jawa2', false],
+    ['Jawa', 'xJawa', false],
+    ['Jawa', '2Jawa', false],
+    ['Jawa', 'éJawa', false],
+    ['Jawa', 'Jawaé', false],
+    ['Jawa', 'Jawanese, then Jawa', true],
+    ['Jawa', '\u{1D400}Jawa', false],
+    ['Jawa', 'Jawa\u{1D7CE}', false],
+    ['Jawa', '\u{1F600}Jawa\u{1F600}', true],
   ])('%s in %j is %s', (token, text, expected) => {
     expect(attestedName(token, [text])).toBe(expected);
+  });
+
+  it('reads every source the line cites', () => {
+    expect(attestedName('Jawa', ['Bali', 'Jawanese', 'to Jawa'])).toBe(true);
+    expect(attestedName('Jawa', ['Bali', 'Jawanese'])).toBe(false);
+  });
+
+  it('refuses a blank name', () => {
+    expect(() => attestedName('', ['Jawa'])).toThrow(
+      'a name to attest is blank',
+    );
   });
 });
 
