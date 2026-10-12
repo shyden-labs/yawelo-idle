@@ -1,29 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
-import { syntheticCourse } from '../fixtures/synthetic-course';
-import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
+import { HOUR_MS, wallMs } from '../src/clock';
 import type { Course } from '../src/course';
 import type { GameEvent } from '../src/events';
-import { collectJourney, startJourney } from '../src/journeys';
 import { apply, replay } from '../src/log';
-import { newWordMemory } from '../src/memory';
 import { Num } from '../src/num';
-import { sailPreview, setSail } from '../src/sail';
-import {
-  advance,
-  answerPractice,
-  answerReview,
-  buyEncounter,
-  buyGrammarNode,
-  buyUpgrade,
-  listen,
-  pickUpWord,
-  setAutomation,
-  type Result,
-} from '../src/sim';
+import { sailPreview } from '../src/sail';
+import { advance, listen } from '../src/sim';
 import { initialState, type GameState } from '../src/state';
 import { offlineCapMs } from '../src/upgrades';
-import { floorBreach } from '../../../tests/floors';
+import {
+  START,
+  MINUTE_MS,
+  course,
+  rich,
+  firstWord,
+  scenario,
+  direct,
+  before,
+  TYPE_INDEXES,
+  TYPES,
+  checkApply,
+  checkCommute,
+} from './log-laws';
 
 /**
  * `apply` and `replay` (#34 AC2, AC3, AC6; design §4, §7): the event log is
@@ -32,188 +30,12 @@ import { floorBreach } from '../../../tests/floors';
  * event's wall time.
  */
 
-const START: WallMs = wallMs(Date.UTC(2027, 0, 4, 8));
-const MINUTE_MS = 60_000;
-
-let builtCourse: Course | undefined;
-/** The synthetic course, built on first use rather than at collection (#97). */
-function course(): Course {
-  builtCourse ??= syntheticCourse(1);
-  return builtCourse;
-}
-
-/** The number of the first destination of region 2: grammar and Pemandu are open there. */
-function regionTwoStart(c: Course): number {
-  return c.regions[0]?.destinations.length ?? 0;
-}
-
-/**
- * A state at region 2's first destination with plenty of every currency and
- * every word of its lexicon but the last held and due, so each event type
- * has something it can do. Plain data, so it is built by spreading.
- */
-function rich(c: Course): GameState {
-  const number = regionTwoStart(c);
-  const lexicon = c.regions[1]?.destinations[0]?.lexicon ?? [];
-  const base = initialState(START, 34);
-  return {
-    ...base,
-    anchor: { sim: base.sim, understanding: Num.toTuple(Num.from(1e40)) },
-    insight: Num.toTuple(Num.from(1e12)),
-    stamps: 1000,
-    stampsEarned: 1000,
-    destination: number,
-    reached: number,
-    words: Object.fromEntries(
-      lexicon.slice(0, -1).map((item) => [item.id, newWordMemory(START)]),
-    ),
-  };
-}
-
-function firstWord(c: Course): string {
-  return c.regions[1]?.destinations[0]?.lexicon[0]?.id ?? '';
-}
-
-/**
- * One event of each type, in an order where each is accepted: resume first,
- * Set Sail last, since a sail resets Encounters and Understanding.
- */
-function scenario(c: Course): readonly GameEvent[] {
-  const at = (minutes: number): WallMs => wallMs(START + minutes * MINUTE_MS);
-  const encounter = c.regions[0]?.encounters[0]?.id ?? '';
-  const node = c.regions[0]?.grammarNodes[0]?.id ?? '';
-  return [
-    { type: 'resume', seq: 1, wallMs: at(1) },
-    { type: 'listen', seq: 2, wallMs: at(2) },
-    { type: 'buyEncounter', seq: 3, wallMs: at(3), id: encounter, count: 3 },
-    { type: 'pickUpWord', seq: 4, wallMs: at(4) },
-    {
-      type: 'answerReview',
-      seq: 5,
-      wallMs: at(5),
-      itemId: firstWord(c),
-      correct: true,
-      latencyMs: 2500,
-      promptType: 'choice',
-    },
-    { type: 'answerPractice', seq: 6, wallMs: at(6), itemId: firstWord(c) },
-    { type: 'buyUpgrade', seq: 7, wallMs: at(7), id: 'offlineCap' },
-    { type: 'startJourney', seq: 8, wallMs: at(8), slot: 0, durationId: '2h' },
-    { type: 'collectJourney', seq: 9, wallMs: at(8 + 121), slot: 0 },
-    { type: 'buyGrammarNode', seq: 10, wallMs: at(130), id: node },
-    {
-      type: 'setAutomation',
-      seq: 11,
-      wallMs: at(131),
-      enabled: true,
-      intervalMs: 10_000,
-    },
-    { type: 'setSail', seq: 12, wallMs: at(132) },
-  ];
-}
-
-/**
- * The action an event names, called directly: the reference `apply` is
- * checked against. Written out here rather than shared with `log.ts`.
- */
-function direct(c: Course, state: GameState, event: GameEvent): Result {
-  const at = advance(c, state, event.wallMs).state;
-  switch (event.type) {
-    case 'resume':
-      return { ok: true, state: at };
-    case 'listen':
-      return { ok: true, state: listen(c, at) };
-    case 'buyEncounter':
-      return buyEncounter(c, at, event.id, event.count);
-    case 'pickUpWord':
-      return pickUpWord(c, at);
-    case 'answerReview':
-      return answerReview(c, at, event.itemId, event.correct);
-    case 'answerPractice':
-      return answerPractice(at, event.itemId);
-    case 'buyUpgrade':
-      return buyUpgrade(c, at, event.id);
-    case 'startJourney':
-      return startJourney(c, at, event.slot, event.durationId);
-    case 'collectJourney':
-      return collectJourney(c, at, event.slot);
-    case 'setSail':
-      return setSail(c, at, event.to);
-    case 'buyGrammarNode':
-      return buyGrammarNode(c, at, event.id);
-    case 'setAutomation':
-      return setAutomation(c, at, event.enabled, event.intervalMs);
-  }
-}
-
-const befores = new WeakMap<Course, GameState[]>();
-
-/**
- * The state before scenario event `index`, every earlier one accepted,
- * memoised per course: states are immutable, and the property below asks
- * for them hundreds of times.
- */
-function before(c: Course, index: number): GameState {
-  const states = befores.get(c) ?? [rich(c)];
-  befores.set(c, states);
-  const events = scenario(c);
-  while (states.length <= index) {
-    const event = events[states.length - 1];
-    const last = states[states.length - 1];
-    if (event === undefined || last === undefined) {
-      throw new RangeError(`no scenario state ${String(index)}`);
-    }
-    const result = apply(c, last, event);
-    if (!result.ok) throw new Error(`scenario ${String(event.seq)} refused`);
-    states.push(result.state);
-  }
-  const state = states[index];
-  if (state === undefined)
-    throw new RangeError(`no scenario state ${String(index)}`);
-  return state;
-}
-
-/** A deep copy of plain data, kept apart from the value it copies. */
-function deepCopy<T>(value: T): T {
-  if (Array.isArray(value)) return value.map(deepCopy) as T;
-  if (typeof value === 'object' && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, deepCopy(child)]),
-    ) as T;
-  }
-  return value;
-}
-
-/** Freeze a state all the way down, so any write to it throws. */
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
-    Object.freeze(value);
-    for (const child of Object.values(value)) deepFreeze(child);
-  }
-  return value;
-}
-
-const TYPES = [
-  'resume',
-  'listen',
-  'buyEncounter',
-  'pickUpWord',
-  'answerReview',
-  'answerPractice',
-  'buyUpgrade',
-  'startJourney',
-  'collectJourney',
-  'buyGrammarNode',
-  'setAutomation',
-  'setSail',
-] as const;
-
 describe('apply dispatches each event to its action (design §4)', () => {
   it('the scenario has one event of each type, in this order', () => {
     expect(scenario(course()).map((e) => e.type)).toEqual(TYPES);
   });
 
-  it.each(TYPES.map((type, index) => ({ type, index })))(
+  it.each(TYPE_INDEXES)(
     '$type: accepted, the action’s state with the event’s seq',
     ({ index }) => {
       const c = course();
@@ -385,57 +207,90 @@ describe('resume (operator, 2026-10-03)', () => {
 });
 
 describe('a refused event leaves state unchanged (AC2)', () => {
-  // One property per event type, so each type is drawn 30 times by
-  // construction (#474). One property over any event took 0.6 s of CPU for
-  // 400 runs and left types to the seed: at 200 runs it never accepted a
-  // purchase. Each type's refused and accepted events, and its refusal kinds,
-  // are recorded floors.
-  it.each(TYPES)(
-    'for any %s event at any point of the scenario, apply never throws and never writes to its input',
-    (type) => {
-      const c = course();
-      let accepted = 0;
-      let refused = 0;
-      const kinds = new Set<string>();
-      fc.assert(
-        fc.property(
-          fc.integer({ min: 0, max: TYPES.length }),
-          eventOf(c, type),
-          (index, partial) => {
-            const state = deepFreeze(before(c, index));
-            const snapshot = deepCopy(state);
-            // The arbitrary's wallMs is an offset from the state's wall clock.
-            const event = {
-              ...partial,
-              seq: state.seq + 1,
-              wallMs: wallMs(state.wall + partial.wallMs),
-            } as GameEvent;
-            const result = apply(c, state, event);
-            expect(state).toEqual(snapshot);
-            if (result.ok) accepted += 1;
-            else {
-              refused += 1;
-              kinds.add(result.rejection.kind);
-            }
-            expect(result).toEqual(
-              (() => {
-                const reference = direct(c, state, event);
-                return reference.ok
-                  ? { ok: true, state: { ...reference.state, seq: event.seq } }
-                  : reference;
-              })(),
-            );
-          },
-        ),
-        { seed: 34, numRuns: 30 },
-      );
-      expect({
-        accepted: floorBreach(`core-log/${type}-accepted`, accepted),
-        refused: floorBreach(`core-log/${type}-refused`, refused),
-        kinds: floorBreach(`core-log/${type}-refusal-kinds`, kinds.size),
-      }).toEqual({ accepted: undefined, refused: undefined, kinds: undefined });
-    },
-  );
+  // Stand-ins of the random events (properties/log.test.ts, #543): for each
+  // type, a valid event at the point of the scenario where that type comes,
+  // and a mangled one (an unknown id, a slot or count out of range, a clock
+  // pushed back) at the start. What `apply` answered is pinned, measured
+  // 2026-10-12: 'undefined' where it accepted, else the refusal's kind.
+  // Every valid event is accepted; a clock pushed back is clamped, so the
+  // mangled resume, listen and pick-up are accepted too.
+  type Fields = Readonly<Record<string, unknown>>;
+  const STAND_INS = (
+    c: Course,
+  ): Record<(typeof TYPES)[number], [Fields, Fields]> => {
+    const encounter = c.regions[1]?.encounters[0]?.id ?? '';
+    const node = c.regions[1]?.grammarNodes[0]?.id ?? '';
+    const word = firstWord(c);
+    return {
+      resume: [{ wallMs: 0 }, { wallMs: -HOUR_MS }],
+      listen: [{ wallMs: MINUTE_MS }, { wallMs: 3 * HOUR_MS }],
+      buyEncounter: [
+        { id: encounter, count: 1 },
+        { id: 'none', count: Number.MAX_SAFE_INTEGER },
+      ],
+      pickUpWord: [{ wallMs: 0 }, { wallMs: -HOUR_MS }],
+      answerReview: [
+        { itemId: word, correct: true, latencyMs: 2500, promptType: 'choice' },
+        { itemId: 'none', correct: false, latencyMs: 0, promptType: 'tiles' },
+      ],
+      answerPractice: [{ itemId: word }, { itemId: 'none' }],
+      buyUpgrade: [{ id: 'offlineCap' }, { id: 'none' }],
+      startJourney: [
+        { slot: 0, durationId: '2h' },
+        { slot: 4, durationId: 'none' },
+      ],
+      collectJourney: [{ slot: 0, wallMs: 3 * HOUR_MS }, { slot: 4 }],
+      buyGrammarNode: [{ id: node }, { id: 'none' }],
+      setAutomation: [
+        { enabled: true, intervalMs: 10_000 },
+        { enabled: true, intervalMs: 7 },
+      ],
+      setSail: [{}, { to: 'none' }],
+    };
+  };
+  const ANSWERED: Record<string, string> = {
+    'resume valid': 'undefined',
+    'resume mangled': 'undefined',
+    'listen valid': 'undefined',
+    'listen mangled': 'undefined',
+    'buyEncounter valid': 'undefined',
+    'buyEncounter mangled': 'unknownEncounter',
+    'pickUpWord valid': 'undefined',
+    'pickUpWord mangled': 'undefined',
+    'answerReview valid': 'undefined',
+    'answerReview mangled': 'unknownWord',
+    'answerPractice valid': 'undefined',
+    'answerPractice mangled': 'unknownWord',
+    'buyUpgrade valid': 'undefined',
+    'buyUpgrade mangled': 'unknownUpgrade',
+    'startJourney valid': 'undefined',
+    'startJourney mangled': 'unknownSlot',
+    'collectJourney valid': 'undefined',
+    'collectJourney mangled': 'unknownSlot',
+    'buyGrammarNode valid': 'undefined',
+    'buyGrammarNode mangled': 'unknownGrammarNode',
+    'setAutomation valid': 'undefined',
+    'setAutomation mangled': 'intervalNotOwned',
+    'setSail valid': 'undefined',
+    'setSail mangled': 'sailTargetInvalid',
+  };
+
+  for (const type of TYPES)
+    for (const which of ['valid', 'mangled'] as const)
+      it(`for a ${which} ${type} event, apply never throws and never writes to its input`, () => {
+        const c = course();
+        const [valid, mangled] = STAND_INS(c)[type];
+        const at = which === 'valid' ? TYPES.indexOf(type) : 0;
+        const partial = {
+          type,
+          seq: 0,
+          wallMs: 0,
+          ...(which === 'valid' ? valid : mangled),
+        } as GameEvent;
+        expect(String(checkApply(c, at, partial))).toBe(
+          ANSWERED[`${type} ${which}`],
+        );
+      });
 
   it('a log with a refused event inserted replays to the state without it', () => {
     const c = course();
@@ -502,36 +357,18 @@ describe('replay (AC6)', () => {
 });
 
 describe('apply and advance commute within the offline cap (design §7)', () => {
-  it('advance then apply equals apply then advance, the event being later', () => {
-    const c = course();
-    let reached = 0;
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: TYPES.length }),
-        fc.integer({ min: 0, max: 4 * HOUR_MS }),
-        fc.integer({ min: 0, max: 2 * HOUR_MS }),
-        (index, first, second) => {
-          reached += 1;
-          const state = before(c, index);
-          const t = wallMs(state.wall + first);
-          const event: GameEvent = {
-            type: 'listen',
-            seq: state.seq + 1,
-            wallMs: wallMs(t + second),
-          };
-          const viaAdvance = apply(c, advance(c, state, t).state, event);
-          const applied = apply(c, state, event);
-          if (!applied.ok) throw new Error('listen refused');
-          expect(viaAdvance).toEqual({
-            ok: true,
-            state: advance(c, applied.state, t).state,
-          });
-        },
-      ),
-      { seed: 34, numRuns: 40 },
-    );
-    expect(reached).toBe(40);
-  });
+  // Stand-ins of the random times (properties/log.test.ts, #543): no time,
+  // the most drawn, and between, from the start and from the last event.
+  it.each([
+    [0, 0, 0],
+    [TYPES.length, 4 * HOUR_MS, 2 * HOUR_MS],
+    [5, 90 * MINUTE_MS, 1],
+  ])(
+    'advance then apply equals apply then advance, the event being later: before event %i, %i ms then %i ms',
+    (index, first, second) => {
+      checkCommute(course(), index, first, second);
+    },
+  );
 
   it('but not when the cap clips: advancing first banks the cap at the earlier time', () => {
     const c = course();
@@ -549,110 +386,3 @@ describe('apply and advance commute within the offline cap (design §7)', () => 
     expect(viaAdvance.state.sim - applied.state.sim).toBe(HOUR_MS);
   });
 });
-
-/**
- * Any event of any type, its seq and wall time set by the caller: ids from the course and
- * some it does not have, slots and counts in and out of range.
- */
-/** Any event of `type`, valid or not, as the property above draws it. */
-function eventOf(
-  c: Course,
-  type: (typeof TYPES)[number],
-): fc.Arbitrary<GameEvent> {
-  // An offset from the state's wall clock, back by up to an hour (clamped)
-  // or on by up to three: the caller adds the state's wall time.
-  const wall = fc.integer({ min: -HOUR_MS, max: 3 * HOUR_MS });
-  // A known id three times in five, so most kinds of event are accepted
-  // somewhere in a few hundred runs (#474), else 'none' or any string.
-  const ids = (known: readonly string[]): fc.Arbitrary<string> =>
-    fc.oneof(
-      { arbitrary: fc.constantFrom(...known), weight: 2 },
-      { arbitrary: fc.constant('none'), weight: 1 },
-      { arbitrary: fc.string(), weight: 1 },
-    );
-  const encounters = c.regions.flatMap((r) => r.encounters.map((e) => e.id));
-  const nodes = c.regions.flatMap((r) => r.grammarNodes.map((n) => n.id));
-  const words = c.regions[1]?.destinations[0]?.lexicon.map((i) => i.id) ?? [];
-  const destinations = c.regions.flatMap((r) =>
-    r.destinations.map((d) => d.id),
-  );
-  const count = fc.oneof(
-    fc.integer({ min: 1, max: 5 }),
-    fc.constant(Number.MAX_SAFE_INTEGER),
-  );
-  const slot = fc.integer({ min: 0, max: 4 });
-  const seq = fc.constant(0);
-  const arbitraries: Record<(typeof TYPES)[number], fc.Arbitrary<unknown>> = {
-    resume: fc.record({ type: fc.constant('resume'), seq, wallMs: wall }),
-    listen: fc.record({ type: fc.constant('listen'), seq, wallMs: wall }),
-    buyEncounter: fc.record({
-      type: fc.constant('buyEncounter'),
-      seq,
-      wallMs: wall,
-      id: ids(encounters),
-      count,
-    }),
-    pickUpWord: fc.record({
-      type: fc.constant('pickUpWord'),
-      seq,
-      wallMs: wall,
-    }),
-    answerReview: fc.record({
-      type: fc.constant('answerReview'),
-      seq,
-      wallMs: wall,
-      itemId: ids(words),
-      correct: fc.boolean(),
-      latencyMs: fc.integer({ min: 0, max: 60_000 }),
-      promptType: fc.constantFrom('choice', 'typed', 'tiles'),
-    }),
-    answerPractice: fc.record({
-      type: fc.constant('answerPractice'),
-      seq,
-      wallMs: wall,
-      itemId: ids(words),
-    }),
-    buyUpgrade: fc.record({
-      type: fc.constant('buyUpgrade'),
-      seq,
-      wallMs: wall,
-      id: ids(['offlineCap', 'journeySlot2', 'journeySlot3', 'pemanduFaster1']),
-    }),
-    startJourney: fc.record({
-      type: fc.constant('startJourney'),
-      seq,
-      wallMs: wall,
-      slot,
-      durationId: ids(['tutorial', '2h', '4h', '8h', '24h']),
-    }),
-    collectJourney: fc.record({
-      type: fc.constant('collectJourney'),
-      seq,
-      wallMs: wall,
-      slot,
-    }),
-    setSail: fc.record(
-      {
-        type: fc.constant('setSail'),
-        seq,
-        wallMs: wall,
-        to: ids(destinations),
-      },
-      { requiredKeys: ['type', 'seq', 'wallMs'] },
-    ),
-    buyGrammarNode: fc.record({
-      type: fc.constant('buyGrammarNode'),
-      seq,
-      wallMs: wall,
-      id: ids(nodes),
-    }),
-    setAutomation: fc.record({
-      type: fc.constant('setAutomation'),
-      seq,
-      wallMs: wall,
-      enabled: fc.boolean(),
-      intervalMs: fc.constantFrom(1000, 2000, 5000, 10_000, 7),
-    }),
-  };
-  return arbitraries[type] as fc.Arbitrary<GameEvent>;
-}

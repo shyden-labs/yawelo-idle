@@ -1,159 +1,53 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import { Decimal } from 'decimal.js';
 import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math';
+import {
+  checkPow,
+  checkUnary,
+  DOMAIN,
+  exact,
+  ulps,
+  UNARY,
+  type Unary,
+} from './det-math-laws';
 
 /**
- * det-math against a high-precision reference (M1 design §2.1, #26 AC2).
+ * det-math against a high-precision reference (M1 design §2.1, #26 AC2): every
+ * result within 2 ulp of the true value rounded to a double (det-math-laws.ts).
  *
- * Every result must lie within 2 ulp of the true value rounded to a double.
- * The reference is decimal.js at 60+ significant digits, fed the input's
- * EXACT value: `new Decimal(1.15)` would read the shortest string "1.15",
- * which is 7.7e-17 away from the double, and pow(1.15, 5000) multiplies that
- * gap into thousands of ulp. `toPrecision(40)` is correctly rounded by
- * ECMAScript, so 40 digits carry the double exactly enough.
+ * Here, on chosen inputs: each domain's edges, and stand-ins of the random
+ * inputs, which run at their full count in the properties suite
+ * (properties/det-math.test.ts, #543). The stand-ins span each domain's
+ * small, middling and large magnitudes, away from its edges.
  */
 
-type Unary = 'exp' | 'ln' | 'log10' | 'expm1' | 'log1p';
-
-const bits = new Float64Array(1);
-const words = new BigInt64Array(bits.buffer);
-
-/** Maps a double to an integer whose order matches the doubles' order. */
-function ordered(x: number): bigint {
-  bits[0] = x;
-  const raw = words[0] ?? 0n;
-  return raw < 0n ? -(raw & 0x7fffffffffffffffn) : raw;
-}
-
-function ulps(a: number, b: number): bigint {
-  const d = ordered(a) - ordered(b);
-  return d < 0n ? -d : d;
-}
-
-/**
- * Significant digits for the reference. 1 + x and e^x - 1 near x = 0 need
- * one more digit per decade of smallness, or they cancel to nothing; the
- * other functions need no more than 60, and asking for 383 digits makes
- * decimal.js's ln take 27 ms a call (measured).
- */
-function digitsFor(fn: Unary, x: number): number {
-  if ((fn !== 'expm1' && fn !== 'log1p') || x === 0) return 60;
-  return 60 + Math.max(0, Math.floor(-Math.log10(Math.abs(x))));
-}
-
-function exact(D: typeof Decimal, x: number): Decimal {
-  return new D(x.toPrecision(40));
-}
-
-function reference(fn: Unary, x: number): number {
-  const D = Decimal.clone({
-    precision: digitsFor(fn, x),
-    rounding: Decimal.ROUND_HALF_EVEN,
-  });
-  const v = exact(D, x);
-  const r = {
-    exp: () => D.exp(v),
-    ln: () => D.ln(v),
-    log10: () => D.log10(v),
-    expm1: () => D.exp(v).minus(1),
-    log1p: () => D.ln(new D(1).plus(v)),
-  }[fn]();
-  return Number(r.toString());
-}
-
-function referencePow(base: number, exponent: number): number {
-  const D = Decimal.clone({ precision: 60, rounding: Decimal.ROUND_HALF_EVEN });
-  return Number(D.pow(exact(D, base), exact(D, exponent)).toString());
-}
-
-const UNARY = { exp, ln, log10, expm1, log1p } as const;
-
-/** Finite-result domains, and boundary inputs at each domain's edges. */
-const DOMAIN: Record<Unary, { min: number; max: number; edges: number[] }> = {
-  exp: {
-    min: -745,
-    max: 709.78,
-    edges: [-745, -744.44, -708.4, -1e-300, 5e-324, 1e-16, 1, 2, 709.78],
-  },
-  ln: {
-    min: Number.MIN_VALUE,
-    max: Number.MAX_VALUE,
-    edges: [
-      5e-324,
-      2.2250738585072014e-308,
-      0.9999999999999999,
-      1.0000000000000002,
-      2,
-      10,
-      Number.MAX_VALUE,
-    ],
-  },
-  log10: {
-    min: Number.MIN_VALUE,
-    max: Number.MAX_VALUE,
-    edges: [
-      5e-324,
-      1e-300,
-      0.1,
-      9.999999999999998,
-      10,
-      1e22,
-      1e23,
-      Number.MAX_VALUE,
-    ],
-  },
-  expm1: {
-    min: -50,
-    max: 709.78,
-    edges: [-50, -1e-300, -5e-324, 5e-324, 1e-300, 1e-10, 0.5, 1, 709.78],
-  },
-  log1p: {
-    min: -0.9999999999999999,
-    max: Number.MAX_VALUE,
-    edges: [
-      -0.9999999999999999,
-      -0.5,
-      -1e-300,
-      5e-324,
-      1e-300,
-      1e-10,
-      1,
-      Number.MAX_VALUE,
-    ],
-  },
+const STAND_INS: Record<Unary, number[]> = {
+  exp: [-321.7, 3.1e-7, 0.3, 123.456],
+  ln: [3.3e-200, 0.7, 37.5, 4.2e250],
+  log10: [6.1e-150, 0.37, 37.5, 8.8e199],
+  expm1: [-17.25, -3.1e-7, 2.5e-9, 455.5],
+  log1p: [-0.75, -2.5e-9, 3.1e-7, 6.6e123],
 };
 
-// Each random input costs one decimal.js reference at 60 digits or more,
-// 0.24 ms (ln) to 0.31 ms (pow) measured alone, and more in the full suite;
-// 300 a function keeps each test under 0.3 s of CPU there (#474: 2,000 took
-// up to 1.6 s). Every run draws 300 new inputs.
-const RANDOM_INPUTS = 300;
+/** Stand-ins of the random positive bases and real exponents. */
+const POW_STAND_INS: [number, number][] = [
+  [1.15, 37.5],
+  [0.0123, -42.7],
+  [987.6, 99.9],
+  [2.5, -0.333],
+];
 
 describe('det-math is within 2 ulp of a 60-digit reference', () => {
   for (const name of Object.keys(UNARY) as Unary[]) {
-    const fn = UNARY[name];
-    const { min, max, edges } = DOMAIN[name];
-
-    for (const x of edges)
+    for (const x of DOMAIN[name].edges)
       it(`${name}(${String(x)}), at its domain edge`, () => {
-        expect(
-          ulps(fn(x), reference(name, x)),
-          `${name}(${String(x)})`,
-        ).toBeLessThanOrEqual(2n);
+        checkUnary(name, x);
       });
 
-    it(`${name} on ${String(RANDOM_INPUTS)} random inputs`, () => {
-      fc.assert(
-        fc.property(fc.double({ min, max, noNaN: true }), (x) => {
-          expect(
-            ulps(fn(x), reference(name, x)),
-            `${name}(${String(x)})`,
-          ).toBeLessThanOrEqual(2n);
-        }),
-        { numRuns: RANDOM_INPUTS },
-      );
-    });
+    for (const x of STAND_INS[name])
+      it(`${name}(${String(x)}), a stand-in for the random inputs`, () => {
+        checkUnary(name, x);
+      });
   }
 
   it('pow(1.15, n) for every n in 0..5000, the Encounter cost curve', () => {
@@ -176,21 +70,10 @@ describe('det-math is within 2 ulp of a 60-digit reference', () => {
     expect(worst).toBeLessThanOrEqual(2n);
   });
 
-  it(`pow on ${String(RANDOM_INPUTS)} random positive bases and real exponents`, () => {
-    fc.assert(
-      fc.property(
-        fc.double({ min: 1e-3, max: 1e3, noNaN: true }),
-        fc.double({ min: -100, max: 100, noNaN: true }),
-        (base, exponent) => {
-          expect(
-            ulps(pow(base, exponent), referencePow(base, exponent)),
-            `pow(${String(base)}, ${String(exponent)})`,
-          ).toBeLessThanOrEqual(2n);
-        },
-      ),
-      { numRuns: RANDOM_INPUTS },
-    );
-  });
+  for (const [base, exponent] of POW_STAND_INS)
+    it(`pow(${String(base)}, ${String(exponent)}), a stand-in for the random bases and exponents`, () => {
+      checkPow(base, exponent);
+    });
 });
 
 describe('det-math special values follow ECMAScript exactly', () => {

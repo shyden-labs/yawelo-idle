@@ -1,79 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import fc from 'fast-check';
 import {
   EVENT_TYPES,
   parseEvent,
   PROMPT_TYPES,
   type EventError,
-  type GameEvent,
 } from '../src/events';
+import {
+  checkJsonRoundTrip,
+  checkNeverThrows,
+  EXAMPLES,
+  FIELD_CASES,
+  MISSING_FIELD_CASES,
+  NON_INTEGER_CASES,
+  FIELDS,
+  INTEGER_CASES,
+  TYPES,
+  type Kind,
+} from './events-laws';
 
 /**
  * The event union and its validator (#34 AC1, design §4). Every field case
  * is generated from the examples and limits declared here, so the tests
  * check the validator against the contract rather than sharing its table.
  */
-
-/** One valid event of each type, in design §4's order with `resume` first. */
-const EXAMPLES = {
-  resume: { type: 'resume', seq: 1, wallMs: 0 },
-  listen: { type: 'listen', seq: 2, wallMs: 10 },
-  buyEncounter: {
-    type: 'buyEncounter',
-    seq: 3,
-    wallMs: 20,
-    id: 'e0',
-    count: 2,
-  },
-  pickUpWord: { type: 'pickUpWord', seq: 4, wallMs: 30 },
-  answerReview: {
-    type: 'answerReview',
-    seq: 5,
-    wallMs: 40,
-    itemId: 'w0',
-    correct: true,
-    latencyMs: 2500,
-    promptType: 'choice',
-  },
-  answerPractice: { type: 'answerPractice', seq: 6, wallMs: 50, itemId: 'w0' },
-  buyUpgrade: { type: 'buyUpgrade', seq: 7, wallMs: 60, id: 'offlineCap' },
-  startJourney: {
-    type: 'startJourney',
-    seq: 8,
-    wallMs: 70,
-    slot: 0,
-    durationId: '2h',
-  },
-  collectJourney: { type: 'collectJourney', seq: 9, wallMs: 80, slot: 1 },
-  setSail: { type: 'setSail', seq: 10, wallMs: 90, to: 'd0' },
-  buyGrammarNode: { type: 'buyGrammarNode', seq: 11, wallMs: 100, id: 'g0' },
-  setAutomation: {
-    type: 'setAutomation',
-    seq: 12,
-    wallMs: 110,
-    enabled: true,
-    intervalMs: 10_000,
-  },
-} as const;
-
-type Kind = 'string' | 'boolean' | 'integer' | 'promptType';
-
-/** Each field's kind and, for integers, its least value (design §4, #34). */
-const FIELDS: Readonly<Record<string, { kind: Kind; min?: number }>> = {
-  seq: { kind: 'integer', min: 1 },
-  wallMs: { kind: 'integer', min: 0 },
-  id: { kind: 'string' },
-  count: { kind: 'integer', min: 1 },
-  itemId: { kind: 'string' },
-  correct: { kind: 'boolean' },
-  latencyMs: { kind: 'integer', min: 0 },
-  promptType: { kind: 'promptType' },
-  slot: { kind: 'integer', min: 0 },
-  durationId: { kind: 'string' },
-  to: { kind: 'string' },
-  enabled: { kind: 'boolean' },
-  intervalMs: { kind: 'integer', min: 1 },
-};
 
 /** A value of the wrong JavaScript type for each kind. */
 const WRONG: Readonly<Record<Kind, unknown>> = {
@@ -82,19 +31,6 @@ const WRONG: Readonly<Record<Kind, unknown>> = {
   integer: '1',
   promptType: 3,
 };
-
-const TYPES = Object.keys(EXAMPLES) as (keyof typeof EXAMPLES)[];
-
-/** Every (type, field) pair but `type` itself, in each example's own order. */
-const FIELD_CASES = TYPES.flatMap((type) =>
-  Object.keys(EXAMPLES[type])
-    .filter((field) => field !== 'type')
-    .map((field) => ({ type, field })),
-);
-
-const INTEGER_CASES = FIELD_CASES.filter(
-  ({ field }) => FIELDS[field]?.kind === 'integer',
-);
 
 function without(
   object: Readonly<Record<string, unknown>>,
@@ -191,19 +127,18 @@ describe('parseEvent accepts (AC1)', () => {
     });
   });
 
-  it('a round trip through JSON, for any valid event', () => {
-    let reached = 0;
-    fc.assert(
-      fc.property(validEvent(), (event) => {
-        reached += 1;
-        expect(parseEvent(JSON.parse(JSON.stringify(event)))).toEqual({
-          ok: true,
-          event,
-        });
-      }),
-      { seed: 34, numRuns: 500 },
-    );
-    expect(reached).toBe(500);
+  it.each(TYPES)('a round trip through JSON, for the %s example', (type) => {
+    checkJsonRoundTrip(EXAMPLES[type]);
+  });
+
+  it('a round trip through JSON, at the largest safe seq, time and count', () => {
+    checkJsonRoundTrip({
+      type: 'buyEncounter',
+      seq: Number.MAX_SAFE_INTEGER,
+      wallMs: Number.MAX_SAFE_INTEGER,
+      id: '',
+      count: Number.MAX_SAFE_INTEGER,
+    });
   });
 });
 
@@ -241,15 +176,12 @@ describe('parseEvent refuses (AC1)', () => {
     });
   });
 
-  it.each(FIELD_CASES.filter(({ field }) => field !== 'to'))(
-    '$type without $field',
-    ({ type, field }) => {
-      expect(errorOf(without(EXAMPLES[type], field))).toEqual({
-        kind: 'missingField',
-        field,
-      });
-    },
-  );
+  it.each(MISSING_FIELD_CASES)('$type without $field', ({ type, field }) => {
+    expect(errorOf(without(EXAMPLES[type], field))).toEqual({
+      kind: 'missingField',
+      field,
+    });
+  });
 
   it.each(FIELD_CASES)(
     '$type with $field of the wrong type',
@@ -271,15 +203,7 @@ describe('parseEvent refuses (AC1)', () => {
     });
   });
 
-  it.each(
-    INTEGER_CASES.flatMap(({ type, field }) =>
-      [1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53].map((value) => ({
-        type,
-        field,
-        value,
-      })),
-    ),
-  )(
+  it.each(NON_INTEGER_CASES)(
     '$type with $field = $value: not a safe integer',
     ({ type, field, value }) => {
       expect(errorOf({ ...EXAMPLES[type], [field]: value })).toEqual({
@@ -380,86 +304,21 @@ describe('parseEvent checks in order (AC1)', () => {
     );
   });
 
-  it('never throws, for any JSON value or any mangled event', () => {
-    let reached = 0;
-    fc.assert(
-      fc.property(
-        fc.oneof(
-          fc.jsonValue(),
-          fc.record({
-            type: fc.constantFrom(...TYPES, 'tap'),
-            seq: fc.oneof(fc.integer(), fc.double(), fc.string()),
-            wallMs: fc.oneof(fc.integer(), fc.double(), fc.constant(null)),
-            id: fc.oneof(fc.string(), fc.integer()),
-            count: fc.oneof(fc.integer(), fc.double()),
-          }),
-        ),
-        (input) => {
-          reached += 1;
-          const result = parseEvent(input);
-          expect(typeof result.ok).toBe('boolean');
-        },
-      ),
-      { seed: 34, numRuns: 2000 },
-    );
-    expect(reached).toBe(2000);
+  // Stand-ins of any JSON value and any mangled event: each JSON kind, an
+  // unknown type, and an event with every field of the wrong kind.
+  it.each<[string, unknown]>([
+    ['null', null],
+    ['a number', 42],
+    ['a string', 'listen'],
+    ['an array', [EXAMPLES.listen]],
+    ['an empty object', {}],
+    ['an unknown type', { ...EXAMPLES.listen, type: 'tap' }],
+    [
+      'a mangled event',
+      { type: 'buyEncounter', seq: 1.5, wallMs: null, id: 3, count: -0.5 },
+    ],
+    ['a string seq', { ...EXAMPLES.listen, seq: '2' }],
+  ])('never throws, for %s', (_label, input) => {
+    checkNeverThrows(input);
   });
 });
-
-/** Any valid event: every type, every field anywhere in its range. */
-function validEvent(): fc.Arbitrary<GameEvent> {
-  const stamp = {
-    seq: fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }),
-    wallMs: fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER }),
-  };
-  const natural = fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER });
-  const positive = fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER });
-  const arbitraries: fc.Arbitrary<unknown>[] = [
-    fc.record({ type: fc.constant('resume'), ...stamp }),
-    fc.record({ type: fc.constant('listen'), ...stamp }),
-    fc.record({
-      type: fc.constant('buyEncounter'),
-      ...stamp,
-      id: fc.string(),
-      count: positive,
-    }),
-    fc.record({ type: fc.constant('pickUpWord'), ...stamp }),
-    fc.record({
-      type: fc.constant('answerReview'),
-      ...stamp,
-      itemId: fc.string(),
-      correct: fc.boolean(),
-      latencyMs: natural,
-      promptType: fc.constantFrom('choice', 'typed', 'tiles'),
-    }),
-    fc.record({
-      type: fc.constant('answerPractice'),
-      ...stamp,
-      itemId: fc.string(),
-    }),
-    fc.record({ type: fc.constant('buyUpgrade'), ...stamp, id: fc.string() }),
-    fc.record({
-      type: fc.constant('startJourney'),
-      ...stamp,
-      slot: natural,
-      durationId: fc.string(),
-    }),
-    fc.record({ type: fc.constant('collectJourney'), ...stamp, slot: natural }),
-    fc.record(
-      { type: fc.constant('setSail'), ...stamp, to: fc.string() },
-      { requiredKeys: ['type', 'seq', 'wallMs'] },
-    ),
-    fc.record({
-      type: fc.constant('buyGrammarNode'),
-      ...stamp,
-      id: fc.string(),
-    }),
-    fc.record({
-      type: fc.constant('setAutomation'),
-      ...stamp,
-      enabled: fc.boolean(),
-      intervalMs: positive,
-    }),
-  ];
-  return fc.oneof(...arbitraries) as fc.Arbitrary<GameEvent>;
-}

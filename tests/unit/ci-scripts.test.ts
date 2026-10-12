@@ -118,7 +118,7 @@ describe('the npm scripts the head’s ci.yml runs (#518 AC1)', () => {
     ]);
   });
 
-  it('reads the real ci.yml: the eleven scripts build-and-test runs', () => {
+  it('reads the real ci.yml: the twelve scripts build-and-test runs', () => {
     expect(ciScripts(readFileSync('.github/workflows/ci.yml', 'utf8'))).toEqual(
       [
         'build',
@@ -128,6 +128,7 @@ describe('the npm scripts the head’s ci.yml runs (#518 AC1)', () => {
         'test:guards',
         'test:integration',
         'test:pacing',
+        'test:properties',
         'test:unit',
         'test:web',
         'test:worker',

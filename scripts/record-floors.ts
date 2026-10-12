@@ -227,6 +227,13 @@ export const SUITES: readonly Suite[] = [
     run: ['npm', 'run', 'test:integration'],
   },
   {
+    name: 'properties suite',
+    cwd: '.',
+    list: [...VITEST_LIST, '-c', 'vitest.properties.config.ts'],
+    files: vitestListed,
+    run: ['npm', 'run', 'test:properties'],
+  },
+  {
     name: 'pacing suite',
     cwd: '.',
     list: [...VITEST_LIST, '-c', 'vitest.pacing.config.ts'],

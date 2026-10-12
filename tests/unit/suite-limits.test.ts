@@ -4,6 +4,7 @@ import { parse } from 'yaml';
 import guards from '../../vitest.guards.config';
 import integration from '../../vitest.integration.config';
 import pacing from '../../vitest.pacing.config';
+import properties from '../../vitest.properties.config';
 import unit from '../../vitest.config';
 import devHosts from '../../apps/dev-hosts/vitest.harness.config';
 import site from '../../apps/site/vitest.harness.config';
@@ -56,6 +57,14 @@ const SUITES = [
     job: 'build-and-test',
     minutes: 1,
     slowest: 11,
+  },
+  // Measured 2026-10-12 over its first three CI runs (#543): 9, 12, 12 s.
+  {
+    suite: 'properties',
+    run: 'npm run test:properties',
+    job: 'build-and-test',
+    minutes: 1,
+    slowest: 12,
   },
   {
     suite: 'pacing',
@@ -151,6 +160,7 @@ describe('no non-unit suite’s config sets a limit of its own (#476 AC2)', () =
     ['vitest.guards.config.ts', guards],
     ['vitest.integration.config.ts', integration],
     ['vitest.pacing.config.ts', pacing],
+    ['vitest.properties.config.ts', properties],
     ['apps/dev-hosts/vitest.harness.config.ts', devHosts],
     ['apps/site/vitest.harness.config.ts', site],
     ['apps/sync-worker/vitest.harness.config.ts', syncWorker],
