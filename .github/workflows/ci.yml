@@ -99,7 +99,7 @@ jobs:
       # a real defect, never a re-run. One measured limit.
       - name: Properties (every property at its full count)
         timeout-minutes: 2
-        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        if: ${{ !cancelled() && steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:properties
       # The personas play the real core and the spec's pacing targets are
       # checked (#35). AC7 asked for under 5 minutes; its one measured limit

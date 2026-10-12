@@ -82,10 +82,11 @@ function growthTo(owned: number): Num {
 }
 
 function seriesOf(count: number): Num {
-  let sum = series.get(count);
+  const key = Math.min(count, 400);
+  let sum = series.get(key);
   if (sum === undefined) {
-    sum = Num.div(Num.sub(Num.pow(GROWTH, count), ONE), GROWTH_LESS_ONE);
-    series.set(count, sum);
+    sum = Num.div(Num.sub(Num.pow(GROWTH, key), ONE), GROWTH_LESS_ONE);
+    series.set(key, sum);
   }
   return sum;
 }
