@@ -30,7 +30,6 @@ const GATES = [
   'format:check',
   'lint',
   'typecheck',
-  'test:guards',
 ] as const;
 
 const FAKE_NPM = `#!/bin/sh
@@ -79,7 +78,7 @@ describe('the pre-push hook (#123 AC2)', () => {
     expect(statSync(HOOK).mode & 0o111).toBe(0o111);
   });
 
-  it('runs the ci-scripts check, format:check, lint, typecheck and the guards, in that order, and passes', () => {
+  it('runs the ci-scripts check, format:check, lint and typecheck, in that order, and passes (#547: no test suite)', () => {
     expect(runHook()).toEqual({ status: 0, calls: GATES.map(call) });
   });
 

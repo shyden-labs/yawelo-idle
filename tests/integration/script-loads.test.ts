@@ -34,6 +34,7 @@ const SCRIPTS = [
   'scripts/dev-secrets.ts',
   'scripts/ensure-d1.ts',
   'scripts/every-commit.ts',
+  'scripts/fetch-floors.ts',
   'scripts/record-floors.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
