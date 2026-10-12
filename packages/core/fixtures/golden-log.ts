@@ -5,7 +5,7 @@ import { parseEvent, PROMPT_TYPES, type GameEvent } from '../src/events';
 import { stateHash } from '../src/hash';
 import { journeyDurationMs, journeyStatus } from '../src/journeys';
 import { apply, replay } from '../src/log';
-import { reviewQueue } from '../src/memory';
+import { reviewQueue, type WordMemory } from '../src/memory';
 import { nextFloat, nextInt, seedRng, type RngState } from '../src/rng';
 import { sailPreview } from '../src/sail';
 import { advance } from '../src/sim';
@@ -54,7 +54,25 @@ export const GOLDEN = {
   stateSeed: 34,
   policySeed: 3434,
   days: 35,
+  /** The player opens the game 5 times a day; each open is one slice (#542). */
+  opensPerDay: 5,
+  /**
+   * A slice whose first event is a resume in which Pemandu buys more than
+   * this many Encounters is heavy (#542): that one event alone measured
+   * 13.7–24.8 ms of thread CPU in Node and up to 110 ms under Vitest, over
+   * the unit suite's line, so the slice runs in the pacing suite. The
+   * heaviest resume below it bought 314 (4.3 ms); the lightest above, 1,329.
+   */
+  heavyPurchases: 1000,
 } as const;
+
+/**
+ * The heavy slices, as `npm run golden-log` finds them (#542). Kept here as
+ * data, so a test file can list its slices without calling anything while
+ * Vitest collects it (#97); the recorder refuses to write a log whose heavy
+ * slices differ, and a unit test holds this list to the recorded one.
+ */
+export const GOLDEN_HEAVY_SLICES: readonly number[] = [107, 118, 134, 150, 161];
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
@@ -69,8 +87,10 @@ export interface GoldenRun {
   readonly events: readonly GameEvent[];
   /** The state the player lived: every event applied as it was decided. */
   readonly live: GameState;
-  /** Each day of the play: where it began and what it sent (#473). */
-  readonly days: readonly GoldenDay[];
+  /** Each open of the play: what it sent (#473, #542). */
+  readonly slices: readonly GoldenSlice[];
+  /** Where the policy stood as each slice began, one per slice. */
+  readonly starts: readonly PlayerStart[];
 }
 
 /** Where the policy stands at a moment: all it needs to play on from there. */
@@ -82,25 +102,34 @@ export interface PlayerStart {
 }
 
 /**
- * One day of the golden play (#473): the policy as the day began, the index
- * of the day's first event in the log, and the day's events the rules
- * accepted, by type, and refused, by kind, as the play itself counted them.
- * `shop` is the day's shop offers judged against `apply` (#479): how many of
- * each kind it accepted and refused.
+ * One open of the golden play (#542; a day before it, #473): its events are
+ * the log's `[from, to)`. `opens` are the day's open times, drawn as its first
+ * open began, so a later open plays on from its own start. `purchases` are
+ * the Encounters bought inside the slice's first event, its resume, where
+ * Pemandu buys across the gap; past `GOLDEN.heavyPurchases` the slice is
+ * `heavy`. `accepted` counts its events the rules accepted, by type, and
+ * `refused` those refused, by kind, as the play itself counted them; `shop`
+ * is its shop offers judged against `apply` (#479).
  */
-export interface GoldenDay {
+export interface GoldenSlice {
+  readonly slice: number;
   readonly day: number;
+  readonly open: number;
   readonly from: number;
-  readonly start: PlayerStart;
+  readonly to: number;
+  readonly opens: readonly number[];
+  readonly purchases: number;
+  readonly heavy: boolean;
   readonly accepted: Readonly<Record<string, number>>;
   readonly refused: Readonly<Record<string, number>>;
   readonly shop: Readonly<Record<ShopKind, ShopCount>>;
 }
 
-/** What one day played again from its recorded start sends, and where it ends. */
-export interface PlayedDay {
+/** What one slice played again from its start sends, and where it ends. */
+export interface PlayedSlice {
   readonly events: readonly GameEvent[];
   readonly end: PlayerStart;
+  readonly opens: readonly number[];
   readonly accepted: Readonly<Record<string, number>>;
   readonly refused: Readonly<Record<string, number>>;
 }
@@ -140,7 +169,7 @@ class Player {
   }
 
   /** What was sent since the last call, accepted by type and refused by kind. */
-  takeCounts(): Pick<GoldenDay, 'accepted' | 'refused'> {
+  takeCounts(): Pick<GoldenSlice, 'accepted' | 'refused'> {
     const counts = { accepted: this.accepted, refused: this.refused };
     this.accepted = {};
     this.refused = {};
@@ -419,20 +448,47 @@ class Player {
   }
 }
 
-/** Day `day` of the golden policy: five opens, their times drawn first. */
-function playDay(player: Player, day: number): void {
+/** Day `day`'s open times: five, drawn from the policy stream as it begins. */
+function drawOpens(player: Player, day: number): number[] {
   const base = BOT_EPOCH_WALL_MS + day * DAY_MS;
   const opens = Array.from(
-    { length: 5 },
+    { length: GOLDEN.opensPerDay },
     () => base + 8 * HOUR_MS + player.int(14 * 3600) * 1000,
   ).sort((a, b) => a - b);
   if (day === 0) opens[0] = base + 8 * HOUR_MS;
-  for (let i = 0; i < opens.length; i += 1) {
-    const start = opens[i] ?? base;
-    const next = opens[i + 1] ?? base + DAY_MS + 8 * HOUR_MS;
-    const first = day === 0 && i === 0;
-    player.open(start, first ? HOUR_MS : 8 * MINUTE_MS, next, i === 2);
-  }
+  return opens;
+}
+
+/** Open `i` of day `day`, at the times the day drew. */
+function playOpen(
+  player: Player,
+  day: number,
+  opens: readonly number[],
+  i: number,
+): void {
+  const base = BOT_EPOCH_WALL_MS + day * DAY_MS;
+  const start = opens[i] ?? base;
+  const next = opens[i + 1] ?? base + DAY_MS + 8 * HOUR_MS;
+  const first = day === 0 && i === 0;
+  player.open(start, first ? HOUR_MS : 8 * MINUTE_MS, next, i === 2);
+}
+
+/** Owned Encounter units, all Encounters together. */
+function ownedUnits(state: GameState): number {
+  return Object.values(state.owned).reduce((sum, n) => sum + n, 0);
+}
+
+/**
+ * The Encounters bought inside one event (#542): for a resume, what Pemandu
+ * bought across the gap. A refused event bought nothing.
+ */
+export function boughtIn(
+  course: Course,
+  state: GameState,
+  event: GameEvent,
+): number {
+  const result = apply(course, state, event);
+  return result.ok ? ownedUnits(result.state) - ownedUnits(state) : 0;
 }
 
 /** The policy before its first day: the first state, the policy seed, no events. */
@@ -445,31 +501,64 @@ export function goldenPolicyStart(initial: GameState): PlayerStart {
   };
 }
 
-/** Play the golden policy for `days` days on `course`. */
+/** Play the golden policy for `days` days on `course`, one slice per open. */
 export function playGolden(
   course: Course,
   days: number = GOLDEN.days,
 ): GoldenRun {
   const initial = initialState(wallMs(BOT_EPOCH_WALL_MS), GOLDEN.stateSeed);
   const player = new Player(course, goldenPolicyStart(initial));
-  const played: GoldenDay[] = [];
+  const slices: GoldenSlice[] = [];
+  const starts: PlayerStart[] = [];
   for (let day = 0; day < days; day += 1) {
-    const start = player.start();
-    const from = player.events.length;
-    playDay(player, day);
-    const counts = player.takeCounts();
-    const sent = player.events.slice(from);
-    const shop = shopCounts(judgeShopAlong(course, start.state, sent));
-    played.push({ day, from, start, ...counts, shop });
+    let opens: readonly number[] = [];
+    for (let open = 0; open < GOLDEN.opensPerDay; open += 1) {
+      const start = player.start();
+      const from = player.events.length;
+      if (open === 0) opens = drawOpens(player, day);
+      playOpen(player, day, opens, open);
+      const counts = player.takeCounts();
+      const sent = player.events.slice(from);
+      const first = sent[0];
+      const purchases =
+        first === undefined ? 0 : boughtIn(course, start.state, first);
+      const shop = shopCounts(judgeShopAlong(course, start.state, sent));
+      slices.push({
+        slice: slices.length,
+        day,
+        open,
+        from,
+        to: player.events.length,
+        opens,
+        purchases,
+        heavy: purchases > GOLDEN.heavyPurchases,
+        ...counts,
+        shop,
+      });
+      starts.push(start);
+    }
   }
-  return { initial, events: player.events, live: player.state, days: played };
+  return { initial, events: player.events, live: player.state, slices, starts };
 }
 
-/** Play one recorded day again from its start (#473). */
-export function playGoldenDay(course: Course, day: GoldenDay): PlayedDay {
-  const player = new Player(course, day.start);
-  playDay(player, day.day);
-  return { events: player.events, end: player.start(), ...player.takeCounts() };
+/**
+ * Play one recorded slice again from its start (#542). Its first open draws
+ * the day's times again; a later one plays at the times recorded.
+ */
+export function playGoldenSlice(
+  course: Course,
+  slice: GoldenSlice,
+  start: PlayerStart,
+): PlayedSlice {
+  const player = new Player(course, start);
+  const opens = slice.open === 0 ? drawOpens(player, slice.day) : slice.opens;
+  playOpen(player, slice.day, opens, slice.open);
+  return {
+    events: player.events,
+    end: player.start(),
+    opens,
+    ...player.takeCounts(),
+  };
 }
 
 /** The fixture's first line: what the log was played on, and where it ended. */
@@ -552,35 +641,200 @@ export interface GoldenReplay {
   readonly refused: number;
 }
 
-/** The days fixture's text: one line per day of the play (#473). */
-export function writeGoldenDays(run: GoldenRun): string {
-  return run.days.map((day) => JSON.stringify(day)).join('\n') + '\n';
+/** What the slice boundaries were chosen from, written into the slices fixture's header (#542). */
+const MEASURED =
+  '#542, 2026-10-12: one open replayed, walked, played or judged from its start measured at most 42 ms of thread CPU under Vitest at load 12-20; a day measured up to 308 ms. A resume in which Pemandu bought over 1,000 Encounters measured 13.7-24.8 ms in Node alone and up to 110 ms under Vitest, so its slice is heavy.';
+
+/** The slices fixture's first line: how the log was cut, and into how many. */
+export interface GoldenSlicesHeader {
+  readonly format: 1;
+  readonly boundary: 'open';
+  readonly opensPerDay: number;
+  readonly heavyPurchases: number;
+  readonly slices: number;
+  readonly measured: string;
+}
+
+/** The slices fixture's text: the header, then one slice per line (#542). */
+export function writeGoldenSlices(run: GoldenRun): string {
+  const header: GoldenSlicesHeader = {
+    format: 1,
+    boundary: 'open',
+    opensPerDay: GOLDEN.opensPerDay,
+    heavyPurchases: GOLDEN.heavyPurchases,
+    slices: run.slices.length,
+    measured: MEASURED,
+  };
+  return (
+    [header, ...run.slices].map((line) => JSON.stringify(line)).join('\n') +
+    '\n'
+  );
 }
 
 /**
- * Read the days fixture. Each line is one day, numbered from 0 in order, and
- * a day's first event comes no earlier than the day before's. What a day
- * holds is not checked here: the tests play and replay each day from it.
+ * Read the slices fixture. Each line after the header is one slice, numbered
+ * from 0 in order, as many as the header says. How the slices cut the log is
+ * not checked here: the tests prove they tile it.
  */
-export function readGoldenDays(text: string): readonly GoldenDay[] {
+export function readGoldenSlices(text: string): {
+  readonly header: GoldenSlicesHeader;
+  readonly slices: readonly GoldenSlice[];
+} {
   const lines = text.split('\n').filter((line) => line !== '');
-  if (lines.length === 0) throw new Error('golden days are empty');
-  let from = 0;
-  return lines.map((line, index) => {
-    const day = JSON.parse(line) as GoldenDay;
-    if (day.day !== index) {
+  const [first, ...rest] = lines;
+  if (first === undefined) throw new Error('golden slices are empty');
+  const header = JSON.parse(first) as GoldenSlicesHeader;
+  const slices = rest.map((line, index) => {
+    const slice = JSON.parse(line) as GoldenSlice;
+    if (slice.slice !== index) {
       throw new Error(
-        `golden days line ${String(index + 1)} is day ${String(day.day)}`,
+        `golden slices line ${String(index + 2)} is slice ${String(slice.slice)}`,
       );
     }
-    if (!Number.isSafeInteger(day.from) || day.from < from) {
-      throw new Error(
-        `golden days line ${String(index + 1)} starts at event ${String(day.from)}, before ${String(from)}`,
-      );
-    }
-    from = day.from;
-    return day;
+    return slice;
   });
+  if (slices.length !== header.slices) {
+    throw new Error(
+      `golden slices hold ${String(slices.length)} slices, header says ${String(header.slices)}`,
+    );
+  }
+  return { header, slices };
+}
+
+/**
+ * Where one slice's start differs from the start before it (#542): the
+ * policy's stream, number and time, the state's fields that changed (words
+ * apart) and those that went, and the words that changed and those that went.
+ */
+export interface StartDelta {
+  readonly rng: RngState;
+  readonly seq: number;
+  readonly t: number;
+  readonly set: Readonly<Record<string, unknown>>;
+  readonly unset: readonly string[];
+  readonly words: Readonly<Record<string, WordMemory>>;
+  readonly wordsUnset: readonly string[];
+}
+
+/** One line of the starts fixture: a day's whole start, or a delta from the slice before. */
+type StartLine =
+  | { readonly slice: number; readonly start: PlayerStart }
+  | { readonly slice: number; readonly delta: StartDelta };
+
+const sameJson = (a: unknown, b: unknown): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);
+
+/** A copy of `record` without the keys in `gone`, its other keys in order. */
+function without<T>(
+  record: Readonly<Record<string, T>>,
+  gone: readonly string[],
+): Record<string, T> {
+  if (gone.length === 0) return { ...record };
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => !gone.includes(key)),
+  );
+}
+
+/** What `to` changes from `from`, for `applyStartDelta` to rebuild it. */
+export function startDelta(from: PlayerStart, to: PlayerStart): StartDelta {
+  const before = new Map<string, unknown>(Object.entries(from.state));
+  const after = new Map<string, unknown>(Object.entries(to.state));
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of after) {
+    if (key !== 'words' && !sameJson(before.get(key), value)) set[key] = value;
+  }
+  const words: Record<string, WordMemory> = {};
+  for (const [id, word] of Object.entries(to.state.words)) {
+    if (!sameJson(from.state.words[id], word)) words[id] = word;
+  }
+  return {
+    rng: to.rng,
+    seq: to.seq,
+    t: to.t,
+    set,
+    unset: [...before.keys()].filter((key) => !after.has(key)),
+    words,
+    wordsUnset: Object.keys(from.state.words).filter(
+      (id) => !(id in to.state.words),
+    ),
+  };
+}
+
+/**
+ * Rebuild a start from the one before it and its delta. A key that stays
+ * keeps its place and a new one goes last, as a spread does: the player reads
+ * `Object.keys(words)[0]`, so the order is part of the start, and
+ * `writeGoldenStarts` refuses a delta that does not rebuild it byte for byte.
+ */
+export function applyStartDelta(
+  from: PlayerStart,
+  delta: StartDelta,
+): PlayerStart {
+  const words = without(
+    { ...from.state.words, ...delta.words },
+    delta.wordsUnset,
+  );
+  const state = without<unknown>(
+    { ...from.state, ...delta.set, words },
+    delta.unset,
+  ) as unknown as GameState;
+  return { state, rng: delta.rng, seq: delta.seq, t: delta.t };
+}
+
+/**
+ * The starts fixture's text (#542): one line per slice, a day's first open
+ * holding the whole start and each later open a delta from the open before.
+ * Throws for a start its delta does not rebuild exactly.
+ */
+export function writeGoldenStarts(run: GoldenRun): string {
+  const lines = run.starts.map((start, n) => {
+    const previous = run.starts[n - 1];
+    if (run.slices[n]?.open === 0 || previous === undefined) {
+      return JSON.stringify({ slice: n, start });
+    }
+    const delta = startDelta(previous, start);
+    if (!sameJson(applyStartDelta(previous, delta), start)) {
+      throw new Error(
+        `slice ${String(n)}'s start does not rebuild from its delta`,
+      );
+    }
+    return JSON.stringify({ slice: n, delta });
+  });
+  return lines.join('\n') + '\n';
+}
+
+/**
+ * Slice `n`'s start, read from the starts fixture's lines (#542): its day's
+ * whole start, then each delta up to it. Only those lines are parsed. A line
+ * out of place, or of the wrong kind, is thrown by number.
+ */
+export function readGoldenStart(
+  lines: readonly string[],
+  n: number,
+): PlayerStart {
+  const first = n - (n % GOLDEN.opensPerDay);
+  let start: PlayerStart | undefined;
+  for (let k = first; k <= n; k += 1) {
+    const at = `golden starts line ${String(k + 1)}`;
+    const line = lines[k];
+    if (line === undefined || line === '') throw new Error(`${at} is missing`);
+    const read = JSON.parse(line) as StartLine;
+    if (read.slice !== k) {
+      throw new Error(`${at} is slice ${String(read.slice)}`);
+    }
+    if (k === first) {
+      if (!('start' in read)) throw new Error(`${at} holds no whole start`);
+      start = read.start;
+    } else {
+      if (!('delta' in read) || start === undefined) {
+        throw new Error(`${at} holds no delta`);
+      }
+      start = applyStartDelta(start, read.delta);
+    }
+  }
+  if (start === undefined)
+    throw new Error(`golden starts have no slice ${String(n)}`);
+  return start;
 }
 
 /** Read a fixture's text, replay it from the start its header names, and hash the result. */

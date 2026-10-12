@@ -1,12 +1,4 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import {
-  GOLDEN,
-  goldenStart,
-  readGolden,
-  readGoldenDays,
-  type GoldenDay,
-} from '../../packages/core/fixtures/golden-log';
 import {
   judgeShopAlong,
   SHOP_KINDS,
@@ -15,21 +7,27 @@ import {
   type ShopKind,
   type ShopTally,
 } from '../../packages/core/fixtures/shop-agreement';
-import type { GameEvent } from '../../packages/core/src/events';
 import { floorBreach } from '../floors';
+import {
+  eventsOf,
+  golden,
+  REGENERATE,
+  sliceOf,
+  startOf,
+  UNIT_ROWS,
+  type SliceRow,
+} from '../golden';
 import { searched } from '../searched';
 
 /**
  * The shop can never disagree with `apply` (#35 AC3), judged along the golden
- * log one day at a time (#479): each day from its recorded start (#473), so
- * no test walks the whole log. Each day's tests prove the day's counts that
- * `npm run golden-log` recorded, and the whole log's counts are those added
- * up.
+ * log one slice at a time (#479 by day; #542 by open): each slice from its
+ * recorded start (#473), so no test walks the whole log. Each slice's tests
+ * prove the counts `npm run golden-log` recorded for it, and the whole log's
+ * counts are those added up. The heavy slices, whose resume alone is over
+ * the unit suite's line, are judged in the pacing suite, with the whole log
+ * (`packages/bots/pacing/golden-log.test.ts`).
  */
-
-const FIXTURE = 'packages/core/fixtures/golden-log.jsonl';
-const DAYS_FIXTURE = 'packages/core/fixtures/golden-days.jsonl';
-const REGENERATE = 'regenerate with `npm run golden-log`';
 
 /**
  * Judgements measured on #35's tuned golden log (2026-10-04), each floor the
@@ -57,88 +55,57 @@ const KINDS = [
   'practice',
 ] as const satisfies readonly ShopKind[];
 
-/** The days the golden policy plays, known before the run. */
-const DAYS = Array.from({ length: GOLDEN.days }, (_, day) => day);
-/** Every day with every kind: one test each. */
-const DAY_KINDS = DAYS.flatMap((day) =>
-  KINDS.map((kind) => [day, kind] as const),
+/** The slices this suite judges; the heavy ones are the pacing suite's. */
+const UNIT: readonly SliceRow[] = [...UNIT_ROWS];
+/** Every unit slice with every kind: one test each. */
+const SLICE_KINDS = UNIT.flatMap(([n, day, open]) =>
+  KINDS.map((kind) => [n, day, open, kind] as const),
 );
-
-let read:
-  | {
-      readonly events: readonly GameEvent[];
-      readonly days: readonly GoldenDay[];
-      readonly course: ReturnType<typeof goldenStart>['course'];
-    }
-  | undefined;
-
-/** Both fixtures, read on first use rather than at collection (#97): no replay. */
-function fixtures(): NonNullable<typeof read> {
-  if (read === undefined) {
-    const { header, events } = readGolden(readFileSync(FIXTURE, 'utf8'));
-    const { course } = goldenStart(header);
-    const days = readGoldenDays(readFileSync(DAYS_FIXTURE, 'utf8'));
-    read = { events, days, course };
-  }
-  return read;
-}
-
-/** Day `n` as recorded; throws for a day the fixture does not hold. */
-function dayOf(n: number): GoldenDay {
-  const day = fixtures().days[n];
-  if (day === undefined)
-    throw new Error(`${DAYS_FIXTURE} has no day ${String(n)}`);
-  return day;
-}
 
 const judged = new Map<number, Record<ShopKind, ShopTally>>();
 
-/** Day `n` judged from its recorded start, once for all its kinds' tests. */
-function judgedDay(n: number): Record<ShopKind, ShopTally> {
+/** Slice `n` judged from its recorded start, once for all its kinds' tests. */
+function judgedSlice(n: number): Record<ShopKind, ShopTally> {
   let tallies = judged.get(n);
   if (tallies === undefined) {
-    const { events, course } = fixtures();
-    const day = dayOf(n);
-    const to = fixtures().days[n + 1]?.from ?? events.length;
     tallies = judgeShopAlong(
-      course,
-      day.start.state,
-      events.slice(day.from, to),
+      golden().course,
+      startOf(n).state,
+      eventsOf(n).events,
     );
     judged.set(n, tallies);
   }
   return tallies;
 }
 
-/** A kind's recorded counts over every day: each day's own test proves its figure. */
+/** A kind's recorded counts over every slice: each slice's own test proves its figure. */
 function total(kind: ShopKind): ShopCount {
   let accepted = 0;
   let refused = 0;
-  for (const n of DAYS) {
-    const count = dayOf(n).shop[kind];
-    accepted += count.accepted;
-    refused += count.refused;
+  for (const slice of golden().slices) {
+    accepted += slice.shop[kind].accepted;
+    refused += slice.shop[kind].refused;
   }
   return { accepted, refused };
 }
 
-describe('the shop agrees with apply along the golden log, day by day (AC3, #479)', () => {
-  it.each(DAY_KINDS)(
-    'day %i: every %s offer’s affordable is apply’s answer',
-    (n, kind) => {
-      const tally = judgedDay(n)[kind];
+describe('the shop agrees with apply along the golden log, slice by slice (AC3, #479, #542)', () => {
+  it.each(SLICE_KINDS)(
+    'slice %i (day %i, open %i): every %s offer’s affordable is apply’s answer',
+    (n, _day, _open, kind) => {
+      const tally = judgedSlice(n)[kind];
       const offers = tally.accepted + tally.refused;
       expect(
         searched(tally.disagreements, {
           of: offers,
-          what: `day ${String(n)}'s judged ${kind} offers`,
+          what: `slice ${String(n)}'s judged ${kind} offers`,
         }),
       ).toEqual([]);
-      expect(shopCounts(judgedDay(n))[kind], REGENERATE).toEqual(
-        dayOf(n).shop[kind],
+      expect(shopCounts(judgedSlice(n))[kind], REGENERATE).toEqual(
+        sliceOf(n).shop[kind],
       );
       expect(
-        floorBreach(`shop-agreement/day ${String(n)}/${kind}`, offers),
+        floorBreach(`shop-agreement/slice ${String(n)}/${kind}`, offers),
       ).toBeUndefined();
     },
   );
@@ -148,7 +115,7 @@ describe('the shop agrees with apply along the golden log, day by day (AC3, #479
   });
 
   it.each(KINDS)(
-    'the days judge, between them, the %s offers the whole log did',
+    'the slices judge, between them, the %s offers the whole log did',
     (kind) => {
       const { accepted, refused } = total(kind);
       expect(
