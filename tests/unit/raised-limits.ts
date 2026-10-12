@@ -1,5 +1,6 @@
 import ts from 'typescript';
 import { lineOf } from './line-of';
+import { unitSuiteFiles } from './unit-suite-files';
 
 /**
  * Every way a unit test file or a unit config raises a limit (#477 AC3),
@@ -258,4 +259,40 @@ export function raisedLimitsIn(sf: ts.SourceFile): LimitReading {
   };
   visit(sf);
   return { findings, sites, declarations };
+}
+
+/**
+ * The files the raised-limit guard reads (#559): the unit config, and every
+ * file the unit suite loads, found as the fast-check guard finds them (#551):
+ * the config's globs over the files git has, its setup files, and every
+ * helper they load, wherever it lives. Another suite's config is left out
+ * when a unit test loads it: it is loaded as data to be checked, and its
+ * limits are that suite's own, held by suite-limits.test.ts. `otherConfigs`
+ * is that list as the repository keeps it, never a name pattern.
+ */
+export function raisedLimitFiles({
+  unitConfig,
+  otherConfigs,
+  ...suite
+}: Parameters<typeof unitSuiteFiles>[0] & {
+  readonly unitConfig: string;
+  readonly otherConfigs: readonly string[];
+}): {
+  readonly files: readonly string[];
+  readonly left: readonly string[];
+  readonly unresolved: readonly string[];
+} {
+  const { all, unresolved } = unitSuiteFiles(suite);
+  return {
+    // A unit test may import the unit config too (suite-limits.test.ts):
+    // it is listed once.
+    files: [
+      unitConfig,
+      ...all.filter(
+        (file) => file !== unitConfig && !otherConfigs.includes(file),
+      ),
+    ],
+    left: all.filter((file) => otherConfigs.includes(file)),
+    unresolved,
+  };
 }

@@ -1,12 +1,15 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { matchesGlob } from 'node:path';
+import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import unit from '../../vitest.config';
 import { floorBreach } from '../floors';
 import { searched } from '../searched';
-import { raisedLimitsIn } from '../unit/raised-limits';
+import { raisedLimitFiles, raisedLimitsIn } from '../unit/raised-limits';
 import { codeWithoutLiterals } from '../unit/source-text';
+import {
+  NON_UNIT_VITEST_CONFIGS,
+  PLAYWRIGHT_CONFIGS,
+} from '../unit/suite-configs';
 import { committableFiles } from '../unit/tracked-files';
 
 /**
@@ -16,30 +19,30 @@ import { committableFiles } from '../unit/tracked-files';
  * with the tree, so it runs in the guards suite. The reader's planted forms
  * are unit tests (tests/unit/raised-limits.test.ts). There is no allow-list.
  *
- * The files are the unit config's own globs over the files git has, the
- * helpers beside the tests, the config and its setup files: a glob added to
- * the config widens the guard with it.
+ * The files are the unit config and every file the unit suite loads, found
+ * as the fast-check guard finds them (#551, #559): the config's globs over
+ * the files git has, its setup files, and every helper they load, wherever
+ * it lives. A glob added to the config, or a helper imported from anywhere,
+ * widens the guard with it. Another suite's config that a unit test loads to
+ * check it is data; its limits are that suite's own, held by
+ * suite-limits.test.ts.
  */
 
 const UNIT_CONFIG = 'vitest.config.ts';
 
-const unitFiles = (): string[] => {
-  const include = [
-    ...(unit.test?.include ?? []),
-    'tests/unit/**/*.ts',
-    'packages/*/test/**/*.ts',
-  ];
-  const exclude = unit.test?.exclude ?? [];
-  const setup = [unit.test?.setupFiles ?? []].flat();
-  return committableFiles(['*.ts'])
-    .filter((path) => existsSync(path))
-    .filter(
-      (path) =>
-        path === UNIT_CONFIG ||
-        setup.includes(path) ||
-        (include.some((glob) => matchesGlob(path, glob)) &&
-          !exclude.some((glob) => matchesGlob(path, glob))),
-    );
+/** The unit suite's files and what the follower could not follow. */
+const unitFiles = () => {
+  const tracked = committableFiles();
+  const known = new Set(tracked);
+  return raisedLimitFiles({
+    tracked,
+    read: (path) => (known.has(path) ? readFileSync(path, 'utf8') : undefined),
+    include: unit.test?.include ?? [],
+    exclude: unit.test?.exclude ?? [],
+    setupFiles: [unit.test?.setupFiles ?? []].flat(),
+    unitConfig: UNIT_CONFIG,
+    otherConfigs: [...NON_UNIT_VITEST_CONFIGS, ...PLAYWRIGHT_CONFIGS],
+  });
 };
 
 /**
@@ -56,7 +59,8 @@ const WRITTEN = [
 
 let walked:
   | {
-      files: string[];
+      files: readonly string[];
+      unresolved: readonly string[];
       readings: {
         file: string;
         code: string;
@@ -68,9 +72,10 @@ let walked:
   | undefined;
 const repository = (): NonNullable<typeof walked> => {
   if (walked !== undefined) return walked;
-  const files = unitFiles();
+  const { files, unresolved } = unitFiles();
   walked = {
     files,
+    unresolved,
     readings: files.map((file) => {
       const sf = ts.createSourceFile(
         file,
@@ -86,7 +91,10 @@ const repository = (): NonNullable<typeof walked> => {
 
 describe('no unit test or unit config raises a limit (#477 AC3, AC4)', () => {
   it('finds none in any file the unit suite loads', () => {
-    const { files, readings } = repository();
+    const { files, readings, unresolved } = repository();
+    expect(
+      searched(unresolved, { of: files, what: 'unit suite files' }),
+    ).toEqual([]);
     const findings = readings.flatMap(({ findings }) => findings);
     expect(
       searched(findings, { of: files, what: 'unit suite files' }),
