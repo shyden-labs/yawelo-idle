@@ -1,40 +1,35 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-12 07:24 UTC (#543 done, then the four guard gaps it opened: #554, #551, #558, #559).
+**Written:** 2026-10-12 15:17 UTC: #544 merged; its deploy-dev hit a Cloudflare 504, and this handover's merge redeploys.
 **Next session:** a hook names it "Yawelo Idle"; type `/color green` once.
 
-## Progress (from `node scripts/board-progress.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` at 07:18 UTC)
+## Progress (from `node scripts/board-progress.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` at 09:57 UTC)
 
-- **By tickets: 26% complete** (88 of 343 in-scope stories closed). Measured pace 5.57 a day over 7 days (ETA at that pace 2026-11-27). **ETA to release-ready: 2026-12-18 to 2027-01-27** (low to medium confidence).
-- **By effort: 1,181 points remaining** across 255 open stories (430 of 1,611 closed, 27%). Measured pace 25.29 points a day (ETA at that pace 2026-11-28). **ETA to release-ready: 2026-12-14 to 2027-01-24** (low to medium confidence).
-- **Measured:** the counts and paces (10 and 11 October closed nothing). **Assumed:** 4–6 stories (20–30 points) a working day; about 30 unfiled prestige stories (130–180 points); 1.5–2.5 weeks of outside waits. The ranges moved by as many days as the measured ETA did.
+- **By tickets: 26% complete** (89 of 344 in-scope stories closed). Measured pace 5.71 a day over 7 days (ETA at that pace 2026-11-26). **ETA to release-ready: 2026-12-17 to 2027-01-26** (low to medium confidence).
+- **By effort: 1,186 points remaining** across 255 open stories (433 of 1,619 closed). Measured pace 25.71 points a day (ETA at that pace 2026-11-28). **ETA to release-ready: 2026-12-14 to 2027-01-24** (low to medium confidence).
+- **Measured:** counts and paces. **Assumed:** 4–6 stories (20–30 points) a working day; about 30 unfiled prestige stories (130–180 points); 1.5–2.5 weeks of outside waits.
 
-## Shyden's rulings this session (2026-10-12, all recorded)
+## Shyden's rulings (2026-10-12)
 
-1. **"revert to original"**, **"don't repeat."**, **"Fresh cases, safe minimums"** and **"Every project"**: properties moved out of unit get back their original counts and draw fresh cases; the 8 floored ones get measured minimums (#84). All in `~/.claude/CLAUDE.md` and `reference-engineering-standards.md`, with "a red property in CI is a real defect, never a re-run".
-2. **"fix all gaps"**: done this session (below).
+1. **"this also needs to be tested"**: the player's 1e7 buying tests are kept, in pacing; unit plays them at 3,000.
+2. **"At file load"**: a tool's one-off setup runs at the test file's load, under #541's load limit.
+3. **"squash"**: a PR whose commits move floors is squashed into one commit before record-floors (now in this repo's CLAUDE.md, Flow).
+4. **"Lock waits for low load"** (#536 AC2 remedy, 15:15 UTC): `~/.claude/scripts/test-lock.zsh` starts a run only below a measured load line. Recorded in `~/.claude/global-rules/reference/reference-engineering-standards.md` only. The global CLAUDE.md line was removed again because it broke the 33,542-byte ceiling; it goes in when the lock lands, offset by a cut Shyden approves. **"Push it"**: this docs-only handover was pushed past a local unit run whose only failure was a 1 s wall timeout at load 32 (shop-agreement slice 155, posted on #536).
 
-## What this session did
+## #544 state (PR #564 merged as `8b96959`; branch head was `53f335c`, one commit with its recorded floors)
 
-- **#543** (8, PR #552, `ca798a3`): every core property in a `properties` suite at its original count; unit keeps pinned stand-ins (57 ms heaviest, was 304).
-- **#554** (3, PR #557, `97e07b5`): collection-calls follows test files to the helper modules they load (`tests/unit/helper-modules.ts`), and skips only a script's exact `if (import.meta.main)`.
-- **#551** (3, PR #560, `7c67364`): no file the unit suite loads loads fast-check (`tests/guards/fast-check-in-unit.test.ts`), over one shared `unitSuiteFiles()`.
-- **#558** (2, PR #561, `77cf763`): floorless-searches reads an absence spelled as an object of empties; the six tree sites were **converted, not listed** (the burn-down ceiling only falls).
-- **#559** (3, PR #562, `88a9b71`): raised-limits reads every file the unit suite loads (163 → 189 files), other suites' configs left out by the repo's own lists; record-floors' `suite` bindings are `entry`.
-- Each merged, deployed to dev, verified by job name and shut by hand. Two blind forms added to the global guard catalogue.
+- The first record-floors run (38230769084 on `3f60466`) failed in the guards suite: the 72 h Pemandu test had moved to `packages/bots/pacing/` while its literal-floors burn-down entry still named `packages/core/test/`. Fixed by converting it to a recorded floor (`pemandu-perf/72 h return bought`), removing the entry and lowering the literal ceilings to 52/47. That is one of #415's rows (`pemandu-perf.test.ts:134`, 1638).
+- build-and-test on `3f60466` also had 24 file-count floor breaches (collection-calls, git-walks, floorless-searches, old-name, licences, supply-chain, raised-limits, line-of, record-floors…). Every one of the seven commits moved them, and CI records floors on the head only, so the seven commits were **folded into one** (`183bdeb`, message in `.superpowers/sdd/544/fold-msg.txt`). Every PR since #547 is a single commit for the same reason. **#565** (8 pts, filed) is the per-commit recording story.
+- PR body updated (`.superpowers/sdd/544/pr-body.md`): one commit, #565, the Pemandu floor, ceilings 52/47.
+- Local unit on the folded tree: 8,849 passed, 2 failed, both Vitest 1 s **wall** timeouts at load 136 (golden-log slice 97, shop-agreement slice 164), in files #544 doesn't touch. CI passed both on `3f60466`. Posted to #536 as AC3 evidence.
 
-## Lessons (memory written)
+## Resume steps
 
-- Shared fixture modules trip `collection-calls`; build derived test tables in the module.
-- `record-floors` runs only on `labeled`: remove the label and add it back after a push.
-- **Gate every push on the unit run's exit code**; a red unit at push time can change the design (the burn-down ceiling did).
-
-## The order next ("Cleanup first, every project")
-
-1. **#544** (3, 9 tests), **#553** (3, 10 tests): the rest over 0.07 s.
-2. **#536** AC3 (3): `CPU_LIMIT_MS` 1,000 → 100, pinned in the hook's `CPU_LIMITS`, a planted 0.11 s test red, 10 green runs at 14 burners.
-3. **#541** (5) per-file load limit; **#84** (5) fresh cases with measured minimums.
-4. Then: #523, #527, #505, #497/#513; #432 stays open for evidence; #467 (Docker); one M1 floor burn-down per session.
+1. Run `ListAgents` and `node -v` (prefix `export PATH=/opt/homebrew/opt/node/bin:$PATH;` if not 26). Re-read #544 and PR #564 from GitHub.
+2. #544 is MERGED: PR #564 merged as `8b96959` at 10:13 UTC, after build-and-test 38234260788 and every-commit 38234261147 were green on `53f335c` (every step read by name). #415 got its row note.
+3. Deploy-dev 38234946084 for `8b96959` **failed**: Cloudflare returned 504 on the site Worker's secrets GET (Ray `a4955be88fdac5fb-IAD`, posted on #497). The sync and game Workers deployed; the site stayed at `767869a`'s stamp, and verify was skipped. No re-run: this handover's PR (`handover/2026-10-12e`) into `develop` starts a fresh deploy-dev. Find that run by its merge SHA and read every step by name, verify included. If it is green, set #544 Done and close #544 by hand, naming #564's merge and that deploy run. If Cloudflare fails again, tell Shyden: it is outside our code.
+4. Next: the lock plan on #536 (comment 6127185694). Sample the load over a working day: how often it sits below each candidate line, beside the unit pass rate there (`.superpowers/sdd/536/measure.py`). Set a maximum wait that ends with a clear error. Put the line and the maximum to Shyden, then change `test-lock.zsh` with its own test. Ask Shyden whether #565 (per-commit floor recording, 8 pts) is still wanted, given "squash".
+5. Then: #553 (10 tests: shop-agreement and golden-log late slices, verify-dev), #536 AC3 (wall timeouts under load; 2 more posted today), #541, #84, #565.
 
 ## Waiting on Shyden
 
@@ -43,13 +38,7 @@
 
 ## State
 
-- **`develop`** at `88a9b71`, deployed and verified. Open PRs: #438 (#341) and this handover's.
-- **Worktrees:** `../yawelo-idle-341`, `-341-gate`, `../yawelo-idle-develop-bench`.
-- **Session tools (git-ignored):** `.superpowers/sdd/{543,551,554,558}/` (probes with `probe.config.ts`, mutation scripts, `move.py`, `prune.py`), `.superpowers/sdd/536/measure.py` and `report.py`, `.superpowers/sdd/101/set-status.sh`.
-
-## Resume steps
-
-1. **Run `ListAgents` and `node -v`** (prefix `export PATH=/opt/homebrew/opt/node/bin:$PATH;` if it isn't 26). Read each ticket's state from GitHub before working on it.
-2. **#544:** move it to In Progress, branch `m1/544-<slug>`, measure first with `measure.py`.
-3. **Test commands never share a call with file edits**, nor name test files in an edit's text: the lock queues the whole command. Wait with Monitor or background jobs, never `sleep`.
-4. **At close-out:** run the progress script, state both estimates, check closed stories against "Website follows the game", and settle the handover as one commit.
+- `develop` at `8b96959`. Open PRs: #438 (#341).
+- This file is **uncommitted** on the #544 branch's working tree: commit it only on a `handover/…` branch, never into #564.
+- Worktrees: `../yawelo-idle-341`, `-341-gate`, `../yawelo-idle-develop-bench`.
+- Session tools (git-ignored): `.superpowers/sdd/544/` (`fold-msg.txt`, `pr-body.md`, `file.py` + `stories/`, `mut.py`, `probe.config.ts`, `readers.probe.ts`, `base.sha`, `head.sha`), `.superpowers/sdd/536/measure.py`.
