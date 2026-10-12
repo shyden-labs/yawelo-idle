@@ -3,6 +3,8 @@ import { syntheticCourse } from '../packages/core/fixtures/synthetic-course';
 import {
   GOLDEN,
   GOLDEN_HEAVY_SLICES,
+  GOLDEN_OPEN_PARTS,
+  GOLDEN_SHOP_FREE_SLICES,
   playGolden,
   writeGolden,
   writeGoldenSlices,
@@ -32,6 +34,33 @@ if (JSON.stringify(heavy) !== JSON.stringify(GOLDEN_HEAVY_SLICES)) {
   // them (#97), so it must name the heavy slices this play found.
   throw new Error(
     `the heavy slices are ${JSON.stringify(heavy)}: set GOLDEN_HEAVY_SLICES in packages/core/fixtures/golden-log.ts to them and run again`,
+  );
+}
+const perOpen = new Map<number, number>();
+for (const s of run.slices) {
+  const open = s.day * GOLDEN.opensPerDay + s.open;
+  perOpen.set(open, (perOpen.get(open) ?? 0) + 1);
+}
+const parts = Object.fromEntries(
+  [...perOpen].filter(([, n]) => n !== GOLDEN.minParts),
+);
+if (JSON.stringify(parts) !== JSON.stringify(GOLDEN_OPEN_PARTS)) {
+  // The test files number their slices from the constant (#97, #553).
+  throw new Error(
+    `the opens not cut into ${String(GOLDEN.minParts)} are ${JSON.stringify(parts)}: set GOLDEN_OPEN_PARTS in packages/core/fixtures/golden-log.ts to them and run again`,
+  );
+}
+const shopFree = run.slices
+  .filter((s) =>
+    Object.values(s.shop).every(
+      (count) => count.accepted + count.refused === 0,
+    ),
+  )
+  .map((s) => s.slice);
+if (JSON.stringify(shopFree) !== JSON.stringify(GOLDEN_SHOP_FREE_SLICES)) {
+  // The shop test lists its slices from the constant (#97, #553).
+  throw new Error(
+    `the shop-free slices are ${JSON.stringify(shopFree)}: set GOLDEN_SHOP_FREE_SLICES in packages/core/fixtures/golden-log.ts to them and run again`,
   );
 }
 const starts = writeGoldenStarts(run);

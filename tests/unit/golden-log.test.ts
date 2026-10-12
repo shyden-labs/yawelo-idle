@@ -5,8 +5,11 @@ import {
   boughtIn,
   GOLDEN,
   GOLDEN_HEAVY_SLICES,
+  GOLDEN_OPEN_PARTS,
+  GOLDEN_SHOP_FREE_SLICES,
   goldenPolicyStart,
   goldenStart,
+  parseGoldenEvents,
   playGoldenSlice,
   readGolden,
   readGoldenSlices,
@@ -26,6 +29,8 @@ import { apply, replay } from '../../packages/core/src/log';
 import type { WordMemory } from '../../packages/core/src/memory';
 import { initialState, type GameState } from '../../packages/core/src/state';
 import {
+  allEvents,
+  eventLines,
   eventsOf,
   FIXTURE,
   golden,
@@ -152,7 +157,7 @@ describe('the golden log fixture (AC5)', () => {
   });
 
   it('opens with the header line writeGolden writes', () => {
-    const { text, header, events, initial } = golden();
+    const { text, header, initial } = golden();
     const written = JSON.stringify({
       format: 1,
       courseSeed: GOLDEN.courseSeed,
@@ -160,20 +165,22 @@ describe('the golden log fixture (AC5)', () => {
       policySeed: GOLDEN.policySeed,
       days: GOLDEN.days,
       startWallMs: initial.wall,
-      events: events.length,
+      events: eventLines().length,
       liveHash: header.liveHash,
     });
     expect(text.split('\n')[0], REGENERATE).toBe(written);
   });
 
-  it('cuts the log at each of the 5 opens a day, as its header states, from measurement (#542 AC1)', () => {
+  it('cuts each of the 5 opens a day at steps, by its work, as its header states, from measurement (#542 AC1, #553)', () => {
     expect(golden().slicesHeader).toEqual({
-      format: 1,
-      boundary: 'open',
+      format: 2,
+      boundary: 'step',
       opensPerDay: 5,
+      minParts: 2,
+      workPerPart: 4000,
       heavyPurchases: 1000,
-      slices: 175,
-      measured: expect.stringContaining('#542') as unknown,
+      slices: 380,
+      measured: expect.stringContaining('#553') as unknown,
     });
   });
 
@@ -192,20 +199,63 @@ describe('the golden log fixture (AC5)', () => {
     ).toEqual(GOLDEN_HEAVY_SLICES);
   });
 
+  it('cuts each open into the parts the test files list (#553)', () => {
+    const perOpen = new Map<number, number>();
+    for (const slice of golden().slices) {
+      const open = slice.day * GOLDEN.opensPerDay + slice.open;
+      perOpen.set(open, (perOpen.get(open) ?? 0) + 1);
+    }
+    const parts = Object.fromEntries(
+      [...perOpen].filter(([, n]) => n !== GOLDEN.minParts),
+    );
+    expect(parts, REGENERATE).toEqual(GOLDEN_OPEN_PARTS);
+  });
+
+  it('names as shop-free the slices the test files list as shop-free (#553)', () => {
+    expect(
+      golden()
+        .slices.filter((slice) =>
+          Object.values(slice.shop).every(
+            (count) => count.accepted + count.refused === 0,
+          ),
+        )
+        .map((slice) => slice.slice),
+      REGENERATE,
+    ).toEqual(GOLDEN_SHOP_FREE_SLICES);
+  });
+
   it('starts its first slice at the first event, where a freshly seeded policy starts', () => {
     expect(sliceOf(0).from).toBe(0);
     expect(startOf(0)).toEqual(goldenPolicyStart(golden().initial));
   });
 
   it('ends its last slice at the log’s last event', () => {
-    expect(sliceOf(LAST_SLICE).to).toBe(golden().events.length);
+    expect(sliceOf(LAST_SLICE).to).toBe(eventLines().length);
   });
 });
 
 describe('the slices tile the log (#542 AC2)', () => {
-  it.each(SLICES)('slice %i is day %i’s open %i', (n, day, open) => {
-    expect(sliceOf(n)).toMatchObject({ slice: n, day, open });
-  });
+  it.each(SLICES)(
+    'slice %i is day %i’s open %i, part %i',
+    (n, day, open, part) => {
+      expect(sliceOf(n)).toMatchObject({ slice: n, day, open, part });
+    },
+  );
+
+  it.each(SLICES)(
+    'slice %i begins with a resume exactly when it is its open’s first part (#553)',
+    (n) => {
+      const [first] = eventsOf(n).events;
+      expect(first?.type === 'resume').toBe(sliceOf(n).part === 0);
+    },
+  );
+
+  it.each(SLICES)(
+    'slice %i starts inside its open exactly when it is a later part (#553)',
+    (n) => {
+      expect(startOf(n).step !== undefined).toBe(sliceOf(n).part > 0);
+    },
+  );
 
   it.each(SLICES)('slice %i holds at least one event', (n) => {
     const { from, to } = sliceOf(n);
@@ -221,8 +271,9 @@ describe('the slices tile the log (#542 AC2)', () => {
 
   it.each(SLICES)(
     'slice %i plays at the times its day’s first open drew',
-    (n, _day, open) => {
-      expect(sliceOf(n).opens).toEqual(sliceOf(n - open).opens);
+    (n, day) => {
+      const first = SLICES.findIndex((row) => row[1] === day);
+      expect(sliceOf(n).opens).toEqual(sliceOf(first).opens);
     },
   );
 
@@ -241,7 +292,7 @@ describe('the slices tile the log (#542 AC2)', () => {
 
 describe('each unit slice, from its start (AC5, #542)', () => {
   it.each(UNIT_WITH_A_NEXT)(
-    'slice %i (day %i, open %i): the policy, resumed at its start, writes exactly its events and ends where the next slice starts',
+    'slice %i (day %i, open %i, part %i): the policy, resumed at its start, writes exactly its events and ends where the next slice starts',
     (n) => {
       const slice = sliceOf(n);
       const { events, lines } = eventsOf(n);
@@ -280,7 +331,7 @@ describe('each unit slice, from its start (AC5, #542)', () => {
   });
 
   it.each(UNIT_WITH_A_NEXT)(
-    'slice %i (day %i, open %i): replay of its events from its start reaches where the next slice starts',
+    'slice %i (day %i, open %i, part %i): replay of its events from its start reaches where the next slice starts',
     (n) => {
       const replayed = replay(
         golden().course,
@@ -305,7 +356,7 @@ describe('each unit slice, from its start (AC5, #542)', () => {
   });
 
   it.each(UNIT_WITH_A_NEXT)(
-    'slice %i (day %i, open %i): a walk of its events with apply reaches where the next slice starts and counts what was recorded',
+    'slice %i (day %i, open %i, part %i): a walk of its events with apply reaches where the next slice starts and counts what was recorded',
     (n) => {
       const slice = sliceOf(n);
       const walked = walk(startOf(n).state, eventsOf(n).events);
@@ -328,7 +379,7 @@ describe('each unit slice, from its start (AC5, #542)', () => {
   });
 
   it.each(UNIT)(
-    'slice %i (day %i, open %i): its first event bought the Encounters recorded',
+    'slice %i (day %i, open %i, part %i): its first event bought the Encounters recorded',
     (n) => {
       const [first] = eventsOf(n).events;
       if (first === undefined) throw new Error(`slice ${String(n)} is empty`);
@@ -363,7 +414,7 @@ describe('the whole log’s counts (AC5)', () => {
   it('steps the device clock back once a day (AC3): 35 measured', () => {
     let clockBack = 0;
     let latest = 0;
-    for (const event of golden().events) {
+    for (const event of allEvents()) {
       if (event.wallMs < latest) clockBack += 1;
       latest = Math.max(latest, event.wallMs);
     }
@@ -426,6 +477,12 @@ describe('readGolden (AC5)', () => {
   it('refuses an empty log', () => {
     expect(() => readGolden('')).toThrow('empty');
   });
+
+  it('names a slice’s line that does not parse by its number in the file (#553)', () => {
+    const lines = head().slice(1, 4);
+    lines[1] = JSON.stringify({ type: 'listen', seq: 0, wallMs: 0 });
+    expect(() => parseGoldenEvents(lines, 40)).toThrow('golden log line 41:');
+  });
 });
 
 describe('readGoldenSlices (#542)', () => {
@@ -469,13 +526,13 @@ describe('readGoldenStart (#542)', () => {
   }
 
   it('rebuilds a later open’s start from its day’s start and the deltas before it', () => {
-    expect(readGoldenStart(firstDay(), 4)).toEqual(startOf(4));
+    expect(readGoldenStart(firstDay(), 4, 0)).toEqual(startOf(4));
   });
 
   it('names a line that holds another slice', () => {
     const lines = firstDay();
     [lines[1], lines[2]] = [lines[2] ?? '', lines[1] ?? ''];
-    expect(() => readGoldenStart(lines, 2)).toThrow(
+    expect(() => readGoldenStart(lines, 2, 0)).toThrow(
       'golden starts line 2 is slice 2',
     );
   });
@@ -484,7 +541,7 @@ describe('readGoldenStart (#542)', () => {
     const lines = firstDay();
     const delta = JSON.parse(lines[1] ?? '{}') as Record<string, unknown>;
     lines[0] = JSON.stringify({ ...delta, slice: 0 });
-    expect(() => readGoldenStart(lines, 0)).toThrow(
+    expect(() => readGoldenStart(lines, 0, 0)).toThrow(
       'golden starts line 1 holds no whole start',
     );
   });
@@ -493,13 +550,13 @@ describe('readGoldenStart (#542)', () => {
     const lines = firstDay();
     const whole = JSON.parse(lines[0] ?? '{}') as Record<string, unknown>;
     lines[1] = JSON.stringify({ ...whole, slice: 1 });
-    expect(() => readGoldenStart(lines, 1)).toThrow(
+    expect(() => readGoldenStart(lines, 1, 0)).toThrow(
       'golden starts line 2 holds no delta',
     );
   });
 
   it('names a line that is missing', () => {
-    expect(() => readGoldenStart(firstDay().slice(0, 3), 3)).toThrow(
+    expect(() => readGoldenStart(firstDay().slice(0, 3), 3, 0)).toThrow(
       'golden starts line 4 is missing',
     );
   });
@@ -570,6 +627,20 @@ describe('startDelta and applyStartDelta (#542)', () => {
     expect(rebuilt(from, to)).toBe(JSON.stringify(to));
   });
 
+  it('rebuilds a start that stands inside an open (#553)', () => {
+    const from = start({ a: word(1) });
+    const step = { next: 'review', count: 3, end: 9 } as const;
+    const to = { ...start({ a: word(1) }, 7), step };
+    expect(rebuilt(from, to)).toBe(JSON.stringify(to));
+  });
+
+  it('rebuilds a start that left an open (#553)', () => {
+    const step = { next: 'pass', count: 2, end: 9 } as const;
+    const from = { ...start({ a: word(1) }), step };
+    const to = start({ a: word(1) }, 7);
+    expect(rebuilt(from, to)).toBe(JSON.stringify(to));
+  });
+
   it('cannot rebuild words that only changed order, so writeGoldenStarts refuses them', () => {
     const from = start({ a: word(1), b: word(2) });
     const to = start({ b: word(2), a: word(1) });
@@ -590,7 +661,7 @@ describe('startDelta and applyStartDelta (#542)', () => {
       starts: [from, to],
     } as unknown as GoldenRun;
     const lines = writeGoldenStarts(run).split('\n');
-    expect(readGoldenStart(lines, 1)).toEqual(to);
+    expect(readGoldenStart(lines, 1, 0)).toEqual(to);
     expect(Object.keys(JSON.parse(lines[0] ?? '{}') as object)).toEqual([
       'slice',
       'start',

@@ -27,6 +27,18 @@ import { CONTENT_SECURITY_POLICY } from '../../apps/web/worker/policy';
 import { floorBreach } from '../floors';
 import { searched } from '../searched';
 
+// The first fetch in a process sets up Node's HTTP client: 20-38 ms of CPU,
+// measured for #553, which fell on whichever verifyDev test ran first. It
+// runs with the file instead, under #541's load limit, against a server
+// that answers this one request.
+const warm = createServer((_req, res) => res.end());
+await new Promise<void>((resolve) => warm.listen(0, '127.0.0.1', resolve));
+const warmed = await fetch(
+  `http://127.0.0.1:${String((warm.address() as AddressInfo).port)}/`,
+);
+await warmed.text();
+warm.close();
+
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const OLD = '1f660b30f75d081ae6559d175e5c0c3e26acb84c';
 const PASSWORD = 'pä:ss';

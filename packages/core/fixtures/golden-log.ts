@@ -17,6 +17,7 @@ import {
 } from '../src/upgrades';
 import {
   judgeShopAlong,
+  SHOP_KINDS,
   shopCounts,
   type ShopCount,
   type ShopKind,
@@ -54,8 +55,17 @@ export const GOLDEN = {
   stateSeed: 34,
   policySeed: 3434,
   days: 35,
-  /** The player opens the game 5 times a day; each open is one slice (#542). */
+  /** The player opens the game 5 times a day (#542). */
   opensPerDay: 5,
+  /**
+   * Each open is cut into slices at steps (#553), at least 2 and one more for
+   * each `workPerPart` of its work (`cutOpen`): measured on 5 unit runs at
+   * load 4 to 39, slices of work 3,000 to 4,000 ran 46 ms at their heaviest
+   * and one of 6,000 to 8,000 ran 74 ms (Shyden, 2026-10-12: "Third part,
+   * heaviest opens", then "splitting 3, 4, 5 etc is ok").
+   */
+  minParts: 2,
+  workPerPart: 4000,
   /**
    * A slice whose first event is a resume in which Pemandu buys more than
    * this many Encounters is heavy (#542): that one event alone measured
@@ -72,7 +82,54 @@ export const GOLDEN = {
  * Vitest collects it (#97); the recorder refuses to write a log whose heavy
  * slices differ, and a unit test holds this list to the recorded one.
  */
-export const GOLDEN_HEAVY_SLICES: readonly number[] = [107, 118, 134, 150, 161];
+export const GOLDEN_HEAVY_SLICES: readonly number[] = [226, 248, 280, 317, 347];
+
+/**
+ * The slices that read no shop (#553): parts of an open between its
+ * purchases, of reviews and listens only, numbered as above, as `npm run
+ * golden-log` finds them. They have no shop offer to judge, so the shop test
+ * passes them by and a test of their own proves they hold no event the shop
+ * is read before (Shyden, 2026-10-12: "Prove them shop-free"). Kept as data
+ * for the same reason as the heavy slices, and held the same way.
+ */
+export const GOLDEN_SHOP_FREE_SLICES: readonly number[] = [
+  1, 27, 134, 227, 231, 283, 290, 295, 306, 307, 318, 319, 320, 331, 336, 341,
+  344, 345, 348, 351, 360, 368, 369, 376,
+];
+
+/**
+ * Every open not cut into `GOLDEN.minParts` slices, by its number from 0
+ * across the days, with its parts, as `npm run golden-log` finds them (#553):
+ * a heavy open is cut into more. Kept as data for the same reason as the
+ * heavy slices, and held the same way.
+ */
+export const GOLDEN_OPEN_PARTS: Readonly<Record<number, number>> = {
+  47: 3,
+  50: 3,
+  55: 3,
+  65: 3,
+  75: 3,
+  76: 3,
+  77: 3,
+  85: 3,
+  87: 3,
+  90: 3,
+  95: 3,
+  100: 3,
+  135: 3,
+  138: 3,
+  140: 3,
+  145: 4,
+  150: 5,
+  155: 3,
+  157: 3,
+  159: 3,
+  160: 4,
+  161: 3,
+  162: 3,
+  170: 4,
+  173: 3,
+};
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
@@ -87,36 +144,68 @@ export interface GoldenRun {
   readonly events: readonly GameEvent[];
   /** The state the player lived: every event applied as it was decided. */
   readonly live: GameState;
-  /** Each open of the play: what it sent (#473, #542). */
+  /** Each part of each open of the play: what it sent (#473, #542, #553). */
   readonly slices: readonly GoldenSlice[];
   /** Where the policy stood as each slice began, one per slice. */
   readonly starts: readonly PlayerStart[];
 }
 
-/** Where the policy stands at a moment: all it needs to play on from there. */
+/** The steps of an open after its resume, in the order the player takes them (#553). */
+const STEPS = [
+  'collect',
+  'review',
+  'refusal',
+  'journeys',
+  'upgrades',
+  'grammar',
+  'automation',
+  'pass',
+] as const;
+
+/**
+ * Where inside an open the policy stands (#553): the step it takes next, the
+ * reviews answered or purchase passes made so far in this open when that step
+ * is `review` or `pass` (0 otherwise), and when the open ends.
+ */
+export interface OpenStep {
+  readonly next: (typeof STEPS)[number];
+  readonly count: number;
+  readonly end: number;
+}
+
+/**
+ * Where the policy stands at a moment: all it needs to play on from there.
+ * A start inside an open (#553) also holds the step it stands at.
+ */
 export interface PlayerStart {
   readonly state: GameState;
   readonly rng: RngState;
   readonly seq: number;
   readonly t: number;
+  readonly step?: OpenStep;
 }
 
 /**
- * One open of the golden play (#542; a day before it, #473): its events are
- * the log's `[from, to)`. `opens` are the day's open times, drawn as its first
- * open began, so a later open plays on from its own start. `purchases` are
- * the Encounters bought inside the slice's first event, its resume, where
- * Pemandu buys across the gap; past `GOLDEN.heavyPurchases` the slice is
- * `heavy`. `accepted` counts its events the rules accepted, by type, and
- * `refused` those refused, by kind, as the play itself counted them; `shop`
- * is its shop offers judged against `apply` (#479).
+ * One part of one open of the golden play (#553; an open before it, #542; a
+ * day before that, #473): its events are the log's `[from, to)`. An open's
+ * first part begins with its resume, and every part but the last stops
+ * `until` the step the next part starts from. `opens` are the day's open
+ * times, drawn as its first open began, so a later slice plays on from its
+ * own start. `purchases` are the Encounters bought inside the slice's first
+ * event (for a first part, its resume, where Pemandu buys across the gap);
+ * past `GOLDEN.heavyPurchases` the slice is `heavy`. `accepted` counts its
+ * events the rules accepted, by type, and `refused` those refused, by kind,
+ * as the play itself counted them; `shop` is its shop offers judged against
+ * `apply` (#479).
  */
 export interface GoldenSlice {
   readonly slice: number;
   readonly day: number;
   readonly open: number;
+  readonly part: number;
   readonly from: number;
   readonly to: number;
+  readonly until?: OpenStep;
   readonly opens: readonly number[];
   readonly purchases: number;
   readonly heavy: boolean;
@@ -166,6 +255,11 @@ class Player {
   /** Where the policy stands now: what a day played from here starts from. */
   start(): PlayerStart {
     return { state: this.state, rng: this.rng, seq: this.seq, t: this.t };
+  }
+
+  /** What was sent since `takeCounts` was last called, without resetting it. */
+  counts(): Pick<GoldenSlice, 'accepted' | 'refused'> {
+    return { accepted: { ...this.accepted }, refused: { ...this.refused } };
   }
 
   /** What was sent since the last call, accepted by type and refused by kind. */
@@ -241,24 +335,65 @@ class Player {
     return sent;
   }
 
-  open(
+  *open(
     start: number,
     lengthMs: number,
     nextOpen: number,
     clockBack: boolean,
-  ): void {
-    this.t = Math.max(start, this.t + STEP_MS);
-    const end = this.t + lengthMs;
-    this.try((s) => ({ type: 'resume', ...s }));
-    this.collect();
-    this.review();
-    this.refusal();
-    this.journeys(nextOpen);
-    this.upgrades();
-    this.grammar();
-    this.automation();
-    let pass = 0;
-    while (this.t < end) {
+    from?: OpenStep,
+  ): Generator<OpenStep, void, undefined> {
+    let end: number;
+    if (from === undefined) {
+      this.t = Math.max(start, this.t + STEP_MS);
+      end = this.t + lengthMs;
+      this.try((s) => ({ type: 'resume', ...s }));
+    } else {
+      end = from.end;
+    }
+    // Before each step the open yields where it stands (#553): a policy
+    // given that step and the start it yielded at plays the rest of the open
+    // exactly as this one does, so a slice can stop there and the next begin.
+    const at = from === undefined ? 0 : STEPS.indexOf(from.next);
+    const resumed = (next: OpenStep['next']): number =>
+      from?.next === next ? from.count : 0;
+    const step = (next: OpenStep['next'], count = 0): OpenStep => ({
+      next,
+      count,
+      end,
+    });
+    if (at <= 0) {
+      yield step('collect');
+      this.collect();
+    }
+    if (at <= 1) {
+      for (let count = resumed('review'); ; count += 1) {
+        yield step('review', count);
+        if (!this.review(count)) break;
+      }
+    }
+    if (at <= 2) {
+      yield step('refusal');
+      this.refusal();
+    }
+    if (at <= 3) {
+      yield step('journeys');
+      this.journeys(nextOpen);
+    }
+    if (at <= 4) {
+      yield step('upgrades');
+      this.upgrades();
+    }
+    if (at <= 5) {
+      yield step('grammar');
+      this.grammar();
+    }
+    if (at <= 6) {
+      yield step('automation');
+      this.automation();
+    }
+    for (let pass = resumed('pass'); ; pass += 1) {
+      yield step('pass', pass);
+      if (this.t >= end) return;
       if (clockBack && pass === 1) {
         // The device clock steps back: clamped, never refused (DN21).
         this.t -= 5 * MINUTE_MS;
@@ -267,7 +402,6 @@ class Player {
       }
       this.purchases();
       this.t += PASS_MS;
-      pass += 1;
     }
   }
 
@@ -279,25 +413,27 @@ class Player {
     }
   }
 
-  review(): void {
-    for (let guard = 0; guard < 200; guard += 1) {
-      const item = reviewQueue(this.seen().words, this.now())[0];
-      if (item === undefined) return;
-      const correct = this.float() < item.retrievability;
-      const latencyMs = 1000 + this.int(4000);
-      const promptType =
-        PROMPT_TYPES[this.int(PROMPT_TYPES.length)] ?? 'choice';
-      const event = (s: { seq: number; wallMs: WallMs }): GameEvent => ({
-        type: 'answerReview',
-        ...s,
-        itemId: item.itemId,
-        correct,
-        latencyMs,
-        promptType,
-      });
-      if (!this.try(event))
-        throw new Error(`due review refused: ${item.itemId}`);
-    }
+  /**
+   * Answer the first due review, unless `answered` reviews this open have
+   * reached the 200 an open answers at most; true when one was answered.
+   */
+  review(answered: number): boolean {
+    if (answered >= 200) return false;
+    const item = reviewQueue(this.seen().words, this.now())[0];
+    if (item === undefined) return false;
+    const correct = this.float() < item.retrievability;
+    const latencyMs = 1000 + this.int(4000);
+    const promptType = PROMPT_TYPES[this.int(PROMPT_TYPES.length)] ?? 'choice';
+    const event = (s: { seq: number; wallMs: WallMs }): GameEvent => ({
+      type: 'answerReview',
+      ...s,
+      itemId: item.itemId,
+      correct,
+      latencyMs,
+      promptType,
+    });
+    if (!this.try(event)) throw new Error(`due review refused: ${item.itemId}`);
+    return true;
   }
 
   journeys(nextOpen: number): void {
@@ -459,19 +595,64 @@ function drawOpens(player: Player, day: number): number[] {
   return opens;
 }
 
-/** Open `i` of day `day`, at the times the day drew. */
+/**
+ * Open `i` of day `day`, at the times the day drew, from the step `from`
+ * (its start when there is none): the steps it yields as it plays.
+ */
 function playOpen(
   player: Player,
   day: number,
   opens: readonly number[],
   i: number,
-): void {
+  from?: OpenStep,
+): Generator<OpenStep, void, undefined> {
   const base = BOT_EPOCH_WALL_MS + day * DAY_MS;
   const start = opens[i] ?? base;
   const next = opens[i + 1] ?? base + DAY_MS + 8 * HOUR_MS;
   const first = day === 0 && i === 0;
-  player.open(start, first ? HOUR_MS : 8 * MINUTE_MS, next, i === 2);
+  return player.open(
+    start,
+    first ? HOUR_MS : 8 * MINUTE_MS,
+    next,
+    i === 2,
+    from,
+  );
 }
+
+const sameStep = (a: OpenStep, b: OpenStep): boolean =>
+  a.next === b.next && a.count === b.count && a.end === b.end;
+
+/** `all` less `part`, by key, keeping only what is left. */
+function less(
+  all: Readonly<Record<string, number>>,
+  part: Readonly<Record<string, number>>,
+): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(all)
+      .map(([key, n]) => [key, n - (part[key] ?? 0)] as const)
+      .filter(([, n]) => n > 0),
+  );
+}
+
+/** A step an open stood at while it played, where it could be cut (#553). */
+interface Cut {
+  readonly at: number;
+  readonly start: PlayerStart;
+  readonly counts: Pick<GoldenSlice, 'accepted' | 'refused'>;
+}
+
+/** True when every kind of shop offer was judged, or none was. */
+const judgesAllOrNone = (
+  shop: Readonly<Record<ShopKind, ShopCount>>,
+): boolean =>
+  judgesEveryKind(shop) ||
+  SHOP_KINDS.every((kind) => shop[kind].accepted + shop[kind].refused === 0);
+
+/** True when every kind of shop offer was judged at least once. */
+const judgesEveryKind = (
+  shop: Readonly<Record<ShopKind, ShopCount>>,
+): boolean =>
+  SHOP_KINDS.every((kind) => shop[kind].accepted + shop[kind].refused > 0);
 
 /** Owned Encounter units, all Encounters together. */
 function ownedUnits(state: GameState): number {
@@ -501,7 +682,116 @@ export function goldenPolicyStart(initial: GameState): PlayerStart {
   };
 }
 
-/** Play the golden policy for `days` days on `course`, one slice per open. */
+/** One part of an open as the recorder cuts it (#553). */
+interface Part {
+  readonly from: number;
+  readonly to: number;
+  readonly start: PlayerStart;
+  readonly until?: OpenStep;
+  readonly counts: Pick<GoldenSlice, 'accepted' | 'refused'>;
+  readonly shop: Readonly<Record<ShopKind, ShopCount>>;
+}
+
+/**
+ * Cut an open into parts (#553): as many as its work needs, `GOLDEN.minParts`
+ * at least, its work being its weight times the words held as it begins. Each
+ * event weighs the hours its advance crosses, at least 1: the cost is the
+ * hourly bonus buckets rebuilt, about one an event and one for each hour a
+ * resume crosses, and each rebuild reads every word held. Cut `k` of `n` is
+ * the step nearest `k / n` of the weight, the earlier of two as near, such
+ * that every part holds an event and judges either every kind of shop offer
+ * or none (a part between purchases, of reviews and listens, reads no shop:
+ * `GOLDEN_SHOP_FREE_SLICES` names it, and its own test proves it; Shyden,
+ * 2026-10-12: "Prove them shop-free"); when no steps cut it so, it is cut
+ * into one part fewer. `GOLDEN_OPEN_PARTS` names every open not cut into
+ * `GOLDEN.minParts`. Throws for an open that judges none of a kind even whole.
+ */
+function cutOpen(
+  course: Course,
+  events: readonly GameEvent[],
+  open: Omit<Part, 'until' | 'shop'>,
+  cuts: readonly Cut[],
+): readonly Part[] {
+  const { from, to } = open;
+  const judged = new Map<string, Readonly<Record<ShopKind, ShopCount>>>();
+  const judge = (start: PlayerStart, a: number, b: number) => {
+    const key = `${String(a)}-${String(b)}`;
+    let shop = judged.get(key);
+    if (shop === undefined) {
+      shop = shopCounts(
+        judgeShopAlong(course, start.state, events.slice(a, b)),
+      );
+      judged.set(key, shop);
+    }
+    return shop;
+  };
+  const weight: number[] = [0];
+  for (let i = from; i < to; i += 1) {
+    const wall = events[i]?.wallMs ?? 0;
+    const gap = wall - (events[i - 1]?.wallMs ?? wall);
+    weight.push(
+      (weight[weight.length - 1] ?? 0) + Math.max(1, Math.ceil(gap / HOUR_MS)),
+    );
+  }
+  const total = weight[to - from] ?? 0;
+  const work = total * Object.keys(open.start.state.words).length;
+  const inside = cuts.filter(({ at }) => at > from && at < to);
+  const begin: Cut = {
+    at: from,
+    start: open.start,
+    counts: { accepted: {}, refused: {} },
+  };
+  /** Cuts `k` to `n - 1` after `prev`, each part judging every kind, or none. */
+  const choose = (n: number, k: number, prev: Cut): Cut[] | undefined => {
+    if (k === n) {
+      return judgesAllOrNone(judge(prev.start, prev.at, to)) ? [] : undefined;
+    }
+    const off = (at: number): number =>
+      Math.abs(n * (weight[at - from] ?? 0) - k * total);
+    const nearest = inside
+      .filter(({ at }) => at > prev.at)
+      .sort((a, b) => off(a.at) - off(b.at) || a.at - b.at);
+    for (const cut of nearest) {
+      if (!judgesAllOrNone(judge(prev.start, prev.at, cut.at))) continue;
+      const rest = choose(n, k + 1, cut);
+      if (rest !== undefined) return [cut, ...rest];
+    }
+    return undefined;
+  };
+  const wanted = Math.max(
+    GOLDEN.minParts,
+    Math.ceil(work / GOLDEN.workPerPart),
+  );
+  for (let n = wanted; n > 1; n -= 1) {
+    const chosen = choose(n, 1, begin);
+    if (chosen === undefined) continue;
+    const bounds = [begin, ...chosen];
+    return bounds.map((cut, i) => {
+      const next = bounds[i + 1];
+      const end = next?.counts ?? open.counts;
+      return {
+        from: cut.at,
+        to: next?.at ?? to,
+        start: cut.start,
+        ...(next?.start.step === undefined ? {} : { until: next.start.step }),
+        counts: {
+          accepted: less(end.accepted, cut.counts.accepted),
+          refused: less(end.refused, cut.counts.refused),
+        },
+        shop: judge(cut.start, cut.at, next?.at ?? to),
+      };
+    });
+  }
+  const shop = judge(open.start, from, to);
+  if (!judgesEveryKind(shop)) {
+    throw new Error(
+      `the open at events [${String(from)}, ${String(to)}) judges no offer of some kind`,
+    );
+  }
+  return [{ ...open, shop }];
+}
+
+/** Play the golden policy for `days` days on `course`, each open cut into parts (#553). */
 export function playGolden(
   course: Course,
   days: number = GOLDEN.days,
@@ -516,34 +806,49 @@ export function playGolden(
       const start = player.start();
       const from = player.events.length;
       if (open === 0) opens = drawOpens(player, day);
-      playOpen(player, day, opens, open);
-      const counts = player.takeCounts();
-      const sent = player.events.slice(from);
-      const first = sent[0];
-      const purchases =
-        first === undefined ? 0 : boughtIn(course, start.state, first);
-      const shop = shopCounts(judgeShopAlong(course, start.state, sent));
-      slices.push({
-        slice: slices.length,
-        day,
-        open,
-        from,
-        to: player.events.length,
-        opens,
-        purchases,
-        heavy: purchases > GOLDEN.heavyPurchases,
-        ...counts,
-        shop,
-      });
-      starts.push(start);
+      const cuts: Cut[] = [];
+      for (const step of playOpen(player, day, opens, open)) {
+        cuts.push({
+          at: player.events.length,
+          start: { ...player.start(), step },
+          counts: player.counts(),
+        });
+      }
+      const parts = cutOpen(
+        course,
+        player.events,
+        { from, to: player.events.length, start, counts: player.takeCounts() },
+        cuts,
+      );
+      for (const [part, half] of parts.entries()) {
+        const first = player.events[half.from];
+        const purchases =
+          first === undefined ? 0 : boughtIn(course, half.start.state, first);
+        slices.push({
+          slice: slices.length,
+          day,
+          open,
+          part,
+          from: half.from,
+          to: half.to,
+          ...(half.until === undefined ? {} : { until: half.until }),
+          opens,
+          purchases,
+          heavy: purchases > GOLDEN.heavyPurchases,
+          ...half.counts,
+          shop: half.shop,
+        });
+        starts.push(half.start);
+      }
     }
   }
   return { initial, events: player.events, live: player.state, slices, starts };
 }
 
 /**
- * Play one recorded slice again from its start (#542). Its first open draws
- * the day's times again; a later one plays at the times recorded.
+ * Play one recorded slice again from its start (#542, #553). A day's first
+ * slice draws the day's times again; a later one plays at the times recorded.
+ * A slice that stops `until` a step ends there, its end holding that step.
  */
 export function playGoldenSlice(
   course: Course,
@@ -551,11 +856,27 @@ export function playGoldenSlice(
   start: PlayerStart,
 ): PlayedSlice {
   const player = new Player(course, start);
-  const opens = slice.open === 0 ? drawOpens(player, slice.day) : slice.opens;
-  playOpen(player, slice.day, opens, slice.open);
+  const opens =
+    slice.open === 0 && slice.part === 0
+      ? drawOpens(player, slice.day)
+      : slice.opens;
+  const { until } = slice;
+  let end: PlayerStart | undefined;
+  for (const step of playOpen(
+    player,
+    slice.day,
+    opens,
+    slice.open,
+    start.step,
+  )) {
+    if (until !== undefined && sameStep(step, until)) {
+      end = { ...player.start(), step };
+      break;
+    }
+  }
   return {
     events: player.events,
-    end: player.start(),
+    end: end ?? player.start(),
     opens,
     ...player.takeCounts(),
   };
@@ -606,21 +927,33 @@ export function readGolden(text: string): {
   const [first, ...rest] = lines;
   if (first === undefined) throw new Error('golden log is empty');
   const header = JSON.parse(first) as GoldenHeader;
-  const events = rest.map((line, index) => {
-    const parsed = parseEvent(JSON.parse(line));
-    if (!parsed.ok) {
-      throw new Error(
-        `golden log line ${String(index + 2)}: ${JSON.stringify(parsed.error)}`,
-      );
-    }
-    return parsed.event;
-  });
+  const events = parseGoldenEvents(rest, 2);
   if (events.length !== header.events) {
     throw new Error(
       `golden log holds ${String(events.length)} events, header says ${String(header.events)}`,
     );
   }
   return { header, events };
+}
+
+/**
+ * Events from a fixture's lines, each through `parseEvent` as any untrusted
+ * log would be; `lineNumber` is the first line's, so a line that does not
+ * parse is thrown by its number in the file (#553: a slice reads its own).
+ */
+export function parseGoldenEvents(
+  lines: readonly string[],
+  lineNumber: number,
+): GameEvent[] {
+  return lines.map((line, index) => {
+    const parsed = parseEvent(JSON.parse(line));
+    if (!parsed.ok) {
+      throw new Error(
+        `golden log line ${String(lineNumber + index)}: ${JSON.stringify(parsed.error)}`,
+      );
+    }
+    return parsed.event;
+  });
 }
 
 /** The course and first state a header names, to replay its log from. */
@@ -643,13 +976,15 @@ export interface GoldenReplay {
 
 /** What the slice boundaries were chosen from, written into the slices fixture's header (#542). */
 const MEASURED =
-  '#542, 2026-10-12: one open replayed, walked, played or judged from its start measured at most 42 ms of thread CPU under Vitest at load 12-20; a day measured up to 308 ms. A resume in which Pemandu bought over 1,000 Encounters measured 13.7-24.8 ms in Node alone and up to 110 ms under Vitest, so its slice is heavy.';
+  '#542, 2026-10-12: one open replayed, walked, played or judged from its start measured at most 42 ms of thread CPU under Vitest at load 12-20; a day measured up to 308 ms. A resume in which Pemandu bought over 1,000 Encounters measured 13.7-24.8 ms in Node alone and up to 110 ms under Vitest, so its slice is heavy. #553, 2026-10-12: at load 158-210 one open judged measured up to 111 ms under Vitest; the cost is the hourly bonus buckets rebuilt, about one an event and one for each hour a resume crosses, so each open is cut at the step nearest the middle of that weight (the worst judgement, warm and alone, 60 ms whole and 35 ms halved; cut by events alone, a replay after the night still measured 73 ms once).';
 
 /** The slices fixture's first line: how the log was cut, and into how many. */
 export interface GoldenSlicesHeader {
-  readonly format: 1;
-  readonly boundary: 'open';
+  readonly format: 2;
+  readonly boundary: 'step';
   readonly opensPerDay: number;
+  readonly minParts: number;
+  readonly workPerPart: number;
   readonly heavyPurchases: number;
   readonly slices: number;
   readonly measured: string;
@@ -658,9 +993,11 @@ export interface GoldenSlicesHeader {
 /** The slices fixture's text: the header, then one slice per line (#542). */
 export function writeGoldenSlices(run: GoldenRun): string {
   const header: GoldenSlicesHeader = {
-    format: 1,
-    boundary: 'open',
+    format: 2,
+    boundary: 'step',
     opensPerDay: GOLDEN.opensPerDay,
+    minParts: GOLDEN.minParts,
+    workPerPart: GOLDEN.workPerPart,
     heavyPurchases: GOLDEN.heavyPurchases,
     slices: run.slices.length,
     measured: MEASURED,
@@ -710,6 +1047,7 @@ export interface StartDelta {
   readonly rng: RngState;
   readonly seq: number;
   readonly t: number;
+  readonly step?: OpenStep;
   readonly set: Readonly<Record<string, unknown>>;
   readonly unset: readonly string[];
   readonly words: Readonly<Record<string, WordMemory>>;
@@ -751,6 +1089,7 @@ export function startDelta(from: PlayerStart, to: PlayerStart): StartDelta {
     rng: to.rng,
     seq: to.seq,
     t: to.t,
+    ...(to.step === undefined ? {} : { step: to.step }),
     set,
     unset: [...before.keys()].filter((key) => !after.has(key)),
     words,
@@ -778,18 +1117,26 @@ export function applyStartDelta(
     { ...from.state, ...delta.set, words },
     delta.unset,
   ) as unknown as GameState;
-  return { state, rng: delta.rng, seq: delta.seq, t: delta.t };
+  return {
+    state,
+    rng: delta.rng,
+    seq: delta.seq,
+    t: delta.t,
+    ...(delta.step === undefined ? {} : { step: delta.step }),
+  };
 }
 
 /**
- * The starts fixture's text (#542): one line per slice, a day's first open
- * holding the whole start and each later open a delta from the open before.
- * Throws for a start its delta does not rebuild exactly.
+ * The starts fixture's text (#542): one line per slice, a day's first slice
+ * holding the whole start and each later slice a delta from the slice before
+ * (#553: a start inside an open carries its step). Throws for a start its
+ * delta does not rebuild exactly.
  */
 export function writeGoldenStarts(run: GoldenRun): string {
   const lines = run.starts.map((start, n) => {
     const previous = run.starts[n - 1];
-    if (run.slices[n]?.open === 0 || previous === undefined) {
+    const slice = run.slices[n];
+    if ((slice?.open === 0 && slice.part === 0) || previous === undefined) {
       return JSON.stringify({ slice: n, start });
     }
     const delta = startDelta(previous, start);
@@ -804,15 +1151,17 @@ export function writeGoldenStarts(run: GoldenRun): string {
 }
 
 /**
- * Slice `n`'s start, read from the starts fixture's lines (#542): its day's
- * whole start, then each delta up to it. Only those lines are parsed. A line
- * out of place, or of the wrong kind, is thrown by number.
+ * Slice `n`'s start, read from the starts fixture's lines (#542): the whole
+ * start of its day's first slice, `first`, then each delta up to it. Only
+ * those lines are parsed. A line out of place, or of the wrong kind, is
+ * thrown by number. A day's slices are counted by the caller (#553: an open
+ * is one slice or two).
  */
 export function readGoldenStart(
   lines: readonly string[],
   n: number,
+  first: number,
 ): PlayerStart {
-  const first = n - (n % GOLDEN.opensPerDay);
   let start: PlayerStart | undefined;
   for (let k = first; k <= n; k += 1) {
     const at = `golden starts line ${String(k + 1)}`;
