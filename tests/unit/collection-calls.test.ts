@@ -530,6 +530,16 @@ const t = String(LIMIT);`,
       1,
     ],
     [
+      'workspace code in a script’s entry point, which a test’s import never runs (#554)',
+      'if (import.meta.main) integrate(1);',
+      0,
+    ],
+    [
+      'workspace code in a script’s entry point written as a block (#554)',
+      'if (import.meta.main) {\n  const s = integrate(1);\n}',
+      0,
+    ],
+    [
       'a workspace value read but not called',
       `import { START } from '../src/clock';
 const t = START;
@@ -789,6 +799,45 @@ suite();`).unclassified,
         .unclassified,
     ).toEqual([
       'line 2: (Math.random() > 1 ? integrate : String)(1) has no root name to resolve',
+    ]);
+  });
+});
+
+/**
+ * A script's entry point (#554). The guard now reads the helper modules a
+ * test loads, scripts among them, and each script runs its work in
+ * `if (import.meta.main) { … }`, which is false when a test imports it. The
+ * walk skips exactly that branch, listing its calls as `in an entry point`
+ * so the count still matches the tree; any other spelling, and an `else`,
+ * runs at import and is judged.
+ */
+describe('the detector reads a script’s entry point (#554)', () => {
+  it('lists the entry point’s calls, as in an entry point', () => {
+    expect(read('if (import.meta.main) integrate(String(1));').calls).toEqual([
+      'line 2: integrate (in an entry point)',
+      'line 2: String (in an entry point)',
+    ]);
+  });
+
+  const RUN_AT_IMPORT: readonly (readonly [string, string])[] = [
+    ['a negated condition', 'if (!import.meta.main) integrate(1);'],
+    [
+      'a condition with more in it',
+      'if (import.meta.main || simMs(0)) integrate(1);',
+    ],
+    ['the else branch', 'if (import.meta.main) {} else integrate(1);'],
+    ['another meta property', 'if (import.meta.url) integrate(1);'],
+    ['a ternary', 'const s = import.meta.main ? 0 : integrate(1);'],
+  ];
+
+  it.each(RUN_AT_IMPORT)('refuses %s, which runs at import', (_label, code) => {
+    expect(refused(code)).toEqual([
+      {
+        scope: '(module)',
+        line: 2,
+        call: 'integrate',
+        reaches: 'integrate (../src/sim)',
+      },
     ]);
   });
 });

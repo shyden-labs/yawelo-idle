@@ -5,10 +5,14 @@ import { searched } from '../searched';
 import { scanCollection } from '../unit/collection-calls';
 import { committableFiles } from '../unit/tracked-files';
 import { callsInTree } from '../unit/calls-in-tree';
+import { helperModules } from '../unit/helper-modules';
 
 /**
- * The collection-calls guard over every committable test file (#97, #356).
- * It reads the whole repository, a cost that grows with the tree, so it runs
+ * The collection-calls guard over every committable test file (#97, #356),
+ * and every helper module those files load by a relative import (#554):
+ * a helper's top level runs while Vitest collects the test, so it is judged
+ * under the same rules. It reads the whole repository, a cost that grows
+ * with the tree, so it runs
  * in the guards suite (#515). The reader's tests on planted fixtures are unit
  * tests (tests/unit/collection-calls.test.ts).
  */
@@ -18,18 +22,32 @@ const TEST_FILE = /\.(test|spec)\.ts$/;
 /** A describe call in raw text: `describe(`, `describe.each(`, `test.describe(`. */
 const RAW_DESCRIBE_CALL = /(^|[^\w.$])((it|test)\.)?describe(\.\w+)*\s*\(/m;
 
-/** Every tracked test file and what the detector read in it, scanned inside each test, never at collection. */
+/**
+ * Every tracked test file and helper module, and what the detector read in
+ * each, scanned inside each test, never at collection.
+ */
 const readScan = () => {
-  const files = committableFiles().filter((path) => TEST_FILE.test(path));
+  const tracked = new Set(committableFiles());
+  const tests = [...tracked].filter((path) => TEST_FILE.test(path));
+  const reach = helperModules(tests, (path) =>
+    tracked.has(path) ? readFileSync(path, 'utf8') : undefined,
+  );
+  const files = [...tests, ...reach.helpers];
   const read = files.map((file) => {
     const source = readFileSync(file, 'utf8');
     return { file, source, scan: scanCollection(source, file) };
   });
-  const withDescribe = read.filter(({ source }) =>
-    RAW_DESCRIBE_CALL.test(source),
+  // A helper's text may name `describe(` without declaring a suite.
+  const withDescribe = read.filter(
+    ({ file, source }) =>
+      TEST_FILE.test(file) && RAW_DESCRIBE_CALL.test(source),
   );
   return {
     files,
+    tests,
+    helpers: reach.helpers,
+    imports: reach.imports,
+    unresolved: reach.unresolved,
     describes: read.reduce((n, { scan }) => n + scan.describes, 0),
     judged: read.reduce((n, { scan }) => n + scan.judged, 0),
     calls: read.flatMap(({ file, scan }) =>
@@ -63,12 +81,30 @@ const scan = () => (scanned ??= readScan());
 
 describe('the suite', () => {
   it('scans every committable test file, this one included', () => {
-    const { files } = scan();
-    expect(files).toContain('tests/unit/collection-calls.test.ts');
-    expect(files).toContain('packages/core/test/grammar.test.ts');
-    expect(files).toContain('tests/engines/golden-vectors.spec.ts');
+    const { tests } = scan();
+    expect(tests).toContain('tests/unit/collection-calls.test.ts');
+    expect(tests).toContain('packages/core/test/grammar.test.ts');
+    expect(tests).toContain('tests/engines/golden-vectors.spec.ts');
     // Measured 44 at T2's head (#97). Lower it only in the commit that removes a test file.
-    expect(files.length).toBeGreaterThan(43);
+    expect(tests.length).toBeGreaterThan(43);
+  });
+
+  it('follows every relative import of a test file to the helper modules it loads, and scans them too (#554)', () => {
+    const { files, helpers, imports, unresolved } = scan();
+    expect(helpers).toContain('packages/core/test/sim-laws.ts');
+    expect(helpers).toContain('tests/floors.ts');
+    expect(helpers).toContain('scripts/record-floors.ts');
+    expect(files).toEqual(expect.arrayContaining([...helpers]));
+    expect(
+      searched(unresolved, {
+        of: imports,
+        what: 'relative imports in test files and their helpers',
+      }),
+    ).toEqual([]);
+    expect({
+      imports: floorBreach('collection-calls/helper-imports', imports.length),
+      helpers: floorBreach('collection-calls/helper-modules', helpers.length),
+    }).toEqual({ imports: undefined, helpers: undefined });
   });
 
   it('reads the describe callbacks in them, counted as callbacks, not files', () => {
