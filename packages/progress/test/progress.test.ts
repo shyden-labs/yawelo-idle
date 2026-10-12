@@ -151,15 +151,20 @@ describe('progress by effort', () => {
     expect(p.effort).toEqual({ available: false, scored: 1, open: 2 });
   });
 
-  it('counts closed points of all points', () => {
+  it('counts closed points of all points, and the open stories', () => {
     const p = progress(
-      [closedOn(1, '2026-10-03', 5), item({ number: 2, estimate: 8 })],
+      [
+        closedOn(1, '2026-10-03', 5),
+        item({ number: 2, estimate: 8 }),
+        item({ number: 3, estimate: 3 }),
+      ],
       TODAY,
     );
     expect(p.effort).toMatchObject({
       available: true,
       closedPoints: 5,
-      openPoints: 8,
+      openPoints: 11,
+      openStories: 2,
       assumedClosed: 0,
     });
   });
@@ -235,9 +240,9 @@ describe('formatLines', () => {
     );
   });
 
-  it('states effort complete, the measured pace and the ETA at that pace', () => {
+  it('states the points remaining, the measured pace and the ETA at that pace, with no percentage (#567)', () => {
     expect(formatLines(progress(sample(), TODAY), TODAY)[1]).toBe(
-      'By effort: 25% complete (7 of 28 points closed). ' +
+      'By effort: 21 points remaining across 2 open stories (7 of 28 points closed). ' +
         'Measured pace 1.00 points a day over the last 7 days (0, 0, 0, 0, 0, 5, 2). ' +
         'ETA at that pace: 2026-10-25, before outside waits.',
     );
@@ -257,6 +262,37 @@ describe('formatLines', () => {
     );
     expect(lines[1]).toContain(
       '1 closed story unscored, counted at the scored mean of 5.0 points (assumed)',
+    );
+  });
+
+  it('names two unscored closed stories in the plural (#567)', () => {
+    const lines = formatLines(
+      progress(
+        [
+          closedOn(1, '2026-10-03', 5),
+          closedOn(2, '2026-08-01', null),
+          closedOn(3, '2026-08-02', null),
+          item({ number: 4, estimate: 8 }),
+        ],
+        TODAY,
+      ),
+      TODAY,
+    );
+    expect(lines[1]).toContain(
+      '(15 of 23 points closed; 2 closed stories unscored, counted at the scored mean of 5.0 points (assumed)). ',
+    );
+  });
+
+  it('names one open story and one point remaining in the singular (#567)', () => {
+    const lines = formatLines(
+      progress(
+        [closedOn(1, '2026-10-03', 5), item({ number: 2, estimate: 1 })],
+        TODAY,
+      ),
+      TODAY,
+    );
+    expect(lines[1]).toMatch(
+      /^By effort: 1 point remaining across 1 open story \(5 of 6 points closed\)\. /,
     );
   });
 
@@ -475,7 +511,7 @@ describe('closeOutLines', () => {
       'By tickets: 50% complete (3 of 6 in-scope stories closed; 1 epic, 1 post-launch and 1 closed as not planned left out). ' +
         'Measured pace 0.29 a day over the last 7 days (0, 0, 0, 1, 0, 1, 0). ' +
         'ETA at that pace: 2026-10-15, before outside waits.',
-      'By effort: 33% complete (12 of 36 points closed; 1 closed story unscored, counted at the scored mean of 4.0 points (assumed)). ' +
+      'By effort: 24 points remaining across 3 open stories (12 of 36 points closed; 1 closed story unscored, counted at the scored mean of 4.0 points (assumed)). ' +
         'Measured pace 1.14 points a day over the last 7 days (0, 0, 0, 3, 0, 5, 0). ' +
         'ETA at that pace: 2026-10-25, before outside waits.',
     ]);
