@@ -305,8 +305,8 @@ export const SUITES: readonly Suite[] = [
 ];
 
 /** A suite's files, repository-relative. */
-export const suiteFiles = (suite: Suite, stdout: string): string[] =>
-  suite.files(stdout).map((file) => posix.join(suite.cwd, file));
+export const suiteFiles = (entry: Suite, stdout: string): string[] =>
+  entry.files(stdout).map((file) => posix.join(entry.cwd, file));
 
 /**
  * The suites to run for `callers` (files that call `floorBreach`), in
@@ -320,8 +320,8 @@ export function planRecord(
   const needed = new Set<Suite>();
   const refusals: string[] = [];
   for (const caller of callers) {
-    const holders = suites.filter((suite) =>
-      (membership.get(suite.name) ?? []).includes(caller),
+    const holders = suites.filter((entry) =>
+      (membership.get(entry.name) ?? []).includes(caller),
     );
     if (holders.length !== 1) {
       refusals.push(
@@ -330,13 +330,13 @@ export function planRecord(
       );
       continue;
     }
-    const [suite] = holders as [Suite];
-    if ('unrecordable' in suite.run)
+    const [entry] = holders as [Suite];
+    if ('unrecordable' in entry.run)
       refusals.push(
-        `${caller} calls floorBreach in the ${suite.name}, which cannot ` +
-          `record: ${suite.run.unrecordable}`,
+        `${caller} calls floorBreach in the ${entry.name}, which cannot ` +
+          `record: ${entry.run.unrecordable}`,
       );
-    else needed.add(suite);
+    else needed.add(entry);
   }
   return { run: suites.filter((suite) => needed.has(suite)), refusals };
 }
@@ -729,15 +729,15 @@ const recordPass = (): Pass => {
   let refusal: string | undefined;
   let seen: Observation[] = [];
   try {
-    for (const suite of plan.run) {
-      if ('unrecordable' in suite.run) continue;
-      const record = join(dir, `${suite.name.replace(/[^a-z]+/gi, '-')}.jsonl`);
-      const [command, ...args] = suite.run as [string, ...string[]];
-      console.log(`Recording the ${suite.name}: ${suite.run.join(' ')}`);
+    for (const entry of plan.run) {
+      if ('unrecordable' in entry.run) continue;
+      const record = join(dir, `${entry.name.replace(/[^a-z]+/gi, '-')}.jsonl`);
+      const [command, ...args] = entry.run as [string, ...string[]];
+      console.log(`Recording the ${entry.name}: ${entry.run.join(' ')}`);
       refusal = runRefusal(
-        suite.name,
+        entry.name,
         spawnSync(command, args, {
-          cwd: suite.cwd,
+          cwd: entry.cwd,
           stdio: 'inherit',
           env: { ...process.env, [RECORD_ENV]: record },
         }),

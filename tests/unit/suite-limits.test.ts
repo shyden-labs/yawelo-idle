@@ -12,7 +12,7 @@ import syncWorker from '../../apps/sync-worker/vitest.harness.config';
 import web from '../../apps/web/vitest.harness.config';
 import engines from '../../playwright.engines.config';
 import { webSmokeConfig } from '../../playwright.web.config';
-import { NON_UNIT_VITEST_CONFIGS } from './suite-configs';
+import { NON_UNIT_VITEST_CONFIGS, PLAYWRIGHT_CONFIGS } from './suite-configs';
 import { runOf } from './workflow-steps';
 
 /**
@@ -203,6 +203,6 @@ describe('no non-unit suite’s config sets a limit of its own (#476 AC2)', () =
       readdirSync('.')
         .filter((f) => /^playwright\..+\.config\.ts$/.test(f))
         .sort(),
-    ).toEqual(['playwright.engines.config.ts', 'playwright.web.config.ts']);
+    ).toEqual([...PLAYWRIGHT_CONFIGS]);
   });
 });

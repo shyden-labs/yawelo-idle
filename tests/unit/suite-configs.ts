@@ -14,3 +14,9 @@ export const NON_UNIT_VITEST_CONFIGS = [
   'apps/sync-worker/vitest.harness.config.ts',
   'apps/web/vitest.harness.config.ts',
 ] as const;
+
+/** Every Playwright config: each suite-limits.test.ts holds to no per-test limit. */
+export const PLAYWRIGHT_CONFIGS = [
+  'playwright.engines.config.ts',
+  'playwright.web.config.ts',
+] as const;

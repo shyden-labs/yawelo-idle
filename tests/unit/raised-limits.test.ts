@@ -1,6 +1,10 @@
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { raisedLimitsIn, UNIT_LIMIT_MS } from './raised-limits';
+import {
+  raisedLimitFiles,
+  raisedLimitsIn,
+  UNIT_LIMIT_MS,
+} from './raised-limits';
 
 /**
  * The reader behind the raised-limit guard (#477 AC3): every way a unit test
@@ -280,4 +284,96 @@ describe('every test call is judged, wherever its name comes from (#477 AC3)', (
       declarations: 0,
     });
   });
+});
+
+/**
+ * The files the guard reads (#559): the unit config and every file the unit
+ * suite loads, found as the fast-check guard finds them (#551), less the
+ * other suites' configs, which unit tests load only to check them as data.
+ * Each case is an in-memory tree.
+ */
+describe('the files the guard reads (#559)', () => {
+  const TREE: Readonly<Record<string, string>> = {
+    'vitest.config.ts': 'export default {};',
+    'tests/unit/setup.ts': '',
+    'tests/unit/a.test.ts':
+      "import { h } from '../../scripts/h';\nimport guards from '../../vitest.guards.config';",
+    'scripts/h.ts': 'export const h = 1;',
+    'vitest.guards.config.ts': 'export default {};',
+  };
+  const files = () =>
+    raisedLimitFiles({
+      tracked: Object.keys(TREE),
+      read: (path) => TREE[path],
+      include: ['tests/**/*.test.ts'],
+      exclude: [],
+      setupFiles: ['tests/unit/setup.ts'],
+      unitConfig: 'vitest.config.ts',
+      otherConfigs: ['vitest.guards.config.ts'],
+    });
+
+  it('are the unit config, its tests, setup files and every helper they load, wherever it lives, less other suites’ configs', () => {
+    expect(files()).toEqual({
+      files: [
+        'vitest.config.ts',
+        'scripts/h.ts',
+        'tests/unit/a.test.ts',
+        'tests/unit/setup.ts',
+      ],
+      left: ['vitest.guards.config.ts'],
+      unresolved: [],
+    });
+  });
+
+  it('lists the unit config once, when a unit test imports it too', () => {
+    const tree: Readonly<Record<string, string>> = {
+      ...TREE,
+      'tests/unit/b.test.ts': "import unit from '../../vitest.config';",
+    };
+    expect(
+      raisedLimitFiles({
+        tracked: Object.keys(tree),
+        read: (path) => tree[path],
+        include: ['tests/**/*.test.ts'],
+        exclude: [],
+        setupFiles: ['tests/unit/setup.ts'],
+        unitConfig: 'vitest.config.ts',
+        otherConfigs: ['vitest.guards.config.ts'],
+      }).files,
+    ).toEqual([
+      'vitest.config.ts',
+      'scripts/h.ts',
+      'tests/unit/a.test.ts',
+      'tests/unit/b.test.ts',
+      'tests/unit/setup.ts',
+    ]);
+  });
+
+  // The planted raises sit in a helper outside the old hand-written globs
+  // (tests/unit/**, packages/*/test/**) that a unit test loads: the guard
+  // finds the helper, then reads the file it found.
+  it.each([
+    ['vi.setConfig', 'vi.setConfig({});'],
+    ['a hook given a limit', `beforeAll(() => {}, ${OVER});`],
+  ])(
+    'reads a limit raised by %s in such a helper, and refuses it',
+    (_how, code) => {
+      const tree: Readonly<Record<string, string>> = {
+        ...TREE,
+        'scripts/h.ts': `${IMPORT}${code}\nexport const h = 1;`,
+      };
+      const found = raisedLimitFiles({
+        tracked: Object.keys(tree),
+        read: (path) => tree[path],
+        include: ['tests/**/*.test.ts'],
+        exclude: [],
+        setupFiles: ['tests/unit/setup.ts'],
+        unitConfig: 'vitest.config.ts',
+        otherConfigs: ['vitest.guards.config.ts'],
+      }).files.filter((file) => file.startsWith('scripts/'));
+      expect(
+        found.map((file) => [file, parse(tree[file] ?? '').findings.length]),
+      ).toEqual([['scripts/h.ts', 1]]);
+    },
+  );
 });
