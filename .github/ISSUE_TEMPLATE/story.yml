@@ -8,6 +8,7 @@ body:
       value: |
         After filing, add the issue to the "Yawelo Idle Stories" board and set its **Estimate** field: 1, 2, 3, 5, 8 or 13 story points. Anything larger is an epic: split it into stories.
         Score from the acceptance criteria against similar closed stories, never from felt hours. Progress by effort reads the board field and nothing else.
+        Set its **Priority** too: P0 (now) to P5 (someday), as the board’s option descriptions define them. A blocker takes at least the level of what waits on it. The next ticket comes from `node scripts/board-next.ts`, never from the handover.
   - type: textarea
     id: story
     attributes:
