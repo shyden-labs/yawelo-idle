@@ -35,6 +35,16 @@ node scripts/board-progress.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"
 
 It prints what `packages/progress` computes, and the roadmap Worker (#341) imports the same module, so the operator's figures and the public roadmap cannot disagree. repo-template's `scripts/board-progress.ts` is the older copy without #340's seven fixes; a change to the maths belongs in `packages/progress`.
 
+## The next ticket
+
+The board's `Priority` (P0 to P5), never HANDOVER.md, picks the next ticket (#576). At the start of every session, after `ListAgents`:
+
+```
+node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"
+```
+
+It refuses while any open ticket has no Priority, and while any open blocker sits below a ticket it blocks: a blocker takes at least the level of what waits on it (Shyden, 2026-10-13, #578). Blockers are GitHub "Blocked by" links on the issue; a `## Depends on` section is context, not the record (#577). Milestones map onto levels (Shyden, 2026-10-13, #578): P2 is the quality-rule tickets plus the milestone in hand, P3 the next two milestones and Website, P4 the later milestones, P5 post-launch and ideas; P0 and P1 by their definitions. Re-score at each milestone close. `scripts/board-setup.ts` creates the Estimate and Priority fields on a board that lacks them.
+
 ## Website follows the game
 
 The coming-soon site (`apps/site`, epic #331, spec `docs/superpowers/specs/2026-10-04-website-design.md`) keeps advertising the game as it grows (operator, 2026-10-06, website spec W16). When a player-facing story or epic closes, file a `Website: announce <feature>` story in the same session: 1–3 points, full ACs, Estimate set, copy approved by Shyden before translation, en + id with D18 evidence. Skip it only when the closing story says why there is nothing new to show. Every story's **Website** field (`.github/ISSUE_TEMPLATE/story.yml`) says what it lets the site show, and every close-out checks that session's closed stories against this rule.
