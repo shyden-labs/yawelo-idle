@@ -1,41 +1,45 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-13 00:22 UTC. Nothing local is running. #568 closed; dev deployed and verified at `4ea5a10`. The #536 load sampler runs under launchd and survives `/clear`.
-**Next session:** a hook names it "Yawelo Idle"; type `/color green` once.
+**Written:** 2026-10-13 ~03:10 UTC. Nothing local is running. The #536 load sampler still runs under launchd and survives a restart.
+**Next session:** a hook names it "Yawelo Idle"; type `/color green` once. The board, not this file, picks the next ticket.
 
-## Progress (from `node scripts/board-progress.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` at 00:21 UTC)
+## Progress (from `node scripts/board-progress.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`)
 
-- **By tickets: 27% complete** (93 of 346 in-scope stories closed). Measured pace 4.86 a day over 7 days, which now includes today's first hour (1 closed) (ETA at that pace 2026-12-05). **ETA to release-ready: 2026-12-26 to 2027-02-03** (low to medium confidence).
-- **By effort: 1,175 points remaining** across 253 open stories (447 of 1,622 closed). Measured pace 21.86 points a day (ETA at that pace 2026-12-06). **ETA to release-ready: 2026-12-22 to 2027-02-01** (low to medium confidence).
-- **Measured:** counts and paces. **Assumed:** the same allowances as before added to the pace ETA (20–30 points a working day; about 30 unfiled prestige stories, 130–180 points; 1.5–2.5 weeks of outside waits). The 12-day slip is the 7-day window dropping a 10-story day for today's 21-minute one: a defect in `packages/progress`, filed as #575.
+- **By tickets: 27% complete** (94 of 352 in-scope stories closed). Measured pace 5.00 a day over 7 days (ETA at that pace 2026-12-04). **ETA to release-ready: 2026-12-25 to 2027-02-02** (low to medium confidence).
+- **By effort: 1,193 points remaining** across 258 open stories. Measured pace 22.29 points a day (ETA at that pace 2026-12-06). **ETA to release-ready: 2026-12-21 to 2027-01-31** (low to medium confidence).
+- **Measured:** counts and paces. **Assumed:** as before, about 30 unfiled prestige stories (130–180 points) and 1.5–2.5 weeks of outside waits. #575: the pace counts today as a whole day.
 
-## Done this session (2026-10-12, evening)
+## Done this session
 
-- **#568 closed** (PR #573, `4ea5a10`, dev verified): `fewer regions reached` prices region 1 at 250 owned instead of 2,000. Region 1 becomes the dearer choice from 220; at 250 the day-long `first` search finds the purchase 34 s in after 2 checks instead of walking 25 hourly segments to find none. Thread CPU 53–59 ms → 8–11 ms over 5+5 unit runs (after at higher load). AC3 mutation red (both key checks, and each alone). Correction of the earlier "a smaller count cannot work" comment posted on #568 with the 200–300 scan.
-- **#572 filed** (3 points, Todo): six one-off CPU spikes in 127,460 test-runs (up to 87 ms against a 13 ms median), all golden-log replay/walk tests; cause assumed GC, AC1 measures it first.
-- **#575 filed** (2 points, Todo, from a side agent's note you relayed): the pace window counts today as a whole day, so the ETA swings at every UTC midnight, on the public roadmap (#341) too.
+- New global rules applied here: the board's **Priority** (P0–P5) picks the next ticket; **blockers inherit** (Shyden 01:03); **milestone tiers** (Shyden 01:00, on #578); **off-board blocker = note** (Shyden 01:51); **In Progress only with a branch or open PR**; **no typed UTC header**.
+- **#576 closed** (PRs #579 and #582): `scripts/board-setup.ts` created the Priority field; `scripts/board-next.ts` works on the real board. Dev verified at `1e27486`.
+- **#577**: 417 Blocked by links and 244 sub-issues written and read back (one GraphQL snapshot). PR #584 adds the story-form line.
+- **#578**: all 287 open tickets scored and read back (P1 5, P2 25, P3 142, P4 106, P5 9; 53 raised by inheritance). Table on #578.
+- **Orphans**: #6, #432 and #536 moved back to Todo. **#580** filed (orphan check in the PR gate, with Shyden's refinement on it).
+- **#581 (P0) closed** (PR #583): dev verify failed at `fe586f9` because `/roadmap` still served the previous commit 2 s after the home page moved on. Verify now waits on every page. **Dev verified at `1369d71`** (run 38339817141).
+- **#341**: AC8 a–d done. App `yawelo-idle-roadmap` (ID **5294556**), installed on yawelo-idle only (installation 170821713, read back). Dev secrets set by Shyden in his terminal.
 
 ## Resume steps
 
-1. Run `ListAgents` and `node -v` (prefix `export PATH=/opt/homebrew/opt/node/bin:$PATH;` if not 26). Re-read #568, #572 and #536.
-2. **#536 lock (from about 16:46 UTC on 2026-10-13):** report the share of minutes below 16/24/32/48/64 from `.superpowers/sdd/536/load-samples.tsv` beside the pass rate by load (`.superpowers/sdd/536-timeouts.py` over all `m-*.jsonl`, now also `.superpowers/sdd/568/m-568*.jsonl`), then remove the sampler (`launchctl bootout gui/501/uk.co.shyden.load-sample`; delete `~/Library/LaunchAgents/uk.co.shyden.load-sample.plist`). Then put the line and a maximum wait to Shyden before changing `test-lock.zsh` (with its own test).
-3. Until the lock lands, a local unit failure that is only a 1 s wall timeout at high load is posted on #536 with its load, never re-run.
-4. Then #575 (pace from finished days only; the ETA jumped 12 days at midnight), #572 (spikes), #541 (unit file load limits), #84.
+1. `ListAgents`; `node -v` (26). Then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`.
+2. **PR #584 (#577)**: labelled `record-floors`. Run `npm run floors:fetch <run-id>`, amend into the one commit, force-push, and merge when CI is green. Then close #577 and #578. #578's AC4 is this file, which no longer orders work.
+3. **#341 (P1, PR #438)**: put App ID `5294556` in the Worker config (replacing whatever stands in for it there). Get #438 green, merge, and deploy dev. Read `/api/roadmap/health`. Then walk Shyden through **step e** (org webhook; the secret is in his `~/roadmap-webhook-secret.txt`, which he deletes afterwards). AC8 (ii)/(iii) read-backs follow.
+4. **#536** lock from about 16:46 UTC today: the old resume step is in `git show 83681f4:HANDOVER.md`.
 
-## Lessons recorded this session
+## Lessons recorded
 
-- A probe that only tries one side of a threshold proves nothing about the other: #568's earlier "≤200 breaks the case" was read as "no smaller count works"; a scan across the line found 220–280 works. Scan both sides before ruling a parameter out.
-- The #536 logger names a test by file and title only (no `describe`), and writes an `outside a test` row with no CPU field (verify-dev's in-process server warm-up, by ruling): filter by key presence and assert exactly one match per run.
-
-- A figure I explain away is still a defect: I wrote off the midnight ETA jump in this file's progress note instead of filing it; #575 came from a side note. A surprise in a measured figure gets a ticket in the same turn.
+- An unquoted heredoc runs Markdown backticks as commands; quote it and pass argv (memory).
+- A coordinate click after a picker landed on **Install**; on pages with a submit button, click by ref and get the OK first (memory).
+- This laptop's connection to api.github.com reset every few minutes during long REST loops; read via one paginated GraphQL query, and make writers resumable.
 
 ## Waiting on Shyden
 
+- **#341 step e**, once #438 deploys to dev (I'll walk it through).
 - `handover/overnight-2026-10-05`: one local-only commit, kept until you say.
-- Still open from before: Spotlight privacy for `~/Developer/Repos`; the `gh api …/logs` hook; Docker for #467; #451 AC3; #341 AC8 a–d (PR #438 must not merge before that); #343 Buttondown; #333, #425/#426, #345, #455.
+- From before: Spotlight privacy for `~/Developer/Repos`; the `gh api …/logs` hook; Docker for #467; #451 AC3; #343 Buttondown; #333, #425/#426, #345, #455.
 
 ## State
 
-- `develop` at `4ea5a10`; `m1/568-dear-count` merged. This file went in on `handover/2026-10-13a`. Open PRs: #438 (#341).
-- Worktrees: `../yawelo-idle-341`, `-341-gate`, `../yawelo-idle-develop-bench` (detached at `b3d56c0`, clean).
-- Session tools (git-ignored): `.superpowers/sdd/568/` (walk probe, mutate.py, drive.py, measure.py, m-568{b,a}{1..5} runs, PR and comment texts); `.superpowers/sdd/cpu-spikes/` (#572 filer); bench and main `.superpowers/sdd/553/`, `.superpowers/sdd/536/`.
+- `develop` at `1369d71`, plus this file. Open PRs: #438 (#341), #584 (#577).
+- Worktrees: `../yawelo-idle-341`, `-341-gate`, `../yawelo-idle-develop-bench`.
+- Session tools (git-ignored): `.superpowers/sdd/board-priority/` (filers, classify.py, link.py, score.py, set-priority.py, PR texts).
