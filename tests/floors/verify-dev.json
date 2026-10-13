@@ -5,6 +5,7 @@
   "verify-dev/health-checks": 4,
   "verify-dev/healthy-site-probes": 11,
   "verify-dev/robots-checks": 2,
+  "verify-dev/stale-page-probes": 25,
   "verify-dev/stale-site-probes": 19,
   "verify-dev/web-checks": 3
 }

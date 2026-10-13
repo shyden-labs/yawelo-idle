@@ -368,6 +368,12 @@ describe('verifyDev', () => {
   let scriptType = JAVASCRIPT;
   /** A page path that keeps serving OLD after the home page turns current. */
   let stalePath = '';
+  /** How many requests to `stalePath` find OLD before it turns current (#581). */
+  let stalePathLooks = Number.POSITIVE_INFINITY;
+  let stalePathSeen = 0;
+  /** A page path that answers `failStatus` with the password (#581). */
+  let failPath = '';
+  let failStatus = 500;
   /** A page path served to anyone, as if the gate did not cover it. */
   let ungatedPath = '';
   /** The game shell names no script. */
@@ -443,13 +449,21 @@ describe('verifyDev', () => {
         return;
       }
       webStale += 1;
-      res.writeHead(authorised ? authorisedStatus : 200, {
-        'content-type': 'text/html',
-        ...tag,
-        ...(req.url === '/play/' ? gamePolicy : {}),
-      });
-      const commit =
-        webStale <= staleLooks || req.url === stalePath ? OLD : served;
+      const pathStale =
+        req.url === stalePath && (stalePathSeen += 1) <= stalePathLooks;
+      res.writeHead(
+        authorised && req.url === failPath
+          ? failStatus
+          : authorised
+            ? authorisedStatus
+            : 200,
+        {
+          'content-type': 'text/html',
+          ...tag,
+          ...(req.url === '/play/' ? gamePolicy : {}),
+        },
+      );
+      const commit = webStale <= staleLooks || pathStale ? OLD : served;
       res.end(noScript && req.url === '/play/' ? page(commit) : shell(commit));
     });
     await new Promise<void>((resolve) =>
@@ -484,6 +498,10 @@ describe('verifyDev', () => {
     retiredServes = false;
     scriptType = JAVASCRIPT;
     stalePath = '';
+    stalePathLooks = Number.POSITIVE_INFINITY;
+    stalePathSeen = 0;
+    failPath = '';
+    failStatus = 500;
     ungatedPath = '';
     noScript = false;
     policyServed = true;
@@ -494,7 +512,7 @@ describe('verifyDev', () => {
   };
 
   const notServed = (polls: number) =>
-    `the expected commit ${SHA} was not served on both hosts after ${String(polls)} looks 0 ms apart`;
+    `the expected commit ${SHA} was not served on every page judged after ${String(polls)} looks 0 ms apart`;
 
   it('passes a gated site serving the expected commit, judging each check once', async () => {
     reset();
@@ -506,8 +524,8 @@ describe('verifyDev', () => {
       '/',
       '/',
       '/health',
-      '/robots.txt',
       ...SITE_PAGES,
+      '/robots.txt',
       SCRIPT,
       '/play/',
       '/retired-game/',
@@ -517,8 +535,8 @@ describe('verifyDev', () => {
       basicAuthorization(`${PASSWORD}x`),
       basicAuthorization(PASSWORD),
       '',
-      '',
       ...SITE_PAGES.map(() => basicAuthorization(PASSWORD)),
+      '',
       basicAuthorization(PASSWORD),
       '',
       '',
@@ -543,13 +561,38 @@ describe('verifyDev', () => {
     ]);
   });
 
-  it('fails a page that still serves an old commit once the home page is current', async () => {
+  it('fails a page still serving an old commit after the last look, naming it (#581)', async () => {
     reset();
     stalePath = '/roadmap';
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     expect(problems).toEqual([
+      notServed(3),
       `web /roadmap: serves commit ${OLD}, expected ${SHA}`,
     ]);
+    expect(requests, 'three looks of seven probes').toBe(21);
+  });
+
+  it('waits while one page still serves the old commit, then judges it once (#581)', async () => {
+    reset();
+    stalePath = '/roadmap';
+    stalePathLooks = 2;
+    const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
+    // The exact count first: a floor that moved would otherwise stop the
+    // test before it ran (measured on #332).
+    expect(requests, 'two looks of seven probes, then one of eleven').toBe(25);
+    expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
+    expect(
+      floorBreach('verify-dev/stale-page-probes', requests),
+    ).toBeUndefined();
+  });
+
+  it('fails at once when a page answers an error while the home page is current (#581)', async () => {
+    reset();
+    failPath = '/roadmap';
+    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
+      'web /roadmap: status 500 with the password, expected 200',
+    ]);
+    expect(requests, 'one look of seven probes').toBe(7);
   });
 
   it('fails a game the gate does not cover', async () => {
