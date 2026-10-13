@@ -246,14 +246,17 @@ describe('the memos behind a fast catch-up are keyed by every part they read (AC
     [
       'fewer regions reached',
       (c, s) => {
-        // Region 1's Encounters owned in thousands cost more than any later
-        // one, so which regions are reached moves the cheapest price.
+        // Region 1's Encounters at 250 owned each cost more than the cheapest
+        // later one (from 220 on), so which regions are reached moves the
+        // cheapest price. Just past that line the first purchase still comes
+        // in seconds, so the day-long search from nothing held stops there
+        // rather than walking all 24 hours to find none (#568).
         const dear: GameState = {
           ...s,
           owned: {
             ...s.owned,
             ...Object.fromEntries(
-              (c.regions[0]?.encounters ?? []).map((e) => [e.id, 2_000]),
+              (c.regions[0]?.encounters ?? []).map((e) => [e.id, 250]),
             ),
           },
         };
