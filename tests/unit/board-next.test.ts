@@ -3,6 +3,7 @@ import {
   boardNext,
   NEXT_QUERY,
   nextTicket,
+  offBoardBlockers,
   type NextItem,
   parseNextItems,
 } from '../../scripts/board-next';
@@ -137,27 +138,61 @@ describe('nextTicket refuses a board it cannot order (#576)', () => {
     expect(nextTicket(items)?.number).toBe(1);
   });
 
-  it('refuses an open blocker that is not on the board, naming it', () => {
+  it('picks past an open blocker that is not on the board (operator 2026-10-13)', () => {
     const items = [
       item(2, {
         blockedBy: [{ number: 40, repository: 'shyden-labs/yawelo-idle' }],
       }),
     ];
-    expect(() => nextTicket(items)).toThrow(
-      '#2 is blocked by shyden-labs/yawelo-idle#40, which is not an open issue on this board: add it, or remove the link',
-    );
+    expect(nextTicket(items)?.number).toBe(2);
   });
 
-  it('refuses an open blocker from another repository, naming it', () => {
+  it('does not read another repository’s #1 as this board’s #1 at a lower level', () => {
     const items = [
-      item(1),
+      item(1, { priority: 'P4' }),
       item(2, {
+        priority: 'P3',
         blockedBy: [{ number: 1, repository: 'shyden-labs/repo-template' }],
       }),
     ];
-    expect(() => nextTicket(items)).toThrow(
-      '#2 is blocked by shyden-labs/repo-template#1, which is not an open issue on this board: add it, or remove the link',
-    );
+    expect(nextTicket(items)?.number).toBe(2);
+  });
+});
+
+describe('offBoardBlockers names each blocker the board does not hold (operator 2026-10-13)', () => {
+  it('names a blocker of this repository missing from the board, and one from another repository', () => {
+    const items = [
+      item(1),
+      item(2, {
+        blockedBy: [
+          { number: 40, repository: 'shyden-labs/yawelo-idle' },
+          { number: 1, repository: 'shyden-labs/repo-template' },
+          { number: 1, repository: 'shyden-labs/yawelo-idle' },
+        ],
+      }),
+    ];
+    expect(offBoardBlockers(items)).toEqual([
+      'note: #2 is blocked by shyden-labs/yawelo-idle#40, which is not an open issue on this board',
+      'note: #2 is blocked by shyden-labs/repo-template#1, which is not an open issue on this board',
+    ]);
+  });
+
+  it('names nothing when every blocker is on the board', () => {
+    const blockedBy = (n: number) => [
+      { number: n, repository: 'shyden-labs/yawelo-idle' },
+    ];
+    expect(
+      againstControl(
+        (missing: number[]) =>
+          offBoardBlockers([
+            item(1),
+            item(2, {
+              blockedBy: [...blockedBy(1), ...missing.flatMap(blockedBy)],
+            }),
+          ]),
+        { input: [], control: [40] },
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -298,7 +333,7 @@ describe('boardNext (#576)', () => {
     const { gh } = ghPrinting([
       page([blocked, rawIssue(1, { createdAt: '2026-01-20T00:00:00Z' })]),
     ]);
-    expect(boardNext(['PVT_fixture', TITLE], gh)).toBe(
+    expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
       'Next: #1 story 1 (P3, Todo).',
     );
   });
@@ -318,14 +353,36 @@ describe('boardNext (#576)', () => {
     });
     const epic = rawIssue(1, { subIssuesSummary: { total: 4, completed: 1 } });
     const { gh } = ghPrinting([page([blocked, epic])]);
-    expect(boardNext(['PVT_fixture', TITLE], gh)).toBe(
+    expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
       'Next: #2 story 2 (P3, Todo, blocked by #1).',
     );
   });
 
+  it('gives a note for each blocker the board does not hold, beside the line', () => {
+    const blocked = rawIssue(2, {
+      blockedBy: {
+        totalCount: 1,
+        nodes: [
+          {
+            number: 1,
+            state: 'OPEN',
+            repository: { nameWithOwner: 'shyden-labs/repo-template' },
+          },
+        ],
+      },
+    });
+    const { gh } = ghPrinting([page([blocked])]);
+    expect(boardNext(['PVT_fixture', TITLE], gh)).toEqual({
+      line: 'Next: #2 story 2 (P3, Todo, blocked by #1).',
+      notes: [
+        'note: #2 is blocked by shyden-labs/repo-template#1, which is not an open issue on this board',
+      ],
+    });
+  });
+
   it('says when nothing is open', () => {
     const { gh } = ghPrinting([page([])]);
-    expect(boardNext(['PVT_fixture', TITLE], gh)).toBe(
+    expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
       'Next: nothing is open.',
     );
   });

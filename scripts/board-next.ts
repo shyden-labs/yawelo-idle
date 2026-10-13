@@ -64,24 +64,23 @@ function assertScored(open: NextItem[]): void {
   }
 }
 
+/** Each open issue keyed by `owner/name#number`, so another repository's #1 is never this one's. */
+function byKey(open: NextItem[]): Map<string, NextItem> {
+  return new Map(open.map((i) => [`${i.repository}#${String(i.number)}`, i]));
+}
+
 /**
- * Refuses a blocker that is not an open issue on this board, then every pair
- * where the blocker's level is below the level of the issue it blocks.
+ * Refuses every pair where an open blocker on this board has a lower level
+ * than the issue it blocks. A blocker the board does not hold is passed over
+ * here and named by `offBoardBlockers` (operator 2026-10-13).
  */
 function assertBlockersInherit(open: NextItem[]): void {
-  const byKey = new Map(
-    open.map((i) => [`${i.repository}#${String(i.number)}`, i]),
-  );
+  const onBoard = byKey(open);
   const low: string[] = [];
   for (const i of open) {
     for (const b of i.blockedBy) {
-      const key = `${b.repository}#${String(b.number)}`;
-      const blocker = byKey.get(key);
-      if (blocker === undefined) {
-        throw new Error(
-          `#${String(i.number)} is blocked by ${key}, which is not an open issue on this board: add it, or remove the link`,
-        );
-      }
+      const blocker = onBoard.get(`${b.repository}#${String(b.number)}`);
+      if (blocker === undefined) continue;
       const [mine, theirs] = [i, blocker].map((x) =>
         LEVELS.indexOf(x.priority as string),
       );
@@ -97,6 +96,25 @@ function assertBlockersInherit(open: NextItem[]): void {
       `A blocker takes at least the level of what waits on it (#578): ${low.join('; ')}. Raise each blocker first.`,
     );
   }
+}
+
+/**
+ * A note for each open blocker the board does not hold (another repository's
+ * issue, or one never added). It never stops the pick: the operator ruled a
+ * note, not a refusal (2026-10-13), and it is printed on stderr.
+ */
+export function offBoardBlockers(items: NextItem[]): string[] {
+  const open = items.filter((i) => i.state === 'OPEN');
+  const onBoard = byKey(open);
+  return open.flatMap((i) =>
+    i.blockedBy
+      .map((b) => `${b.repository}#${String(b.number)}`)
+      .filter((key) => !onBoard.has(key))
+      .map(
+        (key) =>
+          `note: #${String(i.number)} is blocked by ${key}, which is not an open issue on this board`,
+      ),
+  );
 }
 
 /** The next ticket, or `null` when nothing is open. */
@@ -218,8 +236,14 @@ export function parseNextItems(pages: unknown[], title: string): NextItem[] {
 const USAGE =
   'usage: node scripts/board-next.ts <board-node-id> "<board title>"';
 
-/** The line naming the next ticket on the board `args` names (`<node-id> <title>`). */
-export function boardNext(args: readonly string[], gh: Gh): string {
+/**
+ * The line naming the next ticket on the board `args` names
+ * (`<node-id> <title>`), and a note for each blocker the board does not hold.
+ */
+export function boardNext(
+  args: readonly string[],
+  gh: Gh,
+): { line: string; notes: string[] } {
   const [id, title] = args;
   if (id === undefined || title === undefined) throw new Error(USAGE);
   const out = gh([
@@ -232,18 +256,24 @@ export function boardNext(args: readonly string[], gh: Gh): string {
     '-f',
     `id=${id}`,
   ]);
-  const next = nextTicket(parseNextItems(JSON.parse(out) as unknown[], title));
-  if (next === null) return 'Next: nothing is open.';
+  const items = parseNextItems(JSON.parse(out) as unknown[], title);
+  const notes = offBoardBlockers(items);
+  const next = nextTicket(items);
+  if (next === null) return { line: 'Next: nothing is open.', notes };
   const blocked =
     next.blockedBy.length > 0
       ? `, blocked by ${next.blockedBy.map((b) => `#${String(b.number)}`).join(', ')}`
       : '';
-  return `Next: #${String(next.number)} ${next.title} (${String(next.priority)}, ${next.status ?? 'no status'}${blocked}).`;
+  return {
+    line: `Next: #${String(next.number)} ${next.title} (${String(next.priority)}, ${next.status ?? 'no status'}${blocked}).`,
+    notes,
+  };
 }
 
 if (import.meta.main) {
-  const line = boardNext(process.argv.slice(2), (args) =>
+  const { line, notes } = boardNext(process.argv.slice(2), (args) =>
     execFileSync('gh', args, { encoding: 'utf8' }),
   );
+  for (const note of notes) process.stderr.write(`${note}\n`);
   process.stdout.write(`${line}\n`);
 }
