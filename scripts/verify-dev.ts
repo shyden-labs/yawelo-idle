@@ -21,14 +21,16 @@
  *    around the gate (#332).
  *
  * Nothing is retried (Refs #83). The one wait is for a named condition: both
- * hosts serving the expected commit, since the previous deploy can be served
- * for a few seconds after an upload. Each look waits on only two answers: an
+ * hosts, and then each of `SITE_PAGES`, serving the expected commit, since
+ * the previous deploy can be served for a few seconds after an upload, and
+ * on one path after another has moved on (#581). Each look waits on only two answers: an
  * older commit, and no answer from a host that has not yet answered in this
  * run (a new Custom Domain's DNS on its first deploy). Anything else fails at
  * once, by name: a status other than 200, a missing stamp, a dropped
  * connection from a host that has answered, and above all a page served
- * WITHOUT the password, which is a leak at any look. Once both hosts serve
- * the commit, every check is judged once, on that look's own answers.
+ * WITHOUT the password, which is a leak at any look. Once both hosts and
+ * every page serve the commit, every check is judged once, on that look's
+ * own answers.
  *
  * The password is sent, never printed: no problem message carries a header.
  */
@@ -388,14 +390,14 @@ export interface Wait {
 /** The commit an answer reports, or a problem no wait will fix. */
 type Reported = { commit: string } | { problem: string };
 
-function webCommit(probe: Probe): Reported {
+function webCommit(probe: Probe, label = 'web'): Reported {
   if (probe.status !== 200)
     return {
-      problem: `web: status ${String(probe.status)} with the password, expected 200`,
+      problem: `${label}: status ${String(probe.status)} with the password, expected 200`,
     };
   const stamp = COMMIT_STAMP.exec(probe.body)?.[1];
   return stamp === undefined
-    ? { problem: 'web: no yawelo-idle-commit meta tag in the page' }
+    ? { problem: `${label}: no yawelo-idle-commit meta tag in the page` }
     : { commit: stamp };
 }
 
@@ -509,28 +511,50 @@ export async function verifyDev(
       h.kind === 'failed' ? [h.problem] : [],
     );
     if (failed.length > 0) return failed;
-    if (hosts.every((h) => h.kind === 'served')) {
-      const robots = await look(
-        'web',
-        'robots.txt',
-        robotsUrl,
-        {},
-        robotsProblems,
-      );
-      return [
-        ...gate,
-        robots,
-        web,
-        sync,
-        ...(await lookAtTheRest(look, target, right)),
-      ].flatMap((outcome) => outcome.problems);
-    }
     waiting = hosts.flatMap((h) => (h.kind === 'waiting' ? [h.problem] : []));
+    if (waiting.length === 0) {
+      // Every other page judged waits for the commit too (#581): a Workers
+      // version rolls out per request, so /roadmap served the previous commit
+      // 2 s after the home page served this one (deploy-dev run 38333791614).
+      const pages = await lookAtPages(look, target, right);
+      const standings = pages.map((page, i) =>
+        standing(
+          page,
+          (p) => webCommit(p, `web ${String(SITE_PAGES[i])}`),
+          (c) =>
+            `web ${String(SITE_PAGES[i])}: serves commit ${c}, expected ${target.sha}`,
+        ),
+      );
+      const pageFailed = standings.flatMap((h) =>
+        h.kind === 'failed' ? [h.problem] : [],
+      );
+      if (pageFailed.length > 0) return pageFailed;
+      waiting = standings.flatMap((h) =>
+        h.kind === 'waiting' ? [h.problem] : [],
+      );
+      if (waiting.length === 0) {
+        const robots = await look(
+          'web',
+          'robots.txt',
+          robotsUrl,
+          {},
+          robotsProblems,
+        );
+        return [
+          ...gate,
+          robots,
+          web,
+          sync,
+          ...pages,
+          ...(await lookAtTheRest(look, target, right, pages)),
+        ].flatMap((outcome) => outcome.problems);
+      }
+    }
     if (poll < polls)
       await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
   return [
-    `the expected commit ${target.sha} was not served on both hosts after ${String(polls)} looks ${String(pollMs)} ms apart`,
+    `the expected commit ${target.sha} was not served on every page judged after ${String(polls)} looks ${String(pollMs)} ms apart`,
     ...waiting,
   ];
 }
@@ -544,28 +568,42 @@ type Look = (
 ) => Promise<Outcome & { unanswered: boolean }>;
 
 /**
- * Checks 5 and 6, once the home page serves the expected commit: each of
- * `SITE_PAGES`, the game's script, the gate in front of the game, and the
- * game's retired address.
+ * Check 5's pages, at each look once both hosts serve the expected commit:
+ * each of `SITE_PAGES` with the password, in order.
  */
-async function lookAtTheRest(
+async function lookAtPages(
   look: Look,
   target: Target,
   right: Record<string, string>,
-): Promise<Outcome[]> {
-  const at = (path: string) => new URL(path, target.webUrl).href;
-  const outcomes: Outcome[] = [];
+): Promise<Array<Outcome & { unanswered: boolean }>> {
+  const outcomes: Array<Outcome & { unanswered: boolean }> = [];
   for (const path of SITE_PAGES) {
     const label = `web ${path}`;
     outcomes.push(
-      await look('web', label, at(path), right, (p) =>
+      await look('web', label, new URL(path, target.webUrl).href, right, (p) =>
         path === GAME_SHELL
           ? gameShellProblems(p, target.sha, label)
           : webProblems(p, target.sha, label),
       ),
     );
   }
-  const shell = outcomes.at(-1)?.answer?.body ?? '';
+  return outcomes;
+}
+
+/**
+ * The rest of checks 5 and 6, once every page serves the expected commit:
+ * the game's script (named by the shell among `pages`), the gate in front of
+ * the game, and the game's retired address.
+ */
+async function lookAtTheRest(
+  look: Look,
+  target: Target,
+  right: Record<string, string>,
+  pages: readonly Outcome[],
+): Promise<Outcome[]> {
+  const at = (path: string) => new URL(path, target.webUrl).href;
+  const outcomes: Outcome[] = [];
+  const shell = pages.at(SITE_PAGES.indexOf(GAME_SHELL))?.answer?.body ?? '';
   const script = GAME_SCRIPT.exec(shell)?.[1];
   outcomes.push(
     script === undefined
