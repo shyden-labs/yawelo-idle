@@ -7,6 +7,7 @@ import {
 } from '../../packages/progress/src/index';
 import {
   boardPages,
+  FIXTURE_REPO,
   FIXTURE_TITLE,
 } from '../../packages/progress/test/board-fixture';
 import { boardProgress, type Gh } from '../../scripts/board-progress';
@@ -38,14 +39,16 @@ describe('boardProgress (#340, in-process since #490)', () => {
   it('gives the same two lines as a direct module call on the shared fixture', () => {
     const pages = boardPages(TODAY);
     const { gh } = ghPrinting(pages);
-    expect(boardProgress([NODE_ID, FIXTURE_TITLE], gh, TODAY)).toEqual(
-      formatLines(progress(parseItems(pages), TODAY), TODAY),
+    expect(
+      boardProgress([NODE_ID, FIXTURE_TITLE, FIXTURE_REPO], gh, TODAY),
+    ).toEqual(
+      formatLines(progress(parseItems(pages, FIXTURE_REPO), TODAY), TODAY),
     );
   });
 
   it('asks gh once for every page of the board it was given, slurped into one array', () => {
     const { gh, calls } = ghPrinting(boardPages(TODAY));
-    boardProgress([NODE_ID, FIXTURE_TITLE], gh, TODAY);
+    boardProgress([NODE_ID, FIXTURE_TITLE, FIXTURE_REPO], gh, TODAY);
     expect(calls).toEqual([
       [
         'api',
@@ -63,9 +66,16 @@ describe('boardProgress (#340, in-process since #490)', () => {
   it('refuses a board with another title, giving no line', () => {
     const { gh } = ghPrinting(boardPages(TODAY));
     expect(() =>
-      boardProgress([NODE_ID, 'ShyTalk Stories'], gh, TODAY),
+      boardProgress([NODE_ID, 'ShyTalk Stories', FIXTURE_REPO], gh, TODAY),
     ).toThrow(
       'the board is "Fixture Stories", not "ShyTalk Stories": nothing read',
+    );
+  });
+
+  it('reads shyden-labs/yawelo-idle when no repository is given (#341)', () => {
+    const { gh } = ghPrinting(boardPages(TODAY));
+    expect(() => boardProgress([NODE_ID, FIXTURE_TITLE], gh, TODAY)).toThrow(
+      '#1 is an issue of shyden-labs/fixture, not shyden-labs/yawelo-idle: remove it from the board',
     );
   });
 
@@ -75,7 +85,7 @@ describe('boardProgress (#340, in-process since #490)', () => {
       throw new Error('gh was called');
     };
     expect(() => boardProgress([NODE_ID], gh, TODAY)).toThrow(
-      'usage: node scripts/board-progress.ts <board-node-id> "<board title>"',
+      'usage: node scripts/board-progress.ts <board-node-id> "<board title>" [owner/repo]',
     );
   });
 
@@ -83,8 +93,8 @@ describe('boardProgress (#340, in-process since #490)', () => {
     const gh: Gh = () => {
       throw new Error('gh: HTTP 502');
     };
-    expect(() => boardProgress([NODE_ID, FIXTURE_TITLE], gh, TODAY)).toThrow(
-      'gh: HTTP 502',
-    );
+    expect(() =>
+      boardProgress([NODE_ID, FIXTURE_TITLE, FIXTURE_REPO], gh, TODAY),
+    ).toThrow('gh: HTTP 502');
   });
 });

@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "build": "astro build",
-    "typecheck": "astro check --minimumSeverity hint && tsc --noEmit -p worker",
+    "typecheck": "astro check --minimumSeverity hint && tsc --noEmit -p worker && tsc --noEmit -p test/roadmap-worker",
     "test": "astro build && vitest run -c vitest.harness.config.ts",
     "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
   },
   "dependencies": {
     "@yawelo-idle/core": "*",
     "@yawelo-idle/lockdown": "*",
+    "@yawelo-idle/progress": "*",
     "@yawelo-idle/web": "*"
   },
   "devDependencies": {

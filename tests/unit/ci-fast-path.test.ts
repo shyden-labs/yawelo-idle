@@ -61,7 +61,7 @@ const ORDER = [
   'Properties (every property at its full count)',
   'Pacing bots (under 2 minutes)',
   'Upload the pacing report',
-  'Worker tests (sync in workerd + local D1, site and game through the asset router)',
+  'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)',
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)',
   'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)',
   'Build (a warning fails it)',
@@ -90,7 +90,7 @@ const SKIPPED: Record<string, string> = {
   // docs-only, where nothing wrote it, nor when the pacing step never started
   // (#353).
   'Upload the pacing report': `\${{ !cancelled() && ${SKIP} && (steps.pacing.outcome == 'success' || steps.pacing.outcome == 'failure') }}`,
-  'Worker tests (sync in workerd + local D1, site and game through the asset router)': `\${{ ${SKIP} }}`,
+  'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)': `\${{ ${SKIP} }}`,
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)': `\${{ ${SKIP} }}`,
   'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)': `\${{ ${SKIP} }}`,
   'Build (a warning fails it)': `\${{ ${SKIP} }}`,
