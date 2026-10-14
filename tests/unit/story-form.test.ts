@@ -38,4 +38,10 @@ describe('the story form (#576)', () => {
       'Set its **Priority** too: P0 (now) to P5 (someday), as the board’s option descriptions define them. A blocker takes at least the level of what waits on it.',
     );
   });
+
+  it('records each blocker as a "Blocked by" link, the Depends on text being context (#577)', () => {
+    expect(note()).toContain(
+      'Set each issue this one waits on as a **Blocked by** link on the issue, and its epic as its parent (sub-issue). A `## Depends on` section is context, not the record.',
+    );
+  });
 });
