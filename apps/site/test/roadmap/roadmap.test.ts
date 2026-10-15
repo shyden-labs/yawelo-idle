@@ -57,6 +57,7 @@ interface Health {
 /** The socket a 101 carries: workerd's, which is accepted before use. */
 interface Socket {
   accept(): void;
+  send(message: string): void;
   addEventListener(
     type: 'message',
     listener: (event: { data: unknown }) => void,
@@ -450,10 +451,36 @@ describe('drift', () => {
     expect(health.drift).toBe(0);
     expect(health.driftTotal).toBe(1);
   });
+
+  // Only a webhook proves the delivery path works: a change the check finds
+  // leaves earlier drift standing (S3M5a in #341's mutation run survived
+  // without this case).
+  it('keeps drift when the next change is found by a check, not a webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithExtraStory(1) });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      expect((await r.health()).drift).toBe(1);
+      await configureFake({ pages: boardWithExtraStory(2) });
+      clock.at += 600_000;
+      await r.check();
+      return r.health();
+    });
+    expect(health.drift).toBe(1);
+    expect(health.driftTotal).toBe(1);
+  });
 });
 
 describe('the live socket', () => {
-  /** Opens a socket on `stub` and collects what it receives. */
+  /**
+   * Opens a socket on `stub` and collects what it receives. `next` never
+   * waits on a message that will not come: with nothing buffered it sends a
+   * ping, and a socket's messages arrive in order, so a pong before any
+   * snapshot means no snapshot was sent, and the test fails naming it (#341:
+   * three mutants hung here before).
+   */
   async function open(stub: RoadmapStub) {
     const response = await stub.fetch('https://roadmap/api/roadmap/live', {
       headers: { Upgrade: 'websocket' },
@@ -463,22 +490,59 @@ describe('the live socket', () => {
     if (socket === null) throw new Error('no socket in the 101');
     socket.accept();
     const received: Snapshot[] = [];
-    const waiters: (() => void)[] = [];
+    const pongs: (() => void)[] = [];
+    let waiter: {
+      resolve: (s: Snapshot) => void;
+      reject: (e: Error) => void;
+    } | null = null;
+    // A pong answering a ping sent while a snapshot was already on its way.
+    let late = 0;
     socket.addEventListener('message', (event) => {
-      received.push(JSON.parse(String(event.data)) as Snapshot);
-      waiters.shift()?.();
+      const data = String(event.data);
+      if (data === 'pong') {
+        if (pongs.length > 0) pongs.shift()?.();
+        else if (late > 0) late -= 1;
+        else if (waiter !== null) {
+          waiter.reject(
+            new Error(
+              'the socket answered a ping before sending a snapshot: no new version was sent',
+            ),
+          );
+          waiter = null;
+        }
+        return;
+      }
+      const snapshot = JSON.parse(data) as Snapshot;
+      if (waiter === null) received.push(snapshot);
+      else {
+        late += 1;
+        waiter.resolve(snapshot);
+        waiter = null;
+      }
     });
     const next = (): Promise<Snapshot> =>
-      new Promise((resolve) => {
+      new Promise((resolve, reject) => {
         const have = received.shift();
-        if (have !== undefined) resolve(have);
-        else
-          waiters.push(() => {
-            resolve(received.shift() as Snapshot);
-          });
+        if (have !== undefined) {
+          resolve(have);
+          return;
+        }
+        waiter = { resolve, reject };
+        socket.send('ping');
       });
-    return { next };
+    /** Sends a ping and resolves on its pong, the snapshots left alone. */
+    const ping = (): Promise<void> =>
+      new Promise((resolve) => {
+        pongs.push(resolve);
+        socket.send('ping');
+      });
+    return { next, ping };
   }
+
+  it('answers a ping with a pong, whether or not the board has been read', async () => {
+    const socket = await open(await fresh());
+    await socket.ping();
+  });
 
   it('sends the snapshot on connect, then each new version', async () => {
     const stub = await fresh();

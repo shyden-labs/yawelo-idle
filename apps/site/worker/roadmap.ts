@@ -148,6 +148,12 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
 
   constructor(ctx: DurableObjectState, env: RoadmapEnv) {
     super(ctx, env);
+    // The runtime answers a live socket's ping itself, without waking the
+    // object: a keep-alive for viewers, and an ordered marker that lets a test
+    // tell "no new version was sent" from "not yet arrived" (#341).
+    ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair('ping', 'pong'),
+    );
     void ctx.blockConcurrencyWhile(async () => {
       this.state = {
         ...EMPTY,
