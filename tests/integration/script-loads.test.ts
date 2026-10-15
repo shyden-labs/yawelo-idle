@@ -28,6 +28,7 @@ const hasMain = (path: string) =>
  */
 const SCRIPTS = [
   'scripts/board-next.ts',
+  'scripts/board-orphans.ts',
   'scripts/board-progress.ts',
   'scripts/board-setup.ts',
   'scripts/ci-scope.ts',

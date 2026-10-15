@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { againstControl, searched } from '../searched';
 import { withoutYamlComments } from './source-text';
 import { scanWorkflow } from './workflow-secrets';
 
@@ -44,15 +44,25 @@ describe('scanWorkflow', () => {
     expect(scan.findings).toEqual([]);
   });
 
+  it('accepts a secret in a job that declares the board-read environment (#580)', () => {
+    /** The problems in a workflow of a board-read job and the jobs `others` holds. */
+    const besideBoardRead = (others: string) =>
+      problems(workflow(job('    environment: board-read\n') + others));
+    const unprotected = job('').replace('  deploy:', '  other:');
+    expect(
+      againstControl(besideBoardRead, { input: '', control: unprotected }),
+    ).toEqual([]);
+  });
+
   it('flags a secret in a job with no environment', () => {
     expect(problems(workflow(job('')))).toEqual([
-      'secrets.CLOUDFLARE_API_TOKEN in a job that declares no environment; it must be one of dev, production',
+      'secrets.CLOUDFLARE_API_TOKEN in a job that declares no environment; it must be one of dev, production, board-read',
     ]);
   });
 
   it('flags a secret in a job whose environment is not a protected one', () => {
     expect(problems(workflow(job('    environment: scratch\n')))).toEqual([
-      'secrets.CLOUDFLARE_API_TOKEN in a job that declares environment "scratch"; it must be one of dev, production',
+      'secrets.CLOUDFLARE_API_TOKEN in a job that declares environment "scratch"; it must be one of dev, production, board-read',
     ]);
   });
 
@@ -78,7 +88,7 @@ describe('scanWorkflow', () => {
       `  leak:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo "${expression}"\n`,
     );
     expect(problems(source)).toEqual([
-      `${reported} in a job that declares no environment; it must be one of dev, production`,
+      `${reported} in a job that declares no environment; it must be one of dev, production, board-read`,
     ]);
   });
 
@@ -87,7 +97,7 @@ describe('scanWorkflow', () => {
       '  call:\n    uses: ./.github/workflows/deploy.yml\n    secrets: inherit\n',
     );
     expect(problems(source)).toEqual([
-      'secrets in a job that declares no environment; it must be one of dev, production',
+      'secrets in a job that declares no environment; it must be one of dev, production, board-read',
     ]);
   });
 
