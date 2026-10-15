@@ -475,11 +475,40 @@ describe('drift', () => {
 
 describe('the live socket', () => {
   /**
+   * The stated ceiling on one wait for the socket (#341). The suite has no
+   * per-test limit, so a message that never comes would hang it unnamed.
+   * Neither socket test reached vitest's 300 ms slow mark in any of 15 CI
+   * baselines of this file (mutation runs 38695826318, 38696731844 and
+   * 38701252739), so 10 s means the message is not coming.
+   */
+  const SOCKET_CEILING_MS = 10_000;
+
+  /** `pending`, failing by name if it has not settled within the ceiling. */
+  async function within<T>(pending: Promise<T>, what: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ceiling = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(
+          new Error(
+            `no ${what} within ${String(SOCKET_CEILING_MS / 1000)} s of asking`,
+          ),
+        );
+      }, SOCKET_CEILING_MS);
+    });
+    try {
+      return await Promise.race([pending, ceiling]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
    * Opens a socket on `stub` and collects what it receives. `next` never
    * waits on a message that will not come: with nothing buffered it sends a
    * ping, and a socket's messages arrive in order, so a pong before any
    * snapshot means no snapshot was sent, and the test fails naming it (#341:
-   * three mutants hung here before).
+   * three mutants hung here before). A pong that never comes fails by name
+   * at the ceiling.
    */
   async function open(stub: RoadmapStub) {
     const response = await stub.fetch('https://roadmap/api/roadmap/live', {
@@ -521,21 +550,27 @@ describe('the live socket', () => {
       }
     });
     const next = (): Promise<Snapshot> =>
-      new Promise((resolve, reject) => {
-        const have = received.shift();
-        if (have !== undefined) {
-          resolve(have);
-          return;
-        }
-        waiter = { resolve, reject };
-        socket.send('ping');
-      });
+      within(
+        new Promise((resolve, reject) => {
+          const have = received.shift();
+          if (have !== undefined) {
+            resolve(have);
+            return;
+          }
+          waiter = { resolve, reject };
+          socket.send('ping');
+        }),
+        'snapshot or pong',
+      );
     /** Sends a ping and resolves on its pong, the snapshots left alone. */
     const ping = (): Promise<void> =>
-      new Promise((resolve) => {
-        pongs.push(resolve);
-        socket.send('ping');
-      });
+      within(
+        new Promise((resolve) => {
+          pongs.push(resolve);
+          socket.send('ping');
+        }),
+        'pong',
+      );
     return { next, ping };
   }
 
