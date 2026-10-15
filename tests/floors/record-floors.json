@@ -1,7 +1,7 @@
 {
   "record-floors/callers": 57,
-  "record-floors/test-files": 176,
-  "record-floors/typescript-files": 341,
+  "record-floors/test-files": 178,
+  "record-floors/typescript-files": 344,
   "record-floors/unmoved-guard-files": 2,
-  "record-floors/workflow-steps": 53
+  "record-floors/workflow-steps": 58
 }

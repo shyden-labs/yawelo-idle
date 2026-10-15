@@ -22,12 +22,12 @@
   "collection-calls/allowed/a workspace value read but not called": 3,
   "collection-calls/allowed/workspace code in a script’s entry point written as a block (#554)": 1,
   "collection-calls/allowed/workspace code in a script’s entry point, which a test’s import never runs (#554)": 1,
-  "collection-calls/call-counted-files": 277,
+  "collection-calls/call-counted-files": 280,
   "collection-calls/configure-forms": 1,
-  "collection-calls/corpus-calls": 23337,
-  "collection-calls/corpus-judged": 578,
-  "collection-calls/files-with-describe": 170,
-  "collection-calls/helper-imports": 684,
-  "collection-calls/helper-modules": 101,
+  "collection-calls/corpus-calls": 23746,
+  "collection-calls/corpus-judged": 579,
+  "collection-calls/files-with-describe": 172,
+  "collection-calls/helper-imports": 688,
+  "collection-calls/helper-modules": 102,
   "collection-calls/todo-forms": 1
 }
