@@ -124,7 +124,7 @@ jobs:
           if-no-files-found: error
       # Each suite below: one measured limit, at least 3 times its slowest
       # run (#476), and none inside it.
-      - name: Worker tests (sync in workerd + local D1, site and game through the asset router)
+      - name: Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)
         timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:worker
