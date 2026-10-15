@@ -9,6 +9,7 @@ export const NON_UNIT_VITEST_CONFIGS = [
   'vitest.integration.config.ts',
   'vitest.pacing.config.ts',
   'vitest.properties.config.ts',
+  'vitest.stryker.config.ts',
   'apps/dev-hosts/vitest.harness.config.ts',
   'apps/site/vitest.harness.config.ts',
   'apps/sync-worker/vitest.harness.config.ts',

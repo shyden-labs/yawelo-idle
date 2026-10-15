@@ -19,6 +19,11 @@
  * diff it cannot read or parse, a missing EVENT. A missing GITHUB_OUTPUT
  * fails the step, and the job with it. Nothing is retried. Imports are
  * Node's own, so the step runs before `npm ci`.
+ *
+ * The same diff gives the mutation verdict (#36): the mutation workflow runs
+ * Stryker over packages/core only when the change touches something that
+ * run reads, and otherwise reports a pass without it, so its required check
+ * still reports. Every doubt there is `run`, for the same reasons.
  */
 import { appendFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -36,6 +41,37 @@ export interface Classification {
   reason: string;
   /** Every path the classification looked at, in diff order. */
   judged: string[];
+}
+
+export type Mutation = 'run' | 'skip';
+
+export interface MutationVerdict {
+  mutation: Mutation;
+  reason: string;
+}
+
+/**
+ * Whole files outside packages/core that the core mutation run reads: its
+ * config and list of equivalent mutants, the unit config it drives, the
+ * dependencies and Node it runs on, its workflow, and the three scripts that
+ * workflow calls.
+ */
+const MUTATION_FILES = new Set([
+  'stryker.config.json',
+  'stryker.equivalents.json',
+  'vitest.stryker.config.ts',
+  'package.json',
+  'package-lock.json',
+  '.nvmrc',
+  '.github/workflows/mutation.yml',
+  'scripts/ci-scope.ts',
+  'scripts/fail-on-warnings.sh',
+  'scripts/mutation-survivors.ts',
+]);
+
+/** A path whose change can move the core mutation score (#36 AC2). */
+export function mutationInput(path: string): boolean {
+  return path.startsWith('packages/core/') || MUTATION_FILES.has(path);
 }
 
 /** HANDOVER.md, or Markdown under docs/: nothing but Format and the unit suite reads them. */
@@ -73,23 +109,22 @@ export function parseNameStatus(text: string): Change[] {
   return changes;
 }
 
-export function classify(changes: readonly Change[]): Classification {
-  const judged = changes.flatMap(({ paths }) => paths);
+/** Why a diff cannot be judged path by path, or null when it can. */
+function doubtOf(changes: readonly Change[]): string | null {
   if (changes.length === 0)
-    return {
-      scope: 'full',
-      reason: 'the diff is empty, so there is nothing to judge',
-      judged,
-    };
+    return 'the diff is empty, so there is nothing to judge';
   const unjudged = changes.filter(({ status }) => !JUDGED_KINDS.has(status));
   if (unjudged.length > 0)
-    return {
-      scope: 'full',
-      reason: `a change of a kind the fast path does not judge: ${unjudged
-        .map(({ status, paths }) => `${status} ${paths.join(' -> ')}`)
-        .join(', ')}`,
-      judged,
-    };
+    return `a change of a kind this classifier does not judge: ${unjudged
+      .map(({ status, paths }) => `${status} ${paths.join(' -> ')}`)
+      .join(', ')}`;
+  return null;
+}
+
+export function classify(changes: readonly Change[]): Classification {
+  const judged = changes.flatMap(({ paths }) => paths);
+  const doubt = doubtOf(changes);
+  if (doubt !== null) return { scope: 'full', reason: doubt, judged };
   const outside = judged.filter((path) => !onAllowlist(path));
   if (outside.length > 0)
     return {
@@ -104,27 +139,62 @@ export function classify(changes: readonly Change[]): Classification {
   };
 }
 
+/** Whether the core mutation run needs to run for a change (#36). */
+export function classifyMutation(changes: readonly Change[]): MutationVerdict {
+  const doubt = doubtOf(changes);
+  if (doubt !== null) return { mutation: 'run', reason: doubt };
+  const read = changes.flatMap(({ paths }) => paths).filter(mutationInput);
+  if (read.length > 0)
+    return {
+      mutation: 'run',
+      reason: `the change touches what the core mutation run reads: ${read.join(', ')}`,
+    };
+  return {
+    mutation: 'skip',
+    reason: 'the change touches nothing the core mutation run reads',
+  };
+}
+
+/**
+ * The changes a pull-request check judges, or why it judges none: another
+ * event, or a diff it cannot read or parse.
+ */
+function changesFor(
+  event: string,
+  readDiff: () => string,
+): readonly Change[] | { doubt: string } {
+  if (event !== 'pull_request')
+    return { doubt: `the ${JSON.stringify(event)} event always tests in full` };
+  try {
+    return parseNameStatus(readDiff());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      doubt: `the diff could not be read, so everything runs: ${message.trim()}`,
+    };
+  }
+}
+
 /** The fast path applies to pull-request checks only; any doubt is full. */
 export function scopeFor(
   event: string,
   readDiff: () => string,
 ): Classification {
-  if (event !== 'pull_request')
-    return {
-      scope: 'full',
-      reason: `the ${JSON.stringify(event)} event always tests in full`,
-      judged: [],
-    };
-  try {
-    return classify(parseNameStatus(readDiff()));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      scope: 'full',
-      reason: `the diff could not be read, so everything runs: ${message.trim()}`,
-      judged: [],
-    };
-  }
+  const changes = changesFor(event, readDiff);
+  return 'doubt' in changes
+    ? { scope: 'full', reason: changes.doubt, judged: [] }
+    : classify(changes);
+}
+
+/** The mutation run skips on pull-request checks only; any doubt runs it. */
+export function mutationFor(
+  event: string,
+  readDiff: () => string,
+): MutationVerdict {
+  const changes = changesFor(event, readDiff);
+  return 'doubt' in changes
+    ? { mutation: 'run', reason: changes.doubt }
+    : classifyMutation(changes);
 }
 
 /** What the checked-out commit changed against its first parent. */
@@ -147,13 +217,24 @@ export function report(result: Classification): string[] {
   ];
 }
 
+/** The line the step prints for the mutation verdict. */
+export function mutationReport(verdict: MutationVerdict): string {
+  return `mutation: ${verdict.mutation} (${verdict.reason})`;
+}
+
 if (import.meta.main) {
   const output = process.env['GITHUB_OUTPUT'];
   if (output === undefined || output === '') {
     console.error('✗ GITHUB_OUTPUT is not set');
     process.exit(1);
   }
-  const result = scopeFor(process.env['EVENT'] ?? '', () => readDiff('.'));
+  const event = process.env['EVENT'] ?? '';
+  const result = scopeFor(event, () => readDiff('.'));
+  const mutation = mutationFor(event, () => readDiff('.'));
   for (const line of report(result)) console.log(line);
-  appendFileSync(output, `scope=${result.scope}\n`);
+  console.log(mutationReport(mutation));
+  appendFileSync(
+    output,
+    `scope=${result.scope}\nmutation=${mutation.mutation}\n`,
+  );
 }

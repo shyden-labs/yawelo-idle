@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   classify,
+  classifyMutation,
+  mutationFor,
+  mutationInput,
+  mutationReport,
   onAllowlist,
   parseNameStatus,
   report,
@@ -233,5 +237,122 @@ describe('the printed report (AC1)', () => {
 
   it('counts no judged paths in the plural', () => {
     expect(report(classify([]))[1]).toBe('judged 0 paths:');
+  });
+});
+
+describe('the mutation verdict (#36 AC2)', () => {
+  it.each([
+    'packages/core/src/sail.ts',
+    'packages/core/test/sail.test.ts',
+    'packages/core/package.json',
+    'packages/core/tsconfig.json',
+    'stryker.config.json',
+    'vitest.stryker.config.ts',
+    'package.json',
+    'package-lock.json',
+    '.nvmrc',
+    '.github/workflows/mutation.yml',
+    'scripts/ci-scope.ts',
+    'scripts/fail-on-warnings.sh',
+    'stryker.equivalents.json',
+    'scripts/mutation-survivors.ts',
+  ])('takes %s as something the mutation run reads', (path) => {
+    expect(mutationInput(path)).toBe(true);
+  });
+
+  it.each([
+    ['a doc', 'docs/plan.md'],
+    ['the handover', 'HANDOVER.md'],
+    ['another package', 'packages/progress/src/index.ts'],
+    ['an app', 'apps/web/src/main.ts'],
+    ['a repo test', 'tests/unit/ci-scope.test.ts'],
+    ['another workflow', '.github/workflows/ci.yml'],
+    ['another script', 'scripts/board-next.ts'],
+    ['a package named like core', 'packages/core-extra/src/a.ts'],
+    ['a core directory below the root', 'apps/packages/core/src/a.ts'],
+    ['a workspace package.json', 'apps/web/package.json'],
+  ])(
+    'does not take %s (%s) as something the mutation run reads',
+    (_why, path) => {
+      expect(mutationInput(path)).toBe(false);
+    },
+  );
+
+  it('runs when one path is read, naming it and not the others', () => {
+    const verdict = classifyMutation([
+      change('M', 'docs/plan.md'),
+      change('M', 'packages/core/src/sail.ts'),
+    ]);
+    expect(verdict.mutation).toBe('run');
+    expect(verdict.reason).toContain('packages/core/src/sail.ts');
+    expect(verdict.reason).not.toContain('docs/plan.md');
+  });
+
+  it('runs when a deleted path is read', () => {
+    expect(
+      classifyMutation([change('D', 'packages/core/src/old.ts')]).mutation,
+    ).toBe('run');
+  });
+
+  it('skips when no path is read, saying so', () => {
+    expect(
+      classifyMutation([
+        change('M', 'docs/plan.md'),
+        change('A', 'apps/web/src/a.ts'),
+      ]),
+    ).toEqual({
+      mutation: 'skip',
+      reason: 'the change touches nothing the core mutation run reads',
+    });
+  });
+
+  it('runs for an empty diff, saying there was nothing to judge', () => {
+    const verdict = classifyMutation([]);
+    expect(verdict.mutation).toBe('run');
+    expect(verdict.reason).toMatch(/empty/);
+  });
+
+  it.each([
+    ['a rename record', { status: 'R100', paths: ['docs/a.md', 'docs/b.md'] }],
+    ['a type change', { status: 'T', paths: ['docs/a.md'] }],
+    ['an unmerged path', { status: 'U', paths: ['docs/a.md'] }],
+  ])('runs for %s off the inputs, naming the status', (_why, c) => {
+    const verdict = classifyMutation([c]);
+    expect(verdict.mutation).toBe('run');
+    expect(verdict.reason).toContain(c.status);
+  });
+
+  it('runs for any event but pull_request, naming it', () => {
+    const verdict = mutationFor('push', () => 'M\0docs/plan.md\0');
+    expect(verdict.mutation).toBe('run');
+    expect(verdict.reason).toContain('"push"');
+  });
+
+  it('judges a pull request by its diff', () => {
+    expect(
+      mutationFor('pull_request', () => 'M\0docs/plan.md\0').mutation,
+    ).toBe('skip');
+  });
+
+  it('runs when the diff cannot be read, naming the reason', () => {
+    const verdict = mutationFor('pull_request', () => {
+      throw new Error('fatal: bad revision HEAD^1');
+    });
+    expect(verdict.mutation).toBe('run');
+    expect(verdict.reason).toContain('fatal: bad revision HEAD^1');
+  });
+
+  it('runs when the diff cannot be parsed, naming the reason', () => {
+    const verdict = mutationFor('pull_request', () => 'M\0docs/plan.md');
+    expect(verdict.mutation).toBe('run');
+    expect(verdict.reason).toMatch(/name-status/);
+  });
+
+  it('prints its verdict and reason on one line', () => {
+    expect(
+      mutationReport(classifyMutation([change('M', 'docs/plan.md')])),
+    ).toBe(
+      'mutation: skip (the change touches nothing the core mutation run reads)',
+    );
   });
 });

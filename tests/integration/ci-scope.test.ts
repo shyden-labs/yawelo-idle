@@ -221,29 +221,43 @@ describe('the command build-and-test runs (AC1, AC2)', () => {
     return { ...result, written: readFileSync(output, 'utf8') };
   };
 
-  it('writes scope=docs-only and prints each judged path', () => {
+  it('writes scope=docs-only and mutation=skip, and prints each judged path', () => {
     const r = baseRepo();
     r.commit({ 'HANDOVER.md': 'new\n' });
     const result = run(r.dir, { EVENT: 'pull_request' });
     expect(result.status).toBe(0);
-    expect(result.written).toBe('scope=docs-only\n');
+    expect(result.written).toBe('scope=docs-only\nmutation=skip\n');
     expect(result.stdout).toContain('  docs   HANDOVER.md');
+    expect(result.stdout).toContain(
+      'mutation: skip (the change touches nothing the core mutation run reads)',
+    );
   });
 
-  it('writes scope=full for a push, as deploy-dev’s call is', () => {
+  it('writes mutation=run for a change to packages/core, naming the path (#36)', () => {
+    const r = baseRepo();
+    r.commit({ 'packages/core/src/a.ts': 'export const a = 1;\n' });
+    const result = run(r.dir, { EVENT: 'pull_request' });
+    expect(result.status).toBe(0);
+    expect(result.written).toBe('scope=full\nmutation=run\n');
+    expect(result.stdout).toContain(
+      'mutation: run (the change touches what the core mutation run reads: packages/core/src/a.ts)',
+    );
+  });
+
+  it('writes scope=full and mutation=run for a push, as deploy-dev’s call is', () => {
     const r = baseRepo();
     r.commit({ 'HANDOVER.md': 'new\n' });
     const result = run(r.dir, { EVENT: 'push' });
     expect(result.status).toBe(0);
-    expect(result.written).toBe('scope=full\n');
+    expect(result.written).toBe('scope=full\nmutation=run\n');
   });
 
-  it('writes scope=full when EVENT is missing', () => {
+  it('writes scope=full and mutation=run when EVENT is missing', () => {
     const r = baseRepo();
     r.commit({ 'HANDOVER.md': 'new\n' });
     const result = run(r.dir, {});
     expect(result.status).toBe(0);
-    expect(result.written).toBe('scope=full\n');
+    expect(result.written).toBe('scope=full\nmutation=run\n');
   });
 
   it('fails by name when GITHUB_OUTPUT is not set, so no step can be skipped', () => {

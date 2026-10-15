@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.stryker.config.ts" },
+  "checkers": ["typescript"],
+  "tsconfigFile": "packages/core/tsconfig.json",
+  "mutate": [
+    "packages/core/src/encounters.ts",
+    "packages/core/src/words.ts",
+    "packages/core/src/memory.ts",
+    "packages/core/src/production.ts",
+    "packages/core/src/sail.ts",
+    "packages/core/src/journeys.ts",
+    "packages/core/src/upgrades.ts",
+    "packages/core/src/grammar.ts",
+    "packages/core/src/automation.ts"
+  ],
+  "coverageAnalysis": "all",
+  "thresholds": { "high": 95, "low": 90, "break": 90 },
+  "reporters": ["clear-text", "progress-append-only", "html", "json"],
+  "htmlReporter": { "fileName": "reports/mutation/index.html" },
+  "jsonReporter": { "fileName": "reports/mutation/mutation.json" }
+}
