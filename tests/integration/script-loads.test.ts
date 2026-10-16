@@ -38,6 +38,7 @@ const SCRIPTS = [
   'scripts/ensure-d1.ts',
   'scripts/every-commit.ts',
   'scripts/fetch-floors.ts',
+  'scripts/holding-dev.ts',
   'scripts/prod-version.ts',
   'scripts/record-floors.ts',
   'scripts/third-party-notices.ts',

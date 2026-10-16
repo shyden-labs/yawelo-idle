@@ -7,7 +7,7 @@ import {
 } from '../unit/wrangler-configs';
 
 /**
- * The four deploy configs dev-config.test.ts reads by name, and the production
+ * The five dev deploy configs dev-config.test.ts reads by name, and the production
  * ones prod-config.test.ts reads (#621), are every wrangler config in the repo. Finding them walks the tree, so this runs here (#530;
  * the walk moved out of the unit suite with its real run kept).
  */

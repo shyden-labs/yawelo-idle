@@ -3,13 +3,15 @@ import { join } from 'node:path';
 import { unstable_readConfig } from 'wrangler';
 
 /**
- * The dev deploy configs: three Workers and the Pages hostname adapter.
+ * The dev deploy configs: four Workers (one the holding page's dev copy,
+ * #621) and the Pages hostname adapter.
  * dev-config.test.ts reads these four by name; that they are every wrangler
  * config in the repo is a walk of the tree, held by the guards suite
  * (tests/guards/wrangler-configs.test.ts, #530).
  */
 export const WRANGLER_CONFIGS = [
   'apps/dev-hosts/wrangler.jsonc',
+  'apps/site/holding-dev/wrangler.jsonc',
   'apps/site/wrangler.jsonc',
   'apps/sync-worker/wrangler.jsonc',
   'apps/web/wrangler.jsonc',

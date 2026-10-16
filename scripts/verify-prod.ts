@@ -77,13 +77,17 @@ const bodyCheck = (path: string, answer: Probe, built: string): Check => ({
       : `${path}: is not the page this commit builds (${String(answer.body.length)} characters served, ${String(built.length)} built)`,
 });
 
-/** A home page: 200 HTML of this commit, exactly as built, the headers, no cookie, no noindex. */
+/**
+ * A home page: 200 HTML of this commit, exactly as built, the headers, no
+ * cookie, and, unless it is the noindex dev copy (#621 AC8), no noindex.
+ */
 export function pageJudgement(
   path: string,
   answer: Probe,
   built: string,
   sha: string,
   rules: ReadonlyMap<string, string>,
+  indexable = true,
 ): Judgement {
   const type = answer.headers.get('content-type') ?? '';
   const commit = reportedCommit(answer.body);
@@ -112,13 +116,17 @@ export function pageJudgement(
           ? undefined
           : `${path}: sets a cookie`,
     },
-    {
-      name: `${path} indexing`,
-      problem: () =>
-        /noindex/i.test(answer.headers.get('x-robots-tag') ?? '')
-          ? `${path}: X-Robots-Tag noindex`
-          : undefined,
-    },
+    ...(indexable
+      ? [
+          {
+            name: `${path} indexing`,
+            problem: () =>
+              /noindex/i.test(answer.headers.get('x-robots-tag') ?? '')
+                ? `${path}: X-Robots-Tag noindex`
+                : undefined,
+          },
+        ]
+      : []),
   ]);
 }
 
@@ -239,6 +247,7 @@ export async function verifyProd(
   sha: string,
   dist: URL,
   wait: Wait,
+  indexable = true,
 ): Promise<string[]> {
   const built = (file: string): string =>
     readFileSync(new URL(file, dist), 'utf8');
@@ -261,7 +270,7 @@ export async function verifyProd(
     problems.push(
       ...(typeof answer === 'string'
         ? [answer]
-        : pageProblems(path, answer, built(file), sha, rules)),
+        : pageProblems(path, answer, built(file), sha, rules, indexable)),
     );
   }
   for (const [path, file] of MISSING) {
@@ -298,12 +307,19 @@ function required(name: string): string {
 }
 
 if (import.meta.main) {
+  // `--dev-copy` checks the holding page's noindex dev copy (#621 AC8) against
+  // dist-holding-dev, made by scripts/holding-dev.ts; otherwise production.
+  const dev = process.argv.includes('--dev-copy');
   // A new Custom Domain's DNS and certificate: up to 10 minutes (60 looks, 10 s apart).
   const problems = await verifyProd(
-    required('PROD_URL'),
+    required(dev ? 'DEV_HOLDING_URL' : 'PROD_URL'),
     required('EXPECTED_SHA'),
-    new URL('../apps/site/dist-holding/', import.meta.url),
+    new URL(
+      dev ? '../apps/site/dist-holding-dev/' : '../apps/site/dist-holding/',
+      import.meta.url,
+    ),
     { polls: 60, pollMs: 10_000 },
+    !dev,
   );
   if (problems.length > 0) {
     for (const problem of problems) console.error(`✗ ${problem}`);
