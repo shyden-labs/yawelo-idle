@@ -7,6 +7,8 @@ import {
   notFoundProblems,
   pageJudgement,
   pageProblems,
+  rangeJudgement,
+  rangeProblems,
   reportedCommit,
   robotsJudgement,
   robotsProblems,
@@ -250,6 +252,44 @@ describe('a promo video file', () => {
       ),
     ).toEqual([
       '/m.mp4: Cross-Origin-Resource-Policy is missing, expected same-site',
+    ]);
+  });
+});
+
+describe('a promo video asked for its first two bytes (iPhones need ranges, #621)', () => {
+  const ranged = (status: number, range: string, length: string): Probe =>
+    answer(status, 'ab', {
+      'content-range': range,
+      'content-length': length,
+      'cross-origin-resource-policy': 'same-site',
+    });
+
+  it('passes a 206 of exactly those bytes, embeddable by the same site only', () => {
+    const judged = rangeJudgement(
+      '/m.mp4',
+      ranged(206, 'bytes 0-1/42', '2'),
+      42,
+    );
+    expect(
+      searched(judged.problems, { of: judged.checked, what: 'range checks' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('verify-prod/range-checks', judged.checked.length),
+    ).toBeUndefined();
+  });
+
+  it('names a 200 of the whole file, which leaves iPhones on the poster', () => {
+    expect(rangeProblems('/m.mp4', ranged(200, '', '42'), 42)).toEqual([
+      '/m.mp4: a range request got status 200, expected 206',
+    ]);
+  });
+
+  it('names the wrong Content-Range and length', () => {
+    expect(
+      rangeProblems('/m.mp4', ranged(206, 'bytes 0-1/41', '3'), 42),
+    ).toEqual([
+      '/m.mp4: Content-Range bytes 0-1/41, expected bytes 0-1/42',
+      '/m.mp4: a 2-byte range came back with Content-Length 3',
     ]);
   });
 });
