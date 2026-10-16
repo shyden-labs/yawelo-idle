@@ -1,4 +1,5 @@
 {
+  "verify-prod/dev-page-checks": 8,
   "verify-prod/media-checks": 4,
   "verify-prod/not-found-checks": 4,
   "verify-prod/page-checks": 8,

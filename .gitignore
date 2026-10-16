@@ -2,6 +2,7 @@
 node_modules/
 dist/
 dist-holding/
+dist-holding-dev/
 build/
 .vite/
 # The dev hostname adapter's compiled Function (its `test` script) and the

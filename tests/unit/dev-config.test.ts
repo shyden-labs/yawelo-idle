@@ -28,7 +28,7 @@ const ROOT = new URL('../..', import.meta.url).pathname;
  */
 const DEV_WORKERS_SUBDOMAIN = 'shyden-labs-dev';
 
-// The four by name: that they are every wrangler config in the repo walks
+// The five by name: that they are every wrangler config in the repo walks
 // the tree, a guard (#530, tests/guards/wrangler-configs.test.ts).
 // Read on first use, inside a test, not at collection.
 let read: { file: string; config: DeployConfig }[] | undefined;
@@ -124,6 +124,7 @@ describe('the dev Workers’ deploy configs', () => {
         .sort(),
     ).toEqual([
       ['yawelo-idle-dev-hosts', undefined, undefined],
+      ['yawelo-idle-holding-dev', true, false],
       ['yawelo-idle-site-dev', true, false],
       ['yawelo-idle-sync-dev', true, false],
       ['yawelo-idle-web-dev', false, false],
@@ -323,6 +324,8 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
       holds(
         'npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"',
       ),
+      // The holding page's dev copy (#621 AC8).
+      holds('npx wrangler deploy'),
       holds(
         'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
       ),
@@ -420,8 +423,11 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
     expect(builds.map(({ run }) => run)).toEqual([
       'npm run build --workspace @yawelo-idle/web',
       'npm run build --workspace @yawelo-idle/site',
+      // The holding page, whose dev copy is deployed from it (#621 AC8).
+      'npm run build:holding --workspace @yawelo-idle/site',
     ]);
     expect(builds[0]?.index).toBeLessThan(deployIn('apps/web'));
     expect(builds[1]?.index).toBeLessThan(deployIn('apps/site'));
+    expect(builds[2]?.index).toBeLessThan(deployIn('apps/site/holding-dev'));
   });
 });

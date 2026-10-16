@@ -126,6 +126,38 @@ describe('a holding home page', () => {
   });
 });
 
+describe('the holding page’s dev copy (#621 AC8)', () => {
+  const DEV_RULES = new Map([
+    ...RULES,
+    ['x-robots-tag', 'noindex, nofollow, noarchive'],
+  ]);
+  const devAnswer = answer(200, BUILT, {
+    ...HEADERS,
+    'x-robots-tag': 'noindex, nofollow, noarchive',
+  });
+
+  it('passes a noindex page when the copy is not meant to be indexed', () => {
+    const judged = pageJudgement('/', devAnswer, BUILT, SHA, DEV_RULES, false);
+    expect(
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'dev copy page checks',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('verify-prod/dev-page-checks', judged.checked.length),
+    ).toBeUndefined();
+  });
+
+  it('names a dev copy that a search engine could index', () => {
+    expect(
+      pageProblems('/', answer(200, BUILT), BUILT, SHA, DEV_RULES, false),
+    ).toEqual([
+      '/: x-robots-tag is missing, expected "noindex, nofollow, noarchive"',
+    ]);
+  });
+});
+
 describe('a holding 404 page', () => {
   const NOT_FOUND = page('Page not found');
 

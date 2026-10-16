@@ -120,6 +120,21 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"
+      # The holding page's dev copy (#621 AC8): the production holding build,
+      # crawlers blocked and every response noindex, at its own workers.dev
+      # address, so Shyden checks it on his phones before a release.
+      - name: Build the holding page, stamped with this commit
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Make the holding page's dev copy (crawlers blocked, noindex)
+        run: node scripts/holding-dev.ts
+      - name: Deploy the holding page's dev copy
+        working-directory: apps/site/holding-dev
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
       # The dev hostnames (#429): a Pages project whose one Function forwards
       # each request to the site or the sync Worker by host, so it goes after
       # both. Its custom domains were attached once and are read back by the
@@ -195,9 +210,39 @@ jobs:
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
 
-  # dev-verified means every check above passed: verify-dev, then the smoke.
+  # The holding page's dev copy (#621 AC8), checked from outside against
+  # what this commit builds: noindex on every response, crawlers blocked. It
+  # needs no secret, so it names no environment.
+  verify-holding:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    # verify-prod waits at most 60 looks, 10 s apart, then judges once.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build the holding page this commit deployed
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Make its dev copy (crawlers blocked, noindex)
+        run: node scripts/holding-dev.ts
+      - name: Verify the holding page's dev copy serves this commit, noindex, crawlers blocked
+        env:
+          DEV_HOLDING_URL: https://yawelo-idle-holding-dev.shyden-labs-dev.workers.dev
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/verify-prod.ts --dev-copy
+
+  # dev-verified means every check above passed: verify-dev, then the smoke,
+  # and the holding page's dev copy (#621).
   dev-verified:
-    needs: smoke
+    needs: [smoke, verify-holding]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions:
@@ -209,5 +254,5 @@ jobs:
         run: >-
           gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
           -f state=success -f context=dev-verified
-          -f description="Live on dev: password-gated, this commit, game behind the site, D1 answers, smoke clean"
+          -f description="Live on dev: password-gated, this commit, game behind the site, D1 answers, smoke clean, holding copy noindex"
           -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
