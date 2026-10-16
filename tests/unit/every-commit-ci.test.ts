@@ -60,6 +60,13 @@ describe('the every-commit workflow (#348)', () => {
     expect(Object.keys(every().on)).toEqual(['pull_request']);
   });
 
+  // A release pull request (develop into main) brings commits that each passed
+  // here on their way into develop, and one bringing over 256 can never pass
+  // (#633: release PR #630 brought 522).
+  it('runs only on pull requests into develop, never on a release into main (#633)', () => {
+    expect(every().on).toEqual({ pull_request: { branches: ['develop'] } });
+  });
+
   it('holds exactly the list, the matrix and the aggregate', () => {
     expect(Object.keys(every().jobs)).toEqual([
       'list',
