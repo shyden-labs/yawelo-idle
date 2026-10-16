@@ -104,15 +104,19 @@ describe('the production release (#621 AC4)', () => {
     expect(build.env).toEqual({ YAWELO_IDLE_COMMIT: '${{ github.sha }}' });
   });
 
-  it('deploys the holding config, tagged with the commit so a rollback can find it', () => {
+  it('deploys the holding config, named from the repository root, tagged with the commit so a rollback can find it', () => {
+    // From a subfolder of a workspace, npx runs wrangler at the workspace's
+    // root, which reads apps/site/wrangler.jsonc, the dev site, instead
+    // (measured 2026-10-16: deploy-dev run 38889757344 redeployed the dev site
+    // from apps/site/holding-dev). So no wrangler step runs from a subfolder.
     const deploy = step(
       'deploy-prod.yml',
       'deploy',
       'Deploy the holding page, tagged with this commit',
     );
-    expect(deploy['working-directory']).toBe('apps/site/holding');
+    expect(deploy['working-directory']).toBeUndefined();
     expect(deploy.run).toBe(
-      'npx wrangler deploy --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
+      'npx wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
     );
   });
 
@@ -156,15 +160,31 @@ describe('the production rollback (#621 AC6)', () => {
     expect(environmentOf(rollback)).toBe('production');
   });
 
-  it('finds the version by its commit tag, passing the commit through the environment', () => {
+  it('finds the version by its commit tag, from the repository root, passing the commit through the environment', () => {
     const find = step(
       'rollback-prod.yml',
       'rollback',
       'Find the version tagged with that commit',
     );
+    expect(find['working-directory']).toBeUndefined();
     expect(find.env?.['COMMIT']).toBe('${{ inputs.commit }}');
     expect(find.run).toContain(
-      'node ../../../scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT"',
+      'npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
+    );
+    expect(find.run).toContain(
+      'node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT"',
+    );
+  });
+
+  it('rolls back the holding Worker, named from the repository root', () => {
+    const roll = step(
+      'rollback-prod.yml',
+      'rollback',
+      'Roll production back to it',
+    );
+    expect(roll['working-directory']).toBeUndefined();
+    expect(roll.run).toBe(
+      'npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
     );
   });
 
