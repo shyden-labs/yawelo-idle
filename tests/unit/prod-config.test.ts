@@ -54,15 +54,20 @@ describe('the production holding page Worker (#621 AC2)', () => {
     );
   });
 
-  it('runs no script and holds no binding, schedule or variable: assets only', () => {
+  it('runs code only through its media script, and holds no other binding, schedule or variable', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     const declared = CODE_FIELDS.filter((field) => holds(config[field]));
     expect(
-      searched(declared, {
-        of: CODE_FIELDS,
-        what: 'fields that run or bind code',
-      }),
+      searched(
+        declared.filter((field) => field !== 'main'),
+        {
+          of: CODE_FIELDS,
+          what: 'fields that run or bind code',
+        },
+      ),
     ).toEqual([]);
+    expect(declared).toEqual(['main']);
+    expect(config.main).toBe(join(HOLDING, 'worker.ts'));
     expect(
       floorBreach('prod-config/code-fields', CODE_FIELDS.length),
     ).toBeUndefined();
@@ -79,12 +84,14 @@ describe('the production holding page Worker (#621 AC2)', () => {
     ]);
   });
 
-  it('serves the built holding pages, with its own 404 page', () => {
+  it('serves the built holding pages as plain files, running its script only for /media/* (#621: iPhones need byte ranges)', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     // Relative to this config, as wrangler reads it: apps/site/dist-holding.
     expect(config.assets).toEqual({
       directory: '../dist-holding',
+      binding: 'ASSETS',
       not_found_handling: '404-page',
+      run_worker_first: ['/media/*'],
     });
   });
 

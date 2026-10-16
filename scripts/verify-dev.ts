@@ -424,9 +424,8 @@ export function healthProblems(probe: Probe, sha: string): string[] {
 export async function probe(
   url: string,
   headers: Record<string, string> = {},
-  method: 'GET' | 'HEAD' = 'GET',
 ): Promise<Probe> {
-  const response = await fetch(url, { headers, method, redirect: 'manual' });
+  const response = await fetch(url, { headers, redirect: 'manual' });
   return {
     status: response.status,
     headers: response.headers,

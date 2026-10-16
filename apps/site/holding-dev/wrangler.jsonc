@@ -3,15 +3,20 @@
   // The holding page's dev copy (#621 AC8): the production holding build with
   // crawlers blocked and every response noindex (scripts/holding-dev.ts), in
   // the dev-only "Shyden Labs Dev" account at its workers.dev address, so
-  // Shyden checks it on his phones before a release. Assets only, like
-  // production; it holds nothing private, since it is what goes public.
+  // Shyden checks it on his phones before a release. Like production,
+  // only /media/* runs code; it holds nothing private, since it is what goes public.
   // Deployed by deploy-dev.yml.
   "name": "yawelo-idle-holding-dev",
+  // Runs only for /media/*, to answer the promo video in byte ranges, which
+  // iPhones need and the plain assets do not give (#621, media.ts).
+  "main": "../holding/worker.ts",
   "compatibility_date": "2026-09-30",
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
     "directory": "../dist-holding-dev",
+    "binding": "ASSETS",
     "not_found_handling": "404-page",
+    "run_worker_first": ["/media/*"],
   },
 }

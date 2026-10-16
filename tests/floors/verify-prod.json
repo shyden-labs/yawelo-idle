@@ -3,5 +3,6 @@
   "verify-prod/media-checks": 4,
   "verify-prod/not-found-checks": 4,
   "verify-prod/page-checks": 8,
+  "verify-prod/range-checks": 4,
   "verify-prod/robots-checks": 2
 }

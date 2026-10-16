@@ -1,18 +1,23 @@
 {
   "$schema": "../../../node_modules/wrangler/config-schema.json",
   // The production holding page (#621): yawelo-idle.shyden.co.uk, in the
-  // production account that holds the shyden.co.uk zone. Assets only: no
-  // script runs, so no page view counts against a request limit ("Requests to
+  // production account that holds the shyden.co.uk zone. Pages run no
+  // script, so no page view counts against a request limit ("Requests to
   // static assets are free and unlimited", Cloudflare, read 2026-10-16) and
   // its security headers come from public/_headers. The full site replaces it
   // under the same name later (#425). Deployed only by deploy-prod.yml.
   "name": "yawelo-idle-site",
+  // Runs only for /media/*, to answer the promo video in byte ranges, which
+  // iPhones need and the plain assets do not give (#621, media.ts).
+  "main": "./worker.ts",
   "compatibility_date": "2026-09-30",
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "yawelo-idle.shyden.co.uk", "custom_domain": true }],
   "assets": {
     "directory": "../dist-holding",
+    "binding": "ASSETS",
     "not_found_handling": "404-page",
+    "run_worker_first": ["/media/*"],
   },
 }
