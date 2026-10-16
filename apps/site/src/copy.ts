@@ -4,6 +4,11 @@
  * until the home page is built from that copy (#335), and the Indonesian
  * until it is translated with its D18 evidence (#338). Dev is
  * password-gated until then, and production waits for both (epic #331).
+ *
+ * The production holding page (#621) shows only `comingSoon`, `tagline`, the
+ * 404 lines and `homeLink`. Their Indonesian was read back by Google Cloud
+ * Translation and approved by the operator on 2026-10-16
+ * (docs/translations/2026-10-16-holding-page-id.md).
  */
 import { COPY_EN } from './copy-en';
 import type { Locale, Page } from './i18n';
@@ -13,6 +18,8 @@ export interface Copy {
   languageName: string;
   devStrip: string;
   comingSoon: string;
+  /** The hero tagline (#334), shown on the holding page (#621). */
+  tagline: string;
   titles: Record<Page, string>;
   launchListSoon: string;
   roadmapSoon: string;
@@ -27,6 +34,7 @@ export const COPY: Record<Locale, Copy> = {
     languageName: 'English',
     devStrip: COPY_EN.devStrip.text,
     comingSoon: COPY_EN.hero.badge.text,
+    tagline: COPY_EN.hero.tagline.text,
     titles: {
       home: 'Yawelo Idle',
       roadmap: COPY_EN.roadmap.title.text,
@@ -45,6 +53,7 @@ export const COPY: Record<Locale, Copy> = {
     devStrip:
       'Dalam pengembangan: yang Anda lihat bisa berubah, dan game yang dirilis bisa sangat berbeda.',
     comingSoon: 'Segera hadir',
+    tagline: 'Petualangan idle menjelajahi bahasa sungguhan.',
     titles: { home: 'Yawelo Idle', roadmap: 'Peta jalan', privacy: 'Privasi' },
     launchListSoon: 'Daftar peluncuran segera dibuka.',
     roadmapSoon: 'Peta jalan langsung sedang dibangun.',

@@ -86,13 +86,13 @@ export interface Judgement {
 }
 
 /** One check: its name, the problem it finds or undefined, and whether a problem stops the rest. */
-interface Check {
+export interface Check {
   readonly name: string;
   readonly problem: () => string | undefined;
   readonly gate?: boolean;
 }
 
-function judge(checks: readonly Check[]): Judgement {
+export function judge(checks: readonly Check[]): Judgement {
   const checked: string[] = [];
   const problems: string[] = [];
   for (const { name, problem, gate } of checks) {
@@ -421,11 +421,12 @@ export function healthProblems(probe: Probe, sha: string): string[] {
   return [...healthJudgement(probe, sha).problems];
 }
 
-async function probe(
+export async function probe(
   url: string,
   headers: Record<string, string> = {},
+  method: 'GET' | 'HEAD' = 'GET',
 ): Promise<Probe> {
-  const response = await fetch(url, { headers, redirect: 'manual' });
+  const response = await fetch(url, { headers, method, redirect: 'manual' });
   return {
     status: response.status,
     headers: response.headers,
@@ -433,7 +434,7 @@ async function probe(
   };
 }
 
-interface Outcome {
+export interface Outcome {
   problems: string[];
   /** The probe, or null when the request failed outright. */
   answer: Probe | null;
@@ -444,7 +445,7 @@ interface Outcome {
  * connection, DNS not yet resolving a new hostname) is reported, never thrown,
  * so the report names it.
  */
-async function check(
+export async function check(
   label: string,
   url: string,
   headers: Record<string, string>,

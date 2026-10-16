@@ -38,10 +38,12 @@ const SCRIPTS = [
   'scripts/ensure-d1.ts',
   'scripts/every-commit.ts',
   'scripts/fetch-floors.ts',
+  'scripts/prod-version.ts',
   'scripts/record-floors.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
   'scripts/verify-dev.ts',
+  'scripts/verify-prod.ts',
 ] as const;
 
 describe('the scripts load under Node’s own loader (#391)', () => {

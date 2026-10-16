@@ -1,0 +1,87 @@
+---
+/**
+ * The production holding page (#621): the approved lines only, the promo
+ * video on the home page, a language switch, and nothing that links to a page
+ * production does not have yet. Styled after the promo video in the Batik
+ * night palette (spec D7), every colour a token in holding.css.
+ */
+import '../styles/holding.css';
+import { COPY } from '../copy';
+import { alternates, otherLocale, pagePath, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+  /** The home page, or the 404, which has no address of its own. */
+  kind: 'home' | 'notFound';
+}
+
+const { locale, kind } = Astro.props;
+const copy = COPY[locale];
+const other = otherLocale(locale);
+const title = kind === 'home' ? copy.titles.home : copy.notFoundTitle;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="yawelo-idle-commit" content="%YAWELO_IDLE_COMMIT%" />
+    <meta name="description" content={copy.tagline} />
+    <title>{title}</title>
+    {kind === 'home' &&
+      alternates('home').map(({ hreflang, href }) => (
+        <link rel="alternate" hreflang={hreflang} href={href} />
+      ))}
+    {kind === 'home' && <script is:inline src="/holding-video.js" defer />}
+  </head>
+  <body>
+    <nav class="switch">
+      <a
+        href={pagePath(other, 'home')}
+        hreflang={other}
+        lang={other}
+        data-language-switch
+      >
+        {COPY[other].languageName}
+      </a>
+    </nav>
+    <main class="stage">
+      {kind === 'home' ? (
+        <>
+          <h1 class="wordmark">{copy.titles.home}</h1>
+          <p class="badge" data-coming-soon>
+            {copy.comingSoon}
+          </p>
+          <p class="tagline">{copy.tagline}</p>
+          <video
+            class="trailer"
+            data-autoplay
+            muted
+            loop
+            playsinline
+            controls
+            preload="metadata"
+            width="1280"
+            height="720"
+            poster="/media/yawelo-idle-promo-poster.jpg"
+            aria-label={copy.titles.home}
+          >
+            <source src="/media/yawelo-idle-promo.webm" type="video/webm" />
+            <source src="/media/yawelo-idle-promo.mp4" type="video/mp4" />
+          </video>
+        </>
+      ) : (
+        <>
+          <h1 class="heading">{copy.notFoundTitle}</h1>
+          <p class="tagline">{copy.notFoundBody}</p>
+          <p>
+            <a class="home" href={pagePath(locale, 'home')}>
+              {copy.homeLink}
+            </a>
+          </p>
+        </>
+      )}
+    </main>
+  </body>
+</html>

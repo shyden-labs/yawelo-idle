@@ -240,9 +240,35 @@ export type Reading = { readonly text: string } | { readonly refused: string };
  * A file's bytes as text, or a refusal naming it: a guard that skipped what
  * it could not read would pass over the one file it never judged.
  */
+/**
+ * The binary media the site ships (#621): a NUL byte does not refuse these.
+ * Each is read as Latin-1 and as UTF-16 of both byte orders, joined by line
+ * breaks, so a name in their metadata is found however it was written. Any
+ * other file holding a NUL byte is still refused.
+ */
+export const MEDIA_EXTENSIONS: readonly string[] = ['.jpg', '.mp4', '.webm'];
+
+function mediaText(bytes: Uint8Array): string {
+  const latin1 = new TextDecoder('latin1').decode(bytes);
+  const even = bytes.length - (bytes.length % 2);
+  const le = new TextDecoder('utf-16le').decode(bytes.subarray(0, even));
+  const be = new TextDecoder('utf-16be').decode(bytes.subarray(0, even));
+  // UTF-16 text may start on an odd byte: read the shifted pairs too.
+  const odd = bytes.subarray(
+    1,
+    1 + (bytes.length - 1 - ((bytes.length - 1) % 2)),
+  );
+  const leOdd = new TextDecoder('utf-16le').decode(odd);
+  const beOdd = new TextDecoder('utf-16be').decode(odd);
+  return [latin1, le, be, leOdd, beOdd].join('\n');
+}
+
 export function readText(path: string, bytes: Uint8Array): Reading {
-  if (bytes.includes(0))
+  if (bytes.includes(0)) {
+    if (MEDIA_EXTENSIONS.some((extension) => path.endsWith(extension)))
+      return { text: mediaText(bytes) };
     return { refused: `${path}: holds a NUL byte, so it is not text` };
+  }
   try {
     return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes) };
   } catch {
