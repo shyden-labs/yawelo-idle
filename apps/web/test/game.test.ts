@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
 import { floorBreach } from '../../../tests/floors';
 import { searched } from '../../../tests/searched';
+import { inlineTags, startTags } from '../../../tests/inline-tags';
 
 /**
  * The dev game Worker, served by wrangler's test harness from the real
@@ -133,14 +134,8 @@ describe('the game Worker sets a Content Security Policy (#123 AC5)', () => {
 
   it('the shell needs nothing inline: every script has a src, no style element or attribute, no handler', async () => {
     const html = await (await get('/play/')).text();
-    const tags = html.match(/<[a-zA-Z][^>]*>/g) ?? [];
-    const inline = tags.filter(
-      (tag) =>
-        (/^<script\b/i.test(tag) && !/\ssrc=/i.test(tag)) ||
-        /^<style\b/i.test(tag) ||
-        /\sstyle=/i.test(tag) ||
-        /\son[a-z]+=/i.test(tag),
-    );
+    const tags = startTags(html);
+    const inline = inlineTags(tags);
     expect(
       searched(inline, { of: tags, what: 'tags in the served shell' }),
     ).toEqual([]);

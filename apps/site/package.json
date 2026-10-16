@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "astro build",
+    "build:holding": "astro build --config astro.holding.config.ts",
     "typecheck": "astro check --minimumSeverity hint && tsc --noEmit -p worker && tsc --noEmit -p test/roadmap-worker",
-    "test": "astro build && vitest run -c vitest.harness.config.ts",
+    "test": "astro build && astro build --config astro.holding.config.ts && vitest run -c vitest.harness.config.ts",
     "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
   },
   "dependencies": {

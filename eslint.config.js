@@ -67,6 +67,11 @@ export default tseslint.config(
     files: ['apps/web/src/**/*.ts'],
     languageOptions: { globals: { ...globals.browser } },
   },
+  // The holding page's play rule runs in the visitor's browser (#621).
+  {
+    files: ['apps/site/holding/public/**/*.js'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
   coreDeterminismBlock,
   {
     files: ['**/*.js'],

@@ -1,6 +1,7 @@
 # Dependencies and builds
 node_modules/
 dist/
+dist-holding/
 build/
 .vite/
 # The dev hostname adapter's compiled Function (its `test` script) and the

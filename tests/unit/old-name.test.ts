@@ -188,6 +188,50 @@ describe('readText (#356)', () => {
   });
 });
 
+/**
+ * Binary media the site ships (#621) are read as bytes, not refused: a name
+ * in their metadata is found whether it was written as Latin-1 or as UTF-16
+ * of either byte order. Every other binary is still refused (above).
+ */
+describe('readText over binary media (#621)', () => {
+  const planted = (encode: (text: string) => number[]): Uint8Array =>
+    Uint8Array.of(0xff, 0xd8, 0, ...encode(`by ${OLD_NAME} studio`), 0, 0x01);
+  // The planted text is ASCII, so one UTF-16 code unit per character.
+  const codes = (text: string): number[] =>
+    Array.from({ length: text.length }, (_, at) => text.charCodeAt(at));
+  const latin1 = (text: string): number[] => codes(text);
+  const utf16le = (text: string): number[] =>
+    codes(text).flatMap((code) => [code, 0]);
+  const utf16be = (text: string): number[] =>
+    codes(text).flatMap((code) => [0, code]);
+
+  it.each([
+    ['poster.jpg', 'Latin-1', latin1],
+    ['promo.mp4', 'UTF-16LE', utf16le],
+    ['promo.webm', 'UTF-16BE', utf16be],
+  ] as const)(
+    'finds the old name in %s written as %s',
+    (path, _encoding, encode) => {
+      const reading = readText(path, planted(encode));
+      expect('text' in reading && reading.text.includes(OLD_NAME)).toBe(true);
+    },
+  );
+
+  it('reads a media file that names nothing as text, so the walk judges it', () => {
+    const reading = readText(
+      'promo.mp4',
+      Uint8Array.of(0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70),
+    );
+    expect('text' in reading && reading.text.includes('ftyp')).toBe(true);
+  });
+
+  it('still refuses a binary of any other kind', () => {
+    expect(readText('a.png', planted(latin1))).toEqual({
+      refused: 'a.png: holds a NUL byte, so it is not text',
+    });
+  });
+});
+
 describe('every allowance still covers an occurrence (#356)', () => {
   it('names each allowance once', () => {
     const keys = ALLOWANCES.map(keyOf);
