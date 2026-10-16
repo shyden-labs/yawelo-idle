@@ -10,7 +10,9 @@ apps/dev-hosts/public/
 # Astro's generated types (`astro sync`, run by build and check)
 .astro/
 coverage/
+# Stryker's report and its sandbox copy of the repository (#36)
 reports/mutation/
+.stryker-tmp/
 
 # Test output
 playwright-report/

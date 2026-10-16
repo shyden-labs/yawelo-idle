@@ -5,6 +5,7 @@ import guards from '../../vitest.guards.config';
 import integration from '../../vitest.integration.config';
 import pacing from '../../vitest.pacing.config';
 import properties from '../../vitest.properties.config';
+import stryker from '../../vitest.stryker.config';
 import unit from '../../vitest.config';
 import devHosts from '../../apps/dev-hosts/vitest.harness.config';
 import site from '../../apps/site/vitest.harness.config';
@@ -161,6 +162,7 @@ describe('no non-unit suite’s config sets a limit of its own (#476 AC2)', () =
     ['vitest.integration.config.ts', integration],
     ['vitest.pacing.config.ts', pacing],
     ['vitest.properties.config.ts', properties],
+    ['vitest.stryker.config.ts', stryker],
     ['apps/dev-hosts/vitest.harness.config.ts', devHosts],
     ['apps/site/vitest.harness.config.ts', site],
     ['apps/sync-worker/vitest.harness.config.ts', syncWorker],

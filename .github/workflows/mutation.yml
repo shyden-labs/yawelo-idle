@@ -1,0 +1,67 @@
+# Every third-party `uses:` is a full 40-hex commit SHA with a trailing
+# `# vX.Y.Z` comment, as in ci.yml (tests/unit/supply-chain.test.ts).
+#
+# The core mutation run (#36): Stryker mutates the economy and memory code in
+# packages/core/src and kills each mutant with packages/core's unit tests
+# (stryker.config.json). A score under 90 fails the job, and the HTML report
+# is uploaded whether it passed or failed.
+#
+# Branch protection requires this job by its name, so it runs on every pull
+# request. scripts/ci-scope.ts judges the pull request's merge commit against
+# its base: when nothing the run reads changed, it writes mutation=skip,
+# every later step skips and the job passes without running Stryker. Any
+# other output, or none, runs it (fail closed).
+name: mutation
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-24.04
+    # GitHub's default is 360 minutes; every job here stops within 30 (#44).
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The merge commit and its parents: the classifier diffs HEAD^1..HEAD.
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      # Node's own modules only, so it runs before the install it may skip.
+      - name: 'Classify the change (#360, #36)'
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: node scripts/ci-scope.ts
+      - name: Install (a warning fails it)
+        if: ${{ steps.classify.outputs.mutation != 'skip' }}
+        run: scripts/fail-on-warnings.sh npm ci
+      # One limit, at this step, and none inside the run (#476).
+      - name: Mutation testing (Stryker, a score under 90 fails it)
+        id: mutation
+        timeout-minutes: 25
+        if: ${{ steps.classify.outputs.mutation != 'skip' }}
+        run: scripts/fail-on-warnings.sh npm run test:mutation
+      # The score may not drop (Shyden, 2026-10-16): every mutant the tests
+      # did not detect must be on stryker.equivalents.json with its reason,
+      # and every entry there must still be undetected. Run after a Stryker
+      # run that failed too, so the log names each unlisted survivor.
+      - name: No undetected mutant but the listed equivalents (the score may not drop)
+        if: ${{ !cancelled() && steps.classify.outputs.mutation != 'skip' && (steps.mutation.outcome == 'success' || steps.mutation.outcome == 'failure') }}
+        run: node scripts/mutation-survivors.ts
+      # Only after a Stryker run that passed or failed: a step before it that
+      # failed skips the run, and an upload then would fail on a report
+      # nothing wrote, a second red step that misleads (#353).
+      - name: Upload the mutation report
+        if: ${{ !cancelled() && steps.classify.outputs.mutation != 'skip' && (steps.mutation.outcome == 'success' || steps.mutation.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          if-no-files-found: error
