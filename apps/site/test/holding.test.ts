@@ -64,13 +64,17 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
     expect(video).toContain('poster="/media/yawelo-idle-promo-poster.jpg"');
   });
 
-  it('offers WebM first, then MP4', () => {
+  // MP4 first: Safari on a physical iPhone Air played the WebM once, restarted
+  // once, then froze on its end card for good, while the MP4 looped for 35 s
+  // (three variants measured on 2026-10-16, #621). Chrome on Android loops
+  // either.
+  it('offers MP4 first, then WebM', () => {
     const sources = [
       ...html(file).matchAll(/<source src="([^"]+)" type="([^"]+)">/g),
     ].map(([, src, type]) => [src, type]);
     expect(sources).toEqual([
-      ['/media/yawelo-idle-promo.webm', 'video/webm'],
       ['/media/yawelo-idle-promo.mp4', 'video/mp4'],
+      ['/media/yawelo-idle-promo.webm', 'video/webm'],
     ]);
   });
 

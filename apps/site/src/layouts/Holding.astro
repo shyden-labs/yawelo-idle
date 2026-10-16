@@ -67,8 +67,9 @@ const title = kind === 'home' ? copy.titles.home : copy.notFoundTitle;
             poster="/media/yawelo-idle-promo-poster.jpg"
             aria-label={copy.titles.home}
           >
-            <source src="/media/yawelo-idle-promo.webm" type="video/webm" />
+            {/* MP4 first: Safari on iPhone froze on the WebM's second loop (#621). */}
             <source src="/media/yawelo-idle-promo.mp4" type="video/mp4" />
+            <source src="/media/yawelo-idle-promo.webm" type="video/webm" />
           </video>
         </>
       ) : (
