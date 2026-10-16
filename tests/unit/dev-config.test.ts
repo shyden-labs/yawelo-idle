@@ -324,8 +324,12 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
       holds(
         'npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"',
       ),
-      // The holding page's dev copy (#621 AC8).
-      holds('npx wrangler deploy'),
+      // The holding page's dev copy (#621 AC8), named from the repository
+      // root: from its subfolder, npx would run wrangler at apps/site, which
+      // reads the dev site's config (deploy-dev run 38889757344).
+      holds(
+        'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+      ),
       holds(
         'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
       ),
@@ -428,6 +432,12 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
     ]);
     expect(builds[0]?.index).toBeLessThan(deployIn('apps/web'));
     expect(builds[1]?.index).toBeLessThan(deployIn('apps/site'));
-    expect(builds[2]?.index).toBeLessThan(deployIn('apps/site/holding-dev'));
+    expect(builds[2]?.index).toBeLessThan(
+      deploySteps().findIndex(
+        (step) =>
+          runOf(step) ===
+          'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+      ),
+    );
   });
 });
