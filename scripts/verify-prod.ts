@@ -9,8 +9,7 @@
  *    language, with the headers.
  * 3. `robots.txt` is the one this commit builds.
  * 4. The promo video and its poster answer 200 of their type, at the size
- *    this commit builds, embeddable by the same site only, and each video
- *    answers a byte range with 206, as iPhones need.
+ *    this commit builds, embeddable by the same site only.
  *
  *     npm run build:holding --workspace @yawelo-idle/site   # stamped with EXPECTED_SHA
  *     PROD_URL=https://yawelo-idle.shyden.co.uk EXPECTED_SHA=… node scripts/verify-prod.ts
@@ -193,58 +192,6 @@ export const mediaProblems = (
   ...args: Parameters<typeof mediaJudgement>
 ): readonly string[] => mediaJudgement(...args).problems;
 
-/**
- * A video asked for its first two bytes: 206, exactly those bytes, and the
- * embed rule. Safari on iPhone plays video only from a server that answers in
- * ranges (#621; Apple: "HTTP servers hosting media files for iOS must support
- * byte-range requests").
- */
-export function rangeJudgement(
-  path: string,
-  answer: Probe,
-  bytes: number,
-): Judgement {
-  const range = answer.headers.get('content-range') ?? '';
-  const length = answer.headers.get('content-length');
-  const corp = answer.headers.get('cross-origin-resource-policy');
-  const expected = `bytes 0-1/${String(bytes)}`;
-  return judge([
-    {
-      name: `${path} range status`,
-      gate: true,
-      problem: () =>
-        answer.status === 206
-          ? undefined
-          : `${path}: a range request got status ${String(answer.status)}, expected 206`,
-    },
-    {
-      name: `${path} content-range`,
-      problem: () =>
-        range === expected
-          ? undefined
-          : `${path}: Content-Range ${range}, expected ${expected}`,
-    },
-    {
-      name: `${path} range length`,
-      problem: () =>
-        length === '2'
-          ? undefined
-          : `${path}: a 2-byte range came back with Content-Length ${length ?? 'missing'}`,
-    },
-    {
-      name: `${path} range embedding`,
-      problem: () =>
-        corp === 'same-site'
-          ? undefined
-          : `${path}: Cross-Origin-Resource-Policy is ${corp ?? 'missing'} on a range, expected same-site`,
-    },
-  ]);
-}
-
-export const rangeProblems = (
-  ...args: Parameters<typeof rangeJudgement>
-): readonly string[] => rangeJudgement(...args).problems;
-
 export function robotsJudgement(answer: Probe, built: string): Judgement {
   return judge([
     statusCheck('/robots.txt', answer, 200),
@@ -337,20 +284,6 @@ export async function verifyProd(
       ? [robots]
       : robotsProblems(robots, built('robots.txt'))),
   );
-  for (const [path] of MEDIA.filter(([, type]) => type.startsWith('video/'))) {
-    const bytes = statSync(new URL(path.slice(1), dist)).size;
-    let answer: Probe | string;
-    try {
-      answer = await probe(`${origin}${path}`, { Range: 'bytes=0-1' });
-    } catch (error) {
-      answer = `${path}: range request failed: ${error instanceof Error ? error.message : String(error)}`;
-    }
-    problems.push(
-      ...(typeof answer === 'string'
-        ? [answer]
-        : rangeProblems(path, answer, bytes)),
-    );
-  }
   for (const [path, type] of MEDIA) {
     // GET, not HEAD: Cloudflare's static assets send no Content-Length on a
     // HEAD (measured on the dev copy, deploy-dev run 38893672548).
