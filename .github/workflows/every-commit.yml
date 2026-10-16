@@ -13,11 +13,18 @@
 # name and tests none of them, so `every-commit` is red, never green on part
 # of the list.
 #
+# It runs on pull requests into develop only (#633). A release pull request
+# (develop into main) brings commits that each passed here on their way into
+# develop, and one bringing more than 256 could never pass: release PR #630
+# brought 522. main's required check, build-and-test, still runs on the
+# release head.
+#
 # Every third-party `uses:` is a full commit SHA with its version comment,
 # the same SHAs as ci.yml (tests/unit/supply-chain.test.ts).
 name: every-commit
 on:
   pull_request:
+    branches: [develop]
 
 permissions:
   contents: read
