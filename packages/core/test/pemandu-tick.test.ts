@@ -34,15 +34,41 @@ describe('firstHolding: the first tick of a grid where a monotone test holds', (
   it.each([
     ['guessed exactly, inside the grid', 50_000, 50_000, 50_000, 2],
     ['guessed exactly, at the first tick', 10_000, 10_000, 10_000, 1],
-    ['guessed between ticks: the tick after', 50_000, 41_234, 50_000, 2],
     [
-      'guessed one tick late: back one, already known to hold',
+      'guessed between ticks, nearer the one before: it, then on',
       50_000,
-      60_000,
+      41_234,
       50_000,
       2,
     ],
-    ['guessed one tick early', 50_000, 40_000, 50_000, 3],
+    [
+      'guessed between ticks, nearer the one after: it, then the one before',
+      50_000,
+      48_766,
+      50_000,
+      2,
+    ],
+    [
+      'guessed a hair past the tick, as rounding can: that tick and the one before',
+      50_000,
+      50_000.001,
+      50_000,
+      2,
+    ],
+    [
+      'guessed one tick late: that tick and two back',
+      50_000,
+      60_000,
+      50_000,
+      3,
+    ],
+    [
+      'guessed one tick early: that tick, then on, never the one before',
+      50_000,
+      40_000,
+      50_000,
+      2,
+    ],
     [
       'guessed past the grid, holding at its last tick',
       100_000,
@@ -50,7 +76,7 @@ describe('firstHolding: the first tick of a grid where a monotone test holds', (
       100_000,
       2,
     ],
-    ['guessed two ticks late', 50_000, 70_000, 50_000, 3],
+    ['guessed two ticks late', 50_000, 70_000, 50_000, 4],
     ['guessed past the grid, never holding', 200_000, Infinity, undefined, 1],
     ['guessed before the grid, holding at once', 0, -Infinity, 10_000, 1],
   ] as const)('%s', (_label, threshold, guess, tick, checks) => {
@@ -346,4 +372,49 @@ describe('nextPurchaseTick (AC3)', () => {
       expect(checkNextPurchase(caseOf(game))).toEqual(WHERE[label]);
     },
   );
+
+  // The case the properties suite shrank to on its first fresh seed
+  // (721970856, #607): the solve puts the crossing exactly on tick 658,000,
+  // and Num's rounding there leaves Understanding 3e-14 short of the price.
+  it('checks at most one more tick than it walks segments when rounding leaves an exact crossing just short (seed 721970856)', () => {
+    const anchor = simMs(655_200);
+    const state: GameState = {
+      sim: anchor,
+      wall: wallMs(1_799_021_455_200),
+      anchor: { sim: anchor, understanding: [8.219824773239228, 0] },
+      owned: { tea: 9, inn: 0, market: 0 },
+      insight: [0, 0],
+      words: {},
+      memorySince: anchor,
+      stamps: 0,
+      stampsEarned: 0,
+      upgrades: { encounterDiscount: 1 },
+      rng: createStreams(1, ['cards']),
+      journeys: [null, null, null],
+      cards: [],
+      tutorialJourneyUsed: false,
+      destination: 0,
+      reached: 0,
+      finale: false,
+      replays: {},
+      runSpent: [0, 0],
+      playableRegions: 3,
+      grammar: [],
+      automation: { enabled: true, intervalMs: 1000 },
+      seq: 0,
+    };
+    expect(
+      checkNextPurchase({
+        course: NEXT_TICK_COURSE,
+        state,
+        until: simMs(661_450),
+      }),
+    ).toEqual({
+      none: false,
+      firstTick: false,
+      midSegment: true,
+      laterSegment: false,
+      atUntil: false,
+    });
+  });
 });

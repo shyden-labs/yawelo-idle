@@ -176,10 +176,14 @@ export interface Found {
 
 /**
  * The first tick of `grid` at which `holds` is true, for a test that is
- * false and then true along the grid. It starts from `guess` snapped up to
- * the grid, steps back while the tick before also holds, and otherwise
- * steps on until one does, so an exact guess costs two tests, that tick and
- * the one before (AC3), and a wrong one still gives the scan's answer.
+ * false and then true along the grid. It starts at the grid tick nearest
+ * `guess` and tests it first: if it holds, it steps back while the tick
+ * before also holds; if not, it steps on until one does, never testing the
+ * tick before, which cannot hold. So a guess within half a tick of where the
+ * test turns true costs two tests (AC3) whichever way rounding falls, and a
+ * wrong one still gives the scan's answer. Snapping up and testing the tick
+ * before first cost three when rounding left an exact crossing just short
+ * (#607).
  */
 export function firstHolding(
   grid: TickGrid,
@@ -197,14 +201,16 @@ export function firstHolding(
     checks += 1;
     return holds(tick);
   };
-  const snapped = first + Math.ceil((guess - first) / every) * every;
-  let tick = Math.min(Math.max(snapped, first), last + every);
-  let back = false;
-  while (tick - every >= first && test(tick - every)) {
-    tick -= every;
-    back = true;
+  // An empty grid holds no tick to test.
+  if (last < first) return { tick: undefined, checks };
+  const nearest = first + Math.round((guess - first) / every) * every;
+  // A guess before the grid starts at its first tick, one past it at its last.
+  let tick = Math.min(Math.max(nearest, first), last);
+  if (test(tick)) {
+    while (tick - every >= first && test(tick - every)) tick -= every;
+    return { tick, checks };
   }
-  if (back) return { tick, checks };
+  tick += every;
   while (tick <= last && !test(tick)) tick += every;
   return { tick: tick <= last ? tick : undefined, checks };
 }
