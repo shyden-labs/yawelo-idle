@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { includeIgnoreFile } from '@eslint/compat';
+import { defineConfig, includeIgnoreFile } from 'eslint/config';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
@@ -19,8 +19,12 @@ import { coreDeterminismBlock } from './eslint.core-determinism.ts';
  * Ignores come from `.gitignore` rather than a list kept here, so anything git
  * does not track (build output, wrangler state, local agent scratch) is never
  * linted.
+ *
+ * `defineConfig` and `includeIgnoreFile` are ESLint core's own (#624): the
+ * `typescript-eslint` and `@eslint/compat` versions are deprecated in favour
+ * of them.
  */
-export default tseslint.config(
+export default defineConfig(
   includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
