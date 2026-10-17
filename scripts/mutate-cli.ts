@@ -9,8 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { asMutationFile } from './mutation-file.ts';
-import { mutableSuites, realIo, runFile } from './mutate.ts';
+import { mutableSuites, realIo, runFiles } from './mutate.ts';
 import { FLOORS_DIR, SUITES } from './record-floors.ts';
 
 async function main(): Promise<void> {
@@ -38,19 +37,18 @@ async function main(): Promise<void> {
       io.restoreAll();
       process.exit(130);
     });
-  let matched = 0;
-  let rows = 0;
-  for (const path of paths) {
-    const loaded = (await import(pathToFileURL(resolve(root, path)).href)) as {
-      readonly default?: unknown;
-    };
-    const file = asMutationFile(loaded.default);
-    const counts = await runFile(io, path, file, mutableSuites(SUITES));
-    matched += counts.matched;
-    rows += counts.rows;
-  }
-  console.log(`mutate: ${String(matched)} of ${String(rows)} matched`);
-  process.exitCode = matched === rows ? 0 : 1;
+  const totals = await runFiles(
+    io,
+    paths,
+    async (path) =>
+      (
+        (await import(pathToFileURL(resolve(root, path)).href)) as {
+          readonly default?: unknown;
+        }
+      ).default,
+    mutableSuites(SUITES),
+  );
+  process.exitCode = totals.ok ? 0 : 1;
 }
 
 if (import.meta.main)

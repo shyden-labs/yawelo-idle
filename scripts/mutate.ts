@@ -21,6 +21,7 @@ import {
 import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  asMutationFile,
   FILE_SEPARATOR,
   mutationFileProblems,
   type Mutation,
@@ -460,6 +461,17 @@ function redBaseline(
   ];
 }
 
+/** Why `runFile` will not run a file; `runFiles` prints it and runs the next file. */
+export class Refusal extends Error {
+  readonly path: string;
+  readonly why: string;
+  constructor(path: string, why: string) {
+    super(`${path}: ${why}`);
+    this.path = path;
+    this.why = why;
+  }
+}
+
 /**
  * Runs one mutation file (spec §4): checks it, finds its suite, runs the
  * suite clean, then plants each mutation in turn, runs the whole suite, puts
@@ -473,7 +485,7 @@ export async function runFile(
   suites: readonly MutableSuite[],
 ): Promise<{ readonly matched: number; readonly rows: number }> {
   const refuse = (why: string): never => {
-    throw new Error(`${path}: ${why}`);
+    throw new Refusal(path, why);
   };
   const problems = mutationFileProblems(file);
   if (problems.length > 0) refuse(problems.join('\n  '));
@@ -613,6 +625,57 @@ export async function runFile(
     `${path}: ${String(matched)} of ${String(file.mutations.length)} matched`,
   );
   return { matched, rows: file.mutations.length };
+}
+
+/** Loads a mutation file by its repository-relative path and returns the module's default export. */
+export type Load = (path: string) => Promise<unknown>;
+
+/**
+ * Runs each mutation file in turn (#652). A file that does not load, is not
+ * a mutation file, or that `runFile` refuses is printed as `REFUSED`,
+ * counted, and the next file still runs, so one refusal never hides the
+ * others' rows. Anything else, such as a file that did not read back, stops
+ * every file: the tree may no longer be as HEAD has it.
+ */
+export async function runFiles(
+  io: Io,
+  paths: readonly string[],
+  load: Load,
+  suites: readonly MutableSuite[],
+): Promise<{
+  readonly matched: number;
+  readonly rows: number;
+  readonly refused: number;
+  readonly ok: boolean;
+}> {
+  let matched = 0;
+  let rows = 0;
+  let refused = 0;
+  for (const path of paths) {
+    let file: MutationFile;
+    try {
+      file = asMutationFile(await load(path));
+    } catch (error) {
+      refused += 1;
+      io.print(
+        `REFUSED ${path}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      continue;
+    }
+    try {
+      const counts = await runFile(io, path, file, suites);
+      matched += counts.matched;
+      rows += counts.rows;
+    } catch (error) {
+      if (!(error instanceof Refusal)) throw error;
+      refused += 1;
+      io.print(`REFUSED ${path}: ${error.why}`);
+    }
+  }
+  io.print(
+    `mutate: ${String(matched)} of ${String(rows)} rows matched; ${String(refused)} of ${String(paths.length)} files refused`,
+  );
+  return { matched, rows, refused, ok: matched === rows && refused === 0 };
 }
 
 /**

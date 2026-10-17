@@ -62,7 +62,8 @@ For each mutation file, in order:
    4. Run the suite with `FLOORS_RECORD` unset and two reporters (`default` to the log, and the runner's own, `scripts/mutate-reporter.ts`, to a JSON file named by `MUTATE_REPORT`), bounded by the ceiling (§5).
    5. Restore. Re-hash, and refuse to continue if the bytes differ from step 1.
    6. **Judge.** The row matches when all of these hold: the failing tests are exactly the keys of `red` plus the corpus predictions; each red test's messages contain its text; the total equals the baseline total; no test timed out (counted from the error objects the reporter receives); a report exists. Otherwise it prints `MISS <name>` with every unpredicted failure and its first message line, every predicted test that stayed green, every wrong reason, the total and the timeouts.
-6. **End.** `git diff --quiet HEAD` over every mutated file; then `<k> of <n> matched`. Exit 0 only if every row of every file matched.
+6. **End.** `git diff --quiet HEAD` over every mutated file; then `<file>: <k> of <n> matched`.
+7. **Every file runs (#652).** A file that does not load, is not a mutation file, or is refused at any step above prints `REFUSED <file>: <why>`, and the next file still runs, so one refusal never hides the others' rows. A file that does not read back (step 5.5) stops every file. The last line is `mutate: <k> of <n> rows matched; <r> of <f> files refused`. Exit 0 only if every row of every file matched and no file was refused.
 
 Logs: `.mutations/<file stem>/<name>.log` and `.json` (git-ignored, kept whole: a name alone once lost a flake's error text). The `mutations` check (#619) uploads the folder.
 

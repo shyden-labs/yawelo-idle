@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Mutation, MutationFile } from '../../scripts/mutation-file';
 import {
   runFile,
+  runFiles,
   type Io,
+  type Load,
   type MutableSuite,
   type RunOutcome,
   type RunRequest,
@@ -526,5 +528,112 @@ describe('runFile in a Playwright suite (CI)', () => {
         [SMOKE],
       ),
     ).toEqual({ matched: 1, rows: 1 });
+  });
+});
+
+const A = 'tests/mutations/a.ts';
+const B = 'tests/mutations/b.ts';
+const MALFORMED: MutationFile = { ...FILE, targets: [] };
+
+/** A loader answering each path from `modules`; an `Error` is thrown, as a module that fails to load. */
+function loader(modules: Readonly<Record<string, unknown>>): Load {
+  return (path) => {
+    const loaded = modules[path];
+    return loaded instanceof Error
+      ? Promise.reject(loaded)
+      : Promise.resolve(loaded);
+  };
+}
+
+describe('runFiles', () => {
+  it('prints a refused file, counts it, and still runs the next file', async () => {
+    const s = stand([GREEN, BLIND]);
+    const totals = await runFiles(
+      s.io,
+      [A, B],
+      loader({ [A]: MALFORMED, [B]: FILE }),
+      SUITES,
+    );
+    expect(totals.ok).toBe(false);
+    expect(s.printed).toContain(`REFUSED ${A}: names no targets`);
+    expect(s.printed).toContain(`${B}: 1 of 1 matched`);
+    expect(s.printed.at(-1)).toBe(
+      'mutate: 1 of 1 rows matched; 1 of 2 files refused',
+    );
+  });
+
+  it('refuses a file whose module fails to load, naming it, and runs the next', async () => {
+    const s = stand([GREEN, BLIND]);
+    const totals = await runFiles(
+      s.io,
+      [A, B],
+      loader({ [A]: new Error('Cannot find module a.ts'), [B]: FILE }),
+      SUITES,
+    );
+    expect(s.printed).toContain(`REFUSED ${A}: Cannot find module a.ts`);
+    expect(s.printed.at(-1)).toBe(
+      'mutate: 1 of 1 rows matched; 1 of 2 files refused',
+    );
+    expect(totals.ok).toBe(false);
+  });
+
+  it('refuses a module that does not export a mutation file, and runs the next', async () => {
+    const s = stand([GREEN, BLIND]);
+    await runFiles(s.io, [A, B], loader({ [A]: {}, [B]: FILE }), SUITES);
+    expect(s.printed).toContain(
+      `REFUSED ${A}: does not default-export mutationFile({ targets, mutations })`,
+    );
+    expect(s.printed.at(-1)).toBe(
+      'mutate: 1 of 1 rows matched; 1 of 2 files refused',
+    );
+  });
+
+  it('refuses every file, running no suite, and fails', async () => {
+    // No run is scripted, so a suite run would throw, which is no refusal:
+    // runFiles would reject and this test would fail.
+    const s = stand([]);
+    const totals = await runFiles(
+      s.io,
+      [A, B],
+      loader({ [A]: new Error('Cannot find module a.ts'), [B]: MALFORMED }),
+      SUITES,
+    );
+    expect(totals.ok).toBe(false);
+    expect(s.printed).toEqual([
+      `REFUSED ${A}: Cannot find module a.ts`,
+      `REFUSED ${B}: names no targets`,
+      'mutate: 0 of 0 rows matched; 2 of 2 files refused',
+    ]);
+  });
+
+  it('passes when no file is refused and every row matched', async () => {
+    const s = stand([GREEN, BLIND, GREEN, BLIND]);
+    const totals = await runFiles(
+      s.io,
+      [A, B],
+      loader({ [A]: FILE, [B]: FILE }),
+      SUITES,
+    );
+    expect(s.printed.at(-1)).toBe(
+      'mutate: 2 of 2 rows matched; 0 of 2 files refused',
+    );
+    expect(totals.ok).toBe(true);
+  });
+
+  it('fails when a row missed though no file was refused', async () => {
+    const s = stand([GREEN, GREEN]);
+    const totals = await runFiles(s.io, [A], loader({ [A]: FILE }), SUITES);
+    expect(s.printed.at(-1)).toBe(
+      'mutate: 0 of 1 rows matched; 0 of 1 files refused',
+    );
+    expect(totals.ok).toBe(false);
+  });
+
+  it('stops at a file that does not read back, running no later file', async () => {
+    const s = stand([GREEN, BLIND], { restoreFails: true });
+    await expect(
+      runFiles(s.io, [A, B], loader({ [A]: FILE, [B]: FILE }), SUITES),
+    ).rejects.toThrow('src/reader.ts did not read back as it was');
+    expect(s.runs).toHaveLength(2);
   });
 });
