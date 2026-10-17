@@ -10,11 +10,30 @@
  * `MUTATE_REPORT=<path>`; at the end of the run this writes `Written` there.
  */
 import { writeFileSync } from 'node:fs';
-import { posix, relative, sep } from 'node:path';
+import { isAbsolute, posix, relative, sep } from 'node:path';
 import type { Reporter, TestModule, Vitest } from 'vitest/node';
 
 /** The environment variable naming the file the report is written to. */
 export const REPORT_ENV = 'MUTATE_REPORT';
+
+/**
+ * The environment variable naming the repository root, when a suite runs from
+ * its own folder (#649): files are named from it, not from vitest's root.
+ */
+export const ROOT_ENV = 'MUTATE_ROOT';
+
+/** The root a report names files from: `MUTATE_ROOT` when set, else vitest's. */
+export function reportRoot(
+  env: Readonly<Record<string, string | undefined>>,
+  vitestRoot: string,
+): string {
+  const named = env[ROOT_ENV];
+  if (named === undefined) return vitestRoot;
+  if (named === '') throw new Error(`${ROOT_ENV} is set but empty`);
+  if (!isAbsolute(named))
+    throw new Error(`${ROOT_ENV} must be an absolute path, not ${named}`);
+  return named;
+}
 
 /** What the reporter writes: the run as the runner judges it. */
 export interface Written {
@@ -96,7 +115,7 @@ export default class MutateReporter implements Reporter {
   private root = '';
 
   onInit(vitest: Vitest): void {
-    this.root = vitest.config.root;
+    this.root = reportRoot(process.env, vitest.config.root);
   }
 
   onTestRunEnd(testModules: readonly TestModule[]): void {
