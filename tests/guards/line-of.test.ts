@@ -11,6 +11,9 @@ import { committableFiles } from '../unit/tracked-files';
  * It reads the whole repository, a cost that grows with the tree, so it runs
  * in the guards suite (#515). The reader's tests on planted fixtures are unit
  * tests (tests/unit/line-of.test.ts).
+ *
+ * Planted control for #619 AC6: this pull request changes a guards test and
+ * carries no mutation file, so the mutations check must fail naming it.
  */
 
 const parse = (path: string, text: string): ts.SourceFile =>
