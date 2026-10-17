@@ -1,0 +1,29 @@
+// The roadmap tests' Worker (#341): wrangler.jsonc but for name and main,
+// held so by test/roadmap/config.test.ts. main wraps the real Worker
+// (test/roadmap-worker/test-worker.ts); nothing here is deployed.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "yawelo-idle-site-roadmap-test",
+  "main": "test/roadmap-worker/test-worker.ts",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "404-page",
+  },
+  "services": [{ "binding": "GAME", "service": "yawelo-idle-web-dev" }],
+  "vars": {
+    "ROADMAP_APP_ID": "5294556",
+    "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
+    "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
+    "ROADMAP_REPO": "shyden-labs/yawelo-idle",
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Roadmap"] }],
+  "triggers": { "crons": ["*/10 * * * *"] },
+}

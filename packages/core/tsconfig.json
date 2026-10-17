@@ -1,0 +1,24 @@
+{
+  // @yawelo-idle/core runs unchanged in browsers, Electron, Capacitor and
+  // Workers, so it sees ECMAScript alone: no DOM lib and no Node types.
+  // `types: []` matters: without it, the hoisted @types/node would be
+  // included automatically and `process` or `Buffer` would typecheck.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "types": [],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  // The tests run in Node and have their own project (test/tsconfig.json);
+  // the golden vectors are also bundled into every browser engine
+  // (tests/engines), so they are held to ECMAScript here too.
+  "include": ["src/**/*.ts", "fixtures/**/*.ts", "test/golden-vectors.ts"]
+}

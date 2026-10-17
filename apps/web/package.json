@@ -1,0 +1,26 @@
+{
+  "name": "@yawelo-idle/web",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./commit-stamp": "./commit-stamp.ts"
+  },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && tsc --noEmit -p worker",
+    "test": "vite build && vitest run -c vitest.harness.config.ts",
+    "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.0",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "vite": "^8.3.2"
+  },
+  "dependencies": {
+    "@yawelo-idle/lockdown": "*",
+    "@yawelo-idle/ui": "*"
+  }
+}

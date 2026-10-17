@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse } from 'yaml';
 import { withoutYamlComments, withoutYamlQuotes } from './source-text';
+import { isRecord } from './workflow-secrets';
+import { floorBreach } from '../floors';
+import { searched } from '../searched';
 
 /**
  * The CI supply chain is pinned, and something keeps it current.
@@ -21,8 +25,10 @@ import { withoutYamlComments, withoutYamlQuotes } from './source-text';
  *    beside each SHA is what makes a bump reviewable by a human instead of an
  *    opaque hex swap.
  *
- * SOURCE TEXT, not YAML parsing: no YAML parser is available here and none is
- * worth adding ("no new npm dependencies"), matching pipeline-wiring.test.ts.
+ * The `uses:` and Dependabot checks read SOURCE TEXT, stripped of comments
+ * where it matters. The container-image checks PARSE the workflows (`yaml`),
+ * since `container:` is either a string or a mapping and a comment must not
+ * count as an image.
  */
 
 const WORKFLOWS = '.github/workflows';
@@ -44,7 +50,10 @@ const externalUses = () =>
   workflowFiles().flatMap((file) =>
     readFileSync(join(WORKFLOWS, file), 'utf8')
       .split('\n')
-      .map((text, i) => ({ where: `${file}:${i + 1}`, text: text.trim() }))
+      .map((text, i) => ({
+        where: `${file}:${String(i + 1)}`,
+        text: text.trim(),
+      }))
       .filter(({ text }) => /^(-\s*)?uses:\s*[^.\s]/.test(text)),
   );
 
@@ -76,42 +85,165 @@ const ecosystemBlocks = () =>
     .filter((block) => /package-ecosystem:/.test(block));
 
 /**
- * Every `owner/repo` referenced at MORE THAN ONE sub-path, with the distinct
- * refs seen for it — the ones Dependabot would otherwise bump one sub-path at
- * a time, leaving the siblings behind.
+ * Every external `uses` value in the PARSED workflows, job calls and steps
+ * alike. Read independently of the line reader above, so a `uses:` written in
+ * a form that reader cannot see is caught by the difference (Refs #82).
  */
-const subPathRepos = (): [string, Set<string>][] => {
+const parsedUses = (): string[] =>
+  workflowFiles().flatMap((file) => {
+    const doc: unknown = parse(readFileSync(join(WORKFLOWS, file), 'utf8'));
+    const jobs =
+      isRecord(doc) && isRecord(doc.jobs) ? Object.values(doc.jobs) : [];
+    return jobs.flatMap((job) => {
+      if (!isRecord(job)) return [];
+      const steps: unknown[] = Array.isArray(job.steps) ? job.steps : [];
+      return [
+        job.uses,
+        ...steps.map((step) => (isRecord(step) ? step.uses : undefined)),
+      ]
+        .filter((uses): uses is string => typeof uses === 'string')
+        .filter((uses) => !uses.startsWith('./'));
+    });
+  });
+
+/** Every `owner/repo` the workflows reference, with the distinct refs seen for each. */
+const actionRepos = (): [string, Set<string>][] => {
   const refs = new Map<string, Set<string>>();
   for (const { text } of externalUses()) {
     const ref = text.match(/uses:\s*([^@\s]+)@/)?.[1];
     if (!ref) continue;
-    const [owner, repo] = ref.split('/');
+    const [owner = '', repo = ''] = ref.split('/');
     const key = `${owner}/${repo}`;
-    if (!refs.has(key)) refs.set(key, new Set());
-    refs.get(key)!.add(ref);
+    const seen = refs.get(key) ?? new Set<string>();
+    seen.add(ref);
+    refs.set(key, seen);
   }
-  return [...refs.entries()].filter(([, seen]) => seen.size > 1);
+  return [...refs.entries()];
 };
+
+/**
+ * True for an `owner/repo` referenced at MORE THAN ONE sub-path: one that
+ * Dependabot would otherwise bump one sub-path at a time, leaving the
+ * siblings behind.
+ */
+const isSubPath = ([, seen]: [string, Set<string>]): boolean => seen.size > 1;
 
 describe('the CI supply chain is pinned', () => {
   it('there is something to check', () => {
-    expect(externalUses().length).toBeGreaterThan(0);
+    // Measured 6 at b2a6f3f (#82). Lower it only in the commit that removes one.
+    expect(externalUses().length).toBeGreaterThan(5);
+  });
+
+  it('the line reader sees every uses: the parsed workflows hold (Refs #82)', () => {
+    const read = externalUses().map(
+      ({ text }) => text.match(/uses:\s*["']?([^\s"']+)/)?.[1] ?? text,
+    );
+    expect(read.sort()).toEqual(parsedUses().sort());
   });
 
   it('every third-party action is pinned to a full commit SHA', () => {
-    const unpinned = externalUses()
+    const uses = externalUses();
+    const unpinned = uses
       .filter(({ text }) => !/@[0-9a-f]{40}(?=\s|$)/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(unpinned, 'a mutable tag can be repointed under us').toEqual([]);
+    expect(
+      searched(unpinned, { of: uses, what: 'third-party uses' }),
+      'a mutable tag can be repointed under us',
+    ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/pinned-uses', uses.length),
+    ).toBeUndefined();
   });
 
   it('every pinned action names the version its SHA resolves to', () => {
-    const opaque = externalUses()
+    const uses = externalUses();
+    const opaque = uses
       .filter(({ text }) => !/@[0-9a-f]{40}\s+#\s*v\d/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(opaque, 'a bare SHA bump is unreviewable by a human').toEqual([]);
+    expect(
+      searched(opaque, { of: uses, what: 'third-party uses' }),
+      'a bare SHA bump is unreviewable by a human',
+    ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/versioned-uses', uses.length),
+    ).toBeUndefined();
+  });
+});
+
+/** Every container and service image a workflow job runs, by job. */
+const containerImages = () =>
+  workflowFiles().flatMap((file) => {
+    const doc: unknown = parse(readFileSync(join(WORKFLOWS, file), 'utf8'));
+    const jobs = isRecord(doc) && isRecord(doc.jobs) ? doc.jobs : {};
+    return Object.entries(jobs).flatMap(([id, job]) => {
+      if (!isRecord(job)) return [];
+      const services = isRecord(job.services)
+        ? Object.values(job.services)
+        : [];
+      return [job.container, ...services]
+        .map((c) => (isRecord(c) ? c.image : c))
+        .filter((image): image is string => typeof image === 'string')
+        .map((image) => ({ where: `${file}: jobs.${id}`, image }));
+    });
+  });
+
+const lockedVersion = (name: string): unknown => {
+  const lock: unknown = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  const packages =
+    isRecord(lock) && isRecord(lock.packages) ? lock.packages : {};
+  const entry = packages[`node_modules/${name}`];
+  return isRecord(entry) ? entry.version : undefined;
+};
+
+describe('the browser image is pinned and matches the test runner (#44)', () => {
+  it('there is an image to check: CI gets its browsers from one, in every job that runs them', () => {
+    const images = containerImages()
+      .map(({ image }) => image)
+      .filter((image) => image.startsWith('mcr.microsoft.com/playwright:'));
+    // One distinct pin: none is a miss, two would let the deploy-dev smoke
+    // (#123) drift from the browsers build-and-test proved.
+    expect(new Set(images).size).toBe(1);
+  });
+
+  it('every container image is pinned to a digest, not just a tag', () => {
+    const images = containerImages();
+    const unpinned = images
+      .filter(({ image }) => !/@sha256:[0-9a-f]{64}$/.test(image))
+      .map(({ where, image }) => `${where} ${image}`);
+    expect(
+      searched(unpinned, { of: images, what: 'container images' }),
+      'a tag can be re-pushed under us',
+    ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/digest-images', images.length),
+    ).toBeUndefined();
+  });
+
+  it('the Playwright image is the version of @playwright/test the lockfile installs', () => {
+    const version = lockedVersion('@playwright/test');
+    expect(version, 'positive control: the lockfile names it').toMatch(
+      /^\d+\.\d+\.\d+$/,
+    );
+    const playwrightImages = containerImages().filter(({ image }) =>
+      image.startsWith('mcr.microsoft.com/playwright:'),
+    );
+    const stale = playwrightImages
+      .filter(
+        ({ image }) =>
+          !image.startsWith(
+            `mcr.microsoft.com/playwright:v${String(version)}-`,
+          ),
+      )
+      .map(({ where, image }) => `${where} ${image}`);
+    expect(
+      searched(stale, { of: playwrightImages, what: 'Playwright images' }),
+      `a browser build the runner was not made for fails to launch; move the tag to v${String(version)}-noble and re-read its digest from https://mcr.microsoft.com/v2/playwright/manifests/v${String(version)}-noble`,
+    ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/playwright-images', playwrightImages.length),
+    ).toBeUndefined();
   });
 });
 
@@ -130,16 +262,31 @@ describe('Dependabot keeps the pins from rotting', () => {
    * one is added without a matching Dependabot group. Verified by mutation,
    * not by watching it pass.
    */
+  it('reads every action repo the workflows use (Refs #82)', () => {
+    // Measured 2 at b2a6f3f (#82): actions/checkout and actions/setup-node.
+    expect(actionRepos().length).toBeGreaterThan(1);
+  });
+
   it('an action repo used at more than one sub-path is grouped into one PR', () => {
     const config = configBody();
-    const ungrouped = subPathRepos()
+    // Searched over every action repo: the sub-path ones are drawn from them,
+    // and there are none today (dormant, see below).
+    const repos = actionRepos();
+    const ungrouped = repos
+      .filter(isSubPath)
       .filter(([key]) => !withoutYamlQuotes(config).includes(`${key}*`))
-      .map(([key, refs]) => `${key} used at ${refs.size} sub-paths, ungrouped`);
+      .map(
+        ([key, refs]) =>
+          `${key} used at ${String(refs.size)} sub-paths, ungrouped`,
+      );
 
     expect(
-      ungrouped,
+      searched(ungrouped, { of: repos, what: 'action repos' }),
       'separate PRs per sub-path break the one-SHA-per-repo invariant',
     ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/grouped-action-repos', repos.length),
+    ).toBeUndefined();
   });
 
   /**
@@ -157,7 +304,8 @@ describe('Dependabot keeps the pins from rotting', () => {
    * mutation, not by watching it pass.
    */
   it('a sub-path group is declared before the catch-all that would swallow it', () => {
-    const misordered = subPathRepos().flatMap(([key]) =>
+    const repos = actionRepos();
+    const misordered = repos.filter(isSubPath).flatMap(([key]) =>
       ecosystemBlocks()
         .filter((block) => withoutYamlQuotes(block).includes(`${key}*`))
         .filter((block) => {
@@ -171,9 +319,12 @@ describe('Dependabot keeps the pins from rotting', () => {
     );
 
     expect(
-      misordered,
+      searched(misordered, { of: repos, what: 'action repos' }),
       'Dependabot assigns to the FIRST matching group and stops',
     ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/ordered-action-repos', repos.length),
+    ).toBeUndefined();
   });
 
   it('a Dependabot config exists', () => {
@@ -196,11 +347,84 @@ describe('Dependabot keeps the pins from rotting', () => {
     const ecosystems = (config.match(/package-ecosystem:/g) ?? []).length;
     const onDevelop = config.match(/target-branch:\s*["']?develop["']?/g) ?? [];
 
-    expect(ecosystems, 'no ecosystems declared').toBeGreaterThan(0);
+    // Measured 2 at b2a6f3f (#82): npm and github-actions.
+    expect(ecosystems, 'ecosystems declared').toBeGreaterThan(1);
     expect(
       onDevelop.length,
       'an ecosystem defaults to the default branch, bypassing the develop gate',
     ).toBe(ecosystems);
-    expect(config).not.toMatch(/target-branch:\s*["']?main["']?/);
+    const onMain = config.match(/target-branch:\s*["']?main["']?/g) ?? [];
+    expect(
+      searched(onMain, { of: ecosystems, what: 'Dependabot ecosystems' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('supply-chain/dependabot-ecosystems', ecosystems),
+    ).toBeUndefined();
+  });
+
+  /**
+   * #501: type definitions never run ahead of the Node they describe.
+   * Dependabot offered `@types/node` 26 (#493) while the toolchain ran 24,
+   * which types APIs the runtime lacks. Parsed, not read as text, so the
+   * comment above the rule cannot satisfy it.
+   */
+  it('does not offer @types/node majors above the .nvmrc line', () => {
+    const doc: unknown = parse(dependabot());
+    const updates =
+      isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+    const npm = updates.filter(
+      (u) => isRecord(u) && u['package-ecosystem'] === 'npm',
+    );
+    expect(npm, 'one npm entry').toHaveLength(1);
+    const entry: unknown = npm[0];
+    const ignore =
+      isRecord(entry) && Array.isArray(entry.ignore) ? entry.ignore : [];
+    const above = `>=${String(Number(readFileSync('.nvmrc', 'utf8').trim()) + 1)}.0.0`;
+    expect(ignore).toContainEqual({
+      'dependency-name': '@types/node',
+      versions: [above],
+    });
+  });
+});
+
+/**
+ * The install is reproducible (Refs #1).
+ *
+ * The first CI run on develop died in `actions/setup-node` before a single
+ * test ran: `cache: 'npm'` needs a lock file, and the template shipped none.
+ * Without one, `npm ci` refuses too, and every install would resolve the
+ * ranges afresh. The template also tracked a Vitest cache under
+ * `node_modules/`, so a clean checkout carried build state.
+ */
+interface PackageJson {
+  name: string;
+  devDependencies: Record<string, string>;
+}
+
+interface PackageLock {
+  lockfileVersion: number;
+  name: string;
+  packages: Record<string, { devDependencies?: Record<string, string> }>;
+}
+
+describe('the install is reproducible', () => {
+  const pkg = () =>
+    JSON.parse(readFileSync('package.json', 'utf8')) as PackageJson;
+
+  it('the package is named for this repo, not the template', () => {
+    expect(pkg().name).toBe('yawelo-idle');
+  });
+
+  it('a lock file is committed and agrees with package.json', () => {
+    expect(
+      existsSync('package-lock.json'),
+      'npm ci and the CI cache need it',
+    ).toBe(true);
+    const lock = JSON.parse(
+      readFileSync('package-lock.json', 'utf8'),
+    ) as PackageLock;
+    expect(lock.lockfileVersion).toBe(3);
+    expect(lock.name).toBe(pkg().name);
+    expect(lock.packages['']?.devDependencies).toEqual(pkg().devDependencies);
   });
 });

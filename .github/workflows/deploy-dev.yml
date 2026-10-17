@@ -1,0 +1,260 @@
+# Deploys develop to the dev environment on every merge (spec §13): the D1
+# database (created on the first deploy, #357, bound by id, #391) and its
+# migrations, then the sync Worker, then the game and the site Worker (the
+# password gate in front, spec D9, #39, #332), then the Pages hostname adapter
+# that serves them at dev.yawelo-idle.shyden.co.uk and
+# dev-api.yawelo-idle.shyden.co.uk (#429), all in the dev-only "Shyden Labs
+# Dev" account (#395), then a verify that reads them back at those names.
+#
+# Every Cloudflare secret is a `dev` ENVIRONMENT secret, and `dev` admits only
+# the develop branch, so a fork PR or any other branch cannot reach them
+# (spec §12.9, enforced by tests/unit/workflow-secrets.test.ts).
+name: deploy-dev
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+# Two merges in quick succession deploy in order; neither is cancelled, so the
+# last one to finish is always the newest commit.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  # A reusable-workflow call may not set timeout-minutes; ci.yml's own job
+  # carries it (tests/unit/workflow-timeouts.test.ts).
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-24.04
+    # A normal deploy takes 35 s; GitHub's default would be 360 minutes (#44).
+    timeout-minutes: 10
+    environment:
+      name: dev
+      url: https://dev.yawelo-idle.shyden.co.uk
+    # The Cloudflare token is NOT here: it is given only to the steps that call
+    # Cloudflare (#395), so npm ci's install scripts and the build never hold it.
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      # Before anything uses the token, prove it reaches the dev-only "Shyden
+      # Labs Dev" account and nothing else (#395): Cloudflare cannot narrow a
+      # Workers or D1 permission below an account, so a token that reached
+      # another account could write to production. Any other reach stops here.
+      - name: Prove the dev token reaches the dev account alone
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/token-reach.ts
+      # From the repository root, which has no wrangler config to write to.
+      # Asia Pacific, near the players (operator, 2026-10-05): a database never
+      # moves, and without a hint it lands near the runner, in North America.
+      - name: Create the dev D1 database in Asia Pacific if it does not exist yet
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/ensure-d1.ts yawelo-idle-dev apac
+      # Bound by name alone, a deploy after the database was recreated reuses
+      # the deleted database's id and fails with 7404 (#391). This writes a
+      # git-ignored copy of wrangler.jsonc with the id resolved by name, and
+      # the migrations and the deploy both read it.
+      - name: Bind the sync Worker to the dev D1 database by id
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/d1-binding.ts yawelo-idle-dev apps/sync-worker/wrangler.jsonc apps/sync-worker/wrangler.deploy.jsonc
+      - name: Apply D1 migrations (before the Worker, so new code never meets an old schema)
+        working-directory: apps/sync-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc
+      - name: Deploy the sync Worker, stamped with this commit
+        working-directory: apps/sync-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"
+      - name: Build the game, stamped with this commit
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build --workspace @yawelo-idle/web
+      # The game first: the site Worker's GAME binding names it (#332). It
+      # has no address of its own (`workers_dev: false`), so it holds no
+      # password: the site Worker's gate stands in front of it.
+      - name: Deploy the game Worker
+        working-directory: apps/web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Build the site, stamped with this commit
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build --workspace @yawelo-idle/site
+      # The site's secrets reach the Worker from the dev environment's
+      # secrets, uploaded with the version itself, so no one types one into
+      # Cloudflare (#357): the dev password, and the roadmap's webhook secret
+      # and App key (#341). The file lives in the runner's temp, outside the
+      # checkout.
+      - name: Write the site's secrets file (the dev password, the roadmap's webhook secret and App key)
+        env:
+          DEV_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
+          ROADMAP_APP_KEY: ${{ secrets.ROADMAP_APP_KEY }}
+        run: node scripts/dev-secrets.ts "$RUNNER_TEMP/site-secrets.json"
+      - name: Deploy the site Worker with its secrets
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"
+      # The holding page's dev copy (#621 AC8): the production holding build,
+      # crawlers blocked and every response noindex, at its own workers.dev
+      # address, so Shyden checks it on his phones before a release.
+      - name: Build the holding page, stamped with this commit
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Make the holding page's dev copy (crawlers blocked, noindex)
+        run: node scripts/holding-dev.ts
+      # Named from the repository root: from its subfolder, npx runs wrangler
+      # at apps/site, which reads the dev site's config instead (run
+      # 38889757344 redeployed the dev site here).
+      - name: Deploy the holding page's dev copy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
+      # The dev hostnames (#429): a Pages project whose one Function forwards
+      # each request to the site or the sync Worker by host, so it goes after
+      # both. Its custom domains were attached once and are read back by the
+      # verify below. Git keeps no empty directory, so the empty static one
+      # Pages uploads is made here.
+      - name: Make the hostname adapter's empty static directory
+        working-directory: apps/dev-hosts
+        run: mkdir -p public
+      # The project's production branch is `main` (read 2026-10-06, #429).
+      # Wrangler otherwise takes the branch from git, `develop` here, and
+      # makes a preview deployment, which the custom domains do not serve.
+      - name: Deploy the hostname adapter to production on Pages
+        working-directory: apps/dev-hosts
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"
+
+  verify:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    # 8 s when the commit is already served; verify-dev waits at most 36 looks,
+    # 5 s apart, for it to appear, then judges every check once (#83).
+    timeout-minutes: 10
+    environment:
+      name: dev
+      url: https://dev.yawelo-idle.shyden.co.uk
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Verify dev is password-gated, serves this commit, and D1 answers
+        env:
+          # The dev hostnames, through the Pages adapter (#429).
+          DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
+          DEV_SYNC_URL: https://dev-api.yawelo-idle.shyden.co.uk
+          # The game's own address, which must serve nothing (#332).
+          DEV_GAME_URL: https://yawelo-idle-web-dev.shyden-labs-dev.workers.dev/
+          EXPECTED_SHA: ${{ github.sha }}
+          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+        run: node scripts/verify-dev.ts
+
+  # The game's browser smoke (tests/web), re-run against dev once verify has
+  # seen this commit served there (#123 DoD). Same pinned image as CI's
+  # build-and-test, which carries all three browsers, so nothing is installed.
+  smoke:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001
+    environment:
+      name: dev
+      url: https://dev.yawelo-idle.shyden.co.uk
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Smoke the game on dev (Chromium, Firefox and WebKit, behind the dev password)
+        # One measured limit, at least 3 times its slowest run (#476).
+        timeout-minutes: 1
+        env:
+          WEB_SMOKE_URL: https://dev.yawelo-idle.shyden.co.uk/
+          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+        run: npm run test:web:dev
+
+  # The holding page's dev copy (#621 AC8), checked from outside against
+  # what this commit builds: noindex on every response, crawlers blocked. It
+  # needs no secret, so it names no environment.
+  verify-holding:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    # verify-prod waits at most 60 looks, 10 s apart, then judges once.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build the holding page this commit deployed
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Make its dev copy (crawlers blocked, noindex)
+        run: node scripts/holding-dev.ts
+      - name: Verify the holding page's dev copy serves this commit, noindex, crawlers blocked
+        env:
+          DEV_HOLDING_URL: https://yawelo-idle-holding-dev.shyden-labs-dev.workers.dev
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/verify-prod.ts --dev-copy
+
+  # dev-verified means every check above passed: verify-dev, then the smoke,
+  # and the holding page's dev copy (#621).
+  dev-verified:
+    needs: [smoke, verify-holding]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      statuses: write
+    steps:
+      - name: Post dev-verified on the deployed commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+          -f state=success -f context=dev-verified
+          -f description="Live on dev: password-gated, this commit, game behind the site, D1 answers, smoke clean, holding copy noindex"
+          -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

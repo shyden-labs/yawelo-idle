@@ -1,0 +1,48 @@
+// The DEV site Worker, the front door (website spec §7.2, #332): the
+// prerendered pages from ./dist, and /play/* forwarded to the game Worker by
+// service binding, all behind the shared dev password (#39, W15).
+//
+// Cloudflare serves a matching asset WITHOUT invoking a Worker unless
+// `run_worker_first` is set, so the gate in worker/index.ts would never see
+// the request. Here it is set, and every request pays one invocation;
+// production can serve its pages without the Worker and keep them free
+// (#425 AC2).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "yawelo-idle-site-dev",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-30",
+  // Deployed to the "Shyden Labs Dev" account, which holds dev only (#395),
+  // with no Custom Domain: dev.yawelo-idle.shyden.co.uk reaches it through
+  // the Pages adapter's SITE binding (apps/dev-hosts, #429), and its
+  // workers.dev address stays as a second way in, behind the same gate, that
+  // tells an adapter fault from a Worker fault. No preview URLs.
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    // An unknown path gets the nearest 404.html: /id/… the Indonesian one.
+    "not_found_handling": "404-page",
+  },
+  // The game Worker has no address of its own; this binding is its only way
+  // in, so it is deployed first.
+  "services": [{ "binding": "GAME", "service": "yawelo-idle-web-dev" }],
+  // The live roadmap (#341): the one board it reads, as the read-only App
+  // yawelo-idle-roadmap; its snapshot lives in the Roadmap Durable Object
+  // (SQLite storage, the only kind on the Free plan, spec §10 R1), and the
+  // cron re-reads the whole board every 10 minutes to catch a missed webhook.
+  // The App key and webhook secret are Worker secrets from the deploy.
+  "vars": {
+    "ROADMAP_APP_ID": "5294556",
+    "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
+    "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
+    "ROADMAP_REPO": "shyden-labs/yawelo-idle",
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Roadmap"] }],
+  "triggers": { "crons": ["*/10 * * * *"] },
+}

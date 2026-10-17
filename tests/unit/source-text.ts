@@ -29,6 +29,41 @@
  * symptom.
  */
 
+import ts from 'typescript';
+
+/**
+ * `sf`'s code with every literal replaced by `""` and every comment removed
+ * (#361): what a text cross-check counts in, so a fixture string, a template
+ * or a regex spelling the construct it counts cannot satisfy it. The parse
+ * tree says what is a literal, outermost only, so a template is blanked whole
+ * with its substitutions. Once no string, template or regex is left, `//`
+ * and `/*` can only open comments, so a plain pattern removes them.
+ *
+ * The visitor returns nothing: `ts.forEachChild` stops at the first child
+ * whose callback returns a truthy value.
+ */
+export function codeWithoutLiterals(sf: ts.SourceFile): string {
+  const ranges: [number, number][] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isStringLiteral(node) ||
+      ts.isNoSubstitutionTemplateLiteral(node) ||
+      ts.isTemplateExpression(node) ||
+      ts.isRegularExpressionLiteral(node)
+    ) {
+      ranges.push([node.getStart(sf), node.end]);
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  let code = sf.getFullText();
+  // End first, so each replacement leaves the earlier ranges where they were.
+  for (const [from, to] of ranges.reverse())
+    code = code.slice(0, from) + '""' + code.slice(to);
+  return code.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, '');
+}
+
 /**
  * YAML with comments removed, inline ones included, and blank lines dropped.
  *
@@ -62,70 +97,3 @@ export const withoutYamlComments = (text: string): string =>
  */
 export const withoutYamlQuotes = (text: string): string =>
   text.replace(/['"]/g, '');
-
-/**
- * Text with whole-line comments removed, for a given marker.
- *
- * Deliberately leaves trailing comments alone: a GitHub workflow's `run:`
- * blocks are shell, where `#` inside a quoted string is not a comment, and
- * removing those would change the very commands being asserted about.
- */
-export const withoutCommentLines = (text: string, marker = '#'): string =>
-  text
-    .split('\n')
-    .filter((line) => !line.trimStart().startsWith(marker))
-    .join('\n');
-
-/**
- * TypeScript with `//` and block comments removed, STRING LITERALS INTACT.
- *
- * A regex cannot do this correctly and the failures are the ones that matter:
- * `https://…` is not a comment, and `expect(x).toContain('// ')` is a string
- * whose content is the point. Since these guards exist to stop text in the
- * wrong place satisfying an assertion, a stripper that mangles the right place
- * is the same bug wearing the opposite coat — so this scans rather than
- * matches. Quotes, template literals and escapes are tracked; that is the
- * whole of the grammar this needs.
- */
-export function withoutTsComments(source: string): string {
-  let out = '';
-  let quote: string | null = null;
-
-  for (let i = 0; i < source.length; i += 1) {
-    const char = source[i];
-    const next = source[i + 1];
-
-    if (quote) {
-      out += char;
-      if (char === '\\') {
-        out += source[i + 1] ?? '';
-        i += 1;
-      } else if (char === quote) quote = null;
-      continue;
-    }
-
-    if (char === "'" || char === '"' || char === '`') {
-      quote = char;
-      out += char;
-      continue;
-    }
-
-    if (char === '/' && next === '/') {
-      while (i < source.length && source[i] !== '\n') i += 1;
-      out += '\n';
-      continue;
-    }
-
-    if (char === '/' && next === '*') {
-      i += 2;
-      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/'))
-        i += 1;
-      i += 1;
-      continue;
-    }
-
-    out += char;
-  }
-
-  return out;
-}

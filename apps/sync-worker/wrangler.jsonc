@@ -1,0 +1,34 @@
+// The DEV sync Worker (spec §6.7). Production gets its own config when the
+// production pipeline is built; until then this file describes dev only.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "yawelo-idle-sync-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-30",
+  // The sync API, in the "Shyden Labs Dev" account, which holds dev only
+  // (#395): no dev credential may reach the production account that holds
+  // the shyden.co.uk zone, so dev has no Custom Domain. It is served at
+  // dev-api.yawelo-idle.shyden.co.uk through the Pages adapter's SYNC
+  // binding (apps/dev-hosts, #429), and at its workers.dev address as a
+  // second way in. Not password-gated: the Worker marks non-prod responses
+  // noindex instead (src/index.ts). No preview URLs.
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    // Overwritten at deploy time with `--var COMMIT:<sha>`, so /health can
+    // prove which commit is live. "local" never matches a SHA.
+    "COMMIT": "local",
+  },
+  // Named, with no id, so no id is ever copied in by hand. The deploy creates
+  // the database when it is missing (scripts/ensure-d1.ts, #357), then binds
+  // it by id through a git-ignored copy of this file, wrangler.deploy.jsonc
+  // (scripts/d1-binding.ts, #391): bound by name alone, a recreated database
+  // fails to deploy with 7404.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yawelo-idle-dev",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

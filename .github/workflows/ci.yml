@@ -3,20 +3,139 @@
 # push to that action's repo; the SHA is the only immutable reference. The
 # comment is what makes a Dependabot bump reviewable by a human rather than an
 # opaque hex swap -- so never remove it, and never let it drift from the SHA.
+#
+# Runs on every PR (the required `build-and-test` check) and is called by
+# deploy-dev.yml before each dev deploy, so develop never deploys a tree that
+# has not passed here.
+#
+# A docs-only change (HANDOVER.md and Markdown under docs/, #360) runs
+# checkout, install, Format and the unit suite; `classify` decides, and every
+# other step skips only on its `docs-only` verdict, so the required check
+# still reports and anything else runs in full. deploy-dev's call is a push,
+# which is always full (tests/unit/ci-fast-path.test.ts).
 name: build-and-test
 on:
   pull_request:
-  push:
-    branches: [develop]
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit to test; empty tests the event's own commit (every-commit.yml passes each commit of a pull request, #348)
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # GitHub's default is 360 minutes (#44). Each test suite but the unit
+    # suite holds its own step to one measured limit (#476), so the job allows
+    # 20 for those and the rest.
+    timeout-minutes: 20
+    # The browsers and their system libraries come baked into Playwright's own
+    # image, so no step downloads from an apt mirror. `--with-deps` did, and a
+    # starved mirror held four runs for up to 35 minutes on 2026-10-01 (#44).
+    # The tag must be the @playwright/test version the lockfile installs, and
+    # the digest pins it (both enforced by tests/unit/supply-chain.test.ts).
+    # It runs as uid 1001, the runner's own user, as probed in run 36923761040.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001
     steps:
+      # GitHub raises Dependabot security fixes against the default branch
+      # only, and reads dependabot.yml and the issue forms from it, so it must
+      # be develop (#460). First, and outside the docs-only skips, so a wrong
+      # default fails every run in seconds.
+      - name: The default branch is develop
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$DEFAULT_BRANCH" != "develop" ]; then
+            echo "::error::The default branch is '$DEFAULT_BRANCH', not develop, so Dependabot security fixes and its config live outside the develop gate (#460). Set it in Settings > General > Default branch."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          # The commit and its parents: classify diffs HEAD^1..HEAD.
+          fetch-depth: 2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run test:unit
+      - name: Classify the change as docs-only or full (#360)
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: node scripts/ci-scope.ts
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      - name: Format
+        run: npm run format:check
+      - name: Lint (zero warnings)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run lint
+      - name: Typecheck (tsc, svelte-check)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test:unit
+      # Tests that read or parse the whole repository (#475), docs-only
+      # changes included: some read every file. One measured limit.
+      - name: Guards (whole-repo checks)
+        timeout-minutes: 1
+        run: npm run test:guards
+      # Tests where a process is the thing tested: shell scripts, the git
+      # hook, git on fixture repositories, scripts loading under Node (#490).
+      # A unit test starts no process. One measured limit.
+      - name: Integration tests
+        timeout-minutes: 1
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:integration
+      # Every fast-check property at its count from before any cut to fit the
+      # unit limit, drawing fresh cases on every run (#543). A red property is
+      # a real defect, never a re-run. One measured limit (slowest 12 s of
+      # its first 3 runs, 2026-10-12).
+      - name: Properties (every property at its full count)
+        timeout-minutes: 1
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:properties
+      # The personas play the real core and the spec's pacing targets are
+      # checked (#35). AC7 asked for under 5 minutes; its one measured limit
+      # is 2 (#476: slowest 40 s of 15 runs, 2026-10-09).
+      - name: Pacing bots (under 2 minutes)
+        id: pacing
+        timeout-minutes: 2
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:pacing
+      # Only after a pacing run that passed or failed: a step before it that
+      # failed skips the suite, and an upload then would fail on a report
+      # nothing wrote, a second red step that misleads (#353).
+      - name: Upload the pacing report
+        if: ${{ !cancelled() && steps.classify.outputs.scope != 'docs-only' && (steps.pacing.outcome == 'success' || steps.pacing.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          # every-commit.yml calls this once per commit in one run, where an
+          # artifact name may appear once, so a called run names its commit.
+          name: ${{ inputs.ref && format('pacing-report-{0}', inputs.ref) || 'pacing-report' }}
+          path: pacing-report.json
+          if-no-files-found: error
+      # Each suite below: one measured limit, at least 3 times its slowest
+      # run (#476), and none inside it.
+      - name: Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)
+        timeout-minutes: 1
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:worker
+      - name: Cross-engine determinism (Node, Chromium, Firefox, WebKit)
+        timeout-minutes: 1
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:engines
+      - name: Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)
+        timeout-minutes: 1
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:web
+      - name: Build (a warning fails it)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: scripts/fail-on-warnings.sh npm run build

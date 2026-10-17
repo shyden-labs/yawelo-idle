@@ -1,0 +1,66 @@
+# Every third-party `uses:` is a full 40-hex commit SHA with a trailing
+# `# vX.Y.Z` comment, as in ci.yml (tests/unit/supply-chain.test.ts).
+#
+# Records the guards' floors in CI (#547; global rule 2026-10-09: "Floors
+# are recorded by a separate CI job"). Label a pull request `record-floors`
+# and this runs every suite on its head with the recorder's switch set, then
+# uploads `tests/floors/` as `floors-<head SHA>`. `npm run floors:fetch
+# <run-id>` writes them on the laptop, refusing any other commit, and the
+# commit is pushed from there, so CI runs on it as on any push (operator,
+# 2026-10-12: "CI records, laptop commits"). A pull_request event runs the
+# head's own copy of this file, so a branch that adds it can record its own
+# floors. Nothing here can write to the repository.
+name: record-floors
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  record-floors:
+    if: ${{ github.event.label.name == 'record-floors' }}
+    runs-on: ubuntu-24.04
+    # The recorder runs every suite with a floor, the browser suites included,
+    # each of which ci.yml holds to its own limit; 30 covers them in one job.
+    timeout-minutes: 30
+    # ci.yml's image, digest and user: the browser suites need its browsers.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001
+    steps:
+      # A release pull request's head is develop, and main is never recorded
+      # into: their floors come from the ticket branches merged into them.
+      - name: Refuse develop and main
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REFUSED: develop main
+        run: |
+          for branch in $REFUSED; do
+            if [ "$HEAD_REF" = "$branch" ]; then
+              echo "::error::record-floors records ticket branches, not $HEAD_REF (#547)."
+              exit 1
+            fi
+          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # The commit and its parent, as ci.yml has them.
+          fetch-depth: 2
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      - name: Record the floors
+        env:
+          FLOORS_RECORD_JOB: record-floors
+        run: npm run floors:record
+      - name: Upload the recorded floors
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: floors-${{ github.event.pull_request.head.sha }}
+          path: tests/floors/
+          if-no-files-found: error
