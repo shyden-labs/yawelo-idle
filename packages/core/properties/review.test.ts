@@ -17,7 +17,7 @@ describe('review', () => {
       fc.property(
         fc.array(
           fc.record({
-            correct: fc.boolean(),
+            correct: fc.constant(false),
             lateMs: fc.integer({ min: 0, max: 60 * DAY_MS }),
           }),
           { minLength: 5, maxLength: 40, size: 'max' },

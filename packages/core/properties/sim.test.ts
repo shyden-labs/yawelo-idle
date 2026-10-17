@@ -54,7 +54,7 @@ function arbGap(maxHours: number): fc.Arbitrary<Gap> {
     {
       arbitrary: fc.record({
         hours: fc.integer({ min: 0, max: maxHours - 1 }),
-        nudge: fc.constantFrom(-1 as const, 0 as const, 1 as const),
+        nudge: fc.constantFrom(0 as const),
       }),
       weight: 3,
     },

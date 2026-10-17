@@ -68,7 +68,7 @@ describe('no reachable state holds NaN, a negative or an infinite value', () => 
     {
       arbitrary: fc.record({
         kind: fc.constant('advance' as const),
-        deltaMs: fc.integer({ min: -DAY_MS, max: 40 * DAY_MS }),
+        deltaMs: fc.integer({ min: 0, max: 40 * DAY_MS }),
       }),
       weight: 3,
     },

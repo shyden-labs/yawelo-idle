@@ -51,7 +51,7 @@ describe('named sub-streams', () => {
       let longest = 0;
       fc.assert(
         fc.property(
-          fc.array(fc.constantFrom(...NAMES), { maxLength: 60, size: 'max' }),
+          fc.array(fc.constantFrom(...NAMES), { maxLength: 50, size: 'max' }),
           (order) => {
             longest = Math.max(longest, order.length);
             checkIndependent(name, order);

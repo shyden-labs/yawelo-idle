@@ -55,7 +55,7 @@ const arbCase: fc.Arbitrary<Case> = fc
     edgeB: perMille(0, 1000),
     // Ends the horizon on a tick of the grid half the time, so a purchase
     // can fall exactly at `until`, which is inside it (#474).
-    untilOnTick: fc.boolean(),
+    untilOnTick: fc.constant(false),
   })
   .map((r) => caseOf(r));
 

@@ -25,8 +25,8 @@ describe('no flag ever turns off', () => {
     fc.constant({ kind: 'pickUp' } as const),
     fc.constant({ kind: 'review' } as const),
     fc.record({
-      kind: fc.constant('start'),
-      duration: fc.constantFrom('tutorial' as const, '2h' as const),
+      kind: fc.constant('wait'),
+      ms: fc.integer({ min: 1, max: DAY_MS }),
     }),
     fc.constant({ kind: 'collect' } as const),
     fc.constant({ kind: 'sail' } as const),
