@@ -7,6 +7,7 @@ import {
   type RunOutcome,
   type RunRequest,
 } from '../../scripts/mutate';
+import type { Written } from '../../scripts/mutate-reporter';
 import type { Observation } from '../../scripts/record-floors';
 
 /**
@@ -43,36 +44,19 @@ interface Answer {
   readonly failing?: readonly [string, string][];
   readonly total?: number;
   readonly files?: readonly string[];
-  readonly log?: string;
+  readonly timedOut?: readonly string[];
   readonly ceilingHit?: boolean;
   readonly noReport?: boolean;
   readonly observations?: readonly Observation[];
 }
 
-/** A vitest JSON report holding `failing` as failed tests in their files. */
-function vitestJson(answer: Answer): unknown {
-  const byFile = new Map<string, { title: string; message: string }[]>();
-  for (const file of answer.files ?? []) byFile.set(file, []);
-  for (const [name, message] of answer.failing ?? []) {
-    const [file = '', title = ''] = name.split(' › ');
-    byFile.set(file, [...(byFile.get(file) ?? []), { title, message }]);
-  }
+/** What the runner's reporter would write for `answer`. */
+function written(answer: Answer): Written {
   return {
-    numTotalTests: answer.total ?? 9,
-    testResults: [...byFile].map(([file, tests]) => ({
-      name: `/repo/${file}`,
-      status: tests.length > 0 ? 'failed' : 'passed',
-      message: '',
-      assertionResults: tests.map(({ title, message }) => {
-        const path = title.split(' > ');
-        return {
-          ancestorTitles: path.slice(0, -1),
-          title: path.at(-1),
-          status: 'failed',
-          failureMessages: [message],
-        };
-      }),
-    })),
+    total: answer.total ?? 9,
+    files: [...(answer.files ?? [])],
+    failing: Object.fromEntries(answer.failing ?? []),
+    timedOut: [...(answer.timedOut ?? [])],
   };
 }
 
@@ -142,8 +126,8 @@ function stand(
       if (request.recordTo !== undefined)
         observed.set(request.recordTo, answer.observations ?? []);
       const outcome: RunOutcome = {
-        json: answer.noReport === true ? undefined : vitestJson(answer),
-        log: answer.log ?? '',
+        json: answer.noReport === true ? undefined : written(answer),
+        log: '',
         ceilingHit: answer.ceilingHit ?? false,
       };
       return Promise.resolve(outcome);
@@ -314,11 +298,17 @@ describe('runFile', () => {
   });
 
   it('refuses a baseline with a timed-out test', async () => {
-    const s = stand([{ ...GREEN, log: 'Test timed out in 1000ms.' }]);
+    const s = stand([
+      {
+        ...GREEN,
+        failing: [[RED, 'Test timed out in 1000ms.']],
+        timedOut: [RED],
+      },
+    ]);
     await expect(
       runFile(s.io, 'tests/mutations/x.ts', FILE, SUITES),
     ).rejects.toThrow(
-      'the unit suite is red before any mutation:\n  1 test timed out',
+      `the unit suite is red before any mutation:\n  ${RED}: Test timed out in 1000ms.\n  1 test timed out: ${RED}`,
     );
   });
 
@@ -327,7 +317,7 @@ describe('runFile', () => {
     await expect(
       runFile(s.io, 'tests/mutations/x.ts', FILE, SUITES),
     ).rejects.toThrow(
-      'the unit suite is red before any mutation:\n  no JSON report: the run ended before vitest wrote one',
+      'the unit suite is red before any mutation:\n  no report: the run ended before the reporter wrote one',
     );
   });
 });

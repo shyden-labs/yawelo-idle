@@ -2,188 +2,70 @@ import { describe, expect, it } from 'vitest';
 import type { Mutation } from '../../scripts/mutation-file';
 import {
   corpusPredictions,
-  fullName,
   judge,
   laptopRefusal,
   plant,
   readReport,
   suiteOf,
-  timeoutsIn,
   type CorpusPrediction,
   type Report,
 } from '../../scripts/mutate';
 
 /**
- * The mutation runner's pure parts (#527, spec §4–§6): what a vitest report
- * says, where an anchor lands, which suite a set runs in, which whole-repo
- * floors a planted mutation moves, and whether a run matched its prediction.
- * `main` wires them to real processes; the integration suite runs it.
+ * The mutation runner's pure parts (#527, spec §4–§6): what its reporter's
+ * file says, where an anchor lands, which suite a set runs in, which
+ * whole-repo floors a planted mutation moves, and whether a run matched its
+ * prediction. `main` wires them to real processes; the integration suite
+ * runs it.
  */
 
-const ROOT = '/repo';
 const T = 'tests/guards/reader.test.ts';
 const RED = `${T} › reader > reads every item`;
 
-function result(
-  ancestorTitles: string[],
-  title: string,
-  status: string,
-  failureMessages: string[] = [],
-) {
-  return { ancestorTitles, title, status, failureMessages };
-}
-
-describe('fullName', () => {
-  it('joins the file, its describes and the title', () => {
-    expect(fullName(T, ['reader', 'blind'], 'reads every item')).toBe(
-      `${T} › reader > blind > reads every item`,
-    );
-  });
-
-  it('names a test outside any describe by its title alone', () => {
-    expect(fullName(T, [], 'reads every item')).toBe(`${T} › reads every item`);
-  });
-});
-
 describe('readReport', () => {
-  const report = (testResults: unknown[], numTotalTests = 2) => ({
-    numTotalTests,
-    testResults,
-  });
-
-  it('reads the total, the files and each failing test with its messages', () => {
+  it('reads the total, the files, each failure’s text and the timed-out tests', () => {
     expect(
-      readReport(
-        report([
-          {
-            name: `${ROOT}/${T}`,
-            status: 'failed',
-            message: '',
-            assertionResults: [
-              result(['reader'], 'reads every item', 'failed', [
-                'first',
-                'second',
-              ]),
-              result(['reader'], 'reads nothing twice', 'passed'),
-            ],
-          },
-        ]),
-        ROOT,
-      ),
+      readReport({
+        total: 2,
+        files: [T],
+        failing: { [RED]: 'reader/items: read 3, recorded 4' },
+        timedOut: [RED],
+      }),
     ).toEqual<Report>({
       total: 2,
       files: [T],
-      failing: new Map([[RED, 'first\nsecond']]),
+      failing: new Map([[RED, 'reader/items: read 3, recorded 4']]),
+      timedOut: [RED],
     });
-  });
-
-  it('names a file that failed outside any test', () => {
-    expect(
-      readReport(
-        report(
-          [
-            {
-              name: `${ROOT}/${T}`,
-              status: 'failed',
-              message: 'SyntaxError: Unexpected token',
-              assertionResults: [],
-            },
-          ],
-          0,
-        ),
-        ROOT,
-      ).failing,
-    ).toEqual(
-      new Map([[`${T} › (the file)`, 'SyntaxError: Unexpected token']]),
-    );
-  });
-
-  it('counts a skipped test as not failing', () => {
-    expect(
-      readReport(
-        report([
-          {
-            name: `${ROOT}/${T}`,
-            status: 'passed',
-            message: '',
-            assertionResults: [result([], 'later', 'skipped')],
-          },
-        ]),
-        ROOT,
-      ).failing,
-    ).toEqual(new Map());
   });
 
   it.each<[string, unknown, string]>([
     ['a report that is not an object', null, 'is not an object'],
+    ['a list', [], 'is not an object'],
     [
       'a total that is not a count',
-      { numTotalTests: '2', testResults: [] },
-      'numTotalTests is not a count',
+      { total: -1, files: [], failing: {}, timedOut: [] },
+      'total is not a count',
     ],
     [
-      'test results that are not a list',
-      { numTotalTests: 0, testResults: {} },
-      'testResults is not a list',
+      'files that are not text',
+      { total: 0, files: [1], failing: {}, timedOut: [] },
+      'files is not a list of paths',
     ],
     [
-      'a file result with no name',
-      {
-        numTotalTests: 0,
-        testResults: [{ status: 'passed', assertionResults: [] }],
-      },
-      'a file result has no name',
+      'a failure whose text is not text',
+      { total: 1, files: [T], failing: { [RED]: 3 }, timedOut: [] },
+      'failing is not a map of tests to text',
     ],
     [
-      'a file outside the root',
-      {
-        numTotalTests: 0,
-        testResults: [
-          {
-            name: '/elsewhere/a.test.ts',
-            status: 'passed',
-            message: '',
-            assertionResults: [],
-          },
-        ],
-      },
-      '/elsewhere/a.test.ts is outside /repo',
-    ],
-    [
-      'a test result with no title',
-      {
-        numTotalTests: 1,
-        testResults: [
-          {
-            name: `${ROOT}/${T}`,
-            status: 'passed',
-            message: '',
-            assertionResults: [
-              { ancestorTitles: [], status: 'passed', failureMessages: [] },
-            ],
-          },
-        ],
-      },
-      `a test in ${T} has no title`,
+      'timed-out tests that are not text',
+      { total: 1, files: [T], failing: {}, timedOut: {} },
+      'timedOut is not a list of tests',
     ],
   ])('refuses %s', (_case, json, refusal) => {
-    expect(() => readReport(json, ROOT)).toThrow(
-      `the JSON report is not vitest's: ${refusal}`,
+    expect(() => readReport(json)).toThrow(
+      `the runner's report is not readable: ${refusal}`,
     );
-  });
-});
-
-describe('timeoutsIn', () => {
-  it('counts each timed-out test in the default log', () => {
-    expect(
-      timeoutsIn(
-        ' FAIL a > b\nError: Test timed out in 1000ms.\n FAIL c\nError: Test timed out in 1000ms.\n',
-      ),
-    ).toBe(2);
-  });
-
-  it('finds none in a clean log', () => {
-    expect(timeoutsIn(' ✓ a > b 3ms\n Tests  1 passed (1)\n')).toBe(0);
   });
 });
 
@@ -371,21 +253,20 @@ describe('judge', () => {
     text: 'count/reads: read 6, recorded 5',
   };
   const COUNTED = 'tests/guards/count.test.ts › counts every read';
-  const run = (failing: [string, string][], total = 9): Report => ({
+  const run = (
+    failing: [string, string][],
+    total = 9,
+    timedOut: string[] = [],
+  ): Report => ({
     total,
     files: [T],
     failing: new Map(failing),
+    timedOut,
   });
 
   it('matches a run that failed exactly as predicted', () => {
     expect(
-      judge(
-        MUTATION,
-        [],
-        run([[RED, 'reader/items: read 3, recorded 4']]),
-        9,
-        0,
-      ),
+      judge(MUTATION, [], run([[RED, 'reader/items: read 3, recorded 4']]), 9),
     ).toEqual([]);
   });
 
@@ -402,7 +283,6 @@ describe('judge', () => {
           ],
         ]),
         9,
-        0,
       ),
     ).toEqual([]);
   });
@@ -420,7 +300,6 @@ describe('judge', () => {
           ],
         ]),
         9,
-        0,
       ),
     ).toEqual([
       `unpredicted red: ${COUNTED}: count/reads: read 6, recorded 5. The population grew by 1`,
@@ -434,7 +313,6 @@ describe('judge', () => {
         [CORPUS],
         run([[RED, 'reader/items: read 3, recorded 4']]),
         9,
-        0,
       ),
     ).toEqual([
       'whole-repo floor stayed green: count/reads 5 → 6 in tests/guards/count.test.ts',
@@ -453,13 +331,12 @@ describe('judge', () => {
           [other, 'count/reads: read 6, recorded 5'],
         ]),
         9,
-        0,
       ),
     ).toEqual([`unpredicted red: ${other}: count/reads: read 6, recorded 5`]);
   });
 
   it('misses a predicted test that stayed green', () => {
-    expect(judge(MUTATION, [], run([]), 9, 0)).toEqual([
+    expect(judge(MUTATION, [], run([]), 9)).toEqual([
       `predicted red, stayed green: ${RED}`,
     ]);
   });
@@ -471,7 +348,6 @@ describe('judge', () => {
         [],
         run([[RED, '\nTypeError: x is undefined\n  at y']]),
         9,
-        0,
       ),
     ).toEqual([
       `red for another reason: ${RED} (wanted "reader/items"): TypeError: x is undefined`,
@@ -481,12 +357,12 @@ describe('judge', () => {
   it('prints the first line of a failure without its terminal colours', () => {
     const coloured = `${String.fromCharCode(27)}[31m[PARSE_ERROR] ${String.fromCharCode(27)}[0mUnexpected token`;
     expect(
-      judge({ ...MUTATION, red: {} }, [], run([[RED, coloured]]), 9, 0),
+      judge({ ...MUTATION, red: {} }, [], run([[RED, coloured]]), 9),
     ).toEqual([`unpredicted red: ${RED}: [PARSE_ERROR] Unexpected token`]);
   });
 
   it('matches a mutation predicted green that stayed green', () => {
-    expect(judge({ ...MUTATION, red: {} }, [], run([]), 9, 0)).toEqual([]);
+    expect(judge({ ...MUTATION, red: {} }, [], run([]), 9)).toEqual([]);
   });
 
   it('misses a moved total', () => {
@@ -496,7 +372,6 @@ describe('judge', () => {
         [],
         run([[RED, 'reader/items: read 3, recorded 4']], 8),
         9,
-        0,
       ),
     ).toEqual(['the total moved: 8 tests, not 9']);
   });
@@ -506,16 +381,15 @@ describe('judge', () => {
       judge(
         MUTATION,
         [],
-        run([[RED, 'reader/items: read 3, recorded 4']]),
+        run([[RED, 'reader/items: read 3, recorded 4']], 9, [RED]),
         9,
-        1,
       ),
-    ).toEqual(['1 test timed out']);
+    ).toEqual([`1 test timed out: ${RED}`]);
   });
 
   it('misses a run that wrote no report', () => {
-    expect(judge(MUTATION, [], undefined, 9, 0)).toEqual([
-      'no JSON report: the run ended before vitest wrote one',
+    expect(judge(MUTATION, [], undefined, 9)).toEqual([
+      'no report: the run ended before the reporter wrote one',
     ]);
   });
 });

@@ -220,15 +220,14 @@ describe('the mutation runner over a fixture guards suite', () => {
     ]);
   });
 
-  // The second line's tail is vitest's own wording of the failed assertion:
-  // the runner owns the prefix and the floor's text, so those are asserted.
+  // The second line's tail is vitest's headline of the failed assertion,
+  // which cuts a long string short: the runner owns the prefix, and the
+  // floor id survives any cut, so those are asserted.
   it('misses a moved floor in a target that the prediction left out', async () => {
     const [verdict, problem, ...rest] = await row('target-floor-unpredicted');
     expect(verdict).toBe('MISS target-floor-unpredicted');
     expect(problem).toMatch(
-      new RegExp(
-        `^  unpredicted red: ${READER}: .*reader/items: read 3, recorded 4`,
-      ),
+      new RegExp(`^  unpredicted red: ${READER}: .*reader/items`),
     );
     expect(rest).toEqual([]);
   });
@@ -237,9 +236,7 @@ describe('the mutation runner over a fixture guards suite', () => {
     const [verdict, problem, ...rest] = await row('importer-floor-unpredicted');
     expect(verdict).toBe('MISS importer-floor-unpredicted');
     expect(problem).toMatch(
-      new RegExp(
-        `^  unpredicted red: ${HELPER}: .*helper/items: read 1, recorded 2`,
-      ),
+      new RegExp(`^  unpredicted red: ${HELPER}: .*helper/items`),
     );
     expect(rest).toEqual([]);
   });

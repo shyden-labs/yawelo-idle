@@ -19,8 +19,8 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, posix, relative, resolve, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { dirname, join, posix, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   FILE_SEPARATOR,
   asMutationFile,
@@ -36,23 +36,22 @@ import {
   type Observation,
   type Suite,
 } from './record-floors.ts';
+import { REPORT_ENV } from './mutate-reporter.ts';
 
-/** What one vitest run reported, as far as a judge reads it. */
+/** The runner's reporter, by absolute path: a fixture repository runs it too. */
+const REPORTER = fileURLToPath(
+  new URL('./mutate-reporter.ts', import.meta.url),
+);
+
+/** What one run reported, as far as a judge reads it (from `Written`). */
 export interface Report {
   readonly total: number;
   /** Every test file the run reported, repository-relative. */
   readonly files: readonly string[];
-  /** Each failing test by full name, to its failure messages joined. */
+  /** Each failing test by full name, to its whole error text. */
   readonly failing: ReadonlyMap<string, string>;
-}
-
-/** A test as a mutation file names it: `<file> › <describe> > … > <title>`. */
-export function fullName(
-  file: string,
-  ancestors: readonly string[],
-  title: string,
-): string {
-  return `${file}${FILE_SEPARATOR}${[...ancestors, title].join(' > ')}`;
+  /** The failing tests that timed out. */
+  readonly timedOut: readonly string[];
 }
 
 const isRecord = (x: unknown): x is Record<string, unknown> =>
@@ -61,63 +60,43 @@ const isRecord = (x: unknown): x is Record<string, unknown> =>
 const isCount = (x: unknown): x is number =>
   typeof x === 'number' && Number.isInteger(x) && x >= 0;
 
+const isTextList = (x: unknown): x is string[] =>
+  Array.isArray(x) && x.every((each) => typeof each === 'string');
+
 /**
- * Reads vitest's JSON report, refusing any shape it does not know rather
- * than reading it as a clean run. A file that failed outside any test (a
- * syntax error, a throw at load) is named `<file> › (the file)`.
+ * Reads what the runner's reporter wrote (`scripts/mutate-reporter.ts`),
+ * refusing any shape it does not know rather than reading it as a clean run.
  */
-export function readReport(json: unknown, root: string): Report {
+export function readReport(json: unknown): Report {
   const refuse = (why: string): never => {
-    throw new Error(`the JSON report is not vitest's: ${why}`);
+    throw new Error(`the runner's report is not readable: ${why}`);
   };
   if (!isRecord(json)) return refuse('is not an object');
-  if (!isCount(json.numTotalTests))
-    return refuse('numTotalTests is not a count');
-  if (!Array.isArray(json.testResults))
-    return refuse('testResults is not a list');
-  const files: string[] = [];
-  const failing = new Map<string, string>();
-  for (const fileResult of json.testResults as unknown[]) {
-    if (!isRecord(fileResult) || typeof fileResult.name !== 'string')
-      return refuse('a file result has no name');
-    const file = relative(root, fileResult.name).split(sep).join(posix.sep);
-    if (file.startsWith('..') || file === '')
-      return refuse(`${fileResult.name} is outside ${root}`);
-    files.push(file);
-    if (!Array.isArray(fileResult.assertionResults))
-      return refuse(`${file} has no test results`);
-    let testFailed = false;
-    for (const test of fileResult.assertionResults as unknown[]) {
-      if (!isRecord(test) || typeof test.title !== 'string')
-        return refuse(`a test in ${file} has no title`);
-      const ancestors = test.ancestorTitles;
-      if (
-        !Array.isArray(ancestors) ||
-        !ancestors.every((a) => typeof a === 'string')
-      )
-        return refuse(`a test in ${file} has no describe titles`);
-      if (test.status !== 'failed') continue;
-      const messages = test.failureMessages;
-      if (
-        !Array.isArray(messages) ||
-        !messages.every((m) => typeof m === 'string')
-      )
-        return refuse(`a failing test in ${file} has no messages`);
-      testFailed = true;
-      failing.set(fullName(file, ancestors, test.title), messages.join('\n'));
-    }
-    const message =
-      typeof fileResult.message === 'string' ? fileResult.message : '';
-    if (fileResult.status === 'failed' && !testFailed)
-      failing.set(`${file}${FILE_SEPARATOR}(the file)`, message);
-  }
-  return { total: json.numTotalTests, files, failing };
+  if (!isCount(json.total)) return refuse('total is not a count');
+  if (!isTextList(json.files)) return refuse('files is not a list of paths');
+  const failing = json.failing;
+  if (
+    !isRecord(failing) ||
+    !Object.values(failing).every((text) => typeof text === 'string')
+  )
+    return refuse('failing is not a map of tests to text');
+  if (!isTextList(json.timedOut))
+    return refuse('timedOut is not a list of tests');
+  return {
+    total: json.total,
+    files: json.files,
+    failing: new Map(Object.entries(failing as Record<string, string>)),
+    timedOut: json.timedOut,
+  };
 }
 
-/** Timed-out tests, from the default reporter's log: the JSON hides them. */
-export function timeoutsIn(log: string): number {
-  return log.split('Test timed out').length - 1;
-}
+/** `n test(s) timed out: <names>`, or nothing. */
+const timedOutLine = (timedOut: readonly string[]): string[] =>
+  timedOut.length === 0
+    ? []
+    : [
+        `${String(timedOut.length)} test${timedOut.length === 1 ? '' : 's'} timed out: ${timedOut.join(', ')}`,
+      ];
 
 export type Planted = { readonly text: string } | { readonly matches: number };
 
@@ -223,6 +202,8 @@ const firstLine = (message: string): string =>
     .trim()
     .slice(0, 300);
 
+const NO_REPORT = 'no report: the run ended before the reporter wrote one';
+
 /**
  * Each way the run differs from the prediction; none means it matched. The
  * failing tests must be exactly the predicted ones, each red for its stated
@@ -233,15 +214,9 @@ export function judge(
   corpus: readonly CorpusPrediction[],
   report: Report | undefined,
   baselineTotal: number,
-  timeouts: number,
 ): string[] {
-  if (report === undefined)
-    return ['no JSON report: the run ended before vitest wrote one'];
-  const problems: string[] = [];
-  if (timeouts > 0)
-    problems.push(
-      `${String(timeouts)} test${timeouts === 1 ? '' : 's'} timed out`,
-    );
+  if (report === undefined) return [NO_REPORT];
+  const problems: string[] = [...timedOutLine(report.timedOut)];
   if (report.total !== baselineTotal)
     problems.push(
       `the total moved: ${String(report.total)} tests, not ${String(baselineTotal)}`,
@@ -291,7 +266,7 @@ export interface RunRequest {
 }
 
 export interface RunOutcome {
-  /** The parsed JSON report; undefined when the run wrote none. */
+  /** The parsed report the runner's reporter wrote; undefined when it wrote none. */
   readonly json: unknown;
   /** The default reporter's output. */
   readonly log: string;
@@ -329,26 +304,18 @@ const sameBytes = (a: Uint8Array, b: Uint8Array): boolean =>
   a.length === b.length && a.every((byte, i) => byte === b[i]);
 
 /** The problems of one suite run that is meant to be clean. */
-function redBaseline(
-  outcome: RunOutcome,
-  root: string,
-  suite: string,
-): string[] {
+function redBaseline(outcome: RunOutcome, suite: string): string[] {
   if (outcome.ceilingHit)
     return [
       `${suite} ran past the ${String(CEILING_SECONDS)} s ceiling and was stopped`,
     ];
-  if (outcome.json === undefined)
-    return ['no JSON report: the run ended before vitest wrote one'];
-  const report = readReport(outcome.json, root);
-  const timeouts = timeoutsIn(outcome.log);
+  if (outcome.json === undefined) return [NO_REPORT];
+  const report = readReport(outcome.json);
   return [
     ...[...report.failing].map(
       ([test, message]) => `${test}: ${firstLine(message)}`,
     ),
-    ...(timeouts > 0
-      ? [`${String(timeouts)} test${timeouts === 1 ? '' : 's'} timed out`]
-      : []),
+    ...timedOutLine(report.timedOut),
   ];
 }
 
@@ -393,12 +360,12 @@ export async function runFile(
     json: at('baseline', 'json'),
     log: at('baseline', 'log'),
   });
-  const red = redBaseline(baseline, io.root, suite.name);
+  const red = redBaseline(baseline, suite.name);
   if (red.length > 0)
     refuse(
       `the ${suite.name} is red before any mutation:\n  ${red.join('\n  ')}`,
     );
-  const baselineTotal = readReport(baseline.json, io.root).total;
+  const baselineTotal = readReport(baseline.json).total;
 
   const importers = new Map<string, ReadonlySet<string>>();
   const importersOf = async (target: string): Promise<ReadonlySet<string>> => {
@@ -413,7 +380,7 @@ export async function runFile(
     });
     if (listed.ceilingHit || listed.json === undefined)
       refuse(`could not list the guards that import ${target}`);
-    const found = new Set(readReport(listed.json, io.root).files);
+    const found = new Set(readReport(listed.json).files);
     importers.set(target, found);
     return found;
   };
@@ -475,11 +442,8 @@ export async function runFile(
       : judge(
           mutation,
           corpus,
-          outcome.json === undefined
-            ? undefined
-            : readReport(outcome.json, io.root),
+          outcome.json === undefined ? undefined : readReport(outcome.json),
           baselineTotal,
-          timeoutsIn(outcome.log),
         );
     if (found.length === 0) matched += 1;
     io.print(
@@ -515,8 +479,8 @@ export function mutableSuites(suites: readonly Suite[]): MutableSuite[] {
 /** A test-name pattern no test matches: `related` then lists files and runs nothing. */
 const NO_TEST = '^$';
 
-/** The vitest arguments for one request, reports written under `root`. */
-export function vitestArgs(request: RunRequest, root: string): string[] {
+/** The vitest arguments for one request: the default reporter for people, `reporter` for the runner. */
+export function vitestArgs(request: RunRequest, reporter: string): string[] {
   return [
     'vitest',
     ...(request.related === undefined
@@ -524,12 +488,11 @@ export function vitestArgs(request: RunRequest, root: string): string[] {
       : ['related', request.related, '--run', '-t', NO_TEST]),
     ...(request.suite.config === undefined ? [] : ['-c', request.suite.config]),
     '--reporter=default',
-    '--reporter=json',
-    `--outputFile=${join(root, request.json)}`,
+    `--reporter=${reporter}`,
   ];
 }
 
-/** The environment a run gets: the caller's, recording floors only when asked. */
+/** The environment a run gets: the caller's, the report file named, floors recorded only when asked. */
 export function runEnv(
   base: Readonly<Record<string, string | undefined>>,
   request: RunRequest,
@@ -538,6 +501,7 @@ export function runEnv(
   const env = Object.fromEntries(
     Object.entries(base).filter(([key]) => key !== RECORD_ENV),
   );
+  env[REPORT_ENV] = join(root, request.json);
   if (request.recordTo !== undefined)
     env[RECORD_ENV] = join(root, request.recordTo);
   return env;
@@ -636,7 +600,7 @@ export function realIo(options: {
         rmSync(at(request.recordTo), { force: true });
       const { log, ceilingHit } = await spawnBounded(
         'npx',
-        vitestArgs(request, root),
+        vitestArgs(request, REPORTER),
         {
           cwd: root,
           env: runEnv(process.env, request, root),

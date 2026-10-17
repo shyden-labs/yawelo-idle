@@ -8,6 +8,7 @@ import {
   type RunRequest,
 } from '../../scripts/mutate';
 import { RECORD_ENV, SUITES, type Suite } from '../../scripts/record-floors';
+import { REPORT_ENV } from '../../scripts/mutate-reporter';
 
 /**
  * The suites the mutation runner can run (#527, spec §5), and how it runs
@@ -73,16 +74,17 @@ const RUN: RunRequest = {
   log: '.mutations/x/blind.log',
 };
 
+const REPORTER = '/runner/scripts/mutate-reporter.ts';
+
 describe('vitestArgs', () => {
-  it('runs the whole suite under its config, with both reporters', () => {
-    expect(vitestArgs(RUN, '/repo')).toEqual([
+  it('runs the whole suite under its config, with the default and the runner’s reporters', () => {
+    expect(vitestArgs(RUN, REPORTER)).toEqual([
       'vitest',
       'run',
       '-c',
       'vitest.guards.config.ts',
       '--reporter=default',
-      '--reporter=json',
-      '--outputFile=/repo/.mutations/x/blind.json',
+      `--reporter=${REPORTER}`,
     ]);
   });
 
@@ -90,25 +92,31 @@ describe('vitestArgs', () => {
     expect(
       vitestArgs(
         { ...RUN, suite: { name: 'unit suite', config: undefined } },
-        '/repo',
+        REPORTER,
       ),
     ).toEqual([
       'vitest',
       'run',
       '--reporter=default',
-      '--reporter=json',
-      '--outputFile=/repo/.mutations/x/blind.json',
+      `--reporter=${REPORTER}`,
     ]);
   });
 
   it('lists the files importing a file, matching no test name', () => {
     expect(
-      vitestArgs({ ...RUN, related: 'src/reader.ts' }, '/repo').slice(0, 6),
+      vitestArgs({ ...RUN, related: 'src/reader.ts' }, REPORTER).slice(0, 6),
     ).toEqual(['vitest', 'related', 'src/reader.ts', '--run', '-t', '^$']);
   });
 });
 
 describe('runEnv', () => {
+  it('names the report file for the runner’s reporter', () => {
+    expect(runEnv({ PATH: '/bin' }, RUN, '/repo')).toEqual({
+      PATH: '/bin',
+      [REPORT_ENV]: '/repo/.mutations/x/blind.json',
+    });
+  });
+
   it('records floors to the requested file', () => {
     expect(
       runEnv(
@@ -116,15 +124,17 @@ describe('runEnv', () => {
         { ...RUN, recordTo: '.mutations/x/o.jsonl' },
         '/repo',
       ),
-    ).toEqual({ PATH: '/bin', [RECORD_ENV]: '/repo/.mutations/x/o.jsonl' });
+    ).toEqual({
+      PATH: '/bin',
+      [REPORT_ENV]: '/repo/.mutations/x/blind.json',
+      [RECORD_ENV]: '/repo/.mutations/x/o.jsonl',
+    });
   });
 
   it('drops a recording the caller inherited, so a judged run fails on floors', () => {
     expect(
       runEnv({ PATH: '/bin', [RECORD_ENV]: '/tmp/x' }, RUN, '/repo'),
-    ).toEqual({
-      PATH: '/bin',
-    });
+    ).toEqual({ PATH: '/bin', [REPORT_ENV]: '/repo/.mutations/x/blind.json' });
   });
 });
 
