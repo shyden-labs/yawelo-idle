@@ -6,10 +6,13 @@ import { parse } from 'yaml';
  * The `mutations` workflow (#649, spec §7): on every pull request into
  * develop, it lists the mutation files the pull request adds or changes and
  * runs them through the runner, in the image CI tests in, keeping every log.
+ * The first job also judges the changed non-unit tests (#619 AC2), and the
+ * last, `mutations`, is develop's required check (#619 AC5).
  */
 
 interface Step {
   readonly name?: string;
+  readonly id?: string;
   readonly uses?: string;
   readonly run?: string;
   readonly if?: string;
@@ -19,7 +22,7 @@ interface Step {
 }
 
 interface Job {
-  readonly needs?: string;
+  readonly needs?: string | readonly string[];
   readonly if?: string;
   readonly 'runs-on'?: string;
   readonly 'timeout-minutes'?: number;
@@ -53,13 +56,17 @@ describe('mutations.yml', () => {
     expect(permissions).toEqual({ contents: 'read' });
   });
 
-  it('has exactly the two jobs, changed then run', () => {
-    expect(Object.keys(workflow().jobs)).toEqual(['changed', 'run']);
+  it('has exactly the three jobs, changed, run, then mutations', () => {
+    expect(Object.keys(workflow().jobs)).toEqual([
+      'changed',
+      'run',
+      'mutations',
+    ]);
   });
 
-  it('lists the changed mutation files against the pull request’s base, with the whole history', () => {
+  it('judges the changed tests and lists the changed mutation files against the pull request’s base, with the whole history', () => {
     const changed = job('changed');
-    const step = stepRunning(changed, 'node scripts/mutations-changed.ts');
+    const step = stepRunning(changed, 'node scripts/mutations-changed-cli.ts');
     expect(step?.env).toEqual({
       BASE: '${{ github.event.pull_request.base.sha }}',
     });
@@ -71,6 +78,32 @@ describe('mutations.yml', () => {
       count: '${{ steps.list.outputs.count }}',
       files: '${{ steps.list.outputs.files }}',
     });
+  });
+
+  it('installs only when the change is not docs-only, classified by build-and-test’s own script first', () => {
+    const { steps } = job('changed');
+    const classify = steps.findIndex(
+      (s) => s.run?.trim() === 'node scripts/ci-scope.ts',
+    );
+    const install = steps.findIndex(
+      (s) => s.run?.trim() === 'scripts/fail-on-warnings.sh npm ci',
+    );
+    const judge = steps.findIndex(
+      (s) => s.run?.trim() === 'node scripts/mutations-changed-cli.ts',
+    );
+    expect(steps[classify]?.env).toEqual({
+      EVENT: '${{ github.event_name }}',
+    });
+    expect(steps[classify]?.id).toBe('classify');
+    expect(steps[install]?.if).toBe(
+      "${{ steps.classify.outputs.scope != 'docs-only' }}",
+    );
+    expect(steps[judge]?.if).toBeUndefined();
+    expect([classify >= 0, classify < install, install < judge]).toEqual([
+      true,
+      true,
+      true,
+    ]);
   });
 
   it('runs the listed files only when there are any', () => {
@@ -107,8 +140,22 @@ describe('mutations.yml', () => {
     });
   });
 
+  it('judges both jobs in the required check, whatever they ended', () => {
+    const gate = job('mutations');
+    expect(gate.needs).toEqual(['changed', 'run']);
+    expect(gate.if).toBe('${{ !cancelled() }}');
+    const step = stepRunning(gate, 'node scripts/mutations-verdict.ts');
+    expect(step?.env).toEqual({
+      CHANGED: '${{ needs.changed.result }}',
+      COUNT: '${{ needs.changed.outputs.count }}',
+      RUN: '${{ needs.run.result }}',
+    });
+    expect(step?.if).toBeUndefined();
+  });
+
   it('bounds each job', () => {
-    expect(job('changed')['timeout-minutes']).toBe(5);
+    expect(job('changed')['timeout-minutes']).toBe(10);
     expect(job('run')['timeout-minutes']).toBe(30);
+    expect(job('mutations')['timeout-minutes']).toBe(2);
   });
 });
