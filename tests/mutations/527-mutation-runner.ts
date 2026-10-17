@@ -72,8 +72,26 @@ export default mutationFile({
       anchor: '      if (errors.some((e) => e.message.startsWith(TIMED_OUT)))',
       replacement:
         "      if (errors.some((e) => e.message.startsWith('Tests timed out in ')))",
+      // The second test added after the fourth run (hindsight): the
+      // guards fix gave it a genuine timed-out control member, which this
+      // mutant misses too. The row after it is its sibling, predicted
+      // before its first run.
       red: {
         [`${REPORTER} › reportOf > names a test that timed out`]:
+          'reader.test.ts › slow',
+        [`${REPORTER} › reportOf > does not take a failure that only mentions a timeout for one`]:
+          'reader.test.ts › slow',
+      },
+    },
+    {
+      name: 'timeout-words-misspelt',
+      file: 'scripts/mutate-reporter.ts',
+      anchor: "const TIMED_OUT = 'Test timed out in ';",
+      replacement: "const TIMED_OUT = 'Test timed out at ';",
+      red: {
+        [`${REPORTER} › reportOf > names a test that timed out`]:
+          'reader.test.ts › slow',
+        [`${REPORTER} › reportOf > does not take a failure that only mentions a timeout for one`]:
           'reader.test.ts › slow',
       },
     },
