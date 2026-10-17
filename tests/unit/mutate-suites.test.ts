@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   mutableSuites,
+  playwrightArgs,
+  playwrightEnv,
   readObservations,
   runEnv,
   vitestArgs,
@@ -295,6 +297,63 @@ describe('runEnv', () => {
       PATH: '/bin',
       [REPORT_ENV]: '/repo/.mutations/x/blind.json',
       [ROOT_ENV]: '/repo',
+    });
+  });
+});
+
+const SMOKE: RunRequest = {
+  suite: {
+    name: 'web smoke suite',
+    cwd: '.',
+    kind: 'playwright',
+    config: 'playwright.web.config.ts',
+    build: undefined,
+  },
+  json: '.mutations/x/blind.json',
+  log: '.mutations/x/blind.log',
+};
+
+describe('playwrightArgs', () => {
+  it('runs the whole suite under its config, listing for people and writing JSON for the runner', () => {
+    expect(playwrightArgs(SMOKE)).toEqual([
+      'playwright',
+      'test',
+      '-c',
+      'playwright.web.config.ts',
+      '--reporter=list,json',
+    ]);
+  });
+
+  it('refuses a Playwright suite with no config', () => {
+    expect(() =>
+      playwrightArgs({
+        ...SMOKE,
+        suite: { ...SMOKE.suite, config: undefined },
+      }),
+    ).toThrow('web smoke suite names no Playwright config');
+  });
+
+  it('refuses a floor record or an importer listing, which only the guards suite takes', () => {
+    expect(() => playwrightArgs({ ...SMOKE, related: 'src/a.ts' })).toThrow(
+      'web smoke suite: only the guards suite records floors or lists importers',
+    );
+  });
+});
+
+describe('playwrightEnv', () => {
+  it('names the file Playwright writes its JSON report to', () => {
+    expect(playwrightEnv({ PATH: '/bin' }, SMOKE, '/repo')).toEqual({
+      PATH: '/bin',
+      PLAYWRIGHT_JSON_OUTPUT_FILE: '/repo/.mutations/x/blind.json',
+    });
+  });
+
+  it('drops a floor recording the caller inherited', () => {
+    expect(
+      playwrightEnv({ PATH: '/bin', [RECORD_ENV]: '/tmp/x' }, SMOKE, '/repo'),
+    ).toEqual({
+      PATH: '/bin',
+      PLAYWRIGHT_JSON_OUTPUT_FILE: '/repo/.mutations/x/blind.json',
     });
   });
 });

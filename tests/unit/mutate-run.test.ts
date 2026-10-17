@@ -55,6 +55,10 @@ interface Answer {
   readonly ceilingHit?: boolean;
   readonly noReport?: boolean;
   readonly observations?: readonly Observation[];
+  /** The build exited with this non-zero status, so the suite never ran. */
+  readonly buildExit?: number;
+  /** What Playwright wrote, for a Playwright suite. */
+  readonly playwright?: unknown;
 }
 
 /** What the runner's reporter would write for `answer`. */
@@ -75,6 +79,8 @@ interface Stand {
   /** The text of the mutated file each run saw. */
   readonly seen: string[];
   readonly guarded: string[];
+  /** The suites listed, in order. */
+  readonly listed: string[];
 }
 
 function stand(
@@ -95,6 +101,7 @@ function stand(
   const printed: string[] = [];
   const seen: string[] = [];
   const guarded: string[] = [];
+  const listed: string[] = [];
   const observed = new Map<string, readonly Observation[]>();
   const listings =
     options.listings ??
@@ -122,7 +129,10 @@ function stand(
       !(options.dirty ?? []).includes(path) &&
       !(options.dirtyAtEnd === true && next === answers.length) &&
       (path !== SRC || files.get(SRC) === ORIGINAL),
-    list: (suite) => listings.get(suite.name) ?? [],
+    list: (suite) => {
+      listed.push(suite.name);
+      return listings.get(suite.name) ?? [];
+    },
     run: (request) => {
       runs.push(request);
       seen.push(files.get(SRC) ?? '');
@@ -135,9 +145,15 @@ function stand(
       if (request.recordTo !== undefined)
         observed.set(request.recordTo, answer.observations ?? []);
       const outcome: RunOutcome = {
-        json: answer.noReport === true ? undefined : written(answer),
+        json:
+          answer.noReport === true || answer.buildExit !== undefined
+            ? undefined
+            : (answer.playwright ?? written(answer)),
         log: '',
         ceilingHit: answer.ceilingHit ?? false,
+        ...(answer.buildExit === undefined
+          ? {}
+          : { buildExit: answer.buildExit }),
       };
       return Promise.resolve(outcome);
     },
@@ -147,7 +163,7 @@ function stand(
     release: (path) => guarded.push(`release ${path}`),
     print: (line) => printed.push(line),
   };
-  return { io, runs, printed, files, seen, guarded };
+  return { io, runs, printed, files, seen, guarded, listed };
 }
 
 const GREEN: Answer = { files: [TARGET] };
@@ -264,9 +280,9 @@ describe('runFile', () => {
       `${SRC} differs from HEAD: commit or restore it first`,
     ],
     [
-      'targets in no suite it can run',
-      { listings: new Map() },
-      `${TARGET} is in no suite the runner can run (the harness and Playwright suites wait on #649)`,
+      'targets in no suite it can run, in CI',
+      { ci: true, listings: new Map() },
+      `${TARGET} is in no suite the runner can run`,
     ],
   ])('refuses %s before running anything', async (_case, options, refusal) => {
     const s = stand([], options);
@@ -282,15 +298,22 @@ describe('runFile', () => {
     ).rejects.toThrow('tests/mutations/x.ts: names no targets');
   });
 
-  it('refuses a non-unit suite on the laptop before running anything', async () => {
+  it('refuses on the laptop a target the unit suite does not list, listing no other suite', async () => {
     const s = stand([], {
       listings: new Map([['guards suite', [TARGET]]]),
     });
     await expect(
       runFile(s.io, 'tests/mutations/x.ts', FILE, SUITES),
     ).rejects.toThrow(
-      'tests/mutations/x.ts: guards suite: the laptop runs the unit suite only',
+      `tests/mutations/x.ts: ${TARGET}: the laptop runs the unit suite only (Shyden, 2026-10-09); push and let the mutations check run it`,
     );
+    expect(s.listed).toEqual(['unit suite']);
+  });
+
+  it('lists every suite in CI', async () => {
+    const s = stand([GREEN, BLIND], { ci: true });
+    await runFile(s.io, 'tests/mutations/x.ts', FILE, SUITES);
+    expect(s.listed).toEqual(['unit suite', 'guards suite']);
   });
 
   it('refuses a red baseline, naming each failure, and plants nothing', async () => {
@@ -409,5 +432,99 @@ describe('runFile in the guards suite (CI)', () => {
       'export const readAll = (xs) => xs.slice(1);\n',
       'export const readAll = (xs) => xs.slice(1);\n',
     ]);
+  });
+});
+
+describe('runFile in a suite that builds first (CI)', () => {
+  const HARNESS: MutableSuite = {
+    name: 'game harness',
+    cwd: 'apps/web',
+    kind: 'vitest',
+    config: 'vitest.harness.config.ts',
+    build: ['npx', 'vite', 'build'],
+  };
+  const options = {
+    ci: true,
+    listings: new Map([['game harness', [TARGET]]]),
+  };
+
+  it('misses a row whose build failed, naming the exit status', async () => {
+    const s = stand([GREEN, { buildExit: 2 }], options);
+    expect(
+      await runFile(s.io, 'tests/mutations/x.ts', FILE, [HARNESS]),
+    ).toEqual({ matched: 0, rows: 1 });
+    expect(s.printed).toContain('MISS reader-blind');
+    expect(s.printed).toContain('  game harness: build failed (exit 2)');
+    expect(s.files.get(SRC)).toBe(ORIGINAL);
+  });
+
+  it('refuses a baseline whose build failed', async () => {
+    const s = stand([{ buildExit: 1 }], options);
+    await expect(
+      runFile(s.io, 'tests/mutations/x.ts', FILE, [HARNESS]),
+    ).rejects.toThrow(
+      'the game harness is red before any mutation:\n  game harness: build failed (exit 1)',
+    );
+  });
+});
+
+describe('runFile in a Playwright suite (CI)', () => {
+  const SMOKE: MutableSuite = {
+    name: 'web smoke suite',
+    cwd: '.',
+    kind: 'playwright',
+    config: 'playwright.web.config.ts',
+    build: undefined,
+  };
+  const SPEC = 'tests/web/a.spec.ts';
+  const WEBKIT = `${SPEC} › webkit > reads`;
+
+  /** What Playwright writes for one test in `tests/web/a.spec.ts`. */
+  const ran = (status: string, message?: string) => ({
+    config: { rootDir: '/repo/tests/web' },
+    suites: [
+      {
+        title: 'a.spec.ts',
+        file: 'a.spec.ts',
+        specs: [
+          {
+            title: 'reads',
+            tests: [
+              {
+                projectName: 'webkit',
+                status,
+                results:
+                  message === undefined
+                    ? [{ status: 'passed', errors: [] }]
+                    : [{ status: 'failed', errors: [{ message }] }],
+              },
+            ],
+          },
+        ],
+        suites: [],
+      },
+    ],
+    errors: [],
+  });
+
+  it('judges the run through Playwright’s report', async () => {
+    const s = stand(
+      [
+        { playwright: ran('expected') },
+        { playwright: ran('unexpected', 'expected 2 items, got 1') },
+      ],
+      { ci: true, listings: new Map([['web smoke suite', [SPEC]]]) },
+    );
+    expect(
+      await runFile(
+        s.io,
+        'tests/mutations/x.ts',
+        {
+          targets: [SPEC],
+          mutations: [{ ...MUTATION, red: { [WEBKIT]: '2 items' } }],
+        },
+        [SMOKE],
+      ),
+    ).toEqual({ matched: 1, rows: 1 });
   });
 });
