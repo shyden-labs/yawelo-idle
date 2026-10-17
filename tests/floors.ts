@@ -54,10 +54,10 @@ const THIS_FILE = relative(ROOT, fileURLToPath(import.meta.url));
 
 /**
  * The repository-relative `file:line` that called the check: the first stack
- * frame outside this file and outside node_modules. The recorder tells two
- * call sites of one id apart by it.
+ * frame outside `self` (this file, or the checker that asks) and outside
+ * node_modules. The recorder tells two call sites of one id apart by it.
  */
-const callSite = (stack: string): string => {
+export const callSite = (stack: string, self: string = THIS_FILE): string => {
   for (const line of stack.split('\n').slice(1)) {
     // V8 writes `at name (where:line:column)` or `at where:line:column`, and
     // `where` is a path or a file URL.
@@ -68,11 +68,11 @@ const callSite = (stack: string): string => {
       ? fileURLToPath(frame[1])
       : frame[1];
     const file = relative(ROOT, path);
-    if (file !== THIS_FILE && !file.includes('node_modules'))
+    if (file !== self && !file.includes('node_modules'))
       return `${file}:${frame[2]}`;
   }
   // Refused, never guessed.
-  throw new Error(`cannot tell which file called floorBreach:\n${stack}`);
+  throw new Error(`cannot tell which file called ${self}:\n${stack}`);
 };
 
 export interface FloorOptions {

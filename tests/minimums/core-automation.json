@@ -1,0 +1,16 @@
+{
+  "core-automation/tick-by-tick-bought": {
+    "minimum": 147296,
+    "runs": 200,
+    "lowest": 153927,
+    "mean": 161013.39,
+    "sd": 2286.1611671777555
+  },
+  "core-automation/tick-by-tick-idle": {
+    "minimum": 15,
+    "runs": 200,
+    "lowest": 41,
+    "mean": 57.475,
+    "sd": 7.061778713112216
+  }
+}

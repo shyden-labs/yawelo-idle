@@ -7,6 +7,7 @@ import {
   checkJsonRoundTrip,
   NAMES,
 } from '../test/rng-laws';
+import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * The PRNG's properties on random seeds and orders (#26 AC6), at their full
@@ -59,7 +60,9 @@ describe('named sub-streams', () => {
       );
       // fast-check's default size never generates more than 10 elements
       // (measured, #27), whatever maxLength says: the property must reach
-      // longer interleavings than that.
-      expect(longest).toBeGreaterThan(10);
+      // longer interleavings than that, at least its measured minimum (#84).
+      expect(
+        minimumBreach(`core-rng/${name}-longest`, longest),
+      ).toBeUndefined();
     });
 });

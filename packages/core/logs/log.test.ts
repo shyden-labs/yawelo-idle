@@ -3,51 +3,94 @@ import fc from 'fast-check';
 import { HOUR_MS } from '../src/clock';
 import type { Course } from '../src/course';
 import type { GameEvent } from '../src/events';
-import { checkApply, checkCommute, course, TYPES } from '../test/log-laws';
-import { floorBreach } from '../../../tests/floors';
+import {
+  ACCEPTED_BY_CONSTRUCTION,
+  checkApply,
+  checkCommute,
+  course,
+  MEASURED_TYPES,
+  TYPES,
+} from '../test/log-laws';
+import { minimumBreach, minimumsBreach } from '../../../tests/minimums';
 
 /**
  * The event log on random events (#34 AC2; design §7), at the counts before
  * #474 cut them to fit the unit limit (#543). The unit suite checks chosen
  * events through the same checks (test/log.test.ts).
+ *
+ * This is the logs suite (spec §5.12): Shyden, 2026-10-16, "separate test
+ * suite for logging and auditing. run in ci as a pre-requisite to a
+ * release". It runs before a release, never on a pull request.
  */
 
+// One property per event type, so each type is drawn by construction (#474):
+// one property over any event left types to the seed, and at 200 runs it
+// never accepted a purchase. Before #474 cut it, that property drew 400
+// events; 34 a type draws 408.
+const RUNS = 34;
+
+// `direct()` (test/log-laws.ts) accepts resume and listen whatever the
+// state, so their counts are fixed by construction: exact facts, not
+// minimums (#84, spec §4: round 1 measured accepted 34 with no spread,
+// refused never). Both tables are built in log-laws.ts.
+
+/** `RUNS` random events of `type` through `checkApply`, counted by outcome. */
+function draw(type: (typeof TYPES)[number]): {
+  accepted: number;
+  refused: number;
+  kinds: Record<string, number>;
+} {
+  const c = course();
+  let accepted = 0;
+  let refused = 0;
+  const kinds: Record<string, number> = {};
+  fc.assert(
+    fc.property(
+      fc.integer({ min: 0, max: TYPES.length }),
+      eventOf(c, type),
+      (index, partial) => {
+        const kind = checkApply(c, index, partial);
+        if (kind === undefined) accepted += 1;
+        else {
+          refused += 1;
+          kinds[kind] = (kinds[kind] ?? 0) + 1;
+        }
+      },
+    ),
+    { numRuns: RUNS },
+  );
+  return { accepted, refused, kinds };
+}
+
 describe('a refused event leaves state unchanged (AC2)', () => {
-  // One property per event type, so each type is drawn by construction
-  // (#474): one property over any event left types to the seed, and at 200
-  // runs it never accepted a purchase. Before #474 cut it, that property
-  // drew 400 events; 34 a type draws 408. Each type's refused and accepted
-  // events, and its refusal kinds, are recorded floors; the seed stays until
-  // they become measured minimums (#84).
-  it.each(TYPES)(
+  // Each type's accepted and refused events, and its refusals of each kind,
+  // are measured minimums (#84). A count of the kinds seen stops growing
+  // once every kind is seen, so its spread falls to 0 and no minimum bounds
+  // it: each kind is counted alone.
+  it.each(MEASURED_TYPES)(
     'for any %s event at any point of the scenario, apply never throws and never writes to its input',
     (type) => {
-      const c = course();
-      let accepted = 0;
-      let refused = 0;
-      const kinds = new Set<string>();
-      fc.assert(
-        fc.property(
-          fc.integer({ min: 0, max: TYPES.length }),
-          eventOf(c, type),
-          (index, partial) => {
-            const kind = checkApply(c, index, partial);
-            if (kind === undefined) accepted += 1;
-            else {
-              refused += 1;
-              kinds.add(kind);
-            }
-          },
-        ),
-        { seed: 34, numRuns: 34 },
-      );
+      const { accepted, refused, kinds } = draw(type);
       expect({
-        accepted: floorBreach(`core-log/${type}-accepted`, accepted),
-        refused: floorBreach(`core-log/${type}-refused`, refused),
-        kinds: floorBreach(`core-log/${type}-refusal-kinds`, kinds.size),
+        accepted: minimumBreach(`core-log/${type}-accepted`, accepted),
+        refused: minimumBreach(`core-log/${type}-refused`, refused),
+        kinds: minimumsBreach(`core-log/${type}-refused-`, kinds),
       }).toEqual({ accepted: undefined, refused: undefined, kinds: undefined });
     },
   );
+
+  it.each(ACCEPTED_BY_CONSTRUCTION)(
+    'for any %s event at any point of the scenario, apply never throws, never writes to its input, and always accepts',
+    (type) => {
+      expect(draw(type)).toEqual({ accepted: RUNS, refused: 0, kinds: {} });
+    },
+  );
+
+  it('splits every event type between the two tables above, none twice', () => {
+    expect([...MEASURED_TYPES, ...ACCEPTED_BY_CONSTRUCTION].sort()).toEqual(
+      [...TYPES].sort(),
+    );
+  });
 });
 
 describe('apply and advance commute within the offline cap (design §7)', () => {

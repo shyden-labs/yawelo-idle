@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { DAY_MS } from '../src/clock';
 import { checkHistory } from '../test/review-laws';
+import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * Ranks over random review histories (#28 AC5), at the full count (#543).
@@ -27,6 +28,8 @@ describe('review', () => {
       ),
       { numRuns: 300 },
     );
-    expect(correctSteps).toBeGreaterThan(1000);
+    expect(
+      minimumBreach('core-review/correct-steps', correctSteps),
+    ).toBeUndefined();
   });
 });

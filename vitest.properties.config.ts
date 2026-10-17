@@ -14,10 +14,15 @@ import { defineConfig } from 'vitest/config';
  * that did not touch it: that is a real defect, never a re-run. File it,
  * reproduce it from the seed and path fast-check prints, fix it, and keep
  * the shrunk case as a named stand-in in the unit suite.
+ *
+ * The setup file picks each file's fresh seed, the suite's one seeding home,
+ * so a reach count under its measured minimum names the seed that replays it
+ * as a failing property does (#84).
  */
 export default defineConfig({
   test: {
     include: ['packages/*/properties/**/*.test.ts'],
+    setupFiles: ['tests/properties-setup.ts'],
     testTimeout: 0,
     hookTimeout: 0,
   },

@@ -37,14 +37,15 @@ const WORKFLOW = 'record-floors';
 /** The artifact a record uploads: named by the commit it ran on. */
 export const artifactName = (sha: string): string => `floors-${sha}`;
 
-/** Why this run's floors must not be written here, or nothing. */
+/** Why this run's record must not be written here, or nothing. */
 export function fetchRefusal(
   run: RecordRun,
   head: string,
   branch: string,
+  workflow: string = WORKFLOW,
 ): string | undefined {
-  if (run.workflowName !== WORKFLOW)
-    return `run is ${run.workflowName}’s, not ${WORKFLOW}’`;
+  if (run.workflowName !== workflow)
+    return `run is ${run.workflowName}’s, not ${workflow}’`;
   if (run.status !== 'completed') return `run is ${run.status}, not finished`;
   if (run.conclusion !== 'success')
     return `run ended ${run.conclusion}: it recorded nothing`;

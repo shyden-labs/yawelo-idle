@@ -19,14 +19,14 @@ import {
   type Split,
   type Step,
 } from '../test/sim-laws';
-import { floorBreach } from '../../../tests/floors';
+import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * The time model on random times, states and sequences (#27 AC5, AC6, AC8;
  * #33 AC4), at the counts before #474 cut them to fit the unit limit (#543).
  * The unit suite checks chosen cases through the same checks
- * (test/sim.test.ts). The seeded properties keep their seeds until their
- * floors become measured minimums (#84).
+ * (test/sim.test.ts). What they reach is checked against measured
+ * minimums (#84).
  */
 
 const arbState = fc
@@ -80,7 +80,7 @@ describe('integrate (AC6)', () => {
   let plain: Split | undefined;
 
   /**
-   * 1,000 seeded splits over spans of up to 144 h, the count before #474 cut
+   * 1,000 fresh splits over spans of up to 144 h, the count before #474 cut
    * it to 90 (#543). The gaps end on or beside an hour edge three times in
    * eight: a uniform split ends on an edge about once in 3.6 million.
    */
@@ -95,7 +95,7 @@ describe('integrate (AC6)', () => {
         countSplit(seen, s, a, b);
         checkSplit(s, a, b);
       }),
-      { seed: 474, numRuns: 1000 },
+      { numRuns: 1000 },
     );
     plain = seen;
     return seen;
@@ -105,11 +105,14 @@ describe('integrate (AC6)', () => {
     expect(Object.keys(playPlain())).toEqual([...SPLITS]);
   });
 
-  it.each(SPLITS)('the splits reach %s as often as recorded', (name) => {
-    expect(
-      floorBreach(`core-sim/split-${name}`, playPlain()[name]),
-    ).toBeUndefined();
-  });
+  it.each(SPLITS)(
+    'the splits reach %s at least as often as measured',
+    (name) => {
+      expect(
+        minimumBreach(`core-sim/split-${name}`, playPlain()[name]),
+      ).toBeUndefined();
+    },
+  );
 
   const PEMANDU = [...SPLITS, 'bought'] as const;
   type PemanduSplit = Record<(typeof PEMANDU)[number], number>;
@@ -117,7 +120,7 @@ describe('integrate (AC6)', () => {
 
   /**
    * With Pemandu buying, every purchase is replayed three times over: 300
-   * seeded splits of up to 72 h a side, the count and span before #474 cut
+   * fresh splits of up to 72 h a side, the count and span before #474 cut
    * them to 15 of up to 12 h (#543).
    */
   function playPemandu(): PemanduSplit {
@@ -142,7 +145,7 @@ describe('integrate (AC6)', () => {
         countSplit(seen, s, a, b);
         seen.bought += units(checkSplit(s, a, b)) - units(s);
       }),
-      { seed: 474, numRuns: 300 },
+      { numRuns: 300 },
     );
     pemandu = seen;
     return seen;
@@ -153,10 +156,10 @@ describe('integrate (AC6)', () => {
   });
 
   it.each(PEMANDU)(
-    'the splits with Pemandu buying reach %s as often as recorded',
+    'the splits with Pemandu buying reach %s at least as often as measured',
     (name) => {
       expect(
-        floorBreach(`core-sim/pemandu-${name}`, playPemandu()[name]),
+        minimumBreach(`core-sim/pemandu-${name}`, playPemandu()[name]),
       ).toBeUndefined();
     },
   );
@@ -184,7 +187,7 @@ describe('no reachable state holds NaN, a negative or an infinite value (AC8)', 
 
   let played: SequenceReached | undefined;
 
-  /** 500 seeded games of 20 to 120 steps, the count before #474 cut it to 100 (#543). */
+  /** 500 fresh games of 20 to 120 steps, the count before #474 cut it to 100 (#543). */
   function play(): SequenceReached {
     if (played !== undefined) return played;
     const reached: SequenceReached = {
@@ -201,7 +204,7 @@ describe('no reachable state holds NaN, a negative or an infinite value (AC8)', 
           addReached(reached, checkSequence(steps));
         },
       ),
-      { seed: 474, numRuns: 500 },
+      { numRuns: 500 },
     );
     played = reached;
     return reached;
@@ -212,10 +215,10 @@ describe('no reachable state holds NaN, a negative or an infinite value (AC8)', 
   });
 
   it.each(SEQUENCE_REACHED)(
-    'the random sequences reach %s as often as recorded',
+    'the random sequences reach %s at least as often as measured',
     (name) => {
       expect(
-        floorBreach(`core-sim/sequence-${name}`, play()[name]),
+        minimumBreach(`core-sim/sequence-${name}`, play()[name]),
       ).toBeUndefined();
     },
   );

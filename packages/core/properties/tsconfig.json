@@ -1,13 +1,13 @@
 {
   // The core properties (#543) run in Node under vitest, like the unit tests
-  // whose checks they share (../test), and the ones holding recorded floors
-  // (#474) call `floorBreach`, which reads `tests/floors/` from disk. So they
+  // whose checks they share (../test), and the ones counting what they reach
+  // call `minimumBreach` (#84), which reads `tests/minimums/` from disk. So they
   // see Node's types, as test/tsconfig.json does. The shared checks under
   // ../test come in by import.
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "types": ["node"],
-    // tests/floors.ts imports scripts/record-floors.ts by its .ts name, as
+    // tests/minimums.ts reaches scripts/record-floors.ts by its .ts name, as
     // Node's type stripping needs.
     "allowImportingTsExtensions": true
   },

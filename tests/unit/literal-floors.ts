@@ -605,7 +605,10 @@ export const literalFloorFindings = (
       noun: 'unrecorded',
       fix:
         'Record the figure instead: floorBreach(<id>, <count>), checked ' +
-        'for equality and raised by npm run floors:record.',
+        'for equality and raised by npm run floors:record. In the ' +
+        'properties Shyden exempted from exact floors alone (#84, ' +
+        '2026-10-12 and 2026-10-16), a count that moves with fresh cases ' +
+        'takes minimumBreach(<id>, <count>), measured by record-minimums.',
       list: 'tests/unit/literal-floors.burn-down.ts',
     },
   );

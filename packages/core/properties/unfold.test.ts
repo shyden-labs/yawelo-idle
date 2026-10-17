@@ -3,9 +3,10 @@ import fc from 'fast-check';
 import { DAY_MS } from '../src/clock';
 import { UNFOLD_FLAGS, type UnfoldFlag } from '../src/unfold';
 import { checkWalk, type Step } from '../test/unfold-laws';
+import { minimumBreach } from '../../../tests/minimums';
 
 /**
- * No flag ever turns off, over seeded random walks (#31 AC6), at the full
+ * No flag ever turns off, over random walks (#31 AC6), at the full
  * count (#543). The unit suite checks chosen walks through the same check
  * (test/unfold.test.ts).
  */
@@ -32,37 +33,41 @@ describe('no flag ever turns off', () => {
   );
 
   /**
-   * Walks in which each flag turned on, and steps that began with it on (the
-   * steps the check judges), measured at seed 31 over 300 walks (1,886
-   * steps); Listen is on from the first state. Re-measured in #35, when a tap
-   * became 0.5 Understanding and the walk's taps per step doubled to 40, and
-   * again when it became 0.25 and they doubled to 80, to keep its
-   * Understanding per step. Lower one only when the walk is changed
-   * on purpose.
+   * Each flag's walk counts its steps, the walks in which the flag turned on,
+   * and the steps that began with it on (the steps the check judges), each
+   * checked against a measured minimum (#84). Listen is on from the first
+   * state, so it never turns on: that count is 0 by construction, an exact
+   * fact rather than a minimum.
    */
-  const TURNED_ON: Readonly<Record<UnfoldFlag, number>> = {
-    listen: 0,
-    encounters: 55,
-    words: 6,
-    review: 2,
-    upgrades: 60,
-    journeys: 2,
-    culture: 46,
-    goal: 60,
-  };
-  const JUDGED: Readonly<Record<UnfoldFlag, number>> = {
-    listen: 1886,
-    encounters: 1054,
-    words: 852,
-    review: 843,
-    upgrades: 253,
-    journeys: 843,
-    culture: 136,
-    goal: 189,
+  const turnedOnBreach = (flag: UnfoldFlag, turnedOn: number) =>
+    flag === 'listen'
+      ? turnedOn === 0
+        ? undefined
+        : `listen turned on ${String(turnedOn)} times, but it is on from the first state`
+      : minimumBreach(`core-unfold/${flag}-turned-on`, turnedOn);
+
+  /**
+   * Each flag's walks a run. 300 is the count from before any cut (#543).
+   * Four are raised (#84, Shyden 2026-10-16: "Raise their runs"): round 1
+   * (run 38830359612, 200 runs at 300 walks) found a count too small to hold
+   * a measured minimum, so each takes 300 times its factor, rounded up to two
+   * figures. journeys and review turned on 1.25 times a run on average
+   * (sd 1.06), factor 42; words 4.86 (sd 2.12), factor 12; culture's judged
+   * steps 154.47 (sd 25.62), factor 3.
+   */
+  const RUNS: Readonly<Record<UnfoldFlag, number>> = {
+    listen: 300,
+    encounters: 300,
+    words: 3_600,
+    review: 13_000,
+    upgrades: 300,
+    journeys: 13_000,
+    culture: 900,
+    goal: 300,
   };
 
   for (const flag of UNFOLD_FLAGS)
-    it(`${flag} never turns off over seeded walks from a new game and from one near its goal`, () => {
+    it(`${flag} never turns off over random walks from a new game and from one near its goal`, () => {
       let turnedOn = 0;
       let stepsChecked = 0;
       let judged = 0;
@@ -77,10 +82,12 @@ describe('no flag ever turns off', () => {
             turnedOn += walked.turnedOn;
           },
         ),
-        { seed: 31, numRuns: 300 },
+        { numRuns: RUNS[flag] },
       );
-      expect(stepsChecked).toBeGreaterThan(1885);
-      expect(turnedOn).toBeGreaterThan(TURNED_ON[flag] - 1);
-      expect(judged).toBeGreaterThan(JUDGED[flag] - 1);
+      expect({
+        steps: minimumBreach(`core-unfold/${flag}-steps`, stepsChecked),
+        turnedOn: turnedOnBreach(flag, turnedOn),
+        judged: minimumBreach(`core-unfold/${flag}-judged`, judged),
+      }).toEqual({ steps: undefined, turnedOn: undefined, judged: undefined });
     });
 });

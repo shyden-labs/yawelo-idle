@@ -1,0 +1,37 @@
+{
+  "core-pemandu-tick/atUntil": {
+    "minimum": 108,
+    "runs": 200,
+    "lowest": 151,
+    "mean": 187.33,
+    "sd": 13.167689250624235
+  },
+  "core-pemandu-tick/firstTick": {
+    "minimum": 4656,
+    "runs": 200,
+    "lowest": 4814,
+    "mean": 4953.595,
+    "sd": 49.512507683265525
+  },
+  "core-pemandu-tick/laterSegment": {
+    "minimum": 2886,
+    "runs": 200,
+    "lowest": 3024,
+    "mean": 3183.46,
+    "sd": 49.561680772599146
+  },
+  "core-pemandu-tick/midSegment": {
+    "minimum": 3611,
+    "runs": 200,
+    "lowest": 3767,
+    "mean": 3886.825,
+    "sd": 45.817141193397035
+  },
+  "core-pemandu-tick/none": {
+    "minimum": 652,
+    "runs": 200,
+    "lowest": 744,
+    "mean": 824.83,
+    "sd": 28.687382760514083
+  }
+}

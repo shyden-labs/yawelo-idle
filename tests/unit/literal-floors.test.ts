@@ -371,15 +371,20 @@ describe('the text counts', () => {
   });
 });
 
+/** What every unrecorded literal minimum is told to do. */
+const FIX =
+  'Record the figure instead: floorBreach(<id>, <count>), checked for ' +
+  'equality and raised by npm run floors:record. In the properties ' +
+  'Shyden exempted from exact floors alone (#84, 2026-10-12 and ' +
+  '2026-10-16), a count that moves with fresh cases takes ' +
+  'minimumBreach(<id>, <count>), measured by record-minimums.';
+
 describe('literalFloorFindings', () => {
   const filed = (label: string, demands: number): FiledMinimum => ({
     file: 'a.test.ts',
     label,
     demands,
   });
-  const FIX =
-    'Record the figure instead: floorBreach(<id>, <count>), checked for ' +
-    'equality and raised by npm run floors:record.';
 
   it('finds nothing when every scope is listed at its count', () => {
     const sites = [filed('t', 5), filed('t', 9), filed('u', 2)];
@@ -494,11 +499,7 @@ describe('the meta-guard sees every form planted in every kind of file', () => {
     }).toEqual({
       read: 1,
       written: 1,
-      findings: [
-        `${scopeKey(file, label)}: 1 unrecorded, 0 listed. Record the ` +
-          'figure instead: floorBreach(<id>, <count>), checked for equality ' +
-          'and raised by npm run floors:record.',
-      ],
+      findings: [`${scopeKey(file, label)}: 1 unrecorded, 0 listed. ${FIX}`],
     });
   });
 });

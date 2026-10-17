@@ -7,6 +7,7 @@
 export const NON_UNIT_VITEST_CONFIGS = [
   'vitest.guards.config.ts',
   'vitest.integration.config.ts',
+  'vitest.logs.config.ts',
   'vitest.pacing.config.ts',
   'vitest.properties.config.ts',
   'apps/dev-hosts/vitest.harness.config.ts',

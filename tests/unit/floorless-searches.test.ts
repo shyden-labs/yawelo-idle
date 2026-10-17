@@ -193,6 +193,31 @@ describe('searchSitesIn: a floor on the population searched', () => {
     expect(read(source)).toEqual(one({}));
   });
 
+  const MINIMUM =
+    "it('t', () => {\nsearched(f, { of: p, what: 'w' });\nminimumBreach('x/y', p.length);\n});";
+
+  it('reads a measured minimum on the population as proved in a properties file Shyden exempted (#84)', () => {
+    const file = 'packages/core/properties/sim.test.ts';
+    expect(
+      searchSitesIn(
+        ts.createSourceFile(file, MINIMUM, ts.ScriptTarget.Latest, true),
+      ),
+    ).toEqual(one({ proved: true }));
+  });
+
+  it('reads a measured minimum as no floor in a properties file outside the exemption (#84)', () => {
+    const file = 'packages/core/properties/num.test.ts';
+    expect(
+      searchSitesIn(
+        ts.createSourceFile(file, MINIMUM, ts.ScriptTarget.Latest, true),
+      ),
+    ).toEqual(one({}));
+  });
+
+  it('reads a measured minimum as no floor outside the properties suite (#84)', () => {
+    expect(read(MINIMUM)).toEqual(one({}));
+  });
+
   it('reads a floor in another test as no floor for this one', () => {
     expect(
       read(`it('a', () => {\n${SEARCH}\n});\nit('b', () => {\n${FLOOR}\n});`),
