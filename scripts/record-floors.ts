@@ -174,6 +174,12 @@ export interface Suite {
   readonly files: (stdout: string) => string[];
   /** The command that runs the suite, or why it cannot record. */
   readonly run: readonly string[] | { readonly unrecordable: string };
+  /**
+   * How the mutation runner (`scripts/mutate.ts`, #527) runs the whole suite
+   * with vitest: under `config`, or vitest's default when it names none.
+   * Absent: the runner cannot run this suite yet (#649).
+   */
+  readonly mutate?: { readonly config?: string };
 }
 
 /** `vitest list --filesOnly`: one path per line, relative to its root. */
@@ -211,6 +217,7 @@ export const SUITES: readonly Suite[] = [
     list: VITEST_LIST,
     files: vitestListed,
     run: ['npx', 'vitest', 'run'],
+    mutate: {},
   },
   {
     name: 'guards suite',
@@ -218,6 +225,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.guards.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:guards'],
+    mutate: { config: 'vitest.guards.config.ts' },
   },
   {
     name: 'integration suite',
@@ -225,6 +233,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.integration.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:integration'],
+    mutate: { config: 'vitest.integration.config.ts' },
   },
   {
     name: 'properties suite',
@@ -232,6 +241,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.properties.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:properties'],
+    mutate: { config: 'vitest.properties.config.ts' },
   },
   {
     name: 'logs suite',
@@ -242,6 +252,7 @@ export const SUITES: readonly Suite[] = [
       unrecordable:
         'its counts are measured minimums, recorded by record-minimums (#84, #609), never exact floors',
     },
+    mutate: { config: 'vitest.logs.config.ts' },
   },
   {
     name: 'pacing suite',
@@ -249,6 +260,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.pacing.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:pacing'],
+    mutate: { config: 'vitest.pacing.config.ts' },
   },
   {
     name: 'game harness',

@@ -33,6 +33,8 @@ apps/dev-hosts/functions/worker-configuration.d.ts
 
 # Session-local agent files (brainstorm mockups, SDD scratch)
 .superpowers/
+# The mutation runner's logs and reports (#527).
+.mutations/
 .remember/
 
 # OS
