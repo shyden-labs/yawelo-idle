@@ -13,7 +13,8 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * every predicted test went red and no other, but 5 reasons sat where the
  * JSON cut its messages short, and one row counted a timeout from a code
  * frame. Those findings are recorded in the spec; these rows are new
- * predictions, not the old ones edited.
+ * predictions, not the old ones edited. Their first run (`9b0a949`)
+ * matched 8 of 9; the miss is corrected below and marked so.
  */
 
 const UNIT = 'tests/unit/mutate.test.ts';
@@ -114,9 +115,35 @@ export default mutationFile({
         "  if (!isCount(json.total)) return refuse('total is not a count');",
       replacement:
         "  if (!isCount(json.total) && false) return refuse('total is not a count');",
+      // Corrected after the second run (hindsight): it went red as predicted,
+      // but a function that throws nothing gets vitest's bare "to throw an
+      // error", naming no text it expected. The two rows after it are its
+      // siblings, predicted before their first run.
       red: {
         [`${UNIT} › readReport > refuses a total that is not a count`]:
-          'total is not a count',
+          'to throw an error',
+      },
+    },
+    {
+      name: 'report-files-unchecked',
+      file: 'scripts/mutate.ts',
+      anchor:
+        "  if (!isTextList(json.files)) return refuse('files is not a list of paths');",
+      replacement:
+        "  if (!isTextList(json.files) && false) return refuse('files is not a list of paths');",
+      red: {
+        [`${UNIT} › readReport > refuses files that are not text`]:
+          'to throw an error',
+      },
+    },
+    {
+      name: 'report-timed-out-unchecked',
+      file: 'scripts/mutate.ts',
+      anchor: '  if (!isTextList(json.timedOut))',
+      replacement: '  if (!isTextList(json.timedOut) && false)',
+      red: {
+        [`${UNIT} › readReport > refuses timed-out tests that are not text`]:
+          'to throw an error',
       },
     },
   ],
