@@ -1,0 +1,1837 @@
+{
+  "config": {
+    "argv": [
+      "/__t/node/26.12.0/x64/bin/node",
+      "/__w/yawelo-idle/yawelo-idle/node_modules/.bin/playwright",
+      "test",
+      "-c",
+      "playwright.engines.config.ts",
+      "--reporter=list,json"
+    ],
+    "configFile": "/__w/yawelo-idle/yawelo-idle/playwright.engines.config.ts",
+    "rootDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+      },
+      "gitCommit": {
+        "shortHash": "bc0bceb",
+        "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+        "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+        "author": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "committer": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "branch": "scratch/649-record-playwright-reports"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      }
+    ],
+    "quiet": false,
+    "reporter": [["list"], ["json"]],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "golden-log.spec.ts",
+      "file": "golden-log.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "the golden log replays to its recorded hash",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 797,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:37.277Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3a7bac7b4eb848a82ec3-9896ecf196a25eb7c00e",
+          "file": "golden-log.spec.ts",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "title": "the golden log replays to its recorded hash",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1955,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:44.491Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3a7bac7b4eb848a82ec3-967eba94e4158c34f353",
+          "file": "golden-log.spec.ts",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "title": "the golden log replays to its recorded hash",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 16,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1069,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:01.837Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3a7bac7b4eb848a82ec3-c2a6c709d28260937644",
+          "file": "golden-log.spec.ts",
+          "line": 45,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "golden-vectors.spec.ts",
+      "file": "golden-vectors.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "pow gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 164,
+                  "error": {
+                    "message": "Error: chromium: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m",
+                    "stack": "Error: chromium: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:38.217Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-pow-gives-t-86619--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-c888c8da74e418f053d1",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "exp gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 210,
+                  "error": {
+                    "message": "Error: chromium: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m",
+                    "stack": "Error: chromium: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:38.792Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-exp-gives-t-7ad67--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-4a6f408f7cdb630c6f3d",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "ln gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 226,
+                  "error": {
+                    "message": "Error: chromium: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m",
+                    "stack": "Error: chromium: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:39.495Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-ln-gives-th-1fd41--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-1fb68bff335726e5716a",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log10 gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 226,
+                  "error": {
+                    "message": "Error: chromium: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m",
+                    "stack": "Error: chromium: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:40.221Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-log10-gives-eca92--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-010fd094218e379b9cf8",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "expm1 gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 205,
+                  "error": {
+                    "message": "Error: chromium: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m",
+                    "stack": "Error: chromium: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:40.930Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-expm1-gives-115b2--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-5061fe7e68f9ef0f41d9",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log1p gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 216,
+                  "error": {
+                    "message": "Error: chromium: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m",
+                    "stack": "Error: chromium: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:41.638Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-log1p-gives-d2f0b--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-480454ccc8c767156e34",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "meanR gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 261,
+                  "error": {
+                    "message": "Error: chromium: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m",
+                    "stack": "Error: chromium: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:42.352Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-meanR-gives-1e53d--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-c314d6532f77e430d815",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "review gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 7,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 852,
+                  "error": {
+                    "message": "Error: chromium: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m",
+                    "stack": "Error: chromium: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: chromium: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:43.105Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-review-give-44c1d--as-Node-on-100-000-vectors-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-22f46df6bfb1a894fe2c",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "pow gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 310,
+                  "error": {
+                    "message": "Error: firefox: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m",
+                    "stack": "Error: firefox: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:46.808Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-pow-gives-t-86619--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-d4992c7c55983bb852a9",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "exp gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 914,
+                  "error": {
+                    "message": "Error: firefox: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m",
+                    "stack": "Error: firefox: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:47.816Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-exp-gives-t-7ad67--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-efee23c6fdc79a3e26ff",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "ln gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 10,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 936,
+                  "error": {
+                    "message": "Error: firefox: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m",
+                    "stack": "Error: firefox: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:49.697Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-ln-gives-th-1fd41--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-e4cb80124e4aff401ad5",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log10 gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 916,
+                  "error": {
+                    "message": "Error: firefox: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m",
+                    "stack": "Error: firefox: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:51.606Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-log10-gives-eca92--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-a2b232a234c7cc2a7c91",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "expm1 gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 881,
+                  "error": {
+                    "message": "Error: firefox: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m",
+                    "stack": "Error: firefox: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:53.522Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-expm1-gives-115b2--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-43dc66d49ac8a552de32",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log1p gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 13,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 928,
+                  "error": {
+                    "message": "Error: firefox: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m",
+                    "stack": "Error: firefox: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:55.369Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-log1p-gives-d2f0b--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-b3f4b2281250a149ca8c",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "meanR gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 14,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 977,
+                  "error": {
+                    "message": "Error: firefox: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m",
+                    "stack": "Error: firefox: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:57.291Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-meanR-gives-1e53d--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-b227c2a4c940a4d54063",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "review gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 15,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1544,
+                  "error": {
+                    "message": "Error: firefox: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m",
+                    "stack": "Error: firefox: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: firefox: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:59.252Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-review-give-44c1d--as-Node-on-100-000-vectors-firefox/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-c4ebf00c8a5ce44fa942",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "pow gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 16,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 308,
+                  "error": {
+                    "message": "Error: webkit: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m",
+                    "stack": "Error: webkit: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: pow\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"3d7063d7ea64de4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"3d7063d7ea64de4e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:03.051Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-pow-gives-t-86619--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-f51099fba3cc45e2113a",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "exp gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 17,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 319,
+                  "error": {
+                    "message": "Error: webkit: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m",
+                    "stack": "Error: webkit: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: exp\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"282e82fba82afd4e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"282e82fba82afd4e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:03.799Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-exp-gives-t-7ad67--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-6af47d5ee49c29f1ee0f",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "ln gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 18,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 350,
+                  "error": {
+                    "message": "Error: webkit: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m",
+                    "stack": "Error: webkit: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: ln\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"c42cd90d8c5957cf\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"c42cd90d8c5957cf\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:04.637Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-ln-gives-th-1fd41--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-205d8d6286d9f93b2440",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log10 gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 19,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 340,
+                  "error": {
+                    "message": "Error: webkit: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m",
+                    "stack": "Error: webkit: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: log10\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"7975fd2b8f7c506e\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"7975fd2b8f7c506e\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:05.496Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-log10-gives-eca92--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-ec399e2259bb786bc864",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "expm1 gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 20,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 326,
+                  "error": {
+                    "message": "Error: webkit: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m",
+                    "stack": "Error: webkit: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: expm1\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2c1250daae88b5ac\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2c1250daae88b5ac\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:06.337Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-expm1-gives-115b2--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-f711e685eace09e3adfc",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log1p gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 21,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 327,
+                  "error": {
+                    "message": "Error: webkit: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m",
+                    "stack": "Error: webkit: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: log1p\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"2b1b9cb3cddb4cb2\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"2b1b9cb3cddb4cb2\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:07.173Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-log1p-gives-d2f0b--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-155979957ce577f8a1e7",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "meanR gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 22,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 376,
+                  "error": {
+                    "message": "Error: webkit: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m",
+                    "stack": "Error: webkit: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: meanR\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"ec29edb532f4e19d\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"ec29edb532f4e19d\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:08.010Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-meanR-gives-1e53d--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-502bae193fefbad79e6e",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "review gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 23,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 907,
+                  "error": {
+                    "message": "Error: webkit: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m",
+                    "stack": "Error: webkit: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 45,
+                      "line": 58
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 45,
+                        "line": 58
+                      },
+                      "message": "Error: webkit: review\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"1856bc56fcfef272\u001b[7mx\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"1856bc56fcfef272\"\u001b[39m\n\n\u001b[0m \u001b[90m 56 |\u001b[39m       fn\u001b[33m,\u001b[39m\n \u001b[90m 57 |\u001b[39m     )\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 58 |\u001b[39m     expect(engine\u001b[33m,\u001b[39m \u001b[32m`${browserName}: ${fn}`\u001b[39m)\u001b[33m.\u001b[39mtoBe(digest(fn) \u001b[33m+\u001b[39m \u001b[32m'x'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 59 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m\u001b[0m\n\u001b[2m    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:58:45\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:30:08.888Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/__w/yawelo-idle/yawelo-idle/test-results/golden-vectors-review-give-44c1d--as-Node-on-100-000-vectors-webkit/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 45,
+                    "line": 58
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-6987eaa908ad9390ba6d",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-17T17:29:36.750Z",
+    "duration": 33226.568999999996,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 24,
+    "flaky": 0
+  }
+}

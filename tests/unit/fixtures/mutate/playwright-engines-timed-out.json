@@ -1,0 +1,1262 @@
+{
+  "config": {
+    "argv": [
+      "/__t/node/26.12.0/x64/bin/node",
+      "/__w/yawelo-idle/yawelo-idle/node_modules/.bin/playwright",
+      "test",
+      "-c",
+      "playwright.engines.config.ts",
+      "--timeout=1",
+      "--reporter=list,json"
+    ],
+    "configFile": "/__w/yawelo-idle/yawelo-idle/playwright.engines.config.ts",
+    "rootDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+      },
+      "gitCommit": {
+        "shortHash": "bc0bceb",
+        "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+        "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+        "author": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "committer": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "branch": "scratch/649-record-playwright-reports"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 1
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 1
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 1
+      }
+    ],
+    "quiet": false,
+    "reporter": [["list"], ["json"]],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "golden-log.spec.ts",
+      "file": "golden-log.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "the golden log replays to its recorded hash",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 0,
+                  "error": {
+                    "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts:25:6",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                      "column": 6,
+                      "line": 25
+                    },
+                    "snippet": "  23 | let bundle = '';\n  24 |\n> 25 | test.beforeAll(async () => {\n     |      ^\n  26 |   const result = await build({\n  27 |     stdin: {\n  28 |       contents: \"export { replayGolden } from './golden-log';\","
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                        "column": 6,
+                        "line": 25
+                      },
+                      "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n\n  23 | let bundle = '';\n  24 |\n> 25 | test.beforeAll(async () => {\n     |      ^\n  26 |   const result = await build({\n  27 |     stdin: {\n  28 |       contents: \"export { replayGolden } from './golden-log';\",\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts:25:6"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.523Z",
+                  "annotations": [],
+                  "attachments": [],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                    "column": 6,
+                    "line": 25
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "3a7bac7b4eb848a82ec3-9896ecf196a25eb7c00e",
+          "file": "golden-log.spec.ts",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "title": "the golden log replays to its recorded hash",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 0,
+                  "error": {
+                    "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts:25:6",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                      "column": 6,
+                      "line": 25
+                    },
+                    "snippet": "  23 | let bundle = '';\n  24 |\n> 25 | test.beforeAll(async () => {\n     |      ^\n  26 |   const result = await build({\n  27 |     stdin: {\n  28 |       contents: \"export { replayGolden } from './golden-log';\","
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                        "column": 6,
+                        "line": 25
+                      },
+                      "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n\n  23 | let bundle = '';\n  24 |\n> 25 | test.beforeAll(async () => {\n     |      ^\n  26 |   const result = await build({\n  27 |     stdin: {\n  28 |       contents: \"export { replayGolden } from './golden-log';\",\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts:25:6"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.310Z",
+                  "annotations": [],
+                  "attachments": [],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                    "column": 6,
+                    "line": 25
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "3a7bac7b4eb848a82ec3-967eba94e4158c34f353",
+          "file": "golden-log.spec.ts",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "title": "the golden log replays to its recorded hash",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 0,
+                  "error": {
+                    "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts:25:6",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                      "column": 6,
+                      "line": 25
+                    },
+                    "snippet": "  23 | let bundle = '';\n  24 |\n> 25 | test.beforeAll(async () => {\n     |      ^\n  26 |   const result = await build({\n  27 |     stdin: {\n  28 |       contents: \"export { replayGolden } from './golden-log';\","
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                        "column": 6,
+                        "line": 25
+                      },
+                      "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n\n  23 | let bundle = '';\n  24 |\n> 25 | test.beforeAll(async () => {\n     |      ^\n  26 |   const result = await build({\n  27 |     stdin: {\n  28 |       contents: \"export { replayGolden } from './golden-log';\",\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts:25:6"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.095Z",
+                  "annotations": [],
+                  "attachments": [],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+                    "column": 6,
+                    "line": 25
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "3a7bac7b4eb848a82ec3-c2a6c709d28260937644",
+          "file": "golden-log.spec.ts",
+          "line": 45,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "golden-vectors.spec.ts",
+      "file": "golden-vectors.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "pow gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 0,
+                  "error": {
+                    "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:26:6",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 6,
+                      "line": 26
+                    },
+                    "snippet": "  24 | let bundle = '';\n  25 |\n> 26 | test.beforeAll(async () => {\n     |      ^\n  27 |   const result = await build({\n  28 |     stdin: {\n  29 |       contents: \"export { digest } from './golden-vectors';\","
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 6,
+                        "line": 26
+                      },
+                      "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n\n  24 | let bundle = '';\n  25 |\n> 26 | test.beforeAll(async () => {\n     |      ^\n  27 |   const result = await build({\n  28 |     stdin: {\n  29 |       contents: \"export { digest } from './golden-vectors';\",\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:26:6"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.913Z",
+                  "annotations": [],
+                  "attachments": [],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 6,
+                    "line": 26
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-c888c8da74e418f053d1",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "exp gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.939Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-4a6f408f7cdb630c6f3d",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "ln gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.939Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-1fb68bff335726e5716a",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log10 gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.940Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-010fd094218e379b9cf8",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "expm1 gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.940Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-5061fe7e68f9ef0f41d9",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log1p gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.940Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-480454ccc8c767156e34",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "meanR gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.940Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-c314d6532f77e430d815",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "review gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:21.940Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-22f46df6bfb1a894fe2c",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "pow gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 0,
+                  "error": {
+                    "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:26:6",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 6,
+                      "line": 26
+                    },
+                    "snippet": "  24 | let bundle = '';\n  25 |\n> 26 | test.beforeAll(async () => {\n     |      ^\n  27 |   const result = await build({\n  28 |     stdin: {\n  29 |       contents: \"export { digest } from './golden-vectors';\","
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 6,
+                        "line": 26
+                      },
+                      "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n\n  24 | let bundle = '';\n  25 |\n> 26 | test.beforeAll(async () => {\n     |      ^\n  27 |   const result = await build({\n  28 |     stdin: {\n  29 |       contents: \"export { digest } from './golden-vectors';\",\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:26:6"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.697Z",
+                  "annotations": [],
+                  "attachments": [],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 6,
+                    "line": 26
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-d4992c7c55983bb852a9",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "exp gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-efee23c6fdc79a3e26ff",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "ln gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-e4cb80124e4aff401ad5",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log10 gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-a2b232a234c7cc2a7c91",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "expm1 gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-43dc66d49ac8a552de32",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log1p gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-b3f4b2281250a149ca8c",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "meanR gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-b227c2a4c940a4d54063",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "review gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:22.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-c4ebf00c8a5ce44fa942",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "pow gives the same bits as Node on 100,000 vectors",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 0,
+                  "error": {
+                    "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:26:6",
+                    "location": {
+                      "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                      "column": 6,
+                      "line": 26
+                    },
+                    "snippet": "  24 | let bundle = '';\n  25 |\n> 26 | test.beforeAll(async () => {\n     |      ^\n  27 |   const result = await build({\n  28 |     stdin: {\n  29 |       contents: \"export { digest } from './golden-vectors';\","
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                        "column": 6,
+                        "line": 26
+                      },
+                      "message": "\u001b[31m\"beforeAll\" hook timeout of 1ms exceeded.\u001b[39m\n\n  24 | let bundle = '';\n  25 |\n> 26 | test.beforeAll(async () => {\n     |      ^\n  27 |   const result = await build({\n  28 |     stdin: {\n  29 |       contents: \"export { digest } from './golden-vectors';\",\n    at /__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts:26:6"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.475Z",
+                  "annotations": [],
+                  "attachments": [],
+                  "errorLocation": {
+                    "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-vectors.spec.ts",
+                    "column": 6,
+                    "line": 26
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-f51099fba3cc45e2113a",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "exp gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-6af47d5ee49c29f1ee0f",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "ln gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-205d8d6286d9f93b2440",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log10 gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-ec399e2259bb786bc864",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "expm1 gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-f711e685eace09e3adfc",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "log1p gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-155979957ce577f8a1e7",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "meanR gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-502bae193fefbad79e6e",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        },
+        {
+          "title": "review gives the same bits as Node on 100,000 vectors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 1,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:23.501Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "070e8e50d6104a9ca9b2-6987eaa908ad9390ba6d",
+          "file": "golden-vectors.spec.ts",
+          "line": 47,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-17T17:29:21.076Z",
+    "duration": 2438.46,
+    "expected": 0,
+    "skipped": 21,
+    "unexpected": 6,
+    "flaky": 0
+  }
+}

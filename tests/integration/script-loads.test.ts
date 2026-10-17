@@ -41,6 +41,7 @@ const SCRIPTS = [
   'scripts/fetch-minimums.ts',
   'scripts/holding-dev.ts',
   'scripts/mutate-cli.ts',
+  'scripts/mutations-changed.ts',
   'scripts/prod-version.ts',
   'scripts/record-floors.ts',
   'scripts/sample-minimums.ts',

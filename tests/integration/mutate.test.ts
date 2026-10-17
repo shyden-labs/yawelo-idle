@@ -166,7 +166,7 @@ const SUITES: readonly Suite[] = [
     ],
     files: vitestListed,
     run: { unrecordable: 'a fixture' },
-    mutate: { config: 'vitest.guards.config.ts' },
+    mutate: { kind: 'vitest', config: 'vitest.guards.config.ts' },
   },
 ];
 

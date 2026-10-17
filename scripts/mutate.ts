@@ -18,7 +18,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, posix } from 'node:path';
+import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   FILE_SEPARATOR,
@@ -29,10 +29,12 @@ import {
 import {
   readFloorsDir,
   RECORD_ENV,
+  suiteFiles,
   type Observation,
   type Suite,
+  type SuiteMutate,
 } from './record-floors.ts';
-import { REPORT_ENV } from './mutate-reporter.ts';
+import { REPORT_ENV, ROOT_ENV } from './mutate-reporter.ts';
 
 /** The runner's reporter, by absolute path: a fixture repository runs it too. */
 const REPORTER = fileURLToPath(
@@ -94,6 +96,124 @@ export function readReport(json: unknown): Report {
   };
 }
 
+/** A terminal colour or cursor code, which Playwright writes into its JSON even with FORCE_COLOR=0. */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g');
+
+/** How Playwright ends a test (`TestCase.outcome()`). */
+const OUTCOMES = new Set(['expected', 'unexpected', 'flaky', 'skipped']);
+
+/**
+ * Reads Playwright's JSON report (#649, spec §5) into the runner's report:
+ * each test once per project, named `<file> › <project> > <describe> > … >
+ * <title>`, files repository-relative from `root` (where the suite ran). A
+ * flaky test counts failing (the runner allows no retry). An error outside
+ * any test is named by its file, or by `config` when it has none. Any shape
+ * it does not know is refused rather than read as a clean run.
+ */
+export function readPlaywrightReport(
+  json: unknown,
+  root: string,
+  config: string,
+): Report {
+  const refuse = (why: string): never => {
+    throw new Error(`the Playwright report ${why}`);
+  };
+  if (!isRecord(json)) return refuse('is not an object');
+  const { config: run, suites, errors } = json;
+  if (!isRecord(run) || typeof run.rootDir !== 'string')
+    return refuse('names no rootDir');
+  const rootDir = run.rootDir;
+  if (!Array.isArray(suites)) return refuse('has no list of suites');
+  if (!Array.isArray(errors)) return refuse('has no list of errors');
+  const fromRoot = (path: string): string =>
+    relative(root, path).split(sep).join(posix.sep);
+  const textOf = (list: unknown, where: string): string => {
+    if (!Array.isArray(list))
+      return refuse(`has no list of errors for ${where}`);
+    return list
+      .flatMap((e: unknown) => {
+        if (!isRecord(e) || typeof e.message !== 'string')
+          return refuse(`has an error with no message for ${where}`);
+        return [e.message, e.snippet, e.stack].filter(
+          (part): part is string => typeof part === 'string' && part !== '',
+        );
+      })
+      .join('\n')
+      .replace(ANSI, '');
+  };
+
+  let total = 0;
+  const files: string[] = [];
+  const failing: FailedTest[] = [];
+  const timedOut: string[] = [];
+  const walk = (suite: unknown, file: string, titles: readonly string[]) => {
+    if (!isRecord(suite))
+      return refuse(`has a suite that is not an object in ${file}`);
+    const specs = suite.specs ?? [];
+    const inner = suite.suites ?? [];
+    if (!Array.isArray(specs) || !Array.isArray(inner))
+      return refuse(`has a suite with no specs or suites in ${file}`);
+    for (const spec of specs) {
+      if (
+        !isRecord(spec) ||
+        typeof spec.title !== 'string' ||
+        !Array.isArray(spec.tests)
+      )
+        return refuse(`has a spec it cannot read in ${file}`);
+      for (const test of spec.tests as unknown[]) {
+        if (
+          !isRecord(test) ||
+          typeof test.projectName !== 'string' ||
+          test.projectName === ''
+        )
+          return refuse(`has a test with no project in ${file}`);
+        const name = `${file} › ${[test.projectName, ...titles, spec.title].join(' > ')}`;
+        if (typeof test.status !== 'string' || !OUTCOMES.has(test.status))
+          return refuse(`gives ${name} the status ${String(test.status)}`);
+        if (!Array.isArray(test.results))
+          return refuse(`has no results for ${name}`);
+        total += 1;
+        if (test.status !== 'unexpected' && test.status !== 'flaky') continue;
+        const results = test.results as unknown[];
+        failing.push({
+          name,
+          text: results
+            .map((r) =>
+              isRecord(r)
+                ? textOf(r.errors, name)
+                : refuse(`has a result it cannot read for ${name}`),
+            )
+            .filter((text) => text !== '')
+            .join('\n'),
+        });
+        if (results.some((r) => isRecord(r) && r.status === 'timedOut'))
+          timedOut.push(name);
+      }
+    }
+    for (const each of inner) {
+      if (!isRecord(each) || typeof each.title !== 'string')
+        return refuse(`has a describe with no title in ${file}`);
+      walk(each, file, [...titles, each.title]);
+    }
+  };
+  for (const top of suites) {
+    if (!isRecord(top) || typeof top.file !== 'string')
+      return refuse('has a file suite that names no file');
+    const file = fromRoot(join(rootDir, top.file));
+    files.push(file);
+    walk(top, file, []);
+  }
+  for (const error of errors) {
+    const location = isRecord(error) ? error.location : undefined;
+    const name =
+      isRecord(location) && typeof location.file === 'string'
+        ? `${fromRoot(location.file)} › (the file)`
+        : `${config} › (the run)`;
+    failing.push({ name, text: textOf([error], name) });
+  }
+  return { total, files, failing, timedOut };
+}
+
 /** `n test(s) timed out: <names>`, or nothing. */
 const timedOutLine = (timedOut: readonly string[]): string[] =>
   timedOut.length === 0
@@ -130,7 +250,7 @@ export function suiteOf(
       .map(([name]) => name);
     if (suites.length === 0)
       return {
-        refusal: `${target} is in no suite the runner can run (the harness and Playwright suites wait on #649)`,
+        refusal: `${target} is in no suite the runner can run`,
       };
     if (suites.length > 1)
       return { refusal: `${target} is listed by ${suites.join(' and ')}` };
@@ -146,10 +266,9 @@ export function suiteOf(
 
 export const UNIT_SUITE = 'unit suite';
 
-/** Why `suite` may not run here: the laptop runs the unit suite only. */
-export function laptopRefusal(suite: string, ci: boolean): string | undefined {
-  if (ci || suite === UNIT_SUITE) return undefined;
-  return `${suite}: the laptop runs the unit suite only (Shyden, 2026-10-09); push and let the mutations check run it`;
+/** Why `targets`, which the unit suite does not list, cannot run here: the laptop runs the unit suite only. */
+export function laptopRefusal(targets: readonly string[]): string {
+  return `${targets.join(', ')}: the laptop runs the unit suite only (Shyden, 2026-10-09); push and let the mutations check run it`;
 }
 
 /** A whole-repo floor the planted text moves, and the text its failure shows. */
@@ -250,10 +369,17 @@ export function judge(
   return problems;
 }
 
-/** A suite the runner can run: its name in `SUITES`, and its vitest config (none: the default). */
+/**
+ * A suite the runner can run: its name in `SUITES`, the folder it runs from,
+ * its runner and config (a vitest suite with none: vitest's default), and the
+ * build it needs first, if any.
+ */
 export interface MutableSuite {
   readonly name: string;
+  readonly cwd: string;
+  readonly kind: 'vitest' | 'playwright';
   readonly config: string | undefined;
+  readonly build: readonly string[] | undefined;
 }
 
 /** One vitest run of a whole suite. Paths are repository-relative. */
@@ -274,6 +400,8 @@ export interface RunOutcome {
   readonly log: string;
   /** Whether the run passed the ceiling and was stopped. */
   readonly ceilingHit: boolean;
+  /** The suite's build exited with this non-zero status, so it never ran. */
+  readonly buildExit?: number;
 }
 
 /** Everything `runFile` does outside its own logic, so a stand-in can drive it. */
@@ -305,14 +433,27 @@ export const LOG_DIR = '.mutations';
 const sameBytes = (a: Uint8Array, b: Uint8Array): boolean =>
   a.length === b.length && a.every((byte, i) => byte === b[i]);
 
-/** The problems of one suite run that is meant to be clean. */
-function redBaseline(outcome: RunOutcome, suite: string): string[] {
+/** How a run of `suite` ended without a report to judge, if it did. */
+function unrun(outcome: RunOutcome, suite: string): string[] {
   if (outcome.ceilingHit)
     return [
       `${suite} ran past the ${String(CEILING_SECONDS)} s ceiling and was stopped`,
     ];
+  if (outcome.buildExit !== undefined)
+    return [`${suite}: build failed (exit ${String(outcome.buildExit)})`];
+  return [];
+}
+
+/** The problems of one suite run that is meant to be clean. */
+function redBaseline(
+  outcome: RunOutcome,
+  suite: string,
+  read: (json: unknown) => Report,
+): string[] {
+  const stopped = unrun(outcome, suite);
+  if (stopped.length > 0) return stopped;
   if (outcome.json === undefined) return [NO_REPORT];
-  const report = readReport(outcome.json);
+  const report = read(outcome.json);
   return [
     ...report.failing.map((f) => `${f.name}: ${firstLine(f.text)}`),
     ...timedOutLine(report.timedOut),
@@ -344,14 +485,24 @@ export async function runFile(
     if (!io.clean(each))
       refuse(`${each} differs from HEAD: commit or restore it first`);
   }
-  const choice = suiteOf(
-    file.targets,
-    new Map(suites.map((s) => [s.name, io.list(s)])),
+  // The laptop lists the unit suite only: no other suite's listing starts there.
+  const listings = new Map(
+    (io.ci ? suites : suites.filter((s) => s.name === UNIT_SUITE)).map((s) => [
+      s.name,
+      io.list(s),
+    ]),
   );
-  if ('refusal' in choice) return refuse(choice.refusal);
+  const choice = suiteOf(file.targets, listings);
+  if ('refusal' in choice) {
+    if (io.ci) return refuse(choice.refusal);
+    const unit = listings.get(UNIT_SUITE) ?? [];
+    return refuse(laptopRefusal(file.targets.filter((t) => !unit.includes(t))));
+  }
   const suite = suites.find((s) => s.name === choice.suite) as MutableSuite;
-  const laptop = laptopRefusal(suite.name, io.ci);
-  if (laptop !== undefined) refuse(laptop);
+  const read = (json: unknown): Report =>
+    suite.kind === 'playwright'
+      ? readPlaywrightReport(json, io.root, suite.config ?? suite.name)
+      : readReport(json);
 
   const dir = `${LOG_DIR}/${posix.basename(path).replace(/\.[^.]*$/, '')}`;
   const at = (name: string, ext: string) => `${dir}/${name}.${ext}`;
@@ -360,12 +511,12 @@ export async function runFile(
     json: at('baseline', 'json'),
     log: at('baseline', 'log'),
   });
-  const red = redBaseline(baseline, suite.name);
+  const red = redBaseline(baseline, suite.name, read);
   if (red.length > 0)
     refuse(
       `the ${suite.name} is red before any mutation:\n  ${red.join('\n  ')}`,
     );
-  const baselineTotal = readReport(baseline.json).total;
+  const baselineTotal = read(baseline.json).total;
 
   const importers = new Map<string, ReadonlySet<string>>();
   const importersOf = async (target: string): Promise<ReadonlySet<string>> => {
@@ -435,16 +586,16 @@ export async function runFile(
       throw new Error(
         `${mutation.file} did not read back as it was before ${mutation.name}`,
       );
-    const found = outcome.ceilingHit
-      ? [
-          `${suite.name} ran past the ${String(CEILING_SECONDS)} s ceiling and was stopped`,
-        ]
-      : judge(
-          mutation,
-          corpus,
-          outcome.json === undefined ? undefined : readReport(outcome.json),
-          baselineTotal,
-        );
+    const stopped = unrun(outcome, suite.name);
+    const found =
+      stopped.length > 0
+        ? stopped
+        : judge(
+            mutation,
+            corpus,
+            outcome.json === undefined ? undefined : read(outcome.json),
+            baselineTotal,
+          );
     if (found.length === 0) matched += 1;
     io.print(
       found.length === 0 ? `ok   ${mutation.name}` : `MISS ${mutation.name}`,
@@ -464,16 +615,40 @@ export async function runFile(
   return { matched, rows: file.mutations.length };
 }
 
-/** The suites in `suites` the runner can run: those with a `mutate` config, all run from the root. */
+/**
+ * The command line a package script would hold for `mutate`: the build (a
+ * script runs local binaries without npx), then the suite. Each suite's own
+ * script must read exactly this, so the runner builds as the suite does.
+ */
+export function mutateScript(mutate: SuiteMutate): string {
+  const config = mutate.config === undefined ? [] : ['-c', mutate.config];
+  const run =
+    mutate.kind === 'vitest'
+      ? ['vitest', 'run', ...config]
+      : ['playwright', 'test', ...config];
+  const build =
+    mutate.build?.[0] === 'npx' ? mutate.build.slice(1) : mutate.build;
+  return [
+    ...(build === undefined ? [] : [build.join(' ')]),
+    run.join(' '),
+  ].join(' && ');
+}
+
+/** The suites in `suites` the runner can run: those with a `mutate` value. */
 export function mutableSuites(suites: readonly Suite[]): MutableSuite[] {
-  return suites.flatMap((suite) => {
-    if (suite.mutate === undefined) return [];
-    if (suite.cwd !== '.')
-      throw new Error(
-        `${suite.name} runs from ${suite.cwd}: the runner runs suites from the root only (#649)`,
-      );
-    return [{ name: suite.name, config: suite.mutate.config }];
-  });
+  return suites.flatMap(({ name, cwd, mutate }) =>
+    mutate === undefined
+      ? []
+      : [
+          {
+            name,
+            cwd,
+            kind: mutate.kind,
+            config: mutate.config,
+            build: mutate.build,
+          },
+        ],
+  );
 }
 
 /** A test-name pattern no test matches: `related` then lists files and runs nothing. */
@@ -492,7 +667,36 @@ export function vitestArgs(request: RunRequest, reporter: string): string[] {
   ];
 }
 
-/** The environment a run gets: the caller's, the report file named, floors recorded only when asked. */
+/** The Playwright arguments for one request: the list reporter for people, JSON for the runner. */
+export function playwrightArgs(request: RunRequest): string[] {
+  const { suite } = request;
+  if (suite.config === undefined)
+    throw new Error(`${suite.name} names no Playwright config`);
+  if (request.related !== undefined || request.recordTo !== undefined)
+    throw new Error(
+      `${suite.name}: only the guards suite records floors or lists importers`,
+    );
+  return ['playwright', 'test', '-c', suite.config, '--reporter=list,json'];
+}
+
+/** The environment a Playwright run gets: the caller's, with its JSON report's file named, recording no floors. */
+export function playwrightEnv(
+  base: Readonly<Record<string, string | undefined>>,
+  request: RunRequest,
+  root: string,
+): Record<string, string | undefined> {
+  return {
+    ...Object.fromEntries(
+      Object.entries(base).filter(([key]) => key !== RECORD_ENV),
+    ),
+    PLAYWRIGHT_JSON_OUTPUT_FILE: join(root, request.json),
+  };
+}
+
+/**
+ * The environment a run gets: the caller's, the report file and the
+ * repository root named, floors recorded only when asked.
+ */
 export function runEnv(
   base: Readonly<Record<string, string | undefined>>,
   request: RunRequest,
@@ -502,6 +706,7 @@ export function runEnv(
     Object.entries(base).filter(([key]) => key !== RECORD_ENV),
   );
   env[REPORT_ENV] = join(root, request.json);
+  env[ROOT_ENV] = root;
   if (request.recordTo !== undefined)
     env[RECORD_ENV] = join(root, request.recordTo);
   return env;
@@ -527,29 +732,36 @@ export function readObservations(text: string, path: string): Observation[] {
   });
 }
 
-/** Runs `command` under the ceiling, killing its whole process group past it. */
+/**
+ * Runs `command` until `deadline` (epoch ms), killing its whole process group
+ * past it. `exit` is the status it ended with (null: ended by a signal).
+ */
 function spawnBounded(
   command: string,
   args: readonly string[],
   options: { cwd: string; env: Record<string, string | undefined> },
-): Promise<{ log: string; ceilingHit: boolean }> {
+  deadline: number,
+): Promise<{ log: string; ceilingHit: boolean; exit: number | null }> {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(command, args, { ...options, detached: true });
     let log = '';
     let ceilingHit = false;
     child.stdout.on('data', (chunk: Buffer) => (log += chunk.toString()));
     child.stderr.on('data', (chunk: Buffer) => (log += chunk.toString()));
-    const timer = setTimeout(() => {
-      ceilingHit = true;
-      if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL');
-    }, CEILING_SECONDS * 1_000);
+    const timer = setTimeout(
+      () => {
+        ceilingHit = true;
+        if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL');
+      },
+      Math.max(0, deadline - Date.now()),
+    );
     child.on('error', (error) => {
       clearTimeout(timer);
       reject(error);
     });
-    child.on('close', () => {
+    child.on('close', (exit: number | null) => {
       clearTimeout(timer);
-      resolvePromise({ log, ceilingHit });
+      resolvePromise({ log, ceilingHit, exit });
     });
   });
 }
@@ -593,26 +805,61 @@ export function realIo(options: {
         throw new Error(
           `${entry.list.join(' ')} failed: ${listed.stderr.trim()}`,
         );
-      return entry.files(listed.stdout);
+      return suiteFiles(entry, listed.stdout);
     },
     run: async (request) => {
+      const { suite } = request;
       mkdirSync(dirname(at(request.json)), { recursive: true });
       rmSync(at(request.json), { force: true });
       if (request.recordTo !== undefined)
         rmSync(at(request.recordTo), { force: true });
-      const { log, ceilingHit } = await spawnBounded(
+      // One ceiling for the build and the suite together (spec §6).
+      const deadline = Date.now() + CEILING_SECONDS * 1_000;
+      const cwd = at(suite.cwd);
+      let log = '';
+      if (suite.build !== undefined) {
+        const [command, ...args] = suite.build;
+        if (command === undefined)
+          throw new Error(`${suite.name} has an empty build`);
+        const built = await spawnBounded(
+          command,
+          args,
+          { cwd, env: process.env },
+          deadline,
+        );
+        log += built.log;
+        if (built.ceilingHit || built.exit !== 0) {
+          writeFileSync(at(request.log), log);
+          return built.ceilingHit
+            ? { json: undefined, log, ceilingHit: true }
+            : {
+                json: undefined,
+                log,
+                ceilingHit: false,
+                buildExit: built.exit ?? -1,
+              };
+        }
+      }
+      const ran = await spawnBounded(
         'npx',
-        vitestArgs(request, REPORTER),
+        suite.kind === 'playwright'
+          ? playwrightArgs(request)
+          : vitestArgs(request, REPORTER),
         {
-          cwd: root,
-          env: runEnv(process.env, request, root),
+          cwd,
+          env:
+            suite.kind === 'playwright'
+              ? playwrightEnv(process.env, request, root)
+              : runEnv(process.env, request, root),
         },
+        deadline,
       );
+      log += ran.log;
       writeFileSync(at(request.log), log);
       const json = existsSync(at(request.json))
         ? (JSON.parse(readFileSync(at(request.json), 'utf8')) as unknown)
         : undefined;
-      return { json, log, ceilingHit };
+      return { json, log, ceilingHit: ran.ceilingHit };
     },
     observations: (path) =>
       readObservations(

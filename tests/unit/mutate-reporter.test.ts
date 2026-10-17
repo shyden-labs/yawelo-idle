@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   reportOf,
+  reportRoot,
+  ROOT_ENV,
   type ErrorView,
   type ModuleView,
   type Written,
@@ -129,5 +131,41 @@ describe('reportOf', () => {
     expect(() =>
       reportOf([module([], [], '/elsewhere/a.test.ts')], ROOT),
     ).toThrow('/elsewhere/a.test.ts is outside /repo');
+  });
+});
+
+/**
+ * The root a report names files from (#649, spec §4): a harness suite runs
+ * from its app's folder, so vitest's root would name its files relative to
+ * that folder, while targets and predictions are repository-relative.
+ */
+describe('reportRoot', () => {
+  it('is the repository root the runner names, when it names one', () => {
+    expect(reportRoot({ [ROOT_ENV]: '/repo' }, '/repo/apps/web')).toBe('/repo');
+  });
+
+  it('is vitest’s root when the runner names none', () => {
+    expect(reportRoot({}, '/repo/apps/web')).toBe('/repo/apps/web');
+  });
+
+  it('refuses an empty root', () => {
+    expect(() => reportRoot({ [ROOT_ENV]: '' }, '/repo')).toThrow(
+      'MUTATE_ROOT is set but empty',
+    );
+  });
+
+  it('refuses a relative root', () => {
+    expect(() => reportRoot({ [ROOT_ENV]: 'repo' }, '/repo')).toThrow(
+      'MUTATE_ROOT must be an absolute path, not repo',
+    );
+  });
+
+  it('names a harness file from the repository root', () => {
+    expect(
+      reportOf(
+        [module([], [], '/repo/apps/web/test/game.test.ts')],
+        reportRoot({ [ROOT_ENV]: '/repo' }, '/repo/apps/web'),
+      ).files,
+    ).toEqual(['apps/web/test/game.test.ts']);
   });
 });

@@ -1,0 +1,189 @@
+{
+  "config": {
+    "argv": [
+      "/__t/node/26.12.0/x64/bin/node",
+      "/__w/yawelo-idle/yawelo-idle/node_modules/.bin/playwright",
+      "test",
+      "-c",
+      "playwright.engines.config.ts",
+      "--reporter=list,json"
+    ],
+    "configFile": "/__w/yawelo-idle/yawelo-idle/playwright.engines.config.ts",
+    "rootDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+      },
+      "gitCommit": {
+        "shortHash": "bc0bceb",
+        "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+        "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+        "author": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "committer": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "branch": "scratch/649-record-playwright-reports"
+      }
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          }
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          }
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          }
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/engines",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      }
+    ],
+    "quiet": false,
+    "reporter": [["list"], ["json"]],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "SyntaxError: /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts: Unexpected token (66:16)\n\n  64 |   );\n  65 | });\n> 66 | const broken = (;\n     |                 ^\n  67 |",
+      "stack": "SyntaxError: /__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts: Unexpected token (66:16)\n\n  64 |   );\n  65 | });\n> 66 | const broken = (;\n     |                 ^\n  67 |\n    at eval (<anonymous>:1:1)",
+      "location": {
+        "file": "/__w/yawelo-idle/yawelo-idle/tests/engines/golden-log.spec.ts",
+        "line": 66,
+        "column": 16
+      },
+      "snippet": "   at golden-log.spec.ts:66\n\n  64 |   );\n  65 | });\n> 66 | const broken = (;\n     |                ^\n  67 |"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-10-17T17:30:10.708Z",
+    "duration": 157.882,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
