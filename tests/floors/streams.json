@@ -1,0 +1,9 @@
+{
+  "streams/float draws": 20000,
+  "streams/latency draws": 20000,
+  "streams/later opens": 90,
+  "streams/open gaps": 149,
+  "streams/recalls at R = 0": 1000,
+  "streams/recalls at R = 1": 1000,
+  "streams/slot offsets": 90
+}
