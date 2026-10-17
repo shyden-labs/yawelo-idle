@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import {
   initialState,
   Num,
@@ -17,6 +19,7 @@ import type { QuickReturn, Watcher } from '../src/player';
 import { persona } from '../src/personas';
 import {
   insaneValues,
+  judgedValues,
   reachedAt,
   runPersona,
   SailLog,
@@ -52,7 +55,14 @@ function cleanView(): View {
 describe('insaneValues', () => {
   it('finds nothing in a new game’s view', () => {
     const v = cleanView();
-    expect(insaneValues(v)).toEqual([]);
+    const judged = judgedValues(v);
+    expect(
+      searched(insaneValues(v), {
+        of: judged,
+        what: 'values in a new game’s view',
+      }),
+    ).toEqual([]);
+    expect(floorBreach('run/new game values', judged.length)).toBeUndefined();
     expect(v.shop.encounters).toHaveLength(6);
   });
 

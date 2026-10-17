@@ -70,8 +70,18 @@ function sane(n: Num): boolean {
   );
 }
 
-/** Every value of a view a UI would show as a number: the names of those that are not sane. */
-export function insaneValues(v: View): readonly string[] {
+/** A value of a view a UI would show as a number, by name, and whether it is sane. */
+export interface JudgedValue {
+  readonly name: string;
+  readonly sane: boolean;
+}
+
+/**
+ * Every value of a view a UI would show as a number, each judged: the
+ * population `insaneValues` searches, so a test can count what it read
+ * (#369).
+ */
+export function judgedValues(v: View): readonly JudgedValue[] {
   const values: [string, Num][] = [
     ['understanding', v.understanding],
     ['rate', v.rate],
@@ -99,11 +109,19 @@ export function insaneValues(v: View): readonly string[] {
     ]),
   ];
   return [
-    ...values.filter(([, n]) => !sane(n)).map(([name]) => name),
-    ...counts
-      .filter(([, x]) => !Number.isFinite(x) || x < 0)
-      .map(([name]) => name),
+    ...values.map(([name, n]) => ({ name, sane: sane(n) })),
+    ...counts.map(([name, x]) => ({
+      name,
+      sane: Number.isFinite(x) && x >= 0,
+    })),
   ];
+}
+
+/** Every value of a view a UI would show as a number: the names of those that are not sane. */
+export function insaneValues(v: View): readonly string[] {
+  return judgedValues(v)
+    .filter((judged) => !judged.sane)
+    .map((judged) => judged.name);
 }
 
 function holdsMastered(state: GameState): boolean {

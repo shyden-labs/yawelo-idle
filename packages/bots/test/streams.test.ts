@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import { persona } from '../src/personas';
 import {
   dayOpens,
@@ -55,7 +57,13 @@ describe('the streams', () => {
   it('draw floats in [0, 1)', () => {
     const s = new Streams(35);
     const xs = draws(DRAWS, () => s.float('buys'));
-    expect(xs.filter((x) => x < 0 || x >= 1)).toEqual([]);
+    expect(
+      searched(
+        xs.filter((x) => x < 0 || x >= 1),
+        { of: xs, what: 'float draws' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('streams/float draws', xs.length)).toBeUndefined();
     expect(Math.min(...xs)).toBeLessThan(0.001);
     expect(Math.max(...xs)).toBeGreaterThan(0.999);
   });
@@ -70,12 +78,30 @@ describe('recall', () => {
 
   it('is never correct at R = 0', () => {
     const s = new Streams(35);
-    expect(draws(1_000, () => s.recalls(0)).filter(Boolean)).toEqual([]);
+    const recalls = draws(1_000, () => s.recalls(0));
+    expect(
+      searched(recalls.filter(Boolean), {
+        of: recalls,
+        what: 'recalls at R = 0',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('streams/recalls at R = 0', recalls.length),
+    ).toBeUndefined();
   });
 
   it('is always correct at R = 1', () => {
     const s = new Streams(35);
-    expect(draws(1_000, () => s.recalls(1)).filter((x) => !x)).toEqual([]);
+    const recalls = draws(1_000, () => s.recalls(1));
+    expect(
+      searched(
+        recalls.filter((x) => !x),
+        { of: recalls, what: 'recalls at R = 1' },
+      ),
+    ).toEqual([]);
+    expect(
+      floorBreach('streams/recalls at R = 1', recalls.length),
+    ).toBeUndefined();
   });
 });
 
@@ -83,7 +109,13 @@ describe('latency', () => {
   it('is a whole, positive number of milliseconds', () => {
     const s = new Streams(35);
     const xs = draws(DRAWS, () => s.latencyMs());
-    expect(xs.filter((x) => !Number.isSafeInteger(x) || x <= 0)).toEqual([]);
+    expect(
+      searched(
+        xs.filter((x) => !Number.isSafeInteger(x) || x <= 0),
+        { of: xs, what: 'latency draws' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('streams/latency draws', xs.length)).toBeUndefined();
     expect(xs).toHaveLength(DRAWS);
   });
 
@@ -137,15 +169,19 @@ describe('the open schedule', () => {
         offset: o.startMs - EPOCH - day * DAY_MS,
       })),
     );
-    expect(starts).toHaveLength(90);
     expect(
-      starts.filter(
-        ({ offset }) =>
-          offset < WAKE_MS ||
-          offset >= WAKE_MS + WAKING_MS ||
-          offset % 1_000 !== 0,
+      searched(
+        starts.filter(
+          ({ offset }) =>
+            offset < WAKE_MS ||
+            offset >= WAKE_MS + WAKING_MS ||
+            offset % 1_000 !== 0,
+        ),
+        { of: starts, what: 'later opens' },
       ),
     ).toEqual([]);
+    expect(floorBreach('streams/later opens', starts.length)).toBeUndefined();
+    expect(starts).toHaveLength(90);
     expect(Math.min(...starts.map((s) => s.offset))).toBeLessThan(
       WAKE_MS + 3_600_000,
     );
@@ -160,8 +196,14 @@ describe('the open schedule', () => {
       dayOpens(persona('diligent'), EPOCH, day, s).map((o) => o.startMs),
     );
     const gaps = starts.slice(1).map((t, i) => t - (starts[i] ?? 0));
+    expect(
+      searched(
+        gaps.filter((g) => g < MIN_OPEN_GAP_MS),
+        { of: gaps, what: 'gaps between opens' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('streams/open gaps', gaps.length)).toBeUndefined();
     expect(gaps).toHaveLength(149);
-    expect(gaps.filter((g) => g < MIN_OPEN_GAP_MS)).toEqual([]);
     expect(Math.min(...gaps)).toBeLessThan(MIN_OPEN_GAP_MS + 15 * 60_000);
   });
 
@@ -173,10 +215,14 @@ describe('the open schedule', () => {
         (o, i) => o.startMs - EPOCH - day * DAY_MS - WAKE_MS - i * slotMs,
       ),
     );
-    expect(offsets).toHaveLength(90);
     expect(
-      offsets.filter((x) => x < 0 || x > slotMs - MIN_OPEN_GAP_MS),
+      searched(
+        offsets.filter((x) => x < 0 || x > slotMs - MIN_OPEN_GAP_MS),
+        { of: offsets, what: 'offsets within each slot' },
+      ),
     ).toEqual([]);
+    expect(floorBreach('streams/slot offsets', offsets.length)).toBeUndefined();
+    expect(offsets).toHaveLength(90);
   });
 
   it('orders a day’s opens by time', () => {
