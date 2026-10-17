@@ -22,8 +22,11 @@ export interface Mutation {
   readonly replacement: string;
   /**
    * Each test predicted to fail, written `<file> › <describe> > … > <title>`
-   * as vitest reports it, to text its failure message must contain (a floor
-   * id, or the finding). Empty: the mutation is predicted to stay green.
+   * as vitest reports it, to text its failure must contain (a floor id, or
+   * the finding). The text is matched against the whole error the runner's
+   * reporter saw: message, diff, actual and expected. A function expected to
+   * throw that throws nothing fails with vitest's bare "to throw an error".
+   * Empty: the mutation is predicted to stay green.
    */
   readonly red: Readonly<Record<string, string>>;
 }
