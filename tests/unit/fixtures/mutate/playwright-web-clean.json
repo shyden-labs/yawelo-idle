@@ -1,0 +1,603 @@
+{
+  "config": {
+    "argv": [
+      "/__t/node/26.12.0/x64/bin/node",
+      "/__w/yawelo-idle/yawelo-idle/node_modules/.bin/playwright",
+      "test",
+      "-c",
+      "playwright.web.config.ts",
+      "--reporter=list,json"
+    ],
+    "configFile": "/__w/yawelo-idle/yawelo-idle/playwright.web.config.ts",
+    "rootDir": "/__w/yawelo-idle/yawelo-idle/tests/web",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+      },
+      "gitCommit": {
+        "shortHash": "bc0bceb",
+        "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+        "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+        "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+        "author": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "committer": {
+          "name": "Shyden",
+          "email": "shyden1988uk@gmail.com",
+          "time": 1792257997000
+        },
+        "branch": "scratch/649-record-playwright-reports"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/web",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/web",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      },
+      {
+        "outputDir": "/__w/yawelo-idle/yawelo-idle/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/shyden-labs/yawelo-idle/commit/bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "commitHash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "buildHref": "https://github.com/shyden-labs/yawelo-idle/actions/runs/39053867584"
+          },
+          "gitCommit": {
+            "shortHash": "bc0bceb",
+            "hash": "bc0bceb1aecc796a7528d10ee10f1268ba577142",
+            "subject": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)",
+            "body": "chore(scratch): record Playwright JSON reports for #649 (throwaway, never merged; Refs #649)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01VxEpA75kAQPb5eiH4GyVat\n",
+            "author": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "committer": {
+              "name": "Shyden",
+              "email": "shyden1988uk@gmail.com",
+              "time": 1792257997000
+            },
+            "branch": "scratch/649-record-playwright-reports"
+          },
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/__w/yawelo-idle/yawelo-idle/tests/web",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 0
+      }
+    ],
+    "quiet": false,
+    "reporter": [["list"], ["json"]],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": {
+      "command": "npx wrangler dev --config apps/web/wrangler.jsonc --ip 127.0.0.1 --port 8791",
+      "url": "http://127.0.0.1:8791/play/",
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "shell.spec.ts",
+      "file": "shell.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "the shell renders with no console errors or page errors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 319,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:12.895Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-ef44f9c4f2bbe25ca64c",
+          "file": "shell.spec.ts",
+          "line": 43,
+          "column": 1
+        },
+        {
+          "title": "the shell runs under its Content Security Policy with no violation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 107,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:13.289Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-46a79f7201ce348df372",
+          "file": "shell.spec.ts",
+          "line": 96,
+          "column": 1
+        },
+        {
+          "title": "the shell runs Cloudflare Web Analytics' beacon at any version (#451)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 190,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:13.407Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-47d07950853e45635a53",
+          "file": "shell.spec.ts",
+          "line": 149,
+          "column": 1
+        },
+        {
+          "title": "the shell has no axe violations",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 428,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:13.606Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-2cdc8917fffd78b857db",
+          "file": "shell.spec.ts",
+          "line": 176,
+          "column": 1
+        },
+        {
+          "title": "the shell renders with no console errors or page errors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1224,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:14.404Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-da23eb7430b52bfaffca",
+          "file": "shell.spec.ts",
+          "line": 43,
+          "column": 1
+        },
+        {
+          "title": "the shell runs under its Content Security Policy with no violation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 395,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:15.930Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-2510d4bdf0a2f5e2f5fb",
+          "file": "shell.spec.ts",
+          "line": 96,
+          "column": 1
+        },
+        {
+          "title": "the shell runs Cloudflare Web Analytics' beacon at any version (#451)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 432,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:16.335Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-e095f1ce93210b30f6e7",
+          "file": "shell.spec.ts",
+          "line": 149,
+          "column": 1
+        },
+        {
+          "title": "the shell has no axe violations",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 863,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:16.779Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-87e076c00e4996194bf8",
+          "file": "shell.spec.ts",
+          "line": 176,
+          "column": 1
+        },
+        {
+          "title": "the shell renders with no console errors or page errors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 515,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:18.565Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-2ace07831e1a6bb98b65",
+          "file": "shell.spec.ts",
+          "line": 43,
+          "column": 1
+        },
+        {
+          "title": "the shell runs under its Content Security Policy with no violation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 263,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:19.172Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-52beb3a473ebbd887ff5",
+          "file": "shell.spec.ts",
+          "line": 96,
+          "column": 1
+        },
+        {
+          "title": "the shell runs Cloudflare Web Analytics' beacon at any version (#451)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 261,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:19.445Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-ad217f29e8909c1f7dfb",
+          "file": "shell.spec.ts",
+          "line": 149,
+          "column": 1
+        },
+        {
+          "title": "the shell has no axe violations",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 0,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 609,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-17T17:29:19.718Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "3420664513cb0bae123e-9dcc6d8fcce97b19e6cc",
+          "file": "shell.spec.ts",
+          "line": 176,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-17T17:29:10.455Z",
+    "duration": 9944.994,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

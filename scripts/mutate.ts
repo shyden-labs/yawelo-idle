@@ -18,7 +18,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, posix } from 'node:path';
+import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   FILE_SEPARATOR,
@@ -94,6 +94,124 @@ export function readReport(json: unknown): Report {
     ),
     timedOut: json.timedOut,
   };
+}
+
+/** A terminal colour or cursor code, which Playwright writes into its JSON even with FORCE_COLOR=0. */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g');
+
+/** How Playwright ends a test (`TestCase.outcome()`). */
+const OUTCOMES = new Set(['expected', 'unexpected', 'flaky', 'skipped']);
+
+/**
+ * Reads Playwright's JSON report (#649, spec §5) into the runner's report:
+ * each test once per project, named `<file> › <project> > <describe> > … >
+ * <title>`, files repository-relative from `root` (where the suite ran). A
+ * flaky test counts failing (the runner allows no retry). An error outside
+ * any test is named by its file, or by `config` when it has none. Any shape
+ * it does not know is refused rather than read as a clean run.
+ */
+export function readPlaywrightReport(
+  json: unknown,
+  root: string,
+  config: string,
+): Report {
+  const refuse = (why: string): never => {
+    throw new Error(`the Playwright report ${why}`);
+  };
+  if (!isRecord(json)) return refuse('is not an object');
+  const { config: run, suites, errors } = json;
+  if (!isRecord(run) || typeof run.rootDir !== 'string')
+    return refuse('names no rootDir');
+  const rootDir = run.rootDir;
+  if (!Array.isArray(suites)) return refuse('has no list of suites');
+  if (!Array.isArray(errors)) return refuse('has no list of errors');
+  const fromRoot = (path: string): string =>
+    relative(root, path).split(sep).join(posix.sep);
+  const textOf = (list: unknown, where: string): string => {
+    if (!Array.isArray(list))
+      return refuse(`has no list of errors for ${where}`);
+    return list
+      .flatMap((e: unknown) => {
+        if (!isRecord(e) || typeof e.message !== 'string')
+          return refuse(`has an error with no message for ${where}`);
+        return [e.message, e.snippet, e.stack].filter(
+          (part): part is string => typeof part === 'string' && part !== '',
+        );
+      })
+      .join('\n')
+      .replace(ANSI, '');
+  };
+
+  let total = 0;
+  const files: string[] = [];
+  const failing: FailedTest[] = [];
+  const timedOut: string[] = [];
+  const walk = (suite: unknown, file: string, titles: readonly string[]) => {
+    if (!isRecord(suite))
+      return refuse(`has a suite that is not an object in ${file}`);
+    const specs = suite.specs ?? [];
+    const inner = suite.suites ?? [];
+    if (!Array.isArray(specs) || !Array.isArray(inner))
+      return refuse(`has a suite with no specs or suites in ${file}`);
+    for (const spec of specs) {
+      if (
+        !isRecord(spec) ||
+        typeof spec.title !== 'string' ||
+        !Array.isArray(spec.tests)
+      )
+        return refuse(`has a spec it cannot read in ${file}`);
+      for (const test of spec.tests as unknown[]) {
+        if (
+          !isRecord(test) ||
+          typeof test.projectName !== 'string' ||
+          test.projectName === ''
+        )
+          return refuse(`has a test with no project in ${file}`);
+        const name = `${file} › ${[test.projectName, ...titles, spec.title].join(' > ')}`;
+        if (typeof test.status !== 'string' || !OUTCOMES.has(test.status))
+          return refuse(`gives ${name} the status ${String(test.status)}`);
+        if (!Array.isArray(test.results))
+          return refuse(`has no results for ${name}`);
+        total += 1;
+        if (test.status !== 'unexpected' && test.status !== 'flaky') continue;
+        const results = test.results as unknown[];
+        failing.push({
+          name,
+          text: results
+            .map((r) =>
+              isRecord(r)
+                ? textOf(r.errors, name)
+                : refuse(`has a result it cannot read for ${name}`),
+            )
+            .filter((text) => text !== '')
+            .join('\n'),
+        });
+        if (results.some((r) => isRecord(r) && r.status === 'timedOut'))
+          timedOut.push(name);
+      }
+    }
+    for (const each of inner) {
+      if (!isRecord(each) || typeof each.title !== 'string')
+        return refuse(`has a describe with no title in ${file}`);
+      walk(each, file, [...titles, each.title]);
+    }
+  };
+  for (const top of suites) {
+    if (!isRecord(top) || typeof top.file !== 'string')
+      return refuse('has a file suite that names no file');
+    const file = fromRoot(join(rootDir, top.file));
+    files.push(file);
+    walk(top, file, []);
+  }
+  for (const error of errors) {
+    const location = isRecord(error) ? error.location : undefined;
+    const name =
+      isRecord(location) && typeof location.file === 'string'
+        ? `${fromRoot(location.file)} › (the file)`
+        : `${config} › (the run)`;
+    failing.push({ name, text: textOf([error], name) });
+  }
+  return { total, files, failing, timedOut };
 }
 
 /** `n test(s) timed out: <names>`, or nothing. */
