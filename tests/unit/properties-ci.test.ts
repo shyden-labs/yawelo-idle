@@ -56,4 +56,8 @@ describe('the properties suite in CI (#543)', () => {
       root.test?.include?.filter((glob) => glob.startsWith('packages/')),
     ).toEqual(['packages/*/test/**/*.test.ts']);
   });
+
+  it('seeds every file from the one seeding home, so a reach count’s breach names its seed (#84)', () => {
+    expect(properties.test?.setupFiles).toEqual(['tests/properties-setup.ts']);
+  });
 });

@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'yaml';
 import guards from '../../vitest.guards.config';
 import integration from '../../vitest.integration.config';
+import logs from '../../vitest.logs.config';
 import pacing from '../../vitest.pacing.config';
 import properties from '../../vitest.properties.config';
 import unit from '../../vitest.config';
@@ -42,6 +43,8 @@ const workflow = (file: string): Workflow =>
   parse(readFileSync(`.github/workflows/${file}`, 'utf8')) as Workflow;
 const ci = workflow('ci.yml');
 const deployDev = workflow('deploy-dev.yml');
+// The logs suite's own workflow, run before a release (#84, spec §5.12).
+const logsWorkflow = workflow('logs.yml');
 
 const SUITES = [
   {
@@ -59,12 +62,25 @@ const SUITES = [
     slowest: 11,
   },
   // Measured 2026-10-12 over its first three CI runs (#543): 9, 12, 12 s.
+  // Re-measured 2026-10-16 after #84 raised unfold and automation and moved
+  // log to the logs suite: 17 and 12 s (runs 38859103281, 38859103312).
   {
     suite: 'properties',
     run: 'npm run test:properties',
     job: 'build-and-test',
     minutes: 1,
-    slowest: 12,
+    slowest: 17,
+  },
+  // Not yet measured as a step: logs.yml first runs once it is on develop.
+  // Its one file, log.test.ts, took 1.349 s in #608's properties step (run
+  // 38829498709), rounded up here; #609 measures the step at its raised
+  // sizes and sets the limit from that.
+  {
+    suite: 'logs',
+    run: 'npm run test:logs',
+    job: 'logs',
+    minutes: 1,
+    slowest: 2,
   },
   {
     suite: 'pacing',
@@ -104,7 +120,11 @@ const SUITES = [
 ] as const;
 
 const jobOf = (job: string): Workflow['jobs'][string] | undefined =>
-  job === 'smoke' ? deployDev.jobs[job] : ci.jobs[job];
+  job === 'smoke'
+    ? deployDev.jobs[job]
+    : job === 'logs'
+      ? logsWorkflow.jobs[job]
+      : ci.jobs[job];
 
 describe('the unit suite’s limit is its runner’s: 1 s, judged with coverage off (#477 AC1, AC5)', () => {
   it('holds each test and each hook to 1 s', () => {
@@ -142,10 +162,11 @@ describe('each non-unit suite’s one limit is its CI step’s (#476 AC1)', () =
     },
   );
 
-  it('lists every suite step in CI and deploy-dev, and only the unit suite is left to its runner', () => {
+  it('lists every suite step in CI, deploy-dev and the logs workflow, and only the unit suite is left to its runner', () => {
     const suiteRuns = [
       ...(ci.jobs['build-and-test']?.steps ?? []),
       ...Object.values(deployDev.jobs).flatMap((j) => j.steps ?? []),
+      ...Object.values(logsWorkflow.jobs).flatMap((j) => j.steps ?? []),
     ]
       .map((s) => runOf(s))
       .filter((r) => r.startsWith('npm run test:'));
@@ -159,6 +180,7 @@ describe('no non-unit suite’s config sets a limit of its own (#476 AC2)', () =
   const VITEST = [
     ['vitest.guards.config.ts', guards],
     ['vitest.integration.config.ts', integration],
+    ['vitest.logs.config.ts', logs],
     ['vitest.pacing.config.ts', pacing],
     ['vitest.properties.config.ts', properties],
     ['apps/dev-hosts/vitest.harness.config.ts', devHosts],

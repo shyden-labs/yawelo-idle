@@ -2,6 +2,7 @@ import ts from 'typescript';
 import { lineOf } from './line-of';
 import { listFindings } from './burn-down';
 import { chainRoot } from './one-test-per-case';
+import { EXEMPT, isPropertiesFile } from './measured-minimums';
 import {
   expectationOf,
   isFunction,
@@ -90,6 +91,19 @@ const CONTROLLED = 'againstControl';
 const WRAPPERS = [SEARCHED, CONTROLLED];
 const EXPECT = 'expect';
 const FLOOR = 'floorBreach';
+const MINIMUM = 'minimumBreach';
+
+/**
+ * The floor checks a search in `file` may prove itself by: an exact floor
+ * anywhere, and a measured minimum only in the properties Shyden exempted
+ * from exact floors (2026-10-12: "Fresh cases, safe minimums"; 2026-10-16:
+ * "Yes, all 10"; #84), whose fresh cases move every count from run to run.
+ * Anywhere else a measured minimum proves nothing.
+ */
+const floorsIn = (file: string): ReadonlySet<string> =>
+  isPropertiesFile(file) && EXEMPT[file] !== undefined
+    ? new Set([FLOOR, MINIMUM])
+    : new Set([FLOOR]);
 
 /** Matchers whose argument says "empty": `[]`, `{}`, or an object of empties (#558). */
 const EQUALITY = new Set(['toEqual', 'toStrictEqual']);
@@ -131,12 +145,13 @@ function floorsPopulation(
   if (population === undefined) return false;
   const of = spelled(sf, population);
   const counts = new Set([of, `${of}.length`, `${of}.size`]);
+  const floors = floorsIn(sf.fileName);
   let found = false;
   const visit = (child: ts.Node): void => {
     if (
       ts.isCallExpression(child) &&
       ts.isIdentifier(child.expression) &&
-      child.expression.text === FLOOR &&
+      floors.has(child.expression.text) &&
       child.arguments[1] !== undefined &&
       counts.has(spelled(sf, child.arguments[1]))
     )

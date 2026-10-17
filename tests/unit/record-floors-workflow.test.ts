@@ -1,10 +1,16 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parse } from 'yaml';
 import { RECORD_JOB_ENV } from '../../scripts/record-floors';
 import { floorBreach } from '../floors';
 import { searched } from '../searched';
+import {
+  envSites,
+  onlyJob,
+  stepNamed,
+  workflow,
+  workflowFiles,
+  type WorkflowJob,
+  type WorkflowStep,
+} from './workflow-file';
 import { runOf } from './workflow-steps';
 
 /**
@@ -18,77 +24,12 @@ import { runOf } from './workflow-steps';
  * figures never records them.
  */
 
-const DIR = '.github/workflows';
 const FILE = 'record-floors.yml';
+const ID = 'record-floors';
 
-interface Step {
-  readonly name?: string;
-  readonly uses?: string;
-  readonly run?: unknown;
-  readonly env?: Readonly<Record<string, unknown>>;
-  readonly with?: Readonly<Record<string, unknown>>;
-}
-interface Job {
-  readonly if?: string;
-  readonly env?: Readonly<Record<string, unknown>>;
-  readonly steps?: readonly Step[];
-  readonly container?: { readonly image?: string };
-  readonly permissions?: unknown;
-}
-interface Workflow {
-  readonly on?: unknown;
-  readonly env?: Readonly<Record<string, unknown>>;
-  readonly permissions?: unknown;
-  readonly jobs?: Readonly<Record<string, Job>>;
-}
-
-/** A workflow file parsed; throws, naming it, for one that holds no jobs. */
-function workflow(file: string): Workflow {
-  const parsed = parse(readFileSync(join(DIR, file), 'utf8')) as Workflow;
-  if (parsed.jobs === undefined || Object.keys(parsed.jobs).length === 0)
-    throw new Error(`${file} holds no jobs`);
-  return parsed;
-}
-
-/** The record workflow's one job. */
-function job(): Job {
-  const jobs = Object.values(workflow(FILE).jobs ?? {});
-  if (jobs.length !== 1)
-    throw new Error(`${FILE} holds ${String(jobs.length)} jobs`);
-  const [only] = jobs as [Job];
-  return only;
-}
-
-/** The record job's step named `name`, which must be there once. */
-function step(name: string): Step {
-  const found = (job().steps ?? []).filter((s) => s.name === name);
-  if (found.length !== 1)
-    throw new Error(`${FILE} has ${String(found.length)} steps named ${name}`);
-  return found[0] as Step;
-}
-
-/** Every place a workflow sets or names the recorder's switch, as `file: where`. */
-function switchSites(file: string): string[] {
-  const parsed = workflow(file);
-  const sites: string[] = [];
-  if (parsed.env !== undefined && RECORD_JOB_ENV in parsed.env)
-    sites.push(`${file}: env`);
-  for (const [id, j] of Object.entries(parsed.jobs ?? {})) {
-    if (j.env !== undefined && RECORD_JOB_ENV in j.env)
-      sites.push(`${file}: ${id}.env`);
-    for (const [i, s] of (j.steps ?? []).entries()) {
-      const where = `${id}.steps[${String(i)}]`;
-      if (s.env !== undefined && RECORD_JOB_ENV in s.env)
-        sites.push(`${file}: ${where}.env`);
-      if (runOf(s).includes(RECORD_JOB_ENV))
-        sites.push(`${file}: ${where}.run`);
-    }
-  }
-  return sites;
-}
-
-const workflowFiles = (): string[] =>
-  readdirSync(DIR).filter((f) => /\.ya?ml$/.test(f));
+const job = (): WorkflowJob => onlyJob(FILE, ID);
+const step = (name: string): WorkflowStep => stepNamed(FILE, ID, name);
+const switchSites = (file: string): string[] => envSites(file, RECORD_JOB_ENV);
 
 describe('the record-floors workflow (#547)', () => {
   it('runs only when a pull request is labelled', () => {

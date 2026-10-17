@@ -52,10 +52,10 @@ import { committableFiles } from '../tests/unit/tracked-files.ts';
 export const FLOORS_DIR = 'tests/floors';
 
 /** A guard's name: lower-case words joined by hyphens, so it is a safe file name. */
-const GUARD = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const GUARD = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /** The guard an id belongs to, or undefined when it is not `guard/name`. */
-const guardOf = (id: string): string | undefined => {
+export const guardOf = (id: string): string | undefined => {
   const slash = id.indexOf('/');
   const guard = id.slice(0, slash);
   return slash > 0 && slash < id.length - 1 && GUARD.test(guard)
@@ -232,6 +232,16 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.properties.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:properties'],
+  },
+  {
+    name: 'logs suite',
+    cwd: '.',
+    list: [...VITEST_LIST, '-c', 'vitest.logs.config.ts'],
+    files: vitestListed,
+    run: {
+      unrecordable:
+        'its counts are measured minimums, recorded by record-minimums (#84, #609), never exact floors',
+    },
   },
   {
     name: 'pacing suite',

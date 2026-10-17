@@ -1,0 +1,67 @@
+# Every third-party `uses:` is a full 40-hex commit SHA with a trailing
+# `# vX.Y.Z` comment, as in ci.yml (tests/unit/supply-chain.test.ts).
+#
+# Samples the properties suite's reach counts for their measured minimums
+# (#84; Shyden, 2026-10-12: "Fresh cases, safe minimums"). Label a pull
+# request `record-minimums` and this runs the whole properties suite 200
+# times on its head, 50 runs on each of 4 shards, every run a fresh process
+# drawing fresh seeds and recording every reach count, and uploads each
+# shard's runs as `minimums-<head SHA>-<shard>`. `npm run minimums:fetch
+# <run-id>` reads them back on the laptop, refusing any other commit, and
+# writes the minimums there (operator, 2026-10-12: "CI records, laptop
+# commits"). A red run is a real defect, never a re-run (AC9). Nothing here
+# can write to the repository.
+name: record-minimums
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  record-minimums:
+    if: ${{ github.event.label.name == 'record-minimums' }}
+    runs-on: ubuntu-24.04
+    # 50 runs of the properties suite, measured at 8.2 s wall in CI on
+    # 2026-10-15 (run 38777273204), plus each run's start-up: about 9 min.
+    # Re-measured from the first record and set from it (#84 spec §6).
+    timeout-minutes: 20
+    strategy:
+      # One red shard leaves the record unusable: stop the others.
+      fail-fast: true
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      # A release pull request's head is develop, and main is never recorded
+      # into: their minimums come from the ticket branches merged into them.
+      - name: Refuse develop and main
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REFUSED: develop main
+        run: |
+          for branch in $REFUSED; do
+            if [ "$HEAD_REF" = "$branch" ]; then
+              echo "::error::record-minimums samples ticket branches, not $HEAD_REF (#84)."
+              exit 1
+            fi
+          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      - name: Sample the minimums
+        env:
+          MINIMUMS_RECORD_JOB: record-minimums
+        run: npm run minimums:sample -- --runs 50 --out minimums-runs
+      - name: Upload the sampled runs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: minimums-${{ github.event.pull_request.head.sha }}-${{ matrix.shard }}
+          path: minimums-runs/
+          if-no-files-found: error

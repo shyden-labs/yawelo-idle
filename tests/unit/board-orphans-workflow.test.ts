@@ -1,7 +1,13 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parse } from 'yaml';
 import { SKIPPED_AUTHOR } from '../../scripts/board-orphans';
+import {
+  onlyJob,
+  stepNamed,
+  workflow as readWorkflow,
+  type Workflow,
+  type WorkflowJob,
+  type WorkflowStep,
+} from './workflow-file';
 import { runOf } from './workflow-steps';
 
 /**
@@ -14,49 +20,12 @@ import { runOf } from './workflow-steps';
  * and the script says it skipped (operator 2026-10-15).
  */
 
-const FILE = '.github/workflows/board-orphans.yml';
+const FILE = 'board-orphans.yml';
+const ID = 'board-orphans';
 
-interface Step {
-  readonly name?: string;
-  readonly id?: string;
-  readonly if?: string;
-  readonly uses?: string;
-  readonly run?: unknown;
-  readonly env?: Readonly<Record<string, unknown>>;
-  readonly with?: Readonly<Record<string, unknown>>;
-}
-interface Job {
-  readonly 'runs-on'?: string;
-  readonly 'timeout-minutes'?: number;
-  readonly environment?: unknown;
-  readonly container?: unknown;
-  readonly steps?: readonly Step[];
-}
-interface Workflow {
-  readonly on?: unknown;
-  readonly permissions?: unknown;
-  readonly jobs?: Readonly<Record<string, Job>>;
-}
-
-const workflow = (): Workflow => parse(readFileSync(FILE, 'utf8')) as Workflow;
-
-/** The workflow's one job, refusing any other shape. */
-function job(): Job {
-  const jobs = workflow().jobs ?? {};
-  if (Object.keys(jobs).join() !== 'board-orphans')
-    throw new Error(`${FILE} holds jobs ${Object.keys(jobs).join(', ')}`);
-  return jobs['board-orphans'] as Job;
-}
-
-/** The step called `name`, refusing a missing or doubled one. */
-function step(name: string): Step {
-  const found = (job().steps ?? []).filter((s) => s.name === name);
-  if (found.length !== 1)
-    throw new Error(
-      `${FILE} holds ${String(found.length)} steps named "${name}"`,
-    );
-  return found[0] as Step;
-}
+const workflow = (): Workflow => readWorkflow(FILE);
+const job = (): WorkflowJob => onlyJob(FILE, ID);
+const step = (name: string): WorkflowStep => stepNamed(FILE, ID, name);
 
 const NOT_DEPENDABOT = `\${{ github.event.pull_request.user.login != '${SKIPPED_AUTHOR}' }}`;
 

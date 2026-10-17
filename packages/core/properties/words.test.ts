@@ -11,7 +11,7 @@ import {
   type SequenceReached,
   type Step,
 } from '../test/words-laws';
-import { floorBreach } from '../../../tests/floors';
+import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * The word actions on random times, words and sequences (#28 AC5, AC8), at
@@ -77,10 +77,9 @@ describe('no reachable state holds NaN, a negative or an infinite value', () => 
   let played: SequenceReached | undefined;
 
   /**
-   * Plays 300 seeded games of 20 to 120 steps once and keeps what they
-   * reached, so the property and each floor share one play: the count before
-   * #474 cut it to 25 (#543). The seed stays until the floors become
-   * measured minimums (#84).
+   * Plays 300 fresh games of 20 to 120 steps once a run and keeps what they
+   * reached, so the property and each minimum share one play: the count
+   * before #474 cut it to 25 (#543).
    */
   function play(): SequenceReached {
     if (played !== undefined) return played;
@@ -94,7 +93,7 @@ describe('no reachable state holds NaN, a negative or an infinite value', () => 
           addReached(reached, checkSequence(steps));
         },
       ),
-      { seed: 474, numRuns: 300 },
+      { numRuns: 300 },
     );
     played = reached;
     return reached;
@@ -105,9 +104,9 @@ describe('no reachable state holds NaN, a negative or an infinite value', () => 
   });
 
   it.each(SEQUENCE_REACHED)(
-    'the random sequences reach %s as often as recorded',
+    'the random sequences reach %s at least as often as measured',
     (name) => {
-      expect(floorBreach(`core-words/${name}`, play()[name])).toBeUndefined();
+      expect(minimumBreach(`core-words/${name}`, play()[name])).toBeUndefined();
     },
   );
 });

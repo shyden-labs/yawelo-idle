@@ -7,7 +7,7 @@ import {
   INTERVALS,
   type Case,
 } from '../test/pemandu-tick-laws';
-import { floorBreach } from '../../../tests/floors';
+import { minimumBreach } from '../../../tests/minimums';
 import { DAY_MS } from '../src/clock';
 
 /**
@@ -79,7 +79,7 @@ describe('firstHolding: the first tick of a grid where a monotone test holds', (
 });
 
 describe('nextPurchaseTick (AC3)', () => {
-  // What the generated states reached (#474), each a recorded floor: no
+  // What the generated states reached (#474), each a measured minimum (#84): no
   // purchase inside the horizon, a purchase at the first tick, one solved
   // past a segment's first tick, one past the first segment, and one exactly
   // at `until`.
@@ -94,9 +94,9 @@ describe('nextPurchaseTick (AC3)', () => {
   let solved: Reached | undefined;
 
   /**
-   * Solves 10,000 seeded states once, for the property and its floors: the
-   * count before #474 cut it to 500 to fit the unit limit (#543). The seed
-   * stays until the floors become measured minimums (#84).
+   * Solves 10,000 fresh states once a run, for the property and its
+   * minimums: the count before #474 cut it to 500 to fit the unit limit
+   * (#543).
    */
   function solve(): Reached {
     if (solved !== undefined) return solved;
@@ -116,7 +116,7 @@ describe('nextPurchaseTick (AC3)', () => {
         seen.laterSegment += Number(where.laterSegment);
         seen.atUntil += Number(where.atUntil);
       }),
-      { numRuns: 10_000, seed: 33 },
+      { numRuns: 10_000 },
     );
     solved = seen;
     return seen;
@@ -127,10 +127,10 @@ describe('nextPurchaseTick (AC3)', () => {
   });
 
   it.each(REACHED)(
-    'the generated states reach %s as often as recorded',
+    'the generated states reach %s at least as often as measured',
     (name) => {
       expect(
-        floorBreach(`core-pemandu-tick/${name}`, solve()[name]),
+        minimumBreach(`core-pemandu-tick/${name}`, solve()[name]),
       ).toBeUndefined();
     },
   );

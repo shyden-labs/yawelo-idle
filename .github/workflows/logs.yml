@@ -1,0 +1,35 @@
+# The logs suite (#84, spec §5.12): the checks of the code that writes, keeps
+# or replays the game's logs and audit trails, at their full sizes. Shyden,
+# 2026-10-16: "separate test suite for logging and auditing. run in ci as a
+# pre-requisite to a release", and "for now, you can create the workflow that
+# the release pipeline will call later". So a person starts it on the release
+# ref, or the release pipeline (#252) calls it, and no pull request runs it.
+#
+# Every third-party `uses:` is a full 40-hex commit SHA with a trailing
+# `# vX.Y.Z` comment, the same pins as ci.yml.
+name: logs
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  logs:
+    runs-on: ubuntu-24.04
+    # An install and the suite's one-minute step (#44: every job stops within
+    # minutes when a step hangs).
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      # Its one limit (tests/unit/suite-limits.test.ts).
+      - name: Logs (the event log’s checks, before a release)
+        timeout-minutes: 1
+        run: npm run test:logs

@@ -318,6 +318,27 @@ describe('the file lists', () => {
     ).toEqual(['tests/engines/a.spec.ts']);
   });
 
+  it('knows the logs suite and refuses to record a floor in it: its counts are measured minimums (#84, #609)', () => {
+    const logs = SUITES.find(({ name }) => name === 'logs suite') as Suite;
+    expect(logs.list).toEqual([
+      'npx',
+      'vitest',
+      'list',
+      '--filesOnly',
+      '-c',
+      'vitest.logs.config.ts',
+    ]);
+    expect(
+      planRecord(
+        ['packages/core/logs/log.test.ts'],
+        SUITES,
+        new Map([['logs suite', ['packages/core/logs/log.test.ts']]]),
+      ).refusals,
+    ).toEqual([
+      'packages/core/logs/log.test.ts calls floorBreach in the logs suite, which cannot record: its counts are measured minimums, recorded by record-minimums (#84, #609), never exact floors',
+    ]);
+  });
+
   it('joins a suite’s files to its directory', () => {
     const site = SUITES.find(({ name }) => name === 'site harness') as Suite;
     expect(suiteFiles(site, 'test/site.test.ts\n')).toEqual([
