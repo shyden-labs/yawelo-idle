@@ -1,0 +1,82 @@
+# Throwaway (#649): records Playwright JSON reports for the runner's reader
+# tests. Never merged; the branch is deleted once the reports are fetched.
+name: record-playwright-reports
+
+on:
+  push:
+    branches: [scratch/649-record-playwright-reports]
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --workspace @yawelo-idle/web
+      - name: engines, clean
+        env:
+          {
+            PLAYWRIGHT_JSON_OUTPUT_FILE: reports/engines-clean.json,
+            FORCE_COLOR: '0',
+          }
+        run: npx playwright test -c playwright.engines.config.ts --reporter=list,json || echo "exit $?"
+      - name: web smoke, clean
+        env:
+          {
+            PLAYWRIGHT_JSON_OUTPUT_FILE: reports/web-clean.json,
+            FORCE_COLOR: '0',
+          }
+        run: npx playwright test -c playwright.web.config.ts --reporter=list,json || echo "exit $?"
+      - name: engines, timed out
+        env:
+          {
+            PLAYWRIGHT_JSON_OUTPUT_FILE: reports/engines-timed-out.json,
+            FORCE_COLOR: '0',
+          }
+        run: npx playwright test -c playwright.engines.config.ts --timeout=1 --reporter=list,json || echo "exit $?"
+      - name: web smoke, a failed expectation
+        env:
+          {
+            PLAYWRIGHT_JSON_OUTPUT_FILE: reports/web-failed.json,
+            FORCE_COLOR: '0',
+          }
+        run: |
+          python3 .github/scripts-scratch/plant.py tests/web/shell.spec.ts "expect(response?.headers()['content-security-policy']).toContain(" "expect(response?.headers()['content-security-policy']).not.toContain("
+          npx playwright test -c playwright.web.config.ts --reporter=list,json || echo "exit $?"
+      - name: engines, a failed expectation, colour forced
+        env:
+          {
+            PLAYWRIGHT_JSON_OUTPUT_FILE: reports/engines-failed-colour.json,
+            FORCE_COLOR: '1',
+          }
+        run: |
+          python3 .github/scripts-scratch/plant.py tests/engines/golden-vectors.spec.ts ".toBe(digest(fn));" ".toBe(digest(fn) + 'x');"
+          npx playwright test -c playwright.engines.config.ts --reporter=list,json || echo "exit $?"
+      - name: engines, a spec that fails to load
+        env:
+          {
+            PLAYWRIGHT_JSON_OUTPUT_FILE: reports/engines-load-error.json,
+            FORCE_COLOR: '0',
+          }
+        run: |
+          git checkout -- tests/engines/golden-vectors.spec.ts
+          echo 'const broken = (;' >> tests/engines/golden-log.spec.ts
+          npx playwright test -c playwright.engines.config.ts --reporter=list,json || echo "exit $?"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-reports
+          path: reports/
