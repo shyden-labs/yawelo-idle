@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   mutationFilesIn,
+  needsListings,
+  nonUnitTests,
   readNameStatus,
   summary,
+  unprovedTests,
 } from '../../scripts/mutations-changed';
 import { againstControl } from '../searched';
 
@@ -11,6 +14,9 @@ import { againstControl } from '../searched';
  * from `git diff --name-status`. The `mutations` workflow runs exactly
  * these through the runner. Paths come from the pull request, so any that
  * could carry more than a file name is refused rather than passed on.
+ *
+ * The judge (#619 AC2): every non-unit test the pull request adds or
+ * changes must be a target of a mutation file it adds or changes.
  */
 
 describe('readNameStatus', () => {
@@ -100,14 +106,140 @@ describe('mutationFilesIn', () => {
   });
 });
 
+describe('nonUnitTests', () => {
+  it('maps each file a non-unit suite lists to that suite, leaving out the unit suite’s', () => {
+    expect(
+      nonUnitTests(
+        new Map([
+          ['unit suite', ['tests/unit/a.test.ts']],
+          ['guards suite', ['tests/guards/b.test.ts']],
+          ['game harness', ['apps/web/tests/c.test.ts']],
+        ]),
+      ),
+    ).toEqual(
+      new Map([
+        ['tests/guards/b.test.ts', 'guards suite'],
+        ['apps/web/tests/c.test.ts', 'game harness'],
+      ]),
+    );
+  });
+
+  it('refuses a file two suites list', () => {
+    expect(() =>
+      nonUnitTests(
+        new Map([
+          ['guards suite', ['tests/x.test.ts']],
+          ['properties suite', ['tests/x.test.ts']],
+        ]),
+      ),
+    ).toThrow('tests/x.test.ts is listed by guards suite and properties suite');
+  });
+});
+
+describe('unprovedTests', () => {
+  const NON_UNIT = new Map([
+    ['tests/guards/a.test.ts', 'guards suite'],
+    ['tests/guards/b.test.ts', 'guards suite'],
+    ['apps/web/tests/c.test.ts', 'game harness'],
+  ]);
+  const unproved = (path: string, suite: string): string =>
+    `${path} (${suite}): no mutation file this pull request adds or changes targets it`;
+
+  it('names each non-unit test added, changed or renamed in that no changed mutation file targets', () => {
+    expect(
+      unprovedTests(
+        [
+          { status: 'A', path: 'tests/guards/a.test.ts' },
+          { status: 'M', path: 'apps/web/tests/c.test.ts' },
+          { status: 'R', path: 'tests/guards/b.test.ts' },
+        ],
+        NON_UNIT,
+        new Set(),
+      ),
+    ).toEqual([
+      unproved('tests/guards/a.test.ts', 'guards suite'),
+      unproved('apps/web/tests/c.test.ts', 'game harness'),
+      unproved('tests/guards/b.test.ts', 'guards suite'),
+    ]);
+  });
+
+  it('passes a changed non-unit test that a changed mutation file targets', () => {
+    expect(
+      unprovedTests(
+        [
+          { status: 'M', path: 'tests/guards/a.test.ts' },
+          { status: 'M', path: 'tests/guards/b.test.ts' },
+        ],
+        NON_UNIT,
+        new Set(['tests/guards/a.test.ts']),
+      ),
+    ).toEqual([unproved('tests/guards/b.test.ts', 'guards suite')]);
+  });
+
+  it('passes a deleted non-unit test', () => {
+    expect(
+      unprovedTests(
+        [
+          { status: 'D', path: 'tests/guards/a.test.ts' },
+          { status: 'M', path: 'tests/guards/b.test.ts' },
+        ],
+        NON_UNIT,
+        new Set(),
+      ),
+    ).toEqual([unproved('tests/guards/b.test.ts', 'guards suite')]);
+  });
+
+  it('passes a changed path no non-unit suite lists', () => {
+    expect(
+      unprovedTests(
+        [
+          { status: 'M', path: 'tests/unit/d.test.ts' },
+          { status: 'M', path: 'scripts/mutate.ts' },
+          { status: 'M', path: 'tests/guards/b.test.ts' },
+        ],
+        NON_UNIT,
+        new Set(),
+      ),
+    ).toEqual([unproved('tests/guards/b.test.ts', 'guards suite')]);
+  });
+});
+
+describe('needsListings', () => {
+  it('lists the suites when any changed path is off the docs-only allowlist', () => {
+    expect(
+      needsListings([
+        { status: 'M', path: 'HANDOVER.md' },
+        { status: 'M', path: 'tests/guards/a.test.ts' },
+      ]),
+    ).toBe(true);
+  });
+
+  it('lists none when every changed path is HANDOVER.md or Markdown under docs/', () => {
+    expect(
+      needsListings([
+        { status: 'M', path: 'HANDOVER.md' },
+        { status: 'A', path: 'docs/notes.md' },
+      ]),
+    ).toBe(false);
+  });
+});
+
 describe('summary', () => {
-  it('says how many mutation files changed of how many paths it judged', () => {
-    expect(summary(['tests/mutations/a.ts'], 7)).toBe(
-      '1 mutation file changed of 7 paths judged',
+  it('says how many non-unit tests and mutation files changed of how many paths it judged', () => {
+    expect(summary({ tests: 2, files: 1, judged: 7 })).toBe(
+      '2 non-unit tests and 1 mutation file changed of 7 paths judged',
     );
   });
 
   it('says so when none changed', () => {
-    expect(summary([], 3)).toBe('0 mutation files changed of 3 paths judged');
+    expect(summary({ tests: 0, files: 0, judged: 3 })).toBe(
+      '0 non-unit tests and 0 mutation files changed of 3 paths judged',
+    );
+  });
+
+  it('names one test in the singular', () => {
+    expect(summary({ tests: 1, files: 2, judged: 4 })).toBe(
+      '1 non-unit test and 2 mutation files changed of 4 paths judged',
+    );
   });
 });

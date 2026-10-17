@@ -1,12 +1,13 @@
 /**
- * `node scripts/mutations-changed.ts` (#649, spec §7): which mutation files a
- * pull request adds or changes, for the `mutations` workflow to run through
- * the runner. Reads `git diff --name-status <BASE>...HEAD`, prints how many
- * paths it judged, and writes `count` and `files` (space-separated) to
- * `GITHUB_OUTPUT`. #619 extends it into the judge of changed non-unit tests.
+ * Which mutation files a pull request adds or changes, and the judge of its
+ * changed non-unit tests (#649 spec §7, #619 AC2): every non-unit test the
+ * pull request adds, changes or renames in must be a target of a mutation
+ * file it adds or changes. `scripts/mutations-changed-cli.ts` reads the diff,
+ * lists the suites and loads the mutation files; this module judges, so the
+ * unit suite can load it.
  */
-import { spawnSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { onAllowlist } from './ci-scope.ts';
+import { UNIT_SUITE } from './mutate.ts';
 
 /** One path a diff names, with git's status letter (a rename: its new path). */
 export interface Changed {
@@ -55,31 +56,62 @@ export function mutationFilesIn(changed: readonly Changed[]): string[] {
     });
 }
 
-/** `<n> mutation file(s) changed of <m> paths judged`: never a silent pass. */
-export function summary(files: readonly string[], judged: number): string {
-  return `${String(files.length)} mutation file${files.length === 1 ? '' : 's'} changed of ${String(judged)} paths judged`;
+/**
+ * Each file a non-unit suite lists, to that suite, from `listings` (suite
+ * name to the files it lists), refusing a file two suites list.
+ */
+export function nonUnitTests(
+  listings: ReadonlyMap<string, readonly string[]>,
+): Map<string, string> {
+  const suiteOf = new Map<string, string>();
+  for (const [suite, files] of listings) {
+    if (suite === UNIT_SUITE) continue;
+    for (const file of files) {
+      const other = suiteOf.get(file);
+      if (other !== undefined)
+        throw new Error(`${file} is listed by ${other} and ${suite}`);
+      suiteOf.set(file, suite);
+    }
+  }
+  return suiteOf;
 }
 
-function main(): void {
-  const base = process.env.BASE;
-  const output = process.env.GITHUB_OUTPUT;
-  if (base === undefined || base === '' || output === undefined)
-    throw new Error('BASE and GITHUB_OUTPUT must be set');
-  const diff = spawnSync(
-    'git',
-    ['diff', '--name-status', '-M', `${base}...HEAD`],
-    { encoding: 'utf8' },
-  );
-  if (diff.status !== 0)
-    throw new Error(`git diff failed: ${diff.stderr.trim()}`);
-  const changed = readNameStatus(diff.stdout);
-  const files = mutationFilesIn(changed);
-  console.log(summary(files, changed.length));
-  for (const file of files) console.log(`  ${file}`);
-  appendFileSync(
-    output,
-    `count=${String(files.length)}\nfiles=${files.join(' ')}\n`,
-  );
+/**
+ * Each non-unit test among `changed` that exists after the change and that
+ * no target of a changed mutation file names, in diff order.
+ */
+export function unprovedTests(
+  changed: readonly Changed[],
+  nonUnit: ReadonlyMap<string, string>,
+  targeted: ReadonlySet<string>,
+): string[] {
+  return changed.flatMap(({ status, path }) => {
+    const suite = nonUnit.get(path);
+    return status === 'D' || suite === undefined || targeted.has(path)
+      ? []
+      : [
+          `${path} (${suite}): no mutation file this pull request adds or changes targets it`,
+        ];
+  });
 }
 
-if (import.meta.main) main();
+/**
+ * Whether the judge must list the suites: a change of only HANDOVER.md and
+ * Markdown under docs/ (build-and-test's docs-only fast path, #360) holds no
+ * test, so the check passes at once with nothing installed.
+ */
+export function needsListings(changed: readonly Changed[]): boolean {
+  return changed.some(({ path }) => !onAllowlist(path));
+}
+
+const counted = (n: number, one: string, many: string): string =>
+  `${String(n)} ${n === 1 ? one : many}`;
+
+/** How many non-unit tests and mutation files changed of how many paths judged: never a silent pass. */
+export function summary(counts: {
+  readonly tests: number;
+  readonly files: number;
+  readonly judged: number;
+}): string {
+  return `${counted(counts.tests, 'non-unit test', 'non-unit tests')} and ${counted(counts.files, 'mutation file', 'mutation files')} changed of ${String(counts.judged)} paths judged`;
+}
