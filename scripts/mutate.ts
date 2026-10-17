@@ -1,0 +1,713 @@
+/**
+ * The mutation runner (#527, spec `docs/superpowers/specs/
+ * 2026-10-17-mutation-runner-design.md`): `npm run mutate -- <file>...`
+ * plants each mutation of each tracked mutation file (`tests/mutations/`,
+ * shaped by `scripts/mutation-file.ts`), runs the whole suite its targets
+ * belong to, puts the file back, and judges the run against the prediction
+ * written before it. Any row not as predicted fails the run; nothing is
+ * retried.
+ *
+ * The functions here are pure, and the unit suite proves them; `main`
+ * wires them to processes and files, and the integration suite runs it.
+ */
+import { spawn, spawnSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join, posix, relative, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import {
+  FILE_SEPARATOR,
+  asMutationFile,
+  mutationFileProblems,
+  type Mutation,
+  type MutationFile,
+} from './mutation-file.ts';
+import {
+  FLOORS_DIR,
+  readFloorsDir,
+  RECORD_ENV,
+  SUITES,
+  type Observation,
+  type Suite,
+} from './record-floors.ts';
+
+/** What one vitest run reported, as far as a judge reads it. */
+export interface Report {
+  readonly total: number;
+  /** Every test file the run reported, repository-relative. */
+  readonly files: readonly string[];
+  /** Each failing test by full name, to its failure messages joined. */
+  readonly failing: ReadonlyMap<string, string>;
+}
+
+/** A test as a mutation file names it: `<file> › <describe> > … > <title>`. */
+export function fullName(
+  file: string,
+  ancestors: readonly string[],
+  title: string,
+): string {
+  return `${file}${FILE_SEPARATOR}${[...ancestors, title].join(' > ')}`;
+}
+
+const isRecord = (x: unknown): x is Record<string, unknown> =>
+  typeof x === 'object' && x !== null && !Array.isArray(x);
+
+const isCount = (x: unknown): x is number =>
+  typeof x === 'number' && Number.isInteger(x) && x >= 0;
+
+/**
+ * Reads vitest's JSON report, refusing any shape it does not know rather
+ * than reading it as a clean run. A file that failed outside any test (a
+ * syntax error, a throw at load) is named `<file> › (the file)`.
+ */
+export function readReport(json: unknown, root: string): Report {
+  const refuse = (why: string): never => {
+    throw new Error(`the JSON report is not vitest's: ${why}`);
+  };
+  if (!isRecord(json)) return refuse('is not an object');
+  if (!isCount(json.numTotalTests))
+    return refuse('numTotalTests is not a count');
+  if (!Array.isArray(json.testResults))
+    return refuse('testResults is not a list');
+  const files: string[] = [];
+  const failing = new Map<string, string>();
+  for (const fileResult of json.testResults as unknown[]) {
+    if (!isRecord(fileResult) || typeof fileResult.name !== 'string')
+      return refuse('a file result has no name');
+    const file = relative(root, fileResult.name).split(sep).join(posix.sep);
+    if (file.startsWith('..') || file === '')
+      return refuse(`${fileResult.name} is outside ${root}`);
+    files.push(file);
+    if (!Array.isArray(fileResult.assertionResults))
+      return refuse(`${file} has no test results`);
+    let testFailed = false;
+    for (const test of fileResult.assertionResults as unknown[]) {
+      if (!isRecord(test) || typeof test.title !== 'string')
+        return refuse(`a test in ${file} has no title`);
+      const ancestors = test.ancestorTitles;
+      if (
+        !Array.isArray(ancestors) ||
+        !ancestors.every((a) => typeof a === 'string')
+      )
+        return refuse(`a test in ${file} has no describe titles`);
+      if (test.status !== 'failed') continue;
+      const messages = test.failureMessages;
+      if (
+        !Array.isArray(messages) ||
+        !messages.every((m) => typeof m === 'string')
+      )
+        return refuse(`a failing test in ${file} has no messages`);
+      testFailed = true;
+      failing.set(fullName(file, ancestors, test.title), messages.join('\n'));
+    }
+    const message =
+      typeof fileResult.message === 'string' ? fileResult.message : '';
+    if (fileResult.status === 'failed' && !testFailed)
+      failing.set(`${file}${FILE_SEPARATOR}(the file)`, message);
+  }
+  return { total: json.numTotalTests, files, failing };
+}
+
+/** Timed-out tests, from the default reporter's log: the JSON hides them. */
+export function timeoutsIn(log: string): number {
+  return log.split('Test timed out').length - 1;
+}
+
+export type Planted = { readonly text: string } | { readonly matches: number };
+
+/** `text` with `anchor` replaced, or how often it occurs when that is not once. */
+export function plant(
+  text: string,
+  anchor: string,
+  replacement: string,
+): Planted {
+  const parts = text.split(anchor);
+  if (parts.length !== 2) return { matches: parts.length - 1 };
+  return { text: parts.join(replacement) };
+}
+
+export type SuiteChoice =
+  { readonly suite: string } | { readonly refusal: string };
+
+/** The one suite, of `listings` (suite name to the files it lists), that runs every target. */
+export function suiteOf(
+  targets: readonly string[],
+  listings: ReadonlyMap<string, readonly string[]>,
+): SuiteChoice {
+  const found: [string, string][] = [];
+  for (const target of targets) {
+    const suites = [...listings]
+      .filter(([, files]) => files.includes(target))
+      .map(([name]) => name);
+    if (suites.length === 0)
+      return {
+        refusal: `${target} is in no suite the runner can run (the harness and Playwright suites wait on #649)`,
+      };
+    if (suites.length > 1)
+      return { refusal: `${target} is listed by ${suites.join(' and ')}` };
+    found.push([target, suites[0] as string]);
+  }
+  const suites = new Set(found.map(([, suite]) => suite));
+  if (suites.size > 1)
+    return {
+      refusal: `the targets are in more than one suite: ${found.map(([t, s]) => `${t} in ${s}`).join(', ')}`,
+    };
+  return { suite: found[0]?.[1] as string };
+}
+
+export const UNIT_SUITE = 'unit suite';
+
+/** Why `suite` may not run here: the laptop runs the unit suite only. */
+export function laptopRefusal(suite: string, ci: boolean): string | undefined {
+  if (ci || suite === UNIT_SUITE) return undefined;
+  return `${suite}: the laptop runs the unit suite only (Shyden, 2026-10-09); push and let the mutations check run it`;
+}
+
+/** A whole-repo floor the planted text moves, and the text its failure shows. */
+export interface CorpusPrediction {
+  /** The file whose test checks the floor. */
+  readonly file: string;
+  readonly id: string;
+  readonly actual: number;
+  readonly recorded: number | undefined;
+  /** What `floorBreach` says of it (`tests/floors.ts`). */
+  readonly text: string;
+}
+
+/**
+ * The floors a record-mode run of the guards suite saw away from their
+ * recorded figures (spec §6), except those checked in `excluded`: the
+ * targets, and every guard that imports the mutated file, whose moves are
+ * the author's to predict.
+ */
+export function corpusPredictions(
+  observations: readonly Observation[],
+  floors: Readonly<Record<string, number>>,
+  excluded: ReadonlySet<string>,
+): CorpusPrediction[] {
+  const predictions = new Map<string, CorpusPrediction>();
+  for (const { id, actual, site } of observations) {
+    const at = /^(.+):\d+$/.exec(site);
+    if (at?.[1] === undefined)
+      throw new Error(
+        `cannot read a file:line from the site "${site}" of ${id}`,
+      );
+    const file = at[1];
+    const recorded = floors[id];
+    if (actual === recorded || excluded.has(file)) continue;
+    const text =
+      recorded === undefined
+        ? `${id} is not recorded`
+        : `${id}: read ${String(actual)}, recorded ${String(recorded)}`;
+    predictions.set(`${file}\n${text}`, { file, id, actual, recorded, text });
+  }
+  return [...predictions.values()];
+}
+
+/** Terminal colour codes, which vitest leaves in some messages. */
+const COLOURS = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+
+const firstLine = (message: string): string =>
+  (
+    message
+      .replace(COLOURS, '')
+      .split('\n')
+      .find((line) => line.trim() !== '') ?? ''
+  )
+    .trim()
+    .slice(0, 300);
+
+/**
+ * Each way the run differs from the prediction; none means it matched. The
+ * failing tests must be exactly the predicted ones, each red for its stated
+ * reason, plus those a corpus prediction accounts for in its own file.
+ */
+export function judge(
+  mutation: Mutation,
+  corpus: readonly CorpusPrediction[],
+  report: Report | undefined,
+  baselineTotal: number,
+  timeouts: number,
+): string[] {
+  if (report === undefined)
+    return ['no JSON report: the run ended before vitest wrote one'];
+  const problems: string[] = [];
+  if (timeouts > 0)
+    problems.push(
+      `${String(timeouts)} test${timeouts === 1 ? '' : 's'} timed out`,
+    );
+  if (report.total !== baselineTotal)
+    problems.push(
+      `the total moved: ${String(report.total)} tests, not ${String(baselineTotal)}`,
+    );
+  for (const [test, text] of Object.entries(mutation.red)) {
+    const message = report.failing.get(test);
+    if (message === undefined)
+      problems.push(`predicted red, stayed green: ${test}`);
+    else if (!message.includes(text))
+      problems.push(
+        `red for another reason: ${test} (wanted "${text}"): ${firstLine(message)}`,
+      );
+  }
+  const accounts = (p: CorpusPrediction, test: string, message: string) =>
+    test.startsWith(`${p.file}${FILE_SEPARATOR}`) && message.includes(p.text);
+  for (const p of corpus) {
+    if (
+      ![...report.failing].some(([test, message]) => accounts(p, test, message))
+    )
+      problems.push(
+        `whole-repo floor stayed green: ${p.id} ${String(p.recorded)} → ${String(p.actual)} in ${p.file}`,
+      );
+  }
+  for (const [test, message] of report.failing) {
+    if (test in mutation.red) continue;
+    if (corpus.some((p) => accounts(p, test, message))) continue;
+    problems.push(`unpredicted red: ${test}: ${firstLine(message)}`);
+  }
+  return problems;
+}
+
+/** A suite the runner can run: its name in `SUITES`, and its vitest config (none: the default). */
+export interface MutableSuite {
+  readonly name: string;
+  readonly config: string | undefined;
+}
+
+/** One vitest run of a whole suite. Paths are repository-relative. */
+export interface RunRequest {
+  readonly suite: MutableSuite;
+  readonly json: string;
+  readonly log: string;
+  /** Record every floor check to this file (`FLOORS_RECORD`), failing none. */
+  readonly recordTo?: string;
+  /** List the suite's files that import this file, running no test. */
+  readonly related?: string;
+}
+
+export interface RunOutcome {
+  /** The parsed JSON report; undefined when the run wrote none. */
+  readonly json: unknown;
+  /** The default reporter's output. */
+  readonly log: string;
+  /** Whether the run passed the ceiling and was stopped. */
+  readonly ceilingHit: boolean;
+}
+
+/** Everything `runFile` does outside its own logic, so a stand-in can drive it. */
+export interface Io {
+  /** Whether this is CI (`CI=true`), where every suite may run. */
+  readonly ci: boolean;
+  /** The repository root, as vitest names files (real path). */
+  readonly root: string;
+  read(path: string): Uint8Array;
+  write(path: string, bytes: Uint8Array): void;
+  tracked(path: string): boolean;
+  /** Whether `path` is as HEAD has it. */
+  clean(path: string): boolean;
+  /** The suite's test files, repository-relative. */
+  list(suite: MutableSuite): readonly string[];
+  run(request: RunRequest): Promise<RunOutcome>;
+  observations(path: string): readonly Observation[];
+  floors(): Readonly<Record<string, number>>;
+  /** Restore `path` to these bytes if the process is stopped while it is planted. */
+  guard(path: string, bytes: Uint8Array): void;
+  release(path: string): void;
+  print(line: string): void;
+}
+
+export const CEILING_SECONDS = 600;
+export const GUARDS_SUITE = 'guards suite';
+export const LOG_DIR = '.mutations';
+
+const sameBytes = (a: Uint8Array, b: Uint8Array): boolean =>
+  a.length === b.length && a.every((byte, i) => byte === b[i]);
+
+/** The problems of one suite run that is meant to be clean. */
+function redBaseline(
+  outcome: RunOutcome,
+  root: string,
+  suite: string,
+): string[] {
+  if (outcome.ceilingHit)
+    return [
+      `${suite} ran past the ${String(CEILING_SECONDS)} s ceiling and was stopped`,
+    ];
+  if (outcome.json === undefined)
+    return ['no JSON report: the run ended before vitest wrote one'];
+  const report = readReport(outcome.json, root);
+  const timeouts = timeoutsIn(outcome.log);
+  return [
+    ...[...report.failing].map(
+      ([test, message]) => `${test}: ${firstLine(message)}`,
+    ),
+    ...(timeouts > 0
+      ? [`${String(timeouts)} test${timeouts === 1 ? '' : 's'} timed out`]
+      : []),
+  ];
+}
+
+/**
+ * Runs one mutation file (spec §4): checks it, finds its suite, runs the
+ * suite clean, then plants each mutation in turn, runs the whole suite, puts
+ * the file back and judges the run. Refusals throw before anything is
+ * planted; each row's verdict is printed, and the counts returned.
+ */
+export async function runFile(
+  io: Io,
+  path: string,
+  file: MutationFile,
+  suites: readonly MutableSuite[],
+): Promise<{ readonly matched: number; readonly rows: number }> {
+  const refuse = (why: string): never => {
+    throw new Error(`${path}: ${why}`);
+  };
+  const problems = mutationFileProblems(file);
+  if (problems.length > 0) refuse(problems.join('\n  '));
+  const touched = [
+    ...new Set([...file.targets, ...file.mutations.map((m) => m.file)]),
+  ];
+  for (const each of touched) {
+    if (!io.tracked(each)) refuse(`${each} is not tracked`);
+    if (!io.clean(each))
+      refuse(`${each} differs from HEAD: commit or restore it first`);
+  }
+  const choice = suiteOf(
+    file.targets,
+    new Map(suites.map((s) => [s.name, io.list(s)])),
+  );
+  if ('refusal' in choice) return refuse(choice.refusal);
+  const suite = suites.find((s) => s.name === choice.suite) as MutableSuite;
+  const laptop = laptopRefusal(suite.name, io.ci);
+  if (laptop !== undefined) refuse(laptop);
+
+  const dir = `${LOG_DIR}/${posix.basename(path).replace(/\.[^.]*$/, '')}`;
+  const at = (name: string, ext: string) => `${dir}/${name}.${ext}`;
+  const baseline = await io.run({
+    suite,
+    json: at('baseline', 'json'),
+    log: at('baseline', 'log'),
+  });
+  const red = redBaseline(baseline, io.root, suite.name);
+  if (red.length > 0)
+    refuse(
+      `the ${suite.name} is red before any mutation:\n  ${red.join('\n  ')}`,
+    );
+  const baselineTotal = readReport(baseline.json, io.root).total;
+
+  const importers = new Map<string, ReadonlySet<string>>();
+  const importersOf = async (target: string): Promise<ReadonlySet<string>> => {
+    const known = importers.get(target);
+    if (known !== undefined) return known;
+    const name = `importers-${String(importers.size + 1)}`;
+    const listed = await io.run({
+      suite,
+      json: at(name, 'json'),
+      log: at(name, 'log'),
+      related: target,
+    });
+    if (listed.ceilingHit || listed.json === undefined)
+      refuse(`could not list the guards that import ${target}`);
+    const found = new Set(readReport(listed.json, io.root).files);
+    importers.set(target, found);
+    return found;
+  };
+
+  let matched = 0;
+  for (const mutation of file.mutations) {
+    const original = io.read(mutation.file);
+    const planted = plant(
+      new TextDecoder('utf-8', { fatal: true }).decode(original),
+      mutation.anchor,
+      mutation.replacement,
+    );
+    if ('matches' in planted) {
+      io.print(
+        `ANCHOR ${mutation.name}: ${String(planted.matches)} matches in ${mutation.file}`,
+      );
+      continue;
+    }
+    const guards = suite.name === GUARDS_SUITE;
+    const excluded = guards
+      ? new Set([...file.targets, ...(await importersOf(mutation.file))])
+      : new Set<string>();
+    let corpus: CorpusPrediction[] = [];
+    let outcome: RunOutcome;
+    io.guard(mutation.file, original);
+    try {
+      io.write(mutation.file, new TextEncoder().encode(planted.text));
+      if (guards) {
+        const recordTo = at(mutation.name, 'observations.jsonl');
+        await io.run({
+          suite,
+          json: at(mutation.name, 'record.json'),
+          log: at(mutation.name, 'record.log'),
+          recordTo,
+        });
+        corpus = corpusPredictions(
+          io.observations(recordTo),
+          io.floors(),
+          excluded,
+        );
+      }
+      outcome = await io.run({
+        suite,
+        json: at(mutation.name, 'json'),
+        log: at(mutation.name, 'log'),
+      });
+    } finally {
+      io.write(mutation.file, original);
+      io.release(mutation.file);
+    }
+    if (!sameBytes(io.read(mutation.file), original))
+      throw new Error(
+        `${mutation.file} did not read back as it was before ${mutation.name}`,
+      );
+    const found = outcome.ceilingHit
+      ? [
+          `${suite.name} ran past the ${String(CEILING_SECONDS)} s ceiling and was stopped`,
+        ]
+      : judge(
+          mutation,
+          corpus,
+          outcome.json === undefined
+            ? undefined
+            : readReport(outcome.json, io.root),
+          baselineTotal,
+          timeoutsIn(outcome.log),
+        );
+    if (found.length === 0) matched += 1;
+    io.print(
+      found.length === 0 ? `ok   ${mutation.name}` : `MISS ${mutation.name}`,
+    );
+    for (const p of corpus)
+      io.print(
+        `  whole-repo floor: ${p.id} ${String(p.recorded)} → ${String(p.actual)}, ${p.file}`,
+      );
+    for (const problem of found) io.print(`  ${problem}`);
+  }
+  for (const each of new Set(file.mutations.map((m) => m.file)))
+    if (!io.clean(each))
+      refuse(`${each} differs from HEAD after every mutation was put back`);
+  io.print(
+    `${path}: ${String(matched)} of ${String(file.mutations.length)} matched`,
+  );
+  return { matched, rows: file.mutations.length };
+}
+
+/** The suites in `suites` the runner can run: those with a `mutate` config, all run from the root. */
+export function mutableSuites(suites: readonly Suite[]): MutableSuite[] {
+  return suites.flatMap((suite) => {
+    if (suite.mutate === undefined) return [];
+    if (suite.cwd !== '.')
+      throw new Error(
+        `${suite.name} runs from ${suite.cwd}: the runner runs suites from the root only (#649)`,
+      );
+    return [{ name: suite.name, config: suite.mutate.config }];
+  });
+}
+
+/** A test-name pattern no test matches: `related` then lists files and runs nothing. */
+const NO_TEST = '^$';
+
+/** The vitest arguments for one request, reports written under `root`. */
+export function vitestArgs(request: RunRequest, root: string): string[] {
+  return [
+    'vitest',
+    ...(request.related === undefined
+      ? ['run']
+      : ['related', request.related, '--run', '-t', NO_TEST]),
+    ...(request.suite.config === undefined ? [] : ['-c', request.suite.config]),
+    '--reporter=default',
+    '--reporter=json',
+    `--outputFile=${join(root, request.json)}`,
+  ];
+}
+
+/** The environment a run gets: the caller's, recording floors only when asked. */
+export function runEnv(
+  base: Readonly<Record<string, string | undefined>>,
+  request: RunRequest,
+  root: string,
+): Record<string, string | undefined> {
+  const env = Object.fromEntries(
+    Object.entries(base).filter(([key]) => key !== RECORD_ENV),
+  );
+  if (request.recordTo !== undefined)
+    env[RECORD_ENV] = join(root, request.recordTo);
+  return env;
+}
+
+/** The floor checks a record-mode run wrote, one JSON object a line. */
+export function readObservations(text: string, path: string): Observation[] {
+  const lines = text.split('\n').filter((line) => line !== '');
+  if (lines.length === 0)
+    throw new Error(`no floor check was recorded to ${path}`);
+  return lines.map((line) => {
+    const o = JSON.parse(line) as unknown;
+    if (
+      !isRecord(o) ||
+      typeof o.id !== 'string' ||
+      !isCount(o.actual) ||
+      typeof o.site !== 'string'
+    )
+      throw new Error(
+        `${path} holds a line that is not a floor check: ${line}`,
+      );
+    return { id: o.id, actual: o.actual, site: o.site };
+  });
+}
+
+/** Runs `command` under the ceiling, killing its whole process group past it. */
+function spawnBounded(
+  command: string,
+  args: readonly string[],
+  options: { cwd: string; env: Record<string, string | undefined> },
+): Promise<{ log: string; ceilingHit: boolean }> {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(command, args, { ...options, detached: true });
+    let log = '';
+    let ceilingHit = false;
+    child.stdout.on('data', (chunk: Buffer) => (log += chunk.toString()));
+    child.stderr.on('data', (chunk: Buffer) => (log += chunk.toString()));
+    const timer = setTimeout(() => {
+      ceilingHit = true;
+      if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL');
+    }, CEILING_SECONDS * 1_000);
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on('close', () => {
+      clearTimeout(timer);
+      resolvePromise({ log, ceilingHit });
+    });
+  });
+}
+
+/** The real `Io`: files and git under `root`, suites run with npx. */
+export function realIo(options: {
+  readonly root: string;
+  readonly ci: boolean;
+  readonly suites: readonly Suite[];
+  readonly floorsDir: string;
+}): Io & { readonly restoreAll: () => void } {
+  const { root } = options;
+  const at = (path: string) => join(root, path);
+  const git = (args: readonly string[]) =>
+    spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  const guarded = new Map<string, Uint8Array>();
+  return {
+    ci: options.ci,
+    root,
+    read: (path) => readFileSync(at(path)),
+    write: (path, bytes) => {
+      writeFileSync(at(path), bytes);
+    },
+    tracked: (path) =>
+      git(['ls-files', '--error-unmatch', '--', path]).status === 0,
+    clean: (path) => git(['diff', '--quiet', 'HEAD', '--', path]).status === 0,
+    list: (mutable) => {
+      const suite = options.suites.find((s) => s.name === mutable.name);
+      if (suite === undefined)
+        throw new Error(`no suite named ${mutable.name}`);
+      const [command, ...args] = suite.list;
+      if (command === undefined)
+        throw new Error(`${suite.name} has no list command`);
+      const listed = spawnSync(command, args, {
+        cwd: at(suite.cwd),
+        encoding: 'utf8',
+      });
+      if (listed.status !== 0)
+        throw new Error(
+          `${suite.list.join(' ')} failed: ${listed.stderr.trim()}`,
+        );
+      return suite.files(listed.stdout);
+    },
+    run: async (request) => {
+      mkdirSync(dirname(at(request.json)), { recursive: true });
+      rmSync(at(request.json), { force: true });
+      if (request.recordTo !== undefined)
+        rmSync(at(request.recordTo), { force: true });
+      const { log, ceilingHit } = await spawnBounded(
+        'npx',
+        vitestArgs(request, root),
+        {
+          cwd: root,
+          env: runEnv(process.env, request, root),
+        },
+      );
+      writeFileSync(at(request.log), log);
+      const json = existsSync(at(request.json))
+        ? (JSON.parse(readFileSync(at(request.json), 'utf8')) as unknown)
+        : undefined;
+      return { json, log, ceilingHit };
+    },
+    observations: (path) =>
+      readObservations(
+        existsSync(at(path)) ? readFileSync(at(path), 'utf8') : '',
+        path,
+      ),
+    floors: () => readFloorsDir(at(options.floorsDir)),
+    guard: (path, bytes) => guarded.set(path, bytes),
+    release: (path) => guarded.delete(path),
+    print: (line) => {
+      console.log(line);
+    },
+    restoreAll: () => {
+      for (const [path, bytes] of guarded) writeFileSync(at(path), bytes);
+      guarded.clear();
+    },
+  };
+}
+
+async function main(): Promise<void> {
+  const paths = process.argv.slice(2);
+  if (paths.length === 0) {
+    console.error(
+      'name a mutation file: npm run mutate -- tests/mutations/<file>.ts',
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const top = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    encoding: 'utf8',
+  });
+  if (top.status !== 0) throw new Error('run it inside the repository');
+  const root = realpathSync(top.stdout.trim());
+  const io = realIo({
+    root,
+    ci: process.env.CI === 'true',
+    suites: SUITES,
+    floorsDir: FLOORS_DIR,
+  });
+  for (const signal of ['SIGINT', 'SIGTERM'] as const)
+    process.on(signal, () => {
+      io.restoreAll();
+      process.exit(130);
+    });
+  let matched = 0;
+  let rows = 0;
+  for (const path of paths) {
+    const loaded = (await import(pathToFileURL(resolve(root, path)).href)) as {
+      readonly default?: unknown;
+    };
+    const file = asMutationFile(loaded.default);
+    const counts = await runFile(io, path, file, mutableSuites(SUITES));
+    matched += counts.matched;
+    rows += counts.rows;
+  }
+  console.log(`mutate: ${String(matched)} of ${String(rows)} matched`);
+  process.exitCode = matched === rows ? 0 : 1;
+}
+
+if (import.meta.main)
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });

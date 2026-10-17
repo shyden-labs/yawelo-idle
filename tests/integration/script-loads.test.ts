@@ -40,6 +40,7 @@ const SCRIPTS = [
   'scripts/fetch-floors.ts',
   'scripts/fetch-minimums.ts',
   'scripts/holding-dev.ts',
+  'scripts/mutate.ts',
   'scripts/prod-version.ts',
   'scripts/record-floors.ts',
   'scripts/sample-minimums.ts',
