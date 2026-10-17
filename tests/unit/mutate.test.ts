@@ -103,8 +103,7 @@ describe('suiteOf', () => {
 
   it('refuses a target no suite lists', () => {
     expect(suiteOf(['apps/web/test/game.test.ts'], listings)).toEqual({
-      refusal:
-        'apps/web/test/game.test.ts is in no suite the runner can run (the harness and Playwright suites wait on #649)',
+      refusal: 'apps/web/test/game.test.ts is in no suite the runner can run',
     });
   });
 
@@ -123,18 +122,12 @@ describe('suiteOf', () => {
 });
 
 describe('laptopRefusal', () => {
-  it('lets the unit suite run on the laptop', () => {
-    expect(laptopRefusal('unit suite', false)).toBeUndefined();
-  });
-
-  it('refuses any other suite on the laptop', () => {
-    expect(laptopRefusal('pacing suite', false)).toBe(
-      'pacing suite: the laptop runs the unit suite only (Shyden, 2026-10-09); push and let the mutations check run it',
+  it('names each target the laptop cannot run, and why', () => {
+    expect(
+      laptopRefusal(['tests/guards/a.test.ts', 'tests/guards/b.test.ts']),
+    ).toBe(
+      'tests/guards/a.test.ts, tests/guards/b.test.ts: the laptop runs the unit suite only (Shyden, 2026-10-09); push and let the mutations check run it',
     );
-  });
-
-  it('lets any suite run in CI', () => {
-    expect(laptopRefusal('pacing suite', true)).toBeUndefined();
   });
 });
 

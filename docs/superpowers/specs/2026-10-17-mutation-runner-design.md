@@ -83,7 +83,7 @@ PR #650's first CI run (`a54530b`) put the code before the whole-repo guards, wh
 
 ## 5. Suites and the ceiling
 
-`Suite` in `scripts/record-floors.ts` gains an optional `mutate`: the vitest arguments the runner runs the whole suite with, to which it adds `--reporter=default --reporter=<absolute path of scripts/mutate-reporter.ts>`. It is set for the six vitest suites run from the root: unit, guards, integration, properties, logs and pacing. The four harness suites need a build first and the two Playwright suites write another report shape, so they have no `mutate` yet and are refused by name. A follow-up story covers them before #619 can require them (filed with this spec).
+`Suite` in `scripts/record-floors.ts` gains an optional `mutate`: the vitest arguments the runner runs the whole suite with, to which it adds `--reporter=default --reporter=<absolute path of scripts/mutate-reporter.ts>`. It is set for the six vitest suites run from the root: unit, guards, integration, properties, logs and pacing. The four harness suites need a build first and the two Playwright suites write another report shape, so they have no `mutate` yet and are refused by name. A follow-up story covers them before #619 can require them (filed with this spec): #649, `docs/superpowers/specs/2026-10-18-mutation-runner-harness-playwright-design.md`.
 
 Each suite run is bounded at **600 s**, a guard against a mutation that loops forever (memory: "a mutation can hang the suite"), not a performance limit. Basis: the slowest suite, pacing, took 44 s in CI, and a busy laptop has run 12 times slower than its CPU time (global rule); 600 s is 13.6 times 44 s. Past it, the runner kills the run's process group, restores, and fails the row naming the suite and the ceiling.
 
@@ -136,5 +136,5 @@ The ticket's AC1, AC3 and AC5 stand. AC2 and AC4 are corrected by §2's facts, a
 ## 10. Out of scope
 
 - The `mutations` workflow, the guards test that parses every file in `tests/mutations/`, and the required-check setting: #619.
-- The harness and Playwright suites: the follow-up story (§5).
+- The harness and Playwright suites: the follow-up story (§5), #649.
 - Stryker source mutation: #36.

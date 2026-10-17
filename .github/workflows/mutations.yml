@@ -1,0 +1,73 @@
+# Every third-party `uses:` is a full 40-hex commit SHA with a trailing
+# `# vX.Y.Z` comment (tests/guards/supply-chain.test.ts).
+#
+# Runs every mutation file a pull request adds or changes through the
+# mutation runner (#649, spec docs/superpowers/specs/
+# 2026-10-18-mutation-runner-harness-playwright-design.md §7): each suite runs
+# clean first, then each mutation is planted, judged against its prediction
+# and put back. #619 adds the judge that requires a mutation file for every
+# changed non-unit test, and makes this check required.
+name: mutations
+
+on:
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  changed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      count: ${{ steps.list.outputs.count }}
+      files: ${{ steps.list.outputs.files }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The base and every commit since, for `<base>...HEAD`.
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: List the mutation files this pull request adds or changes
+        id: list
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/mutations-changed.ts
+
+  run:
+    needs: changed
+    if: ${{ needs.changed.outputs.count != '0' }}
+    runs-on: ubuntu-24.04
+    # Measured on PR #651 (run 39057208788): 6 min 43 s for 15 rows over
+    # three suites (unit rows about 24 s each, harness 2.5 s, web smoke 13 s
+    # to 16 s, builds included). 30 leaves room for a pull request carrying
+    # more files; the runner's 600 s ceiling bounds each suite run inside.
+    timeout-minutes: 30
+    # The image and user ci.yml tests in (tests/unit/mutations-ci.test.ts).
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      - name: Run each mutation file through the runner
+        env:
+          FILES: ${{ needs.changed.outputs.files }}
+        run: npm run mutate -- $FILES
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: mutations
+          path: .mutations/
+          # A dot-folder: skipped unless asked (PR #651's first green run
+          # uploaded nothing and only warned).
+          include-hidden-files: true
+          if-no-files-found: error

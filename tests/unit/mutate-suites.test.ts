@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   mutableSuites,
+  playwrightArgs,
+  playwrightEnv,
   readObservations,
   runEnv,
   vitestArgs,
@@ -8,13 +10,13 @@ import {
   type RunRequest,
 } from '../../scripts/mutate';
 import { RECORD_ENV, SUITES, type Suite } from '../../scripts/record-floors';
-import { REPORT_ENV } from '../../scripts/mutate-reporter';
+import { REPORT_ENV, ROOT_ENV } from '../../scripts/mutate-reporter';
 
 /**
  * The suites the mutation runner can run (#527, spec §5), and how it runs
- * them: the six vitest suites run from the root, each under its own config,
- * with both reporters, recording floors only when asked. The harness and
- * Playwright suites wait on #649.
+ * them: each from its own folder, under its own config, after its build
+ * (#649), vitest suites with both reporters naming files from the
+ * repository root, recording floors only when asked.
  */
 
 const SUITE: Suite = {
@@ -29,46 +31,199 @@ describe('mutableSuites', () => {
   it('keeps a suite with a mutate config, under its name', () => {
     expect(
       mutableSuites([
-        { ...SUITE, mutate: { config: 'vitest.guards.config.ts' } },
+        {
+          ...SUITE,
+          mutate: { kind: 'vitest', config: 'vitest.guards.config.ts' },
+        },
       ]),
-    ).toEqual([{ name: 'guards suite', config: 'vitest.guards.config.ts' }]);
+    ).toEqual<MutableSuite[]>([
+      {
+        name: 'guards suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: 'vitest.guards.config.ts',
+        build: undefined,
+      },
+    ]);
   });
 
   it('keeps a suite run under vitest’s default config', () => {
     expect(
-      mutableSuites([{ ...SUITE, name: 'unit suite', mutate: {} }]),
-    ).toEqual([{ name: 'unit suite', config: undefined }]);
+      mutableSuites([
+        { ...SUITE, name: 'unit suite', mutate: { kind: 'vitest' } },
+      ]),
+    ).toEqual<MutableSuite[]>([
+      {
+        name: 'unit suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: undefined,
+        build: undefined,
+      },
+    ]);
   });
 
   it('leaves out a suite with no mutate command', () => {
     expect(
-      mutableSuites([SUITE, { ...SUITE, name: 'unit suite', mutate: {} }]),
-    ).toEqual([{ name: 'unit suite', config: undefined }]);
+      mutableSuites([
+        SUITE,
+        { ...SUITE, name: 'unit suite', mutate: { kind: 'vitest' } },
+      ]).map((s) => s.name),
+    ).toEqual(['unit suite']);
   });
 
-  it('refuses a mutable suite that does not run from the root', () => {
-    expect(() =>
-      mutableSuites([{ ...SUITE, cwd: 'apps/web', mutate: {} }]),
-    ).toThrow(
-      'guards suite runs from apps/web: the runner runs suites from the root only (#649)',
-    );
+  it('keeps a suite that runs from its own folder, with its build', () => {
+    expect(
+      mutableSuites([
+        {
+          ...SUITE,
+          name: 'game harness',
+          cwd: 'apps/web',
+          mutate: {
+            kind: 'vitest',
+            config: 'vitest.harness.config.ts',
+            build: ['npx', 'vite', 'build'],
+          },
+        },
+      ]),
+    ).toEqual<MutableSuite[]>([
+      {
+        name: 'game harness',
+        cwd: 'apps/web',
+        kind: 'vitest',
+        config: 'vitest.harness.config.ts',
+        build: ['npx', 'vite', 'build'],
+      },
+    ]);
   });
 
-  it('can run exactly the six root vitest suites, under their own configs', () => {
-    expect(mutableSuites(SUITES)).toEqual([
-      { name: 'unit suite', config: undefined },
-      { name: 'guards suite', config: 'vitest.guards.config.ts' },
-      { name: 'integration suite', config: 'vitest.integration.config.ts' },
-      { name: 'properties suite', config: 'vitest.properties.config.ts' },
-      { name: 'logs suite', config: 'vitest.logs.config.ts' },
-      { name: 'pacing suite', config: 'vitest.pacing.config.ts' },
+  it('keeps a Playwright suite as a Playwright suite', () => {
+    expect(
+      mutableSuites([
+        {
+          ...SUITE,
+          name: 'engines suite',
+          mutate: {
+            kind: 'playwright',
+            config: 'playwright.engines.config.ts',
+          },
+        },
+      ]),
+    ).toEqual<MutableSuite[]>([
+      {
+        name: 'engines suite',
+        cwd: '.',
+        kind: 'playwright',
+        config: 'playwright.engines.config.ts',
+        build: undefined,
+      },
+    ]);
+  });
+
+  it('can run every suite package.json runs, each from its folder, under its config, after its build', () => {
+    expect(mutableSuites(SUITES)).toEqual<MutableSuite[]>([
+      {
+        name: 'unit suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: undefined,
+        build: undefined,
+      },
+      {
+        name: 'guards suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: 'vitest.guards.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'integration suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: 'vitest.integration.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'properties suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: 'vitest.properties.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'logs suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: 'vitest.logs.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'pacing suite',
+        cwd: '.',
+        kind: 'vitest',
+        config: 'vitest.pacing.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'game harness',
+        cwd: 'apps/web',
+        kind: 'vitest',
+        config: 'vitest.harness.config.ts',
+        build: ['npx', 'vite', 'build'],
+      },
+      {
+        name: 'site harness',
+        cwd: 'apps/site',
+        kind: 'vitest',
+        config: 'vitest.harness.config.ts',
+        build: ['npm', 'run', 'build:harness'],
+      },
+      {
+        name: 'dev hosts harness',
+        cwd: 'apps/dev-hosts',
+        kind: 'vitest',
+        config: 'vitest.harness.config.ts',
+        build: [
+          'npx',
+          'wrangler',
+          'pages',
+          'functions',
+          'build',
+          '--outdir',
+          '.build',
+        ],
+      },
+      {
+        name: 'sync Worker harness',
+        cwd: 'apps/sync-worker',
+        kind: 'vitest',
+        config: 'vitest.harness.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'engines suite',
+        cwd: '.',
+        kind: 'playwright',
+        config: 'playwright.engines.config.ts',
+        build: undefined,
+      },
+      {
+        name: 'web smoke suite',
+        cwd: '.',
+        kind: 'playwright',
+        config: 'playwright.web.config.ts',
+        build: ['npm', 'run', 'build', '--workspace', '@yawelo-idle/web'],
+      },
     ]);
   });
 });
 
 const GUARDS: MutableSuite = {
   name: 'guards suite',
+  cwd: '.',
+  kind: 'vitest',
   config: 'vitest.guards.config.ts',
+  build: undefined,
 };
 const RUN: RunRequest = {
   suite: GUARDS,
@@ -93,7 +248,7 @@ describe('vitestArgs', () => {
   it('names no config for a suite under vitest’s default', () => {
     expect(
       vitestArgs(
-        { ...RUN, suite: { name: 'unit suite', config: undefined } },
+        { ...RUN, suite: { ...GUARDS, name: 'unit suite', config: undefined } },
         REPORTER,
       ),
     ).toEqual([
@@ -116,6 +271,7 @@ describe('runEnv', () => {
     expect(runEnv({ PATH: '/bin' }, RUN, '/repo')).toEqual({
       PATH: '/bin',
       [REPORT_ENV]: '/repo/.mutations/x/blind.json',
+      [ROOT_ENV]: '/repo',
     });
   });
 
@@ -129,6 +285,7 @@ describe('runEnv', () => {
     ).toEqual({
       PATH: '/bin',
       [REPORT_ENV]: '/repo/.mutations/x/blind.json',
+      [ROOT_ENV]: '/repo',
       [RECORD_ENV]: '/repo/.mutations/x/o.jsonl',
     });
   });
@@ -136,7 +293,68 @@ describe('runEnv', () => {
   it('drops a recording the caller inherited, so a judged run fails on floors', () => {
     expect(
       runEnv({ PATH: '/bin', [RECORD_ENV]: '/tmp/x' }, RUN, '/repo'),
-    ).toEqual({ PATH: '/bin', [REPORT_ENV]: '/repo/.mutations/x/blind.json' });
+    ).toEqual({
+      PATH: '/bin',
+      [REPORT_ENV]: '/repo/.mutations/x/blind.json',
+      [ROOT_ENV]: '/repo',
+    });
+  });
+});
+
+const SMOKE: RunRequest = {
+  suite: {
+    name: 'web smoke suite',
+    cwd: '.',
+    kind: 'playwright',
+    config: 'playwright.web.config.ts',
+    build: undefined,
+  },
+  json: '.mutations/x/blind.json',
+  log: '.mutations/x/blind.log',
+};
+
+describe('playwrightArgs', () => {
+  it('runs the whole suite under its config, listing for people and writing JSON for the runner', () => {
+    expect(playwrightArgs(SMOKE)).toEqual([
+      'playwright',
+      'test',
+      '-c',
+      'playwright.web.config.ts',
+      '--reporter=list,json',
+    ]);
+  });
+
+  it('refuses a Playwright suite with no config', () => {
+    expect(() =>
+      playwrightArgs({
+        ...SMOKE,
+        suite: { ...SMOKE.suite, config: undefined },
+      }),
+    ).toThrow('web smoke suite names no Playwright config');
+  });
+
+  it('refuses a floor record or an importer listing, which only the guards suite takes', () => {
+    expect(() => playwrightArgs({ ...SMOKE, related: 'src/a.ts' })).toThrow(
+      'web smoke suite: only the guards suite records floors or lists importers',
+    );
+  });
+});
+
+describe('playwrightEnv', () => {
+  it('names the file Playwright writes its JSON report to', () => {
+    expect(playwrightEnv({ PATH: '/bin' }, SMOKE, '/repo')).toEqual({
+      PATH: '/bin',
+      PLAYWRIGHT_JSON_OUTPUT_FILE: '/repo/.mutations/x/blind.json',
+    });
+  });
+
+  it('drops a floor recording the caller inherited', () => {
+    expect(
+      playwrightEnv({ PATH: '/bin', [RECORD_ENV]: '/tmp/x' }, SMOKE, '/repo'),
+    ).toEqual({
+      PATH: '/bin',
+      PLAYWRIGHT_JSON_OUTPUT_FILE: '/repo/.mutations/x/blind.json',
+    });
   });
 });
 
