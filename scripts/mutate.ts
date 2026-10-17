@@ -15,24 +15,20 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, posix, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, join, posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   FILE_SEPARATOR,
-  asMutationFile,
   mutationFileProblems,
   type Mutation,
   type MutationFile,
 } from './mutation-file.ts';
 import {
-  FLOORS_DIR,
   readFloorsDir,
   RECORD_ENV,
-  SUITES,
   type Observation,
   type Suite,
 } from './record-floors.ts';
@@ -43,13 +39,19 @@ const REPORTER = fileURLToPath(
   new URL('./mutate-reporter.ts', import.meta.url),
 );
 
+/** A failing test: `<file> › <describe> > … > <title>`, and its whole error text. */
+export interface FailedTest {
+  readonly name: string;
+  readonly text: string;
+}
+
 /** What one run reported, as far as a judge reads it (from `Written`). */
 export interface Report {
   readonly total: number;
   /** Every test file the run reported, repository-relative. */
   readonly files: readonly string[];
-  /** Each failing test by full name, to its whole error text. */
-  readonly failing: ReadonlyMap<string, string>;
+  /** Each failing test, by full name, with its whole error text. */
+  readonly failing: readonly FailedTest[];
   /** The failing tests that timed out. */
   readonly timedOut: readonly string[];
 }
@@ -85,7 +87,9 @@ export function readReport(json: unknown): Report {
   return {
     total: json.total,
     files: json.files,
-    failing: new Map(Object.entries(failing as Record<string, string>)),
+    failing: Object.entries(failing as Record<string, string>).map(
+      ([name, text]) => ({ name, text }),
+    ),
     timedOut: json.timedOut,
   };
 }
@@ -222,28 +226,26 @@ export function judge(
       `the total moved: ${String(report.total)} tests, not ${String(baselineTotal)}`,
     );
   for (const [test, text] of Object.entries(mutation.red)) {
-    const message = report.failing.get(test);
-    if (message === undefined)
+    const failed = report.failing.find((f) => f.name === test);
+    if (failed === undefined)
       problems.push(`predicted red, stayed green: ${test}`);
-    else if (!message.includes(text))
+    else if (!failed.text.includes(text))
       problems.push(
-        `red for another reason: ${test} (wanted "${text}"): ${firstLine(message)}`,
+        `red for another reason: ${test} (wanted "${text}"): ${firstLine(failed.text)}`,
       );
   }
-  const accounts = (p: CorpusPrediction, test: string, message: string) =>
-    test.startsWith(`${p.file}${FILE_SEPARATOR}`) && message.includes(p.text);
+  const accounts = (p: CorpusPrediction, f: FailedTest) =>
+    f.name.startsWith(`${p.file}${FILE_SEPARATOR}`) && f.text.includes(p.text);
   for (const p of corpus) {
-    if (
-      ![...report.failing].some(([test, message]) => accounts(p, test, message))
-    )
+    if (!report.failing.some((f) => accounts(p, f)))
       problems.push(
         `whole-repo floor stayed green: ${p.id} ${String(p.recorded)} → ${String(p.actual)} in ${p.file}`,
       );
   }
-  for (const [test, message] of report.failing) {
-    if (test in mutation.red) continue;
-    if (corpus.some((p) => accounts(p, test, message))) continue;
-    problems.push(`unpredicted red: ${test}: ${firstLine(message)}`);
+  for (const f of report.failing) {
+    if (f.name in mutation.red) continue;
+    if (corpus.some((p) => accounts(p, f))) continue;
+    problems.push(`unpredicted red: ${f.name}: ${firstLine(f.text)}`);
   }
   return problems;
 }
@@ -312,9 +314,7 @@ function redBaseline(outcome: RunOutcome, suite: string): string[] {
   if (outcome.json === undefined) return [NO_REPORT];
   const report = readReport(outcome.json);
   return [
-    ...[...report.failing].map(
-      ([test, message]) => `${test}: ${firstLine(message)}`,
-    ),
+    ...report.failing.map((f) => `${f.name}: ${firstLine(f.text)}`),
     ...timedOutLine(report.timedOut),
   ];
 }
@@ -563,8 +563,6 @@ export function realIo(options: {
 }): Io & { readonly restoreAll: () => void } {
   const { root } = options;
   const at = (path: string) => join(root, path);
-  const git = (args: readonly string[]) =>
-    spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   const guarded = new Map<string, Uint8Array>();
   return {
     ci: options.ci,
@@ -573,9 +571,13 @@ export function realIo(options: {
     write: (path, bytes) => {
       writeFileSync(at(path), bytes);
     },
+    // Committed at HEAD: the restore is checked against HEAD's bytes.
     tracked: (path) =>
-      git(['ls-files', '--error-unmatch', '--', path]).status === 0,
-    clean: (path) => git(['diff', '--quiet', 'HEAD', '--', path]).status === 0,
+      spawnSync('git', ['cat-file', '-e', `HEAD:${path}`], { cwd: root })
+        .status === 0,
+    clean: (path) =>
+      spawnSync('git', ['diff', '--quiet', 'HEAD', '--', path], { cwd: root })
+        .status === 0,
     list: (mutable) => {
       const suite = options.suites.find((s) => s.name === mutable.name);
       if (suite === undefined)
@@ -629,49 +631,3 @@ export function realIo(options: {
     },
   };
 }
-
-async function main(): Promise<void> {
-  const paths = process.argv.slice(2);
-  if (paths.length === 0) {
-    console.error(
-      'name a mutation file: npm run mutate -- tests/mutations/<file>.ts',
-    );
-    process.exitCode = 2;
-    return;
-  }
-  const top = spawnSync('git', ['rev-parse', '--show-toplevel'], {
-    encoding: 'utf8',
-  });
-  if (top.status !== 0) throw new Error('run it inside the repository');
-  const root = realpathSync(top.stdout.trim());
-  const io = realIo({
-    root,
-    ci: process.env.CI === 'true',
-    suites: SUITES,
-    floorsDir: FLOORS_DIR,
-  });
-  for (const signal of ['SIGINT', 'SIGTERM'] as const)
-    process.on(signal, () => {
-      io.restoreAll();
-      process.exit(130);
-    });
-  let matched = 0;
-  let rows = 0;
-  for (const path of paths) {
-    const loaded = (await import(pathToFileURL(resolve(root, path)).href)) as {
-      readonly default?: unknown;
-    };
-    const file = asMutationFile(loaded.default);
-    const counts = await runFile(io, path, file, mutableSuites(SUITES));
-    matched += counts.matched;
-    rows += counts.rows;
-  }
-  console.log(`mutate: ${String(matched)} of ${String(rows)} matched`);
-  process.exitCode = matched === rows ? 0 : 1;
-}
-
-if (import.meta.main)
-  main().catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  });

@@ -122,6 +122,8 @@ function stand(
       const answer = answers[next];
       next += 1;
       if (answer === undefined)
+        // So a test scripting no runs proves, by its exact refusal, that
+        // nothing ran before the refusal: a run would throw this instead.
         throw new Error(`no answer scripted for run ${String(next)}`);
       if (request.recordTo !== undefined)
         observed.set(request.recordTo, answer.observations ?? []);
@@ -264,7 +266,6 @@ describe('runFile', () => {
     await expect(
       runFile(s.io, 'tests/mutations/x.ts', FILE, SUITES),
     ).rejects.toThrow(`tests/mutations/x.ts: ${refusal}`);
-    expect(s.runs).toEqual([]);
   });
 
   it('refuses a malformed file before running anything', async () => {
@@ -272,7 +273,6 @@ describe('runFile', () => {
     await expect(
       runFile(s.io, 'tests/mutations/x.ts', { ...FILE, targets: [] }, SUITES),
     ).rejects.toThrow('tests/mutations/x.ts: names no targets');
-    expect(s.runs).toEqual([]);
   });
 
   it('refuses a non-unit suite on the laptop before running anything', async () => {
@@ -284,7 +284,6 @@ describe('runFile', () => {
     ).rejects.toThrow(
       'tests/mutations/x.ts: guards suite: the laptop runs the unit suite only',
     );
-    expect(s.runs).toEqual([]);
   });
 
   it('refuses a red baseline, naming each failure, and plants nothing', async () => {

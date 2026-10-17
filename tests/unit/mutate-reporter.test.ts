@@ -106,11 +106,12 @@ describe('reportOf', () => {
                 message: "expected 'Error: Test timed out in 1000ms.' to be ''",
               },
             ]),
+            test('slow', 'failed', [{ message: 'Test timed out in 1000ms.' }]),
           ]),
         ],
         ROOT,
       ).timedOut,
-    ).toEqual([]);
+    ).toEqual([`${FILE} › slow`]);
   });
 
   it('names a file that failed outside any test', () => {

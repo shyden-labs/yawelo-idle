@@ -224,21 +224,21 @@ describe('the mutation runner over a fixture guards suite', () => {
   // which cuts a long string short: the runner owns the prefix, and the
   // floor id survives any cut, so those are asserted.
   it('misses a moved floor in a target that the prediction left out', async () => {
-    const [verdict, problem, ...rest] = await row('target-floor-unpredicted');
-    expect(verdict).toBe('MISS target-floor-unpredicted');
-    expect(problem).toMatch(
-      new RegExp(`^  unpredicted red: ${READER}: .*reader/items`),
-    );
-    expect(rest).toEqual([]);
+    expect(await row('target-floor-unpredicted')).toEqual([
+      'MISS target-floor-unpredicted',
+      expect.stringMatching(
+        new RegExp(`^  unpredicted red: ${READER}: .*reader/items`),
+      ),
+    ]);
   });
 
   it('misses a moved floor in a guard importing the mutated file, when not predicted', async () => {
-    const [verdict, problem, ...rest] = await row('importer-floor-unpredicted');
-    expect(verdict).toBe('MISS importer-floor-unpredicted');
-    expect(problem).toMatch(
-      new RegExp(`^  unpredicted red: ${HELPER}: .*helper/items`),
-    );
-    expect(rest).toEqual([]);
+    expect(await row('importer-floor-unpredicted')).toEqual([
+      'MISS importer-floor-unpredicted',
+      expect.stringMatching(
+        new RegExp(`^  unpredicted red: ${HELPER}: .*helper/items`),
+      ),
+    ]);
   });
 
   it('matches that importer’s moved floor when predicted', async () => {

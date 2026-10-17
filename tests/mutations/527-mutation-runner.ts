@@ -20,10 +20,12 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
 const UNIT = 'tests/unit/mutate.test.ts';
 const RUN = 'tests/unit/mutate-run.test.ts';
 const REPORTER = 'tests/unit/mutate-reporter.test.ts';
+const FORMAT = 'tests/unit/mutation-file.test.ts';
+const PROBLEMS = `${FORMAT} › mutationFileProblems >`;
 const GUARDS_RUN = `${RUN} › runFile in the guards suite (CI) > lists the importers once, records, and predicts only floors outside targets and importers`;
 
 export default mutationFile({
-  targets: [UNIT, RUN, REPORTER],
+  targets: [UNIT, RUN, REPORTER, FORMAT],
   mutations: [
     {
       name: 'anchor-twice-planted',
@@ -144,6 +146,31 @@ export default mutationFile({
       red: {
         [`${UNIT} › readReport > refuses timed-out tests that are not text`]:
           'to throw an error',
+      },
+    },
+    {
+      // The well-formed search reads its mutations through watched copies:
+      // a check skipping the first still finds nothing, and reads 1 of 2.
+      name: 'mutations-partly-read',
+      file: 'scripts/mutation-file.ts',
+      anchor: '  for (const m of file.mutations) {',
+      replacement: '  for (const m of file.mutations.slice(1)) {',
+      red: {
+        [`${PROBLEMS} finds none in a well-formed file`]:
+          'mutation-file/well-formed: read 1, recorded 2',
+        [`${PROBLEMS} accepts a mutation predicted green`]:
+          'the control found nothing',
+        [`${PROBLEMS} refuses a name twice`]: 'names first-sail-blind twice',
+        [`${PROBLEMS} refuses a name that cannot name a log file`]:
+          'a name is letters, digits',
+        [`${PROBLEMS} refuses an empty file`]: 'names no file',
+        [`${PROBLEMS} refuses an empty anchor`]: 'has an empty anchor',
+        [`${PROBLEMS} refuses a replacement equal to its anchor`]:
+          'its replacement is its anchor',
+        [`${PROBLEMS} refuses a red test named without its file`]:
+          'is not written <file>',
+        [`${PROBLEMS} refuses a red test with no text to show`]:
+          'names no text its failure must show',
       },
     },
   ],

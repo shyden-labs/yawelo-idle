@@ -41,7 +41,9 @@ describe('mutableSuites', () => {
   });
 
   it('leaves out a suite with no mutate command', () => {
-    expect(mutableSuites([SUITE])).toEqual([]);
+    expect(
+      mutableSuites([SUITE, { ...SUITE, name: 'unit suite', mutate: {} }]),
+    ).toEqual([{ name: 'unit suite', config: undefined }]);
   });
 
   it('refuses a mutable suite that does not run from the root', () => {

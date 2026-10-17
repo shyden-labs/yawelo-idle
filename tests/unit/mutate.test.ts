@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Mutation } from '../../scripts/mutation-file';
+import { floorBreach } from '../floors';
+import { againstControl, searched } from '../searched';
+import { watched } from '../watched';
 import {
   corpusPredictions,
   judge,
@@ -34,7 +37,7 @@ describe('readReport', () => {
     ).toEqual<Report>({
       total: 2,
       files: [T],
-      failing: new Map([[RED, 'reader/items: read 3, recorded 4']]),
+      failing: [{ name: RED, text: 'reader/items: read 3, recorded 4' }],
       timedOut: [RED],
     });
   });
@@ -179,7 +182,7 @@ describe('corpusPredictions', () => {
     ).toEqual(['line-of/accesses: read 97, recorded 100']);
   });
 
-  it('predicts nothing for a floor at its recorded figure', () => {
+  it('predicts nothing for a floor at its recorded figure, beside one that moved', () => {
     expect(
       corpusPredictions(
         [
@@ -188,11 +191,12 @@ describe('corpusPredictions', () => {
             actual: 100,
             site: 'tests/guards/line-of.test.ts:39',
           },
+          { id: 'reader/items', actual: 3, site: `${T}:12` },
         ],
         floors,
         NONE,
-      ),
-    ).toEqual([]);
+      ).map((p) => p.id),
+    ).toEqual(['reader/items']);
   });
 
   it('predicts an id no floor file records', () => {
@@ -208,11 +212,18 @@ describe('corpusPredictions', () => {
   it('leaves out a floor checked in an excluded file (a target or an importer)', () => {
     expect(
       corpusPredictions(
-        [{ id: 'reader/items', actual: 3, site: `${T}:12` }],
+        [
+          { id: 'reader/items', actual: 3, site: `${T}:12` },
+          {
+            id: 'line-of/accesses',
+            actual: 102,
+            site: 'tests/guards/line-of.test.ts:39',
+          },
+        ],
         floors,
         new Set([T]),
-      ),
-    ).toEqual([]);
+      ).map((p) => p.id),
+    ).toEqual(['line-of/accesses']);
   });
 
   it('predicts one moved floor once, however often it was checked', () => {
@@ -260,31 +271,53 @@ describe('judge', () => {
   ): Report => ({
     total,
     files: [T],
-    failing: new Map(failing),
+    failing: failing.map(([name, text]) => ({ name, text })),
     timedOut,
   });
+  const OTHER_RED = `${T} › reader > reads nothing twice`;
 
+  // The judge is handed watched failing tests, so each search names the
+  // failing tests it actually read (#368's watched), not the fixture's size.
   it('matches a run that failed exactly as predicted', () => {
+    const { items, read } = watched(
+      run([
+        [RED, 'reader/items: read 3, recorded 4'],
+        [OTHER_RED, 'reader/twice: read 2, recorded 1'],
+      ]).failing,
+      'name',
+    );
+    const both = {
+      ...MUTATION,
+      red: { [RED]: 'reader/items', [OTHER_RED]: 'reader/twice' },
+    };
     expect(
-      judge(MUTATION, [], run([[RED, 'reader/items: read 3, recorded 4']]), 9),
+      searched(judge(both, [], { ...run([]), failing: items }, 9), {
+        of: read,
+        what: 'failing tests the judge read',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('mutate-judge/exact-match', read.length),
+    ).toBeUndefined();
   });
 
   it('matches a whole-repo floor the corpus prediction accounts for', () => {
+    const { items, read } = watched(
+      run([
+        [RED, 'reader/items: read 3, recorded 4'],
+        [COUNTED, 'count/reads: read 6, recorded 5. The population grew by 1'],
+      ]).failing,
+      'name',
+    );
     expect(
-      judge(
-        MUTATION,
-        [CORPUS],
-        run([
-          [RED, 'reader/items: read 3, recorded 4'],
-          [
-            COUNTED,
-            'count/reads: read 6, recorded 5. The population grew by 1',
-          ],
-        ]),
-        9,
-      ),
+      searched(judge(MUTATION, [CORPUS], { ...run([]), failing: items }, 9), {
+        of: read,
+        what: 'failing tests the judge read',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('mutate-judge/corpus-match', read.length),
+    ).toBeUndefined();
   });
 
   it('misses that same run without the corpus prediction', () => {
@@ -362,7 +395,13 @@ describe('judge', () => {
   });
 
   it('matches a mutation predicted green that stayed green', () => {
-    expect(judge({ ...MUTATION, red: {} }, [], run([]), 9)).toEqual([]);
+    expect(
+      againstControl(
+        (failing: [string, string][]) =>
+          judge({ ...MUTATION, red: {} }, [], run(failing), 9),
+        { input: [], control: [[RED, 'reader/items: read 3, recorded 4']] },
+      ),
+    ).toEqual([]);
   });
 
   it('misses a moved total', () => {

@@ -6,6 +6,9 @@ import {
   type Mutation,
   type MutationFile,
 } from '../../scripts/mutation-file';
+import { floorBreach } from '../floors';
+import { againstControl, searched } from '../searched';
+import { watched } from '../watched';
 
 /**
  * The tracked mutation file (#527, spec §3): one set of mutations proving the
@@ -30,16 +33,31 @@ const FILE: MutationFile = {
 };
 
 describe('mutationFileProblems', () => {
+  // The check is handed watched mutations, so the search names the
+  // mutations it read, not the fixture's size.
   it('finds none in a well-formed file', () => {
-    expect(mutationFileProblems(FILE)).toEqual([]);
+    const { items, read } = watched(
+      [MUTATION, { ...MUTATION, name: 'first-sail-blind-again' }],
+      'name',
+    );
+    expect(
+      searched(mutationFileProblems({ ...FILE, mutations: items }), {
+        of: read,
+        what: 'mutations the check read',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('mutation-file/well-formed', read.length),
+    ).toBeUndefined();
   });
 
   it('accepts a mutation predicted green', () => {
     expect(
-      mutationFileProblems({
-        ...FILE,
-        mutations: [{ ...MUTATION, red: {} }],
-      }),
+      againstControl(
+        (red: Readonly<Record<string, string>>) =>
+          mutationFileProblems({ ...FILE, mutations: [{ ...MUTATION, red }] }),
+        { input: {}, control: { 'a describe > a title': 'x' } },
+      ),
     ).toEqual([]);
   });
 
