@@ -29,10 +29,12 @@ import {
 import {
   readFloorsDir,
   RECORD_ENV,
+  suiteFiles,
   type Observation,
   type Suite,
+  type SuiteMutate,
 } from './record-floors.ts';
-import { REPORT_ENV } from './mutate-reporter.ts';
+import { REPORT_ENV, ROOT_ENV } from './mutate-reporter.ts';
 
 /** The runner's reporter, by absolute path: a fixture repository runs it too. */
 const REPORTER = fileURLToPath(
@@ -250,10 +252,17 @@ export function judge(
   return problems;
 }
 
-/** A suite the runner can run: its name in `SUITES`, and its vitest config (none: the default). */
+/**
+ * A suite the runner can run: its name in `SUITES`, the folder it runs from,
+ * its runner and config (a vitest suite with none: vitest's default), and the
+ * build it needs first, if any.
+ */
 export interface MutableSuite {
   readonly name: string;
+  readonly cwd: string;
+  readonly kind: 'vitest' | 'playwright';
   readonly config: string | undefined;
+  readonly build: readonly string[] | undefined;
 }
 
 /** One vitest run of a whole suite. Paths are repository-relative. */
@@ -464,16 +473,40 @@ export async function runFile(
   return { matched, rows: file.mutations.length };
 }
 
-/** The suites in `suites` the runner can run: those with a `mutate` config, all run from the root. */
+/**
+ * The command line a package script would hold for `mutate`: the build (a
+ * script runs local binaries without npx), then the suite. Each suite's own
+ * script must read exactly this, so the runner builds as the suite does.
+ */
+export function mutateScript(mutate: SuiteMutate): string {
+  const config = mutate.config === undefined ? [] : ['-c', mutate.config];
+  const run =
+    mutate.kind === 'vitest'
+      ? ['vitest', 'run', ...config]
+      : ['playwright', 'test', ...config];
+  const build =
+    mutate.build?.[0] === 'npx' ? mutate.build.slice(1) : mutate.build;
+  return [
+    ...(build === undefined ? [] : [build.join(' ')]),
+    run.join(' '),
+  ].join(' && ');
+}
+
+/** The suites in `suites` the runner can run: those with a `mutate` value. */
 export function mutableSuites(suites: readonly Suite[]): MutableSuite[] {
-  return suites.flatMap((suite) => {
-    if (suite.mutate === undefined) return [];
-    if (suite.cwd !== '.')
-      throw new Error(
-        `${suite.name} runs from ${suite.cwd}: the runner runs suites from the root only (#649)`,
-      );
-    return [{ name: suite.name, config: suite.mutate.config }];
-  });
+  return suites.flatMap(({ name, cwd, mutate }) =>
+    mutate === undefined
+      ? []
+      : [
+          {
+            name,
+            cwd,
+            kind: mutate.kind,
+            config: mutate.config,
+            build: mutate.build,
+          },
+        ],
+  );
 }
 
 /** A test-name pattern no test matches: `related` then lists files and runs nothing. */
@@ -492,7 +525,10 @@ export function vitestArgs(request: RunRequest, reporter: string): string[] {
   ];
 }
 
-/** The environment a run gets: the caller's, the report file named, floors recorded only when asked. */
+/**
+ * The environment a run gets: the caller's, the report file and the
+ * repository root named, floors recorded only when asked.
+ */
 export function runEnv(
   base: Readonly<Record<string, string | undefined>>,
   request: RunRequest,
@@ -502,6 +538,7 @@ export function runEnv(
     Object.entries(base).filter(([key]) => key !== RECORD_ENV),
   );
   env[REPORT_ENV] = join(root, request.json);
+  env[ROOT_ENV] = root;
   if (request.recordTo !== undefined)
     env[RECORD_ENV] = join(root, request.recordTo);
   return env;
@@ -593,9 +630,13 @@ export function realIo(options: {
         throw new Error(
           `${entry.list.join(' ')} failed: ${listed.stderr.trim()}`,
         );
-      return entry.files(listed.stdout);
+      return suiteFiles(entry, listed.stdout);
     },
     run: async (request) => {
+      if (request.suite.kind !== 'vitest' || request.suite.build !== undefined)
+        throw new Error(
+          `${request.suite.name}: the runner cannot build or run Playwright yet`,
+        );
       mkdirSync(dirname(at(request.json)), { recursive: true });
       rmSync(at(request.json), { force: true });
       if (request.recordTo !== undefined)
@@ -604,7 +645,7 @@ export function realIo(options: {
         'npx',
         vitestArgs(request, REPORTER),
         {
-          cwd: root,
+          cwd: at(request.suite.cwd),
           env: runEnv(process.env, request, root),
         },
       );

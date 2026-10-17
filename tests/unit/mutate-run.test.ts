@@ -17,8 +17,15 @@ import type { Observation } from '../../scripts/record-floors';
  * integration suite runs the real thing.
  */
 
-const UNIT: MutableSuite = { name: 'unit suite', config: undefined };
+const UNIT: MutableSuite = {
+  name: 'unit suite',
+  cwd: '.',
+  kind: 'vitest',
+  config: undefined,
+  build: undefined,
+};
 const GUARDS: MutableSuite = {
+  ...UNIT,
   name: 'guards suite',
   config: 'vitest.guards.config.ts',
 };

@@ -175,12 +175,27 @@ export interface Suite {
   /** The command that runs the suite, or why it cannot record. */
   readonly run: readonly string[] | { readonly unrecordable: string };
   /**
-   * How the mutation runner (`scripts/mutate.ts`, #527) runs the whole suite
-   * with vitest: under `config`, or vitest's default when it names none.
-   * Absent: the runner cannot run this suite yet (#649).
+   * How the mutation runner (`scripts/mutate.ts`, #527, #649) runs the whole
+   * suite from `cwd`: with vitest or Playwright, under `config` (vitest's
+   * default when a vitest suite names none), after `build` when the suite
+   * needs one. Absent: the runner cannot run this suite.
    */
-  readonly mutate?: { readonly config?: string };
+  readonly mutate?: SuiteMutate;
 }
+
+/** How the mutation runner runs a suite (`Suite.mutate`). */
+export type SuiteMutate =
+  | {
+      readonly kind: 'vitest';
+      readonly config?: string;
+      /** Run in `cwd` before the suite, with the mutation planted. */
+      readonly build?: readonly string[];
+    }
+  | {
+      readonly kind: 'playwright';
+      readonly config: string;
+      readonly build?: readonly string[];
+    };
 
 /** `vitest list --filesOnly`: one path per line, relative to its root. */
 export const vitestListed = (stdout: string): string[] =>
@@ -217,7 +232,7 @@ export const SUITES: readonly Suite[] = [
     list: VITEST_LIST,
     files: vitestListed,
     run: ['npx', 'vitest', 'run'],
-    mutate: {},
+    mutate: { kind: 'vitest' },
   },
   {
     name: 'guards suite',
@@ -225,7 +240,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.guards.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:guards'],
-    mutate: { config: 'vitest.guards.config.ts' },
+    mutate: { kind: 'vitest', config: 'vitest.guards.config.ts' },
   },
   {
     name: 'integration suite',
@@ -233,7 +248,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.integration.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:integration'],
-    mutate: { config: 'vitest.integration.config.ts' },
+    mutate: { kind: 'vitest', config: 'vitest.integration.config.ts' },
   },
   {
     name: 'properties suite',
@@ -241,7 +256,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.properties.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:properties'],
-    mutate: { config: 'vitest.properties.config.ts' },
+    mutate: { kind: 'vitest', config: 'vitest.properties.config.ts' },
   },
   {
     name: 'logs suite',
@@ -252,7 +267,7 @@ export const SUITES: readonly Suite[] = [
       unrecordable:
         'its counts are measured minimums, recorded by record-minimums (#84, #609), never exact floors',
     },
-    mutate: { config: 'vitest.logs.config.ts' },
+    mutate: { kind: 'vitest', config: 'vitest.logs.config.ts' },
   },
   {
     name: 'pacing suite',
@@ -260,7 +275,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.pacing.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test:pacing'],
-    mutate: { config: 'vitest.pacing.config.ts' },
+    mutate: { kind: 'vitest', config: 'vitest.pacing.config.ts' },
   },
   {
     name: 'game harness',
@@ -269,6 +284,11 @@ export const SUITES: readonly Suite[] = [
     files: vitestListed,
     // Its `test` script builds first: the Worker serves the built ./dist.
     run: ['npm', 'run', 'test'],
+    mutate: {
+      kind: 'vitest',
+      config: 'vitest.harness.config.ts',
+      build: ['npx', 'vite', 'build'],
+    },
   },
   {
     name: 'site harness',
@@ -277,6 +297,11 @@ export const SUITES: readonly Suite[] = [
     files: vitestListed,
     // Its `test` script builds first: the Worker serves the built ./dist.
     run: ['npm', 'run', 'test'],
+    mutate: {
+      kind: 'vitest',
+      config: 'vitest.harness.config.ts',
+      build: ['npm', 'run', 'build:harness'],
+    },
   },
   {
     name: 'dev hosts harness',
@@ -285,6 +310,19 @@ export const SUITES: readonly Suite[] = [
     files: vitestListed,
     // Its `test` script compiles the Function first, into ./.build.
     run: ['npm', 'run', 'test'],
+    mutate: {
+      kind: 'vitest',
+      config: 'vitest.harness.config.ts',
+      build: [
+        'npx',
+        'wrangler',
+        'pages',
+        'functions',
+        'build',
+        '--outdir',
+        '.build',
+      ],
+    },
   },
   {
     name: 'sync Worker harness',
@@ -292,6 +330,7 @@ export const SUITES: readonly Suite[] = [
     list: [...VITEST_LIST, '-c', 'vitest.harness.config.ts'],
     files: vitestListed,
     run: ['npm', 'run', 'test'],
+    mutate: { kind: 'vitest', config: 'vitest.harness.config.ts' },
   },
   {
     name: 'engines suite',
@@ -307,6 +346,7 @@ export const SUITES: readonly Suite[] = [
     ],
     files: (stdout) => playwrightListed(process.cwd())(stdout),
     run: ['npm', 'run', 'test:engines'],
+    mutate: { kind: 'playwright', config: 'playwright.engines.config.ts' },
   },
   {
     name: 'web smoke suite',
@@ -323,6 +363,11 @@ export const SUITES: readonly Suite[] = [
     files: (stdout) => playwrightListed(process.cwd())(stdout),
     // Its script builds the game first: the local Worker serves ./dist.
     run: ['npm', 'run', 'test:web'],
+    mutate: {
+      kind: 'playwright',
+      config: 'playwright.web.config.ts',
+      build: ['npm', 'run', 'build', '--workspace', '@yawelo-idle/web'],
+    },
   },
 ];
 
