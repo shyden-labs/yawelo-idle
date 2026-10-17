@@ -579,21 +579,21 @@ export function realIo(options: {
       spawnSync('git', ['diff', '--quiet', 'HEAD', '--', path], { cwd: root })
         .status === 0,
     list: (mutable) => {
-      const suite = options.suites.find((s) => s.name === mutable.name);
-      if (suite === undefined)
-        throw new Error(`no suite named ${mutable.name}`);
-      const [command, ...args] = suite.list;
+      const entry = options.suites.find((s) => s.name === mutable.name);
+      if (entry === undefined)
+        throw new Error(`no entry named ${mutable.name}`);
+      const [command, ...args] = entry.list;
       if (command === undefined)
-        throw new Error(`${suite.name} has no list command`);
+        throw new Error(`${entry.name} has no list command`);
       const listed = spawnSync(command, args, {
-        cwd: at(suite.cwd),
+        cwd: at(entry.cwd),
         encoding: 'utf8',
       });
       if (listed.status !== 0)
         throw new Error(
-          `${suite.list.join(' ')} failed: ${listed.stderr.trim()}`,
+          `${entry.list.join(' ')} failed: ${listed.stderr.trim()}`,
         );
-      return suite.files(listed.stdout);
+      return entry.files(listed.stdout);
     },
     run: async (request) => {
       mkdirSync(dirname(at(request.json)), { recursive: true });

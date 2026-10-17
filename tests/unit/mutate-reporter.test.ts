@@ -16,12 +16,12 @@ import {
 const ROOT = '/repo';
 const FILE = 'tests/guards/reader.test.ts';
 
-function test(fullName: string, state: string, errors: ErrorView[] = []) {
+function testCase(fullName: string, state: string, errors: ErrorView[] = []) {
   return { fullName, result: () => ({ state, errors }) };
 }
 
 function module(
-  tests: ReturnType<typeof test>[],
+  tests: ReturnType<typeof testCase>[],
   errors: ErrorView[] = [],
   moduleId = `${ROOT}/${FILE}`,
 ): ModuleView {
@@ -36,7 +36,7 @@ describe('reportOf', () => {
   it('counts every test, skipped ones too, and names every file', () => {
     expect(
       reportOf(
-        [module([test('a > b', 'passed'), test('a > c', 'skipped')])],
+        [module([testCase('a > b', 'passed'), testCase('a > c', 'skipped')])],
         ROOT,
       ),
     ).toEqual<Written>({ total: 2, files: [FILE], failing: {}, timedOut: [] });
@@ -47,7 +47,7 @@ describe('reportOf', () => {
       reportOf(
         [
           module([
-            test('reader > reads every item', 'failed', [
+            testCase('reader > reads every item', 'failed', [
               {
                 message: 'expected [ { …(3) } ] to deeply equal []',
                 diff: '- []\n+ [ { "id": "reader/items" } ]',
@@ -70,7 +70,7 @@ describe('reportOf', () => {
       reportOf(
         [
           module([
-            test('a', 'failed', [{ message: 'one' }, { message: 'two' }]),
+            testCase('a', 'failed', [{ message: 'one' }, { message: 'two' }]),
           ]),
         ],
         ROOT,
@@ -83,7 +83,7 @@ describe('reportOf', () => {
       reportOf(
         [
           module([
-            test('slow', 'failed', [
+            testCase('slow', 'failed', [
               {
                 message:
                   'Test timed out in 1000ms.\nIf this is a long-running test, …',
@@ -101,12 +101,14 @@ describe('reportOf', () => {
       reportOf(
         [
           module([
-            test('quotes', 'failed', [
+            testCase('quotes', 'failed', [
               {
                 message: "expected 'Error: Test timed out in 1000ms.' to be ''",
               },
             ]),
-            test('slow', 'failed', [{ message: 'Test timed out in 1000ms.' }]),
+            testCase('slow', 'failed', [
+              { message: 'Test timed out in 1000ms.' },
+            ]),
           ]),
         ],
         ROOT,

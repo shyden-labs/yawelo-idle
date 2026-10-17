@@ -74,12 +74,12 @@ export function reportOf(
     if (file.startsWith('..') || file === '')
       throw new Error(`${m.moduleId} is outside ${root}`);
     files.push(file);
-    for (const test of m.children.allTests()) {
+    for (const testCase of m.children.allTests()) {
       total += 1;
-      const result = test.result();
+      const result = testCase.result();
       if (result.state !== 'failed') continue;
       const errors = result.errors ?? [];
-      const name = `${file} › ${test.fullName}`;
+      const name = `${file} › ${testCase.fullName}`;
       failing[name] = textOf(errors);
       if (errors.some((e) => e.message.startsWith(TIMED_OUT)))
         timedOut.push(name);
