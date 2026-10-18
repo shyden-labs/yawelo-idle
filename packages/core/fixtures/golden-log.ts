@@ -235,6 +235,7 @@ const REFUSALS = [
 
 class Player {
   state: GameState;
+  private readonly course: Course;
   private rng: RngState;
   private seq: number;
   private t: number;
@@ -242,10 +243,8 @@ class Player {
   private accepted: Record<string, number> = {};
   private refused: Record<string, number> = {};
 
-  constructor(
-    private readonly course: Course,
-    start: PlayerStart,
-  ) {
+  constructor(course: Course, start: PlayerStart) {
+    this.course = course;
     this.state = start.state;
     this.rng = start.rng;
     this.seq = start.seq;

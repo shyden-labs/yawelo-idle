@@ -6,6 +6,7 @@
   // to ECMAScript alone.
   "extends": "../tsconfig.json",
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "types": ["node"],
     // tests/floors.ts imports scripts/record-floors.ts by its .ts name, as
     // Node's type stripping needs.

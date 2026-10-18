@@ -4,6 +4,7 @@
   // `types: []` matters: without it, the hoisted @types/node would be
   // included automatically and `process` or `Buffer` would typecheck.
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",

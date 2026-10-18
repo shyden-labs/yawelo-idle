@@ -6,6 +6,7 @@
   // ../test come in by import.
   "extends": "../tsconfig.json",
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "types": ["node"],
     // tests/minimums.ts reaches scripts/record-floors.ts by its .ts name, as
     // Node's type stripping needs.
