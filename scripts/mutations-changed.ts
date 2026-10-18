@@ -36,18 +36,21 @@ export function readNameStatus(text: string): Changed[] {
 const MUTATION_FILE = /^tests\/mutations\/[A-Za-z0-9._-]+\.ts$/;
 
 /**
+ * Whether `path` is where a mutation file lives: TypeScript in
+ * `tests/mutations/`. The one spelling of the rule, read by
+ * `mutationFilesIn` and by `changedHelpers`, which leaves these out (#670).
+ */
+const isMutationFile = (path: string): boolean =>
+  path.startsWith('tests/mutations/') && path.endsWith('.ts');
+
+/**
  * The mutation files among `changed` that exist after the change (added,
  * changed or renamed in), refusing one whose name holds anything but
  * letters, digits, `.`, `_` and `-`.
  */
 export function mutationFilesIn(changed: readonly Changed[]): string[] {
   return changed
-    .filter(
-      ({ status, path }) =>
-        status !== 'D' &&
-        path.startsWith('tests/mutations/') &&
-        path.endsWith('.ts'),
-    )
+    .filter(({ status, path }) => status !== 'D' && isMutationFile(path))
     .map(({ path }) => {
       if (!MUTATION_FILE.test(path))
         throw new Error(
@@ -177,7 +180,8 @@ const JAVASCRIPT = /\.[cm]?js$/;
  * data a test may read from disk; a JavaScript one is refused by name, as
  * the import follower cannot read it. A file in one of the `recorded`
  * folders, whose counts CI alone writes and their own checks compare
- * exactly, is listed apart and judged no further (Shyden, 2026-10-18).
+ * exactly, is listed apart and judged no further (Shyden, 2026-10-18). A
+ * mutation file is judged as one, never as a helper too (#670).
  */
 export function changedHelpers(
   changed: readonly Changed[],
@@ -202,7 +206,7 @@ export function changedHelpers(
       .filter(({ path }) => isRecorded(path))
       .map(({ path }) => path),
     helpers: candidates
-      .filter(({ path }) => TYPESCRIPT.test(path))
+      .filter(({ path }) => TYPESCRIPT.test(path) && !isMutationFile(path))
       .map(({ path }) => path),
     data: candidates
       .filter(({ path }) => !TYPESCRIPT.test(path) && !JAVASCRIPT.test(path))
