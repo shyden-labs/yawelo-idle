@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  boardOrphans,
-  type OrphanReads,
-  SKIPPED_AUTHOR,
-} from '../../scripts/board-orphans';
+import { boardOrphans, type OrphanReads } from '../../scripts/board-orphans';
 import type { Gh } from '../../scripts/board-progress';
 
 /**
@@ -500,33 +496,39 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
   });
 });
 
-describe("boardOrphans skips Dependabot's pull requests by name (#580, operator 2026-10-15)", () => {
-  it('names the author it skips', () => {
-    expect(SKIPPED_AUTHOR).toBe('dependabot[bot]');
+/**
+ * A check is green only when it ran (Shyden, 2026-10-18, every project):
+ * Dependabot's pull requests are read like anyone else's, with the key from
+ * the repository's Dependabot secret, since its runs get no environment
+ * secrets (#661).
+ */
+describe("boardOrphans reads Dependabot's pull requests too (#661)", () => {
+  const DEPENDABOT = { ...ENV, PR_AUTHOR: 'dependabot[bot]' };
+
+  it('fails, naming the Dependabot secret, when a Dependabot pull request has no token', () => {
+    expect(() =>
+      boardOrphans(ARGS, { ...DEPENDABOT, BOARD_TOKEN: '' }, neverCalled),
+    ).toThrow(
+      "no board token: BOARD_TOKEN is empty, so the board cannot be read (Dependabot's runs read the repository's Dependabot secret ROADMAP_APP_KEY, #661)",
+    );
   });
 
-  it('passes without reading anything, saying it skipped and why', () => {
+  it('reads the board for a Dependabot pull request as for anyone else', () => {
     expect(
       boardOrphans(
         ARGS,
-        { PR_AUTHOR: 'dependabot[bot]', PR_NUMBER: '7', BOARD_TOKEN: '' },
-        neverCalled,
+        DEPENDABOT,
+        reads({
+          items: [rawIssue(12, 'In Progress')],
+          branches: ['develop', 'board/12-orphan-check'],
+        }),
       ),
     ).toEqual({
       ok: true,
       lines: [
-        'Skipped: Dependabot opened this pull request, and its runs get no environment secrets, so the board cannot be read. The next pull request anyone else opens checks it (#580).',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request.',
+        '#12: branch board/12-orphan-check',
       ],
     });
-  });
-
-  it('skips no other author: one with an empty token fails', () => {
-    expect(() =>
-      boardOrphans(
-        ARGS,
-        { PR_AUTHOR: 'dependabot', PR_NUMBER: '7', BOARD_TOKEN: '' },
-        neverCalled,
-      ),
-    ).toThrow('no board token');
   });
 });

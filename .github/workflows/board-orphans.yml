@@ -12,10 +12,11 @@
 # `board-read` environment, which admits pull-request runs and holds only
 # that App's key; the branches and pull requests are public and are read with
 # the run's own token (operator 2026-10-15). A fork's pull request gets no
-# secrets at all. Dependabot's runs get no environment secrets either, so on
-# its pull requests the key check and the mint skip and the script says it
-# skipped (operator 2026-10-15). It needs no install: the script imports only
-# Node's own modules and the repo's TypeScript.
+# secrets at all. Every step runs for every author (#661: a check is green
+# only when it ran): Dependabot's runs get no environment secrets, so theirs
+# read ROADMAP_APP_KEY from the repository's Dependabot secret. It needs no
+# install: the script imports only Node's own modules and the repo's
+# TypeScript.
 name: board-orphans
 on:
   pull_request:
@@ -32,17 +33,15 @@ jobs:
     environment: board-read
     steps:
       - name: The board key is set
-        if: ${{ github.event.pull_request.user.login != 'dependabot[bot]' }}
         env:
           KEY: ${{ secrets.ROADMAP_APP_KEY }}
         run: |
           if [ -z "$KEY" ]; then
-            echo "::error::ROADMAP_APP_KEY is not set in the board-read environment, so the board cannot be read (#580)."
+            echo "::error::ROADMAP_APP_KEY is not set, so the board cannot be read: it is the board-read environment's secret, and the repository's Dependabot secret for Dependabot's pull requests (#580, #661)."
             exit 1
           fi
       - name: Mint the board token (read-only roadmap App)
         id: board-token
-        if: ${{ github.event.pull_request.user.login != 'dependabot[bot]' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: Iv23liVLjRN8twjcTmN0

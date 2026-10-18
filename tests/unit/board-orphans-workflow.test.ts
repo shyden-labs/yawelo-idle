@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { SKIPPED_AUTHOR } from '../../scripts/board-orphans';
 import {
   onlyJob,
   stepNamed,
@@ -15,9 +14,9 @@ import { runOf } from './workflow-steps';
  * scripts/board-orphans.ts in a job of its own, which branch protection
  * requires by its name. The board is read with the read-only roadmap App's
  * token, minted from the `board-read` environment's key; the branches and
- * pull requests with the run's own token (operator 2026-10-15). Dependabot's
- * runs get no environment secrets, so the key check and the mint skip there
- * and the script says it skipped (operator 2026-10-15).
+ * pull requests with the run's own token (operator 2026-10-15). Every step
+ * runs for every author (#661: a check is green only when it ran); a
+ * Dependabot run reads the key from the repository's Dependabot secret.
  */
 
 const FILE = 'board-orphans.yml';
@@ -26,8 +25,6 @@ const ID = 'board-orphans';
 const workflow = (): Workflow => readWorkflow(FILE);
 const job = (): WorkflowJob => onlyJob(FILE, ID);
 const step = (name: string): WorkflowStep => stepNamed(FILE, ID, name);
-
-const NOT_DEPENDABOT = `\${{ github.event.pull_request.user.login != '${SKIPPED_AUTHOR}' }}`;
 
 describe('board-orphans.yml (#580)', () => {
   it('runs on every pull request, and again when its title or body is edited', () => {
@@ -69,12 +66,12 @@ describe('board-orphans.yml (#580)', () => {
     ]);
   });
 
-  it("fails by name when the key is missing, except on Dependabot's pull requests", () => {
+  it('fails by name when the key is missing, for every author, naming both places it is set', () => {
     const s = step('The board key is set');
-    expect(s.if).toBe(NOT_DEPENDABOT);
+    expect(s.if).toBeUndefined();
     expect(s.env).toEqual({ KEY: '${{ secrets.ROADMAP_APP_KEY }}' });
     expect(runOf(s)).toContain(
-      '::error::ROADMAP_APP_KEY is not set in the board-read environment, so the board cannot be read (#580).',
+      "::error::ROADMAP_APP_KEY is not set, so the board cannot be read: it is the board-read environment's secret, and the repository's Dependabot secret for Dependabot's pull requests (#580, #661).",
     );
     expect(runOf(s)).toContain('exit 1');
   });
@@ -82,7 +79,7 @@ describe('board-orphans.yml (#580)', () => {
   it("mints a token for the roadmap App's org installation, reading issues and projects only", () => {
     const s = step('Mint the board token (read-only roadmap App)');
     expect([s.if, s.id, s.uses]).toEqual([
-      NOT_DEPENDABOT,
+      undefined,
       'board-token',
       'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1',
     ]);
