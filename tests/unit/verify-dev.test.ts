@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createServer, type Server } from 'node:http';
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import type { AddressInfo } from 'node:net';
 import {
   NO_INDEX,
@@ -10,7 +15,10 @@ import {
   gateProblems,
   healthJudgement,
   healthProblems,
+  holdingJudgement,
+  holdingProblems,
   leaked,
+  PREVIEW_PAGES,
   roadmapJudgement,
   roadmapProblems,
   retiredJudgement,
@@ -20,6 +28,11 @@ import {
   scriptJudgement,
   scriptProblems,
   SITE_PAGES,
+  siteJudgement,
+  siteProblems,
+  stylesheetJudgement,
+  stylesheetOf,
+  stylesheetProblems,
   verifyDev,
   webJudgement,
   webProblems,
@@ -63,6 +76,144 @@ const shell = (sha: string) =>
   );
 const noindex = { 'x-robots-tag': NO_INDEX };
 const policy = { 'content-security-policy': CONTENT_SECURITY_POLICY };
+const STYLESHEET = '/_astro/Holding.Bd-ZPiSZ.css';
+const CSS = 'text/css; charset=utf-8';
+/** The holding page as its build writes it (Holding.astro, #673). */
+const holding = (sha: string) =>
+  page(sha)
+    .replace(
+      '</head>',
+      `<link rel="alternate" hreflang="id" href="/id/"><link rel="stylesheet" href="${STYLESHEET}"></head>`,
+    )
+    .replace(
+      '</html>',
+      '<body><p class="badge" data-coming-soon>Soon</p></body></html>',
+    );
+/** The site being built as its build writes it (Base.astro, #673). */
+const site = (sha: string) =>
+  page(sha).replace(
+    '</html>',
+    '<body><p class="dev-strip" data-dev-strip>In development</p></body></html>',
+  );
+
+describe('holdingProblems (#673)', () => {
+  it('accepts the holding page with its commit, noindex and mark', () => {
+    const judged = holdingJudgement(probe(200, holding(SHA), noindex), SHA);
+    expect(
+      searched(judged.problems, { of: judged.checked, what: 'holding checks' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('verify-dev/holding-checks', judged.checked.length),
+    ).toBeUndefined();
+  });
+
+  it('fails the site being built served in its place', () => {
+    expect(holdingProblems(probe(200, site(SHA), noindex), SHA)).toEqual([
+      'web: not the holding page: no data-coming-soon mark',
+    ]);
+  });
+
+  it('fails a page that names the mark only in its text', () => {
+    const text = page(SHA).replace(
+      '</html>',
+      '<body><p>data-coming-soon</p></body></html>',
+    );
+    expect(holdingProblems(probe(200, text, noindex), SHA)).toEqual([
+      'web: not the holding page: no data-coming-soon mark',
+    ]);
+  });
+
+  it('fails a non-200 and judges nothing after it', () => {
+    const judged = holdingJudgement(probe(404, holding(SHA), noindex), SHA);
+    expect(judged).toEqual({
+      checked: ['status'],
+      problems: ['web: status 404 with the password, expected 200'],
+    });
+  });
+});
+
+describe('siteProblems (#673)', () => {
+  it('accepts the site being built with its commit, noindex and mark', () => {
+    const judged = siteJudgement(probe(200, site(SHA), noindex), SHA, 'site /');
+    expect(
+      searched(judged.problems, { of: judged.checked, what: 'site checks' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('verify-dev/site-checks', judged.checked.length),
+    ).toBeUndefined();
+  });
+
+  it('fails the holding page served in its place', () => {
+    expect(
+      siteProblems(probe(200, holding(SHA), noindex), SHA, 'site /'),
+    ).toEqual(['site /: not the site being built: no data-dev-strip mark']);
+  });
+});
+
+describe('stylesheetOf (#673)', () => {
+  it('names the stylesheet the page links', () => {
+    expect(stylesheetOf(holding(SHA))).toBe(STYLESHEET);
+  });
+
+  it('names none in a page that links none', () => {
+    expect(stylesheetOf(site(SHA))).toBeUndefined();
+  });
+
+  it('names none for a link that is not a stylesheet', () => {
+    expect(
+      stylesheetOf('<link rel="alternate" href="/_astro/x.css">'),
+    ).toBeUndefined();
+  });
+
+  it('names the stylesheet whatever the order of its attributes', () => {
+    expect(stylesheetOf(`<link href="${STYLESHEET}" rel="stylesheet">`)).toBe(
+      STYLESHEET,
+    );
+  });
+});
+
+describe('stylesheetProblems (#673)', () => {
+  const label = `web ${STYLESHEET}`;
+
+  it('accepts CSS with noindex', () => {
+    const judged = stylesheetJudgement(
+      label,
+      probe(200, 'body{}', { 'content-type': CSS, ...noindex }),
+    );
+    expect(
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'stylesheet checks',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('verify-dev/stylesheet-checks', judged.checked.length),
+    ).toBeUndefined();
+  });
+
+  it('fails a stylesheet served as a page', () => {
+    expect(
+      stylesheetProblems(
+        label,
+        probe(200, '<html>', { 'content-type': 'text/html', ...noindex }),
+      ),
+    ).toEqual([`${label}: Content-Type is "text/html", expected text/css`]);
+  });
+
+  it('fails a stylesheet without the noindex header', () => {
+    expect(
+      stylesheetProblems(label, probe(200, 'body{}', { 'content-type': CSS })),
+    ).toEqual([`${label}: X-Robots-Tag is null, expected "${NO_INDEX}"`]);
+  });
+
+  it('fails a non-200 and judges nothing after it', () => {
+    const judged = stylesheetJudgement(label, probe(404, '', noindex));
+    expect(judged).toEqual({
+      checked: ['status'],
+      problems: [`${label}: status 404 with the password, expected 200`],
+    });
+  });
+});
 
 describe('basicAuthorization', () => {
   it('encodes the password as UTF-8 after a fixed username', () => {
@@ -450,6 +601,17 @@ describe('roadmapProblems (#341)', () => {
 describe('verifyDev', () => {
   let server: Server;
   let base = '';
+  /** The site Worker's own address, which shows the site being built (#673). */
+  let siteServer: Server;
+  let siteBase = '';
+  /** The front door serves the site being built in place of the holding page. */
+  let plantSite = false;
+  /** The site's own address serves the holding page in place of the site. */
+  let siteServesHolding = false;
+  /** The site's own address serves its pages to anyone. */
+  let ungatedSite = false;
+  /** The status the holding page's stylesheet answers with. */
+  let styleStatus = 200;
   let served = SHA;
   let gated = true;
   let tagged = true;
@@ -489,10 +651,12 @@ describe('verifyDev', () => {
   /** What /api/roadmap/health answers to an authorised request (#341). */
   let roadmap: Record<string, unknown> = {};
 
-  beforeAll(async () => {
-    server = createServer((req, res) => {
+  /** One fake for both addresses: `role` says which Worker's pages it plays. */
+  const handle =
+    (role: 'web' | 'site') =>
+    (req: IncomingMessage, res: ServerResponse): void => {
       requests += 1;
-      seenUrls.push(req.url ?? '');
+      seenUrls.push(`${role === 'site' ? 'site:' : ''}${req.url ?? ''}`);
       const tag: Record<string, string> = tagged
         ? { 'x-robots-tag': NO_INDEX }
         : {};
@@ -530,6 +694,11 @@ describe('verifyDev', () => {
         res.end('export {};');
         return;
       }
+      if (role === 'web' && req.url === STYLESHEET && authorised) {
+        res.writeHead(styleStatus, { 'content-type': CSS, ...tag });
+        res.end('body{}');
+        return;
+      }
       if (req.url === '/robots.txt') {
         if (dropRobots) {
           req.socket.destroy();
@@ -546,7 +715,8 @@ describe('verifyDev', () => {
           return;
         }
       }
-      if (gated && !authorised && req.url !== ungatedPath) {
+      const ungated = role === 'site' ? ungatedSite : req.url === ungatedPath;
+      if (gated && !authorised && !ungated) {
         if (redirectGateOnce && authorization === '') {
           redirectGateOnce = false;
           res.writeHead(302, { location: '/login', ...tag });
@@ -573,20 +743,35 @@ describe('verifyDev', () => {
         },
       );
       const commit = webStale <= staleLooks || pathStale ? OLD : served;
-      res.end(noScript && req.url === '/play/' ? page(commit) : shell(commit));
-    });
+      if (req.url === '/play/' && role === 'web')
+        res.end(noScript ? page(commit) : shell(commit));
+      else if (role === 'site')
+        res.end(siteServesHolding ? holding(commit) : site(commit));
+      else res.end(plantSite ? site(commit) : holding(commit));
+    };
+
+  const listen = async (handler: Server): Promise<string> => {
     await new Promise<void>((resolve) =>
-      server.listen(0, '127.0.0.1', resolve),
+      handler.listen(0, '127.0.0.1', resolve),
     );
-    base = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
+    return `http://127.0.0.1:${String((handler.address() as AddressInfo).port)}`;
+  };
+
+  beforeAll(async () => {
+    server = createServer(handle('web'));
+    siteServer = createServer(handle('site'));
+    base = await listen(server);
+    siteBase = await listen(siteServer);
   });
 
   afterAll(() => {
     server.close();
+    siteServer.close();
   });
 
   const target = () => ({
     webUrl: `${base}/`,
+    siteUrl: `${siteBase}/`,
     syncUrl: base,
     gameUrl: `${base}/retired-game/`,
     sha: SHA,
@@ -594,6 +779,10 @@ describe('verifyDev', () => {
   });
 
   const reset = () => {
+    plantSite = false;
+    siteServesHolding = false;
+    ungatedSite = false;
+    styleStatus = 200;
     served = SHA;
     gated = true;
     tagged = true;
@@ -652,9 +841,12 @@ describe('verifyDev', () => {
       '/',
       '/health',
       ...SITE_PAGES,
+      ...PREVIEW_PAGES.map((path) => `site:${path}`),
       '/robots.txt',
+      STYLESHEET,
       SCRIPT,
       '/play/',
+      'site:/',
       '/retired-game/',
       '/api/roadmap/health',
     ]);
@@ -664,8 +856,11 @@ describe('verifyDev', () => {
       basicAuthorization(PASSWORD),
       '',
       ...SITE_PAGES.map(() => basicAuthorization(PASSWORD)),
+      ...PREVIEW_PAGES.map(() => basicAuthorization(PASSWORD)),
       '',
       basicAuthorization(PASSWORD),
+      basicAuthorization(PASSWORD),
+      '',
       '',
       '',
       basicAuthorization(PASSWORD),
@@ -676,8 +871,51 @@ describe('verifyDev', () => {
     ).toBeUndefined();
   });
 
-  it('checks Indonesian, the roadmap and the game at /play/ (#332 AC7)', () => {
-    expect(SITE_PAGES).toEqual(['/id/', '/roadmap', '/play/']);
+  it('checks Indonesian and the game at /play/ on the front door (#332 AC7, #673)', () => {
+    expect(SITE_PAGES).toEqual(['/id/', '/play/']);
+  });
+
+  it('checks the site being built at its own address, roadmap included (#673)', () => {
+    expect(PREVIEW_PAGES).toEqual(['/', '/id/', '/roadmap']);
+  });
+
+  it('fails a front door serving the site being built in place of the holding page (#673)', async () => {
+    reset();
+    plantSite = true;
+    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
+      'web: not the holding page: no data-coming-soon mark',
+      'web /id/: not the holding page: no data-coming-soon mark',
+      'web: no stylesheet in the page',
+    ]);
+  });
+
+  it('fails a holding page whose stylesheet is not served (#673)', async () => {
+    reset();
+    styleStatus = 404;
+    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
+      `web ${STYLESHEET}: status 404 with the password, expected 200`,
+    ]);
+  });
+
+  it('fails a site address serving the holding page in place of the site (#673)', async () => {
+    reset();
+    siteServesHolding = true;
+    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual(
+      PREVIEW_PAGES.map(
+        (path) =>
+          `site ${path}: not the site being built: no data-dev-strip mark`,
+      ),
+    );
+  });
+
+  it('fails a site address the gate does not cover (#673)', async () => {
+    reset();
+    ungatedSite = true;
+    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
+      'site without credentials: answered 200, expected 401; the password gate is not in front of it',
+      'site without credentials: no Basic WWW-Authenticate challenge',
+      'site without credentials: the response carries app markup',
+    ]);
   });
 
   it('fails when the retired game address still serves the game (#332)', async () => {
@@ -696,9 +934,9 @@ describe('verifyDev', () => {
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     expect(problems).toEqual([
       notServed(3),
-      `web /roadmap: serves commit ${OLD}, expected ${SHA}`,
+      `site /roadmap: serves commit ${OLD}, expected ${SHA}`,
     ]);
-    expect(requests, 'three looks of seven probes').toBe(21);
+    expect(requests, 'three looks of nine probes').toBe(27);
   });
 
   it('waits while one page still serves the old commit, then judges it once (#581)', async () => {
@@ -708,8 +946,8 @@ describe('verifyDev', () => {
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     // The exact count first: a floor that moved would otherwise stop the
     // test before it ran (measured on #332).
-    // The last look's twelfth probe is the roadmap's health (#341).
-    expect(requests, 'two looks of seven probes, then one of twelve').toBe(26);
+    // The last look's sixteenth probe is the roadmap's health (#341).
+    expect(requests, 'two looks of nine probes, then one of sixteen').toBe(34);
     expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
     expect(
       floorBreach('verify-dev/stale-page-probes', requests),
@@ -720,9 +958,9 @@ describe('verifyDev', () => {
     reset();
     failPath = '/roadmap';
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'web /roadmap: status 500 with the password, expected 200',
+      'site /roadmap: status 500 with the password, expected 200',
     ]);
-    expect(requests, 'one look of seven probes').toBe(7);
+    expect(requests, 'one look of nine probes').toBe(9);
   });
 
   it('fails a game the gate does not cover', async () => {
@@ -782,9 +1020,10 @@ describe('verifyDev', () => {
     const problems = await verifyDev(target(), { polls: 5, pollMs: 0 });
     // The exact count first: a floor that moved would otherwise stop the
     // test before it ran (measured on #332).
-    expect(requests, 'two stale looks of four probes, then one of twelve').toBe(
-      20,
-    );
+    expect(
+      requests,
+      'two stale looks of four probes, then one of sixteen',
+    ).toBe(24);
     expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
     expect(
       floorBreach('verify-dev/stale-site-probes', requests),
@@ -830,7 +1069,7 @@ describe('verifyDev', () => {
       'web without credentials: answered 302, expected 401; the password gate is not in front of it',
       'web without credentials: no Basic WWW-Authenticate challenge',
     ]);
-    expect(requests, 'one look of twelve probes').toBe(12);
+    expect(requests, 'one look of sixteen probes').toBe(16);
   });
 
   it('fails at once when a host that has answered drops a connection', async () => {
@@ -853,7 +1092,7 @@ describe('verifyDev', () => {
         new RegExp(`^robots\\.txt: request to ${base}/robots\\.txt failed: `),
       ),
     ]);
-    expect(requests, 'one look of twelve probes').toBe(12);
+    expect(requests, 'one look of sixteen probes').toBe(16);
   });
 
   it('fails when the noindex header is missing everywhere', async () => {
@@ -866,6 +1105,11 @@ describe('verifyDev', () => {
         (path) =>
           `web ${path}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       ),
+      ...PREVIEW_PAGES.map(
+        (path) =>
+          `site ${path}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
+      ),
+      `web ${STYLESHEET}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       `web ${SCRIPT}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       'roadmap: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"',
     ]);
@@ -923,7 +1167,7 @@ describe('verifyDev', () => {
     // Every kind of message: a judged leak, a wait, judged answers, failed requests.
     expect(leaking).toHaveLength(6);
     expect(stale).toHaveLength(3);
-    expect(untagged).toHaveLength(7);
+    expect(untagged).toHaveLength(10);
     expect(unreachable).toHaveLength(3);
     const reported = [...leaking, ...stale, ...untagged, ...unreachable];
     const credential = basicAuthorization(PASSWORD).slice(6);

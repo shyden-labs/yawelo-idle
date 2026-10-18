@@ -12,6 +12,7 @@ import { runOf } from './workflow-steps';
 import { floorBreach } from '../floors';
 import { searched } from '../searched';
 import { DEV_HOSTS } from '../../apps/dev-hosts/hosts';
+import { HOLDING_HOST } from '../../apps/site/worker/routes';
 
 /**
  * The dev deploy configs (three Workers and the Pages hostname adapter,
@@ -89,12 +90,24 @@ describe('the dev Workers’ deploy configs', () => {
   });
 
   it('reaches the game only through the site Worker’s GAME binding (#332)', () => {
-    expect(byName('yawelo-idle-site-dev').services).toEqual([
-      { binding: 'GAME', service: 'yawelo-idle-web-dev' },
-    ]);
+    expect(byName('yawelo-idle-site-dev').services).toContainEqual({
+      binding: 'GAME',
+      service: 'yawelo-idle-web-dev',
+    });
     const game = byName('yawelo-idle-web-dev');
     expect(game.workers_dev).toBe(false);
     expect(game.routes).toBeUndefined();
+  });
+
+  it('binds the game and the holding page’s dev copy, and nothing else, to the site Worker (#332, #673)', () => {
+    expect(byName('yawelo-idle-site-dev').services).toEqual([
+      { binding: 'GAME', service: byName('yawelo-idle-web-dev').name },
+      { binding: 'HOLDING', service: byName('yawelo-idle-holding-dev').name },
+    ]);
+  });
+
+  it('shows the holding page on the hostname that reaches the site Worker (#673)', () => {
+    expect(HOLDING_HOST).toBe(devHost('SITE'));
   });
 
   it('runs the game’s script before its files, so every response carries the CSP (#123, #332)', () => {
@@ -136,8 +149,10 @@ describe('the dev Workers’ deploy configs', () => {
       (step) => runOf(step) === 'node scripts/verify-dev.ts',
     );
     const game = `https://${byName('yawelo-idle-web-dev').name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
+    const site = `https://${byName('yawelo-idle-site-dev').name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
     expect(verify?.env).toMatchObject({
       DEV_WEB_URL: `https://${devHost('SITE')}/`,
+      DEV_SITE_URL: `${site}/`,
       DEV_SYNC_URL: `https://${devHost('SYNC')}`,
       DEV_GAME_URL: `${game}/`,
     });
@@ -321,14 +336,15 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
         'npx wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"',
       ),
       holds('npx wrangler deploy'),
-      holds(
-        'npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"',
-      ),
       // The holding page's dev copy (#621 AC8), named from the repository
       // root: from its subfolder, npx would run wrangler at apps/site, which
-      // reads the dev site's config (deploy-dev run 38889757344).
+      // reads the dev site's config (deploy-dev run 38889757344). Before
+      // the site Worker, whose HOLDING binding names it (#673).
       holds(
         'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+      ),
+      holds(
+        'npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"',
       ),
       holds(
         'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
@@ -411,6 +427,13 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
         step['working-directory'] === dir &&
         runOf(step).startsWith('npx wrangler deploy'),
     );
+  /** The holding page's dev copy, deployed from the repository root (#621 AC8). */
+  const holdingDeploy = () =>
+    deploySteps().findIndex(
+      (step) =>
+        runOf(step) ===
+        'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+    );
 
   it('deploys the game before the site, whose GAME binding names it', () => {
     const game = deployIn('apps/web');
@@ -426,18 +449,18 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
     );
     expect(builds.map(({ run }) => run)).toEqual([
       'npm run build --workspace @yawelo-idle/web',
-      'npm run build --workspace @yawelo-idle/site',
-      // The holding page, whose dev copy is deployed from it (#621 AC8).
+      // The holding page, whose dev copy is deployed from it (#621 AC8)
+      // before the site Worker that binds it (#673).
       'npm run build:holding --workspace @yawelo-idle/site',
+      'npm run build --workspace @yawelo-idle/site',
     ]);
     expect(builds[0]?.index).toBeLessThan(deployIn('apps/web'));
-    expect(builds[1]?.index).toBeLessThan(deployIn('apps/site'));
-    expect(builds[2]?.index).toBeLessThan(
-      deploySteps().findIndex(
-        (step) =>
-          runOf(step) ===
-          'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
-      ),
-    );
+    expect(builds[1]?.index).toBeLessThan(holdingDeploy());
+    expect(builds[2]?.index).toBeLessThan(deployIn('apps/site'));
+  });
+
+  it('deploys the holding page’s dev copy before the site Worker that binds it (#673)', () => {
+    expect(holdingDeploy()).toBeGreaterThanOrEqual(0);
+    expect(holdingDeploy()).toBeLessThan(deployIn('apps/site'));
   });
 });

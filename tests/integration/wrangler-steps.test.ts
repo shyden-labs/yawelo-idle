@@ -79,8 +79,8 @@ function callAt(step: string): WranglerCall {
 /** The deploys of a tracked config, each dry-run as its step runs it. */
 const DRY_RUNS = [
   'deploy-dev.yml / deploy / Deploy the game Worker',
-  'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
   "deploy-dev.yml / deploy / Deploy the holding page's dev copy",
+  'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
   'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
 ];
 

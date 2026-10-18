@@ -44,18 +44,18 @@ const CALLS = [
     start: 'the package root apps/web',
   },
   {
-    step: `${DEV}Deploy the site Worker with its secrets`,
-    command: 'deploy',
-    from: 'apps/site',
-    configArgs: [],
-    start: 'the package root apps/site',
-  },
-  {
     step: `${DEV}Deploy the holding page's dev copy`,
     command: 'deploy',
     from: '.',
     configArgs: ['--config', 'apps/site/holding-dev/wrangler.jsonc'],
     start: 'the repository root',
+  },
+  {
+    step: `${DEV}Deploy the site Worker with its secrets`,
+    command: 'deploy',
+    from: 'apps/site',
+    configArgs: [],
+    start: 'the package root apps/site',
   },
   {
     step: `${DEV}Deploy the hostname adapter to production on Pages`,
