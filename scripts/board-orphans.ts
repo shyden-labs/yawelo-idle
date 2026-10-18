@@ -21,17 +21,17 @@
  * the branches and pull requests, which are public, with the run's own token
  * (operator 2026-10-15). Anything it cannot read fails it by name, and each
  * read carries a known positive: the board holds items, the branches hold
- * `develop`, the open pull requests hold this one. Dependabot's runs get no
- * environment secrets, so on its pull requests the check passes and says it
- * skipped; the next pull request anyone else opens checks the same board
- * (operator 2026-10-15).
+ * `develop`, the open pull requests hold this one. It reads the board for
+ * every author, Dependabot included (#661: a check is green only when it
+ * ran); Dependabot's runs get no environment secrets, so theirs read the key
+ * from the repository's Dependabot secret.
  */
 import { execFileSync } from 'node:child_process';
 import { NEXT_QUERY, type NextItem, parseNextItems } from './board-next.ts';
 import type { Gh } from './board-progress.ts';
 
-/** The pull-request author whose runs get no environment secrets. */
-export const SKIPPED_AUTHOR = 'dependabot[bot]';
+/** The pull-request author whose runs read Dependabot secrets, not environment ones. */
+const DEPENDABOT = 'dependabot[bot]';
 
 /** `gh` with the board's token, and `gh` with the run's own token. */
 export interface OrphanReads {
@@ -127,20 +127,14 @@ export function boardOrphans(
   const [id, title, repo] = args;
   if (id === undefined || title === undefined || repo === undefined)
     throw new Error(USAGE);
-  if (env.PR_AUTHOR === SKIPPED_AUTHOR) {
-    return {
-      ok: true,
-      lines: [
-        'Skipped: Dependabot opened this pull request, and its runs get no environment secrets, so the board cannot be read. The next pull request anyone else opens checks it (#580).',
-      ],
-    };
-  }
   const prNumber = Number(env.PR_NUMBER);
   if (!Number.isInteger(prNumber) || prNumber <= 0)
     throw new Error('PR_NUMBER is not a pull request number');
   if (!env.BOARD_TOKEN)
     throw new Error(
-      "no board token: BOARD_TOKEN is empty, so the board cannot be read (the board-read environment's ROADMAP_APP_KEY, #580)",
+      env.PR_AUTHOR === DEPENDABOT
+        ? "no board token: BOARD_TOKEN is empty, so the board cannot be read (Dependabot's runs read the repository's Dependabot secret ROADMAP_APP_KEY, #661)"
+        : "no board token: BOARD_TOKEN is empty, so the board cannot be read (the board-read environment's ROADMAP_APP_KEY, #580)",
     );
 
   const items = read('the board', () =>
