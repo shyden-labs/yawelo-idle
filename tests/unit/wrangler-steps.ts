@@ -83,12 +83,12 @@ export const WRANGLER_STEPS: readonly (MeantConfig & { step: string })[] = [
     config: 'apps/web/wrangler.jsonc',
   },
   {
-    step: 'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
-    config: 'apps/site/wrangler.jsonc',
-  },
-  {
     step: "deploy-dev.yml / deploy / Deploy the holding page's dev copy",
     config: 'apps/site/holding-dev/wrangler.jsonc',
+  },
+  {
+    step: 'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
+    config: 'apps/site/wrangler.jsonc',
   },
   {
     step: 'deploy-dev.yml / deploy / Deploy the hostname adapter to production on Pages',

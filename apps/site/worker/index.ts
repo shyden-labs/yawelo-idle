@@ -2,8 +2,11 @@
  * The site Worker, the front door (website spec §7.2): every request passes
  * the non-prod gate (#39) except `/hooks/github`, then `/play` and `/play/*`
  * go to the game Worker through the GAME service binding, `/api/roadmap*` to
- * the `Roadmap` Durable Object (#341), and everything else to the site's own
- * prerendered pages. The cron reads the board every 10 minutes.
+ * the `Roadmap` Durable Object (#341), and everything else to the pages: on
+ * the dev front door the holding page's dev copy, through the HOLDING
+ * service binding, so dev shows what production shows (#673); on this
+ * Worker's own address the site's own prerendered pages, the site being
+ * built. The cron reads the board every 10 minutes.
  *
  * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
  * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
@@ -12,7 +15,13 @@
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
 import { Roadmap, type RoadmapEnv } from './roadmap';
-import { HOOK_PATH, isGamePath, isRoadmapPath, ROADMAP_PATHS } from './routes';
+import {
+  HOOK_PATH,
+  isGamePath,
+  isRoadmapPath,
+  ROADMAP_PATHS,
+  showsHolding,
+} from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 
 export { Roadmap };
@@ -80,9 +89,10 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === HOOK_PATH) return hook(request, env, ctx);
     return gateWebRequest(request, env.DEV_PASSWORD, (allowed) => {
-      const path = new URL(allowed.url).pathname;
+      const { hostname, pathname: path } = new URL(allowed.url);
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
+      if (showsHolding(hostname)) return env.HOLDING.fetch(allowed);
       return env.ASSETS.fetch(allowed);
     });
   },

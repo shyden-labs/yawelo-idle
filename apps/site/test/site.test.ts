@@ -13,7 +13,7 @@ import {
   type Locale,
   type Page,
 } from '../src/i18n';
-import { EXEMPT_PATHS } from '../worker/routes';
+import { EXEMPT_PATHS, HOLDING_HOST, ROADMAP_PATHS } from '../worker/routes';
 
 /**
  * The dev site Worker, served by wrangler's test harness from the real
@@ -42,13 +42,22 @@ const server = createTestHarness({
     {
       configPath: './wrangler.jsonc',
       secrets: { DEV_PASSWORD: PASSWORD },
-      bindingOverrides: { GAME: 'game-echo' },
+      bindingOverrides: { GAME: 'game-echo', HOLDING: 'holding-copy' },
     },
     {
       config: {
         name: 'game-echo',
         main: './test/game-echo.ts',
         compatibility_date: '2026-09-30',
+      },
+    },
+    // The holding page's build, served as assets only, as its dev copy is
+    // (apps/site/holding-dev/wrangler.jsonc, #673).
+    {
+      config: {
+        name: 'holding-copy',
+        compatibility_date: '2026-09-30',
+        assets: { directory: './dist-holding', not_found_handling: '404-page' },
       },
     },
   ],
@@ -260,4 +269,75 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
       expect(html).toContain(COPY[locale].devStrip);
     },
   );
+});
+
+/** The dev front door: the holding page, with the game and the roadmap kept (#673). */
+const FRONT = `https://${HOLDING_HOST}`;
+
+describe('the dev front door shows the holding page production shows (#673)', () => {
+  it.each(['/', '/id/'])(
+    'shows the holding page at %s with the password, noindex added',
+    async (path) => {
+      const response = await get(`${FRONT}${path}`, authorised);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
+      const html = await response.text();
+      expect(html).toContain(' data-coming-soon>');
+    },
+  );
+
+  it('serves the stylesheet the holding page links, as CSS', async () => {
+    const html = await (await get(`${FRONT}/`, authorised)).text();
+    // Matched on the page, never on the href: toMatch throws on a missing
+    // href before it adds this message, so the failure would not say why.
+    const link =
+      /<link rel="stylesheet" href="(\/_astro\/Holding\.[^"]+\.css)">/;
+    expect(html, 'the Holding stylesheet').toMatch(link);
+    const href = link.exec(html)?.[1];
+    const response = await get(`${FRONT}${String(href)}`, authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
+  });
+
+  it.each(['/', '/id/', '/no/such/page'])(
+    'refuses %s on the front door without credentials',
+    async (path) => {
+      const response = await get(`${FRONT}${path}`);
+      expect(response.status).toBe(401);
+      expect(await response.text()).toBe(await challengeResponse().text());
+    },
+  );
+
+  it('serves blocking robots.txt on the front door without credentials', async () => {
+    const response = await get(`${FRONT}/robots.txt`);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
+  });
+
+  it('forwards the game on the front door', async () => {
+    const response = await get(`${FRONT}/play/`, authorised);
+    expect(response.status).toBe(200);
+    expect(await reachedGame(response)).toMatchObject({ pathname: '/play/' });
+  });
+
+  it('answers the roadmap’s health on the front door, not the holding page', async () => {
+    const response = await get(`${FRONT}${ROADMAP_PATHS.health}`, authorised);
+    expect(response.headers.get('Content-Type')).toMatch(
+      /^application\/json\b/,
+    );
+  });
+
+  it.each(EXEMPT_PATHS)(
+    'takes %s on the front door without credentials, POST only',
+    async (path) => {
+      const response = await get(`${FRONT}${path}`);
+      expect(response.status).toBe(405);
+      expect(response.headers.get('Allow')).toBe('POST');
+    },
+  );
+
+  it('keeps the site being built at the Worker’s own address', async () => {
+    const html = await (await get(`${DEV}/`, authorised)).text();
+    expect(html).toContain(' data-dev-strip>');
+  });
 });

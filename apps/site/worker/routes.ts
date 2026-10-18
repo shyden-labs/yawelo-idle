@@ -29,6 +29,19 @@ export function isRoadmapPath(pathname: string): boolean {
   return (Object.values(ROADMAP_PATHS) as readonly string[]).includes(pathname);
 }
 
+/**
+ * The dev front door (apps/dev-hosts/hosts.ts maps it to this Worker), whose
+ * pages are the holding page production shows (#673; Shyden, 2026-10-18:
+ * "Dev shows holding"). The site being built stays at this Worker's own
+ * workers.dev address, behind the same gate.
+ */
+export const HOLDING_HOST = 'dev.yawelo-idle.shyden.co.uk';
+
+/** Whether a page request on `hostname` is the holding page's to answer. */
+export function showsHolding(hostname: string): boolean {
+  return hostname === HOLDING_HOST;
+}
+
 /** The game's paths, forwarded to the game Worker. */
 export function isGamePath(pathname: string): boolean {
   return pathname === '/play' || pathname.startsWith('/play/');

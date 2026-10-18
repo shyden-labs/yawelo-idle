@@ -27,8 +27,13 @@
     "not_found_handling": "404-page",
   },
   // The game Worker has no address of its own; this binding is its only way
-  // in, so it is deployed first.
-  "services": [{ "binding": "GAME", "service": "yawelo-idle-web-dev" }],
+  // in, so it is deployed first. HOLDING is the holding page's dev copy,
+  // which the dev front door shows in place of the site being built (#673),
+  // so it is deployed first too.
+  "services": [
+    { "binding": "GAME", "service": "yawelo-idle-web-dev" },
+    { "binding": "HOLDING", "service": "yawelo-idle-holding-dev" },
+  ],
   // The live roadmap (#341): the one board it reads, as the read-only App
   // yawelo-idle-roadmap; its snapshot lives in the Roadmap Durable Object
   // (SQLite storage, the only kind on the Free plan, spec §10 R1), and the

@@ -99,6 +99,25 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
+      # The holding page's dev copy (#621 AC8): the production holding build,
+      # crawlers blocked and every response noindex, at its own workers.dev
+      # address, so Shyden checks it on his phones before a release. Before
+      # the site Worker, whose HOLDING binding names it: the dev front door
+      # shows it (#673).
+      - name: Build the holding page, stamped with this commit
+        env:
+          YAWELO_IDLE_COMMIT: ${{ github.sha }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Make the holding page's dev copy (crawlers blocked, noindex)
+        run: node scripts/holding-dev.ts
+      # Named from the repository root: from its subfolder, npx runs wrangler
+      # at apps/site, which reads the dev site's config instead (run
+      # 38889757344 redeployed the dev site here).
+      - name: Deploy the holding page's dev copy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
       - name: Build the site, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
@@ -120,23 +139,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"
-      # The holding page's dev copy (#621 AC8): the production holding build,
-      # crawlers blocked and every response noindex, at its own workers.dev
-      # address, so Shyden checks it on his phones before a release.
-      - name: Build the holding page, stamped with this commit
-        env:
-          YAWELO_IDLE_COMMIT: ${{ github.sha }}
-        run: npm run build:holding --workspace @yawelo-idle/site
-      - name: Make the holding page's dev copy (crawlers blocked, noindex)
-        run: node scripts/holding-dev.ts
-      # Named from the repository root: from its subfolder, npx runs wrangler
-      # at apps/site, which reads the dev site's config instead (run
-      # 38889757344 redeployed the dev site here).
-      - name: Deploy the holding page's dev copy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
       # The dev hostnames (#429): a Pages project whose one Function forwards
       # each request to the site or the sync Worker by host, so it goes after
       # both. Its custom domains were attached once and are read back by the
@@ -171,11 +173,14 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.nvmrc'
-      - name: Verify dev is password-gated, serves this commit, and D1 answers
+      - name: Verify dev is password-gated, serves this commit, shows the holding page, and D1 answers
         env:
           # The dev hostnames, through the Pages adapter (#429).
           DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
           DEV_SYNC_URL: https://dev-api.yawelo-idle.shyden.co.uk
+          # The site Worker's own address, where the site being built stays
+          # while the front door shows the holding page (#673).
+          DEV_SITE_URL: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/
           # The game's own address, which must serve nothing (#332).
           DEV_GAME_URL: https://yawelo-idle-web-dev.shyden-labs-dev.workers.dev/
           EXPECTED_SHA: ${{ github.sha }}
