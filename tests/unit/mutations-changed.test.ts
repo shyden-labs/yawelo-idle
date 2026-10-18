@@ -352,6 +352,42 @@ describe('changedHelpers', () => {
     });
   });
 
+  // #670: PR #669 printed `2 helpers and 1 mutation file` for one helper and one mutation file.
+  it('leaves out a mutation file, which is judged as one, never as a helper too (#670)', () => {
+    expect(
+      changedHelpers(
+        [
+          { status: 'M', path: 'tests/searched.ts' },
+          { status: 'A', path: 'tests/mutations/670-x.ts' },
+        ],
+        LISTED,
+        WORKSPACES,
+        RECORDED,
+      ),
+    ).toEqual({
+      helpers: ['tests/searched.ts'],
+      data: [],
+      recorded: [],
+      unreadable: [],
+    });
+  });
+
+  it('keeps a file under tests/mutations/ that is not a mutation file as data (#670)', () => {
+    expect(
+      changedHelpers(
+        [{ status: 'A', path: 'tests/mutations/notes.json' }],
+        LISTED,
+        WORKSPACES,
+        RECORDED,
+      ),
+    ).toEqual({
+      helpers: [],
+      data: ['tests/mutations/notes.json'],
+      recorded: [],
+      unreadable: [],
+    });
+  });
+
   it('leaves out a deleted one', () => {
     expect(
       changedHelpers(
