@@ -34,6 +34,7 @@ export interface Finding {
 }
 
 export interface Scan {
+  /** Jobs the scan read, counted as it reads each one, not as listed (#373). */
   jobs: number;
   secretReferences: number;
   /** Every secret reference read, as `file: where: reference` (#367). */
@@ -118,7 +119,9 @@ export function scanWorkflow(file: string, source: string): Scan {
   }
 
   const jobs = isRecord(doc.jobs) ? Object.entries(doc.jobs) : [];
+  let read = 0;
   for (const [id, job] of jobs) {
+    read += 1;
     const refs = secretReferences(strings(job).join('\n'));
     references.push(...refs.map((ref) => `${file}: jobs.${id}: ${ref}`));
     if (refs.length === 0) continue;
@@ -141,7 +144,7 @@ export function scanWorkflow(file: string, source: string): Scan {
   }
 
   return {
-    jobs: jobs.length,
+    jobs: read,
     secretReferences: references.length,
     references,
     findings,

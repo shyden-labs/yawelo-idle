@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { floorBreach } from '../floors';
+import { searched } from '../searched';
 import { MAX_TIMEOUT_MINUTES, scanTimeouts } from './workflow-timeouts';
 
 /**
@@ -24,18 +26,28 @@ describe('scanTimeouts', () => {
       'w.yml',
       workflow(job('build', '    timeout-minutes: 15\n')),
     );
+    expect(
+      searched(scan.findings, { of: scan.checked, what: 'jobs checked' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('workflow-timeouts/inside-bound-jobs', scan.checked),
+    ).toBeUndefined();
     expect(scan.checked).toBe(1);
-    expect(scan.findings).toEqual([]);
   });
 
   it(`accepts the bound itself, ${String(MAX_TIMEOUT_MINUTES)} minutes`, () => {
-    expect(
-      problems(
-        workflow(
-          job('build', `    timeout-minutes: ${String(MAX_TIMEOUT_MINUTES)}\n`),
-        ),
+    const scan = scanTimeouts(
+      'w.yml',
+      workflow(
+        job('build', `    timeout-minutes: ${String(MAX_TIMEOUT_MINUTES)}\n`),
       ),
+    );
+    expect(
+      searched(scan.findings, { of: scan.checked, what: 'jobs checked' }),
     ).toEqual([]);
+    expect(
+      floorBreach('workflow-timeouts/at-bound-jobs', scan.checked),
+    ).toBeUndefined();
   });
 
   it('pins the bound at 30 minutes', () => {
@@ -89,8 +101,16 @@ describe('scanTimeouts', () => {
       'w.yml',
       workflow('  test:\n    uses: ./.github/workflows/ci.yml\n'),
     );
+    expect(
+      searched(scan.findings, {
+        of: scan.calls,
+        what: 'reusable-workflow calls',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('workflow-timeouts/local-call-calls', scan.calls.length),
+    ).toBeUndefined();
     expect(scan.calls).toEqual(['./.github/workflows/ci.yml']);
-    expect(scan.findings).toEqual([]);
   });
 
   it('flags a call to a remote reusable workflow, whose timeouts this repo cannot see', () => {
@@ -127,18 +147,44 @@ describe('this repo’s workflows stop every job within minutes', () => {
       'jobs judged, counted as jobs, not files',
     ).toBeGreaterThan(3);
     expect(
-      scans.filter(({ scan }) => scan.checked + scan.calls.length === 0),
+      searched(
+        scans.filter(({ scan }) => scan.checked + scan.calls.length === 0),
+        { of: scans, what: 'workflows' },
+      ),
       'every workflow has a job the scan looked at',
     ).toEqual([]);
+    expect(
+      floorBreach('workflow-timeouts/workflows', scans.length),
+    ).toBeUndefined();
   });
 
   it('every reusable-workflow call names a workflow that is scanned here', () => {
     const scanned = files().map((f) => `./${dir}/${f}`);
     const calls = scanAll().flatMap(({ scan }) => scan.calls);
-    expect(calls.filter((call) => !scanned.includes(call))).toEqual([]);
+    expect(
+      searched(
+        calls.filter((call) => !scanned.includes(call)),
+        { of: calls, what: 'reusable-workflow calls' },
+      ),
+    ).toEqual([]);
+    expect(
+      floorBreach('workflow-timeouts/repo-calls', calls.length),
+    ).toBeUndefined();
   });
 
   it('every job has a timeout of at most 30 minutes', () => {
-    expect(scanAll().flatMap(({ scan }) => scan.findings)).toEqual([]);
+    const scans = scanAll();
+    // Every job the scans judged: those running steps, and reusable-workflow calls.
+    const jobs = scans.reduce(
+      (n, { scan }) => n + scan.checked + scan.calls.length,
+      0,
+    );
+    expect(
+      searched(
+        scans.flatMap(({ scan }) => scan.findings),
+        { of: jobs, what: 'jobs judged' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('workflow-timeouts/repo-jobs', jobs)).toBeUndefined();
   });
 });

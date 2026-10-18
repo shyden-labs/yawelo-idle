@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { floorBreach } from '../floors';
+import { againstControl, searched } from '../searched';
 import { scanTests } from '../unit/one-test-per-case';
 import { minus } from '../unit/burn-down';
 import { committableFiles } from '../unit/tracked-files';
@@ -16,9 +18,10 @@ import { committableFiles } from '../unit/tracked-files';
  * #62 and empty since. `file :: test :: loop`. The guard fails on a site
  * missing from this list AND on an entry that no longer matches a site. Never
  * add an entry: split the loop, or declare a runtime population or one
- * scenario above it with its reason.
+ * scenario above it with its reason. Typed as the empty tuple, so an entry is
+ * a type error and `[]` is the list itself (#373).
  */
-const BURN_DOWN: readonly string[] = [];
+const BURN_DOWN: readonly [] = [];
 
 const TEST_FILE = /\.(test|spec)\.ts$/;
 
@@ -36,13 +39,17 @@ const readScan = () => {
   return {
     files,
     tests: read.reduce((n, { scan }) => n + scan.tests, 0),
+    testCalls: read.flatMap(({ file, scan }) =>
+      scan.testCalls.map((call) => `${file} ${call}`),
+    ),
+    examined: read.reduce((n, { scan }) => n + scan.examined, 0),
     sites: read.flatMap(({ file, scan }) =>
       scan.looped.map((site) => `${file} :: ${site.test} :: ${site.loop}`),
     ),
     unclassified: read.flatMap(({ file, scan }) =>
       scan.unclassified.map((what) => `${file} ${what}`),
     ),
-    withTestCalls: withTestCalls.length,
+    withTestCalls: withTestCalls.map(({ file }) => file),
     unread: withTestCalls
       .filter(({ scan }) => scan.tests < 1)
       .map(({ file }) => file),
@@ -71,19 +78,48 @@ describe('the suite', () => {
   it('reads at least one test in every file whose text holds a test call', () => {
     const { withTestCalls, unread } = scan();
     // Measured 32 at b2a6f3f (#82): every test file holds one.
-    expect(withTestCalls).toBeGreaterThan(31);
-    expect(unread).toEqual([]);
+    expect(withTestCalls.length).toBeGreaterThan(31);
+    expect(
+      searched(unread, {
+        of: withTestCalls,
+        what: 'files whose text holds a test call',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach(
+        'one-test-per-case/files-with-test-calls',
+        withTestCalls.length,
+      ),
+    ).toBeUndefined();
   });
 
   it('classifies every call on it and test, refusing by name what it cannot read', () => {
-    expect(scan().unclassified).toEqual([]);
+    const { unclassified, examined } = scan();
+    expect(
+      searched(unclassified, { of: examined, what: 'calls on it and test' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('one-test-per-case/repo-calls', examined),
+    ).toBeUndefined();
   });
 
   it('loops no known population inside a test beyond the burn-down list', () => {
-    expect(minus(scan().sites, BURN_DOWN)).toEqual([]);
+    const { sites, testCalls } = scan();
+    expect(
+      searched(minus(sites, BURN_DOWN), { of: testCalls, what: 'test calls' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('one-test-per-case/repo-test-calls', testCalls.length),
+    ).toBeUndefined();
   });
 
   it('keeps no burn-down entry that has already been split', () => {
-    expect(minus(BURN_DOWN, scan().sites)).toEqual([]);
+    const { sites } = scan();
+    expect(
+      againstControl((listed: readonly string[]) => minus(listed, sites), {
+        input: [],
+        control: ['planted.test.ts :: t :: for (const c of CASES)'],
+      }),
+    ).toEqual([]);
   });
 });
