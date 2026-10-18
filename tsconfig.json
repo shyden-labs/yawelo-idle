@@ -1,0 +1,32 @@
+{
+  // The root project: repo guards under tests/ and root config files. Each
+  // workspace under apps/ and packages/ has its own tsconfig.json and is
+  // checked by its own `typecheck` script.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    // Node runs scripts/*.ts by stripping types, which needs the .ts
+    // extension on a relative import (scripts/pacing-calibrate.ts).
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "scripts/**/*.ts",
+    "eslint.core-determinism.ts",
+    "vitest.config.ts",
+    "vitest.pacing.config.ts",
+    "playwright.engines.config.ts",
+    "playwright.web.config.ts"
+  ],
+  // The browser specs see the DOM, so they have their own project.
+  "exclude": ["tests/web/**"]
+}

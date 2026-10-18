@@ -1,0 +1,10 @@
+{
+  // The roadmap tests' Worker (#341): the Workers runtime only, like the site
+  // Worker it wraps, and nothing from Node or the DOM. The Node-side tests in
+  // ../roadmap are typed by ../../tsconfig.json with the rest of the site.
+  "extends": "../../worker/tsconfig.json",
+  "compilerOptions": {
+    "types": ["../../worker/worker-configuration.d.ts"]
+  },
+  "include": ["*.ts", "../../worker/*.ts", "../github-fake/contract.ts"]
+}

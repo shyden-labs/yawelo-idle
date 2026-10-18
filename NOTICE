@@ -1,0 +1,23 @@
+Yawelo Idle
+Copyright 2026 Shyden Labs (https://shyden.co.uk)
+
+The source code in this repository is licensed under the Apache License,
+Version 2.0 (see LICENSE). Course content is licensed per item under
+CC BY-SA 4.0 or CC BY-NC-SA 4.0 (see LICENSE-CONTENT.md). The Yawelo Idle
+name and logo are trademarks of Shyden Labs and are not licensed
+(see TRADEMARKS.md).
+
+This product bundles the following Apache-2.0 packages from the stdlib
+project (https://github.com/stdlib-js/stdlib), Copyright (c) 2016-2026
+The Stdlib Authors, together with the @stdlib packages they depend on:
+
+  @stdlib/math-base-special-exp
+  @stdlib/math-base-special-expm1
+  @stdlib/math-base-special-ln
+  @stdlib/math-base-special-log10
+  @stdlib/math-base-special-log1p
+  @stdlib/math-base-special-pow
+
+Some of them carry further upstream copyrights (Sun Microsystems, the Go
+Authors). The full licence and NOTICE text of every bundled third-party
+package is in THIRD-PARTY-NOTICES.md.

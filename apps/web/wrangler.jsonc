@@ -1,0 +1,25 @@
+// The DEV game: a Worker with static assets (spec D9, as amended 2026-10-01:
+// Cloudflare now folds Pages into Workers), built under /play/ and reached
+// only through the site Worker's service binding (website spec §7.2, #332).
+//
+// No address of its own: `workers_dev: false` and no route, so nobody can
+// reach the game around the site Worker's dev gate. Deployed to the
+// "Shyden Labs Dev" account, which holds dev only (#395).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "yawelo-idle-web-dev",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    // Vite writes the game to dist/play (vite.config.ts), so /play/x maps to
+    // dist/play/x with no prefix to strip.
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // The script runs before the asset router, so the Content Security
+    // Policy it sets reaches the files too (#123). A call over the site
+    // Worker's service binding carries no request fee, so this costs CPU only.
+    "run_worker_first": true,
+  },
+}

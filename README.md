@@ -1,49 +1,44 @@
-# Shyden Ltd repo template
+# Yawelo Idle
 
-Start every new Shyden Ltd repository from this one. It carries the supply-chain
-configuration that is **mandatory in every repo**, and the test that stops it
-rotting.
+An idle game for learning a real language. English speakers learn Indonesian (`en-id`) while journeying across the Indonesian archipelago; Indonesian speakers learn English (`id-en`) while journeying across the English-speaking world. Words you pick up power the game, and reviewing them with spaced repetition makes them stronger. Nobody is ever forced to study.
 
-## What is here, and why each piece exists
+It is built once for the web and shipped to browsers (PWA), Steam (Electron) and iOS/Android (Capacitor), by [Shyden Labs](https://shyden.co.uk).
 
-| File | Why |
-| --- | --- |
-| `.github/dependabot.yml` | Version updates are **not** inheritable org-wide — only *security* updates are. Every repo needs its own file, covering every ecosystem present **and** `github-actions`. |
-| `.github/workflows/ci.yml` | Demonstrates the SHA-pinning convention with real, current pins. |
-| `tests/unit/supply-chain.test.ts` | Asserts the rules below, so a new unpinned action or an undeclared ecosystem fails CI instead of being noticed years later. |
-| `tests/unit/source-text.ts` | Comment stripping. A guard that reads a file as text must never be satisfiable by that file's own documentation. |
-| `.npmrc` | `engine-strict=true` turns the `engines` floor from a warning into a hard install failure. |
+## Status
 
-## The four rules
+**Pre-alpha: design complete, foundations in progress.** Nothing is playable yet. Work is tracked on the [Yawelo Idle Stories](https://github.com/orgs/shyden-labs/projects/4) board.
 
-1. **Every repo gets Dependabot**, covering every ecosystem present and `github-actions`.
-2. **Pin actions to SHAs, never tags.** A tag is mutable and can be repointed by anyone who can push to that action's repo. Keep the trailing `# vX.Y.Z` comment: it is what makes a bump reviewable rather than an opaque hex swap.
-3. **Target `develop`, never `main`.** A PR against a protected default branch either cannot merge or bypasses the dev gate.
-4. **Group same-repo sub-path actions, above the catch-all.** Dependabot assigns to the **first** matching group and stops, so a group declared below `patch-updates` never runs.
+## Read first
 
-## The rule behind the rules
+- [Design spec](docs/superpowers/specs/2026-10-01-yawelo-idle-design.md): the source of truth. It covers the core loop, progression, content, architecture, fair play and testing.
+- [Idle-game research](docs/research/2026-10-01-idle-game-research.md): 20 games, 28 player complaints, and the 26-item do-not list the design is held to.
 
-**Test the invariant, don't trust the config.** Each rule above is asserted by
-`tests/unit/supply-chain.test.ts` — and every one of those assertions has been
-mutation-verified: break the thing it protects, watch it fail, restore it, watch
-it pass.
+## Player-trust promises
 
-That is not ceremony. `shyden.co.uk` shipped a guard asserting `dependabot.yml`
-contained `"actions/cache*"`, and the file's own explanatory **note** spelled
-that pattern out verbatim. The check passed with **no group configured at all**
-(issue #23). Three more of the same shape have been found since. The vacuity is
-invisible until you break something and watch.
+No ads. No energy timers. No sold progress. No punishment for missed days. No expiring content. Saves are never silently lost. Each promise is enforced by an automated test (spec §9).
 
-So: **strip comments before asserting**, assert **order** where order carries
-meaning, prefer an exact set to a substring test, and never trust a guard you
-have not watched fail. Note that this repo's `dependabot.yml` *configures* the
-sub-path group rather than describing it in a comment — that distinction is the
-whole lesson.
+## Development
 
-## Using it
+```sh
+npm ci                # Node 26.3 or later (see .nvmrc); engine-strict is on
+npm run format:check  # Prettier
+npm run lint          # ESLint, zero warnings
+npm run typecheck     # tsc and svelte-check
+npm run test:unit
+npm run build
+```
 
-1. **Use this template** on GitHub, or `gh repo create <name> --template Shyden-Ltd/repo-template`.
-2. Create `develop` and make it the default branch; protect `main`.
-3. Add the ecosystems your repo actually uses to `.github/dependabot.yml`.
-4. `npm ci && npm run test:unit` — the supply-chain suite must be green before anything else is written.
-5. Enable Dependabot alerts and security updates on the new repo. Org defaults now cover new repositories, but check rather than assume.
+Every change follows test-driven development, and each ticket gets its own branch with a PR into `develop`. Third-party GitHub Actions are pinned to full commit SHAs, Dependabot opens its PRs against `develop`, and `tests/unit/supply-chain.test.ts` enforces both.
+
+Every merge to `develop` deploys dev (web and sync Workers, D1) and verifies it live before marking it `dev-verified`. Dev is at `https://dev.yawelo-idle.shyden.co.uk`, behind the shared Shyden Labs dev password, with the sync API at `https://dev-api.yawelo-idle.shyden.co.uk`. The Workers live in the dev-only "Shyden Labs Dev" Cloudflare account, so no dev credential can reach production (#395); a Pages project there, `apps/dev-hosts`, carries the two names and forwards each request to its Worker (#429).
+
+## Licences
+
+| What                                                           | Licence                                         |
+| -------------------------------------------------------------- | ----------------------------------------------- |
+| Source code                                                    | [Apache-2.0](LICENSE)                           |
+| Course content adapted from CC BY-SA sources (e.g. Wiktionary) | [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt)       |
+| Original story, culture cards, motifs and art                  | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) |
+| The Yawelo Idle name and logo                                  | Reserved, see [TRADEMARKS.md](TRADEMARKS.md)    |
+
+Every content item records its own licence. See [LICENSE-CONTENT.md](LICENSE-CONTENT.md).

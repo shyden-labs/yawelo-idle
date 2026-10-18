@@ -1,0 +1,90 @@
+# Returns production to an earlier release (#621 AC6), by hand from main,
+# through the same `production` environment and Shyden's approval. Every
+# deploy is tagged with its commit (deploy-prod.yml), so the version to return
+# to is found by that tag, never typed in; then it is verified from outside
+# like a deploy.
+name: rollback-prod
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: The released commit (full 40-character SHA) to return production to
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# The deploy's own group: a rollback never overlaps a deploy.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://yawelo-idle.shyden.co.uk
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Prove the production token reaches the production account alone
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/token-reach.ts
+      # The commit arrives through the environment, never pasted into the
+      # script, and prod-version.ts refuses anything but a full SHA.
+      # Every wrangler call here names the holding config from the repository
+      # root (see deploy-prod.yml).
+      - name: Find the version tagged with that commit
+        id: version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"
+          echo "id=$(node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT")" >> "$GITHUB_OUTPUT"
+      - name: Roll production back to it
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERSION: ${{ steps.version.outputs.id }}
+          COMMIT: ${{ inputs.commit }}
+        run: npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes
+
+  verify:
+    needs: rollback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # The commit production returned to, so the verify compares with what
+      # that commit builds. The rollback job refused anything but a full SHA
+      # (prod-version.ts) before this job could start.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build the holding page that commit released
+        env:
+          YAWELO_IDLE_COMMIT: ${{ inputs.commit }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Verify production serves the commit it was rolled back to
+        env:
+          PROD_URL: https://yawelo-idle.shyden.co.uk
+          EXPECTED_SHA: ${{ inputs.commit }}
+        run: node scripts/verify-prod.ts

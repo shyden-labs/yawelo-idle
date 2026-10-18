@@ -1,0 +1,171 @@
+/*
+ * The holding page's look (#621), after Shyden's promo video: a deep night
+ * sky of blue and green specks, a glowing white wordmark and a mint-to-teal
+ * "Coming soon" pill (spec D7, Batik night). Every colour is a token here;
+ * tests/unit/holding-contrast.test.ts measures each text pair against
+ * WCAG 2.2 AA from these values, on screen and in print. Nothing moves, so
+ * there is no motion to reduce; the video's own play rule is in
+ * public/holding-video.js.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #050816;
+  --bg-glow: #0c1838;
+  --text: #f4f8ff;
+  --muted: #b7c4e0;
+  --mint: #7ff3cf;
+  --focus: #ffd66e;
+  --pill-from: #6ff0a8;
+  --pill-to: #48d6e8;
+  --pill-text: #04201a;
+  --glow: rgb(127 243 207 / 45%);
+  --glow-soft: rgb(127 243 207 / 20%);
+  --star-blue: rgb(111 168 255 / 85%);
+  --star-green: rgb(127 243 160 / 80%);
+  --star-white: rgb(244 248 255 / 70%);
+  --video-bg: #000000;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --bg-glow: #ffffff;
+    --text: #000000;
+    --muted: #333333;
+    --mint: #00523a;
+    --focus: #000000;
+    --pill-from: #ffffff;
+    --pill-to: #ffffff;
+    --pill-text: #000000;
+    --glow: transparent;
+    --glow-soft: transparent;
+    --star-blue: transparent;
+    --star-green: transparent;
+    --star-white: transparent;
+  }
+
+  .trailer {
+    display: none;
+  }
+
+  .badge {
+    outline: 2px solid var(--text);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, var(--star-blue), transparent),
+    radial-gradient(2px 2px at 78% 12%, var(--star-green), transparent),
+    radial-gradient(1.5px 1.5px at 34% 72%, var(--star-white), transparent),
+    radial-gradient(2px 2px at 88% 64%, var(--star-blue), transparent),
+    radial-gradient(1.5px 1.5px at 56% 28%, var(--star-green), transparent),
+    radial-gradient(2px 2px at 22% 86%, var(--star-green), transparent),
+    radial-gradient(1.5px 1.5px at 66% 90%, var(--star-white), transparent),
+    radial-gradient(2px 2px at 6% 52%, var(--star-white), transparent),
+    radial-gradient(1.5px 1.5px at 94% 36%, var(--star-green), transparent),
+    radial-gradient(ellipse 70% 55% at 50% 40%, var(--bg-glow), transparent);
+  background-attachment: fixed;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Noto Sans',
+    sans-serif;
+  line-height: 1.5;
+}
+
+.switch {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px;
+}
+
+a {
+  color: var(--mint);
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible,
+.trailer:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* The viewport less the language switch's row, so short content centres. */
+  min-height: calc(100svh - 72px);
+  gap: 20px;
+  padding: 24px 16px 48px;
+  text-align: center;
+}
+
+.wordmark,
+.heading {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  text-shadow:
+    0 0 28px var(--glow),
+    0 0 6px var(--glow-soft);
+}
+
+.wordmark {
+  font-size: clamp(2.75rem, 11vw, 6rem);
+}
+
+.heading {
+  font-size: clamp(2rem, 7vw, 3.5rem);
+}
+
+.badge {
+  margin: 0;
+  padding: 0.45em 1.4em;
+  border-radius: 999px;
+  color: var(--pill-text);
+  background: linear-gradient(90deg, var(--pill-from), var(--pill-to));
+  box-shadow: 0 0 24px var(--glow);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tagline {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+}
+
+.trailer {
+  display: block;
+  width: min(100%, 960px);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-top: 12px;
+  border-radius: 16px;
+  background: var(--video-bg);
+  box-shadow: 0 0 40px var(--glow-soft);
+}

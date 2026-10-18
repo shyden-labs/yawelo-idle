@@ -1,0 +1,30 @@
+{
+  "name": "@yawelo-idle/core",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures/synthetic-course": "./fixtures/synthetic-course.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test && tsc --noEmit -p properties",
+    "build": "esbuild src/index.ts --bundle --platform=neutral --main-fields=module,main --format=esm --outfile=dist/index.js"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "@stdlib/math-base-special-exp": "0.2.5",
+    "@stdlib/math-base-special-expm1": "0.2.4",
+    "@stdlib/math-base-special-ln": "0.2.5",
+    "@stdlib/math-base-special-log10": "0.3.1",
+    "@stdlib/math-base-special-log1p": "0.2.4",
+    "@stdlib/math-base-special-pow": "0.3.1",
+    "break_infinity.js": "2.2.0",
+    "ts-fsrs": "5.4.2"
+  },
+  "devDependencies": {
+    "decimal.js": "^10.6.0",
+    "esbuild": "^0.28.2",
+    "fast-check": "^4.10.2"
+  }
+}

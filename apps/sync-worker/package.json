@@ -1,0 +1,14 @@
+{
+  "name": "@yawelo-idle/sync-worker",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run -c vitest.harness.config.ts",
+    "types": "wrangler types --strict-vars=false",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yawelo-idle/lockdown": "*"
+  }
+}

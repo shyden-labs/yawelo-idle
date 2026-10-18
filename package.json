@@ -1,8 +1,70 @@
 {
-  "name": "repo-template",
+  "name": "yawelo-idle",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
-  "engines": { "node": ">=24" },
-  "scripts": { "test:unit": "vitest run" },
-  "devDependencies": { "vitest": "^5.0.0" }
+  "engines": {
+    "node": "^24.16.0 || >=26.3.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "postinstall": "npm run types --workspace @yawelo-idle/sync-worker --workspace @yawelo-idle/web --workspace @yawelo-idle/site --workspace @yawelo-idle/dev-hosts",
+    "check:ci-scripts": "node scripts/ci-scripts.ts",
+    "test:unit": "vitest run",
+    "test:guards": "vitest run -c vitest.guards.config.ts",
+    "test:integration": "vitest run -c vitest.integration.config.ts",
+    "floors:fetch": "node scripts/fetch-floors.ts",
+    "floors:record": "node scripts/record-floors.ts",
+    "test:worker": "npm run test --workspace @yawelo-idle/sync-worker --workspace @yawelo-idle/web --workspace @yawelo-idle/site --workspace @yawelo-idle/dev-hosts",
+    "test:pacing": "vitest run -c vitest.pacing.config.ts",
+    "test:properties": "vitest run -c vitest.properties.config.ts",
+    "test:engines": "playwright test -c playwright.engines.config.ts",
+    "test:web": "npm run build --workspace @yawelo-idle/web && playwright test -c playwright.web.config.ts",
+    "test:web:dev": "playwright test -c playwright.web.config.ts",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/web && npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "npm run build --workspaces --if-present",
+    "bench:pemandu": "esbuild scripts/bench-pemandu.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/yawelo-idle/bench-pemandu.mjs && node node_modules/.cache/yawelo-idle/bench-pemandu.mjs",
+    "golden-log": "esbuild scripts/golden-log.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/yawelo-idle/golden-log.mjs && node node_modules/.cache/yawelo-idle/golden-log.mjs",
+    "notices": "node scripts/third-party-notices.ts",
+    "pacing:calibrate": "node scripts/pacing-calibrate.ts",
+    "pacing:sweep": "node scripts/pacing-sweep.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@eslint/compat": "^2.1.1",
+    "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "@types/semver": "^7.8.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-astro": "^3.2.1",
+    "eslint-plugin-svelte": "^3.23.0",
+    "globals": "^17.0.0",
+    "ignore": "^7.0.12",
+    "jsonc-parser": "^3.3.1",
+    "prettier": "^3.9.9",
+    "prettier-plugin-astro": "^1.1.0",
+    "prettier-plugin-svelte": "^4.1.1",
+    "semver": "^7.8.5",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.148.0",
+    "yaml": "^2.9.1"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "fsevents": false,
+    "workerd": true
+  },
+  "overrides": {
+    "sharp": "0.35.5"
+  }
 }
