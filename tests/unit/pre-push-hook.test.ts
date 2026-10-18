@@ -21,10 +21,9 @@ const commands = (): string[] =>
     .filter((line) => line !== '' && !line.startsWith('#'));
 
 describe('the pre-push hook (#547)', () => {
-  it('runs the ci-scripts check, format, lint and typecheck, in that order, and nothing else', () => {
+  it('runs format, lint and typecheck, in that order, and nothing else', () => {
     expect(commands()).toEqual([
       'set -euo pipefail',
-      'npm run --silent check:ci-scripts',
       'npm run --silent format:check',
       'npm run --silent lint',
       'npm run --silent typecheck',

@@ -24,6 +24,7 @@ interface Step {
   uses?: string;
   with?: Record<string, unknown>;
   env?: Record<string, unknown>;
+  'timeout-minutes'?: unknown;
 }
 
 interface Job {
@@ -51,6 +52,7 @@ const ORDER = [
   'actions/checkout',
   'actions/setup-node',
   'Classify the change as docs-only or full (#360)',
+  'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
   'Format',
   'Lint (zero warnings)',
@@ -73,6 +75,7 @@ const DOCS_ONLY = [
   'actions/checkout',
   'actions/setup-node',
   'Classify the change as docs-only or full (#360)',
+  'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
   'Format',
   'Unit tests',
@@ -101,7 +104,7 @@ describe('build-and-test’s steps (#360 AC2)', () => {
     expect(steps().map(idOf)).toEqual(ORDER);
   });
 
-  it('on docs-only, run exactly the default-branch check, checkout, Node, the classifier, install, Format, the unit suite and the guards', () => {
+  it('on docs-only, run exactly the default-branch check, checkout, Node, the classifier, the squash-only check, install, Format, the unit suite and the guards', () => {
     expect(
       steps()
         .filter((s) => s.if === undefined)
@@ -128,6 +131,26 @@ describe('build-and-test’s steps (#360 AC2)', () => {
   });
 });
 
+describe('the squash-only step (#679 AC3)', () => {
+  const step = () =>
+    steps().find((s) => idOf(s) === 'Develop merges by squash only (#679)') ??
+    {};
+
+  it('runs the check with Node alone, on this repository', () => {
+    expect(step().run).toBe(
+      'node scripts/develop-squash-only.ts "$GITHUB_REPOSITORY"',
+    );
+  });
+
+  it('reads the rules with the run’s own token, and nothing else', () => {
+    expect(step().env).toEqual({ GH_TOKEN: '${{ github.token }}' });
+  });
+
+  it('has a one-minute limit', () => {
+    expect(step()['timeout-minutes']).toBe(1);
+  });
+});
+
 describe('the classifier step (#360 AC1)', () => {
   const classifier = () =>
     steps().find(
@@ -148,9 +171,13 @@ describe('the classifier step (#360 AC1)', () => {
 
   it('has the commit’s first parent to diff against: checkout fetches two levels', () => {
     const checkout = steps().find((s) => idOf(s) === 'actions/checkout');
-    expect(checkout?.with).toEqual({
-      ref: '${{ inputs.ref }}',
-      'fetch-depth': 2,
+    expect(checkout?.with).toEqual({ 'fetch-depth': 2 });
+  });
+
+  it('takes no input, so every caller tests its event’s own commit (#679)', () => {
+    expect(read('ci.yml').on).toEqual({
+      pull_request: null,
+      workflow_call: null,
     });
   });
 });

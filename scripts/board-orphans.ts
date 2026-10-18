@@ -29,6 +29,7 @@
 import { execFileSync } from 'node:child_process';
 import { NEXT_QUERY, type NextItem, parseNextItems } from './board-next.ts';
 import type { Gh } from './board-progress.ts';
+import { entries, isRecord, read } from './gh-reads.ts';
 
 /** The pull-request author whose runs read Dependabot secrets, not environment ones. */
 const DEPENDABOT = 'dependabot[bot]';
@@ -50,29 +51,6 @@ const USAGE =
   'usage: node scripts/board-orphans.ts <board-node-id> "<board title>" <owner/repo>';
 
 const IN_PROGRESS = 'In Progress';
-
-/** `what`'s value from `call`, or an error naming what could not be read. */
-function read<T>(what: string, call: () => T): T {
-  try {
-    return call();
-  } catch (error) {
-    throw new Error(
-      `could not read ${what}: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
-  }
-}
-
-/** The entries of every page `gh api --paginate --slurp` printed. */
-function entries(out: string): unknown[] {
-  const pages = JSON.parse(out) as unknown;
-  if (!Array.isArray(pages) || !pages.every(Array.isArray))
-    throw new Error('the reply is not a list of pages');
-  return (pages as unknown[][]).flat();
-}
-
-const isRecord = (x: unknown): x is Record<string, unknown> =>
-  typeof x === 'object' && x !== null;
 
 function parseBranches(out: string): string[] {
   return entries(out).map((e) => {

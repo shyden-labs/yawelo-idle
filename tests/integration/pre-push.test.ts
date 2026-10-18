@@ -25,12 +25,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const HOOK = '.githooks/pre-push';
-const GATES = [
-  'check:ci-scripts',
-  'format:check',
-  'lint',
-  'typecheck',
-] as const;
+const GATES = ['format:check', 'lint', 'typecheck'] as const;
 
 const FAKE_NPM = `#!/bin/sh
 printf '%s\\n' "$*" >> "$NPM_LOG"
@@ -78,7 +73,7 @@ describe('the pre-push hook (#123 AC2)', () => {
     expect(statSync(HOOK).mode & 0o111).toBe(0o111);
   });
 
-  it('runs the ci-scripts check, format:check, lint and typecheck, in that order, and passes (#547: no test suite)', () => {
+  it('runs format:check, lint and typecheck, in that order, and passes (#547: no test suite)', () => {
     expect(runHook()).toEqual({ status: 0, calls: GATES.map(call) });
   });
 

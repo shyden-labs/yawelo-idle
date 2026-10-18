@@ -5,7 +5,8 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * check floors on what each search read (#373 AC4). Predicted before the
  * first run, from the population measured on the branch: 10 workflows, 22
  * jobs (19 that run steps and 3 reusable-workflow calls, one each in
- * deploy-dev, deploy-prod and every-commit), 4 workflows naming a stored
+ * deploy-dev, deploy-prod and every-commit, since retired by #679), 4
+ * workflows naming a stored
  * secret, and one job or call in each fixture.
  *
  * Each mutation blinds a reader to part of what it reads (one job, one call,

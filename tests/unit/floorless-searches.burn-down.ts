@@ -38,13 +38,4 @@ export const UNPROVED: Readonly<Record<string, number>> = {
   'tests/unit/core-determinism-lint.test.ts › is scoped to packages/core/src: the same code elsewhere is not banned': 2,
   'tests/unit/core-determinism-lint.test.ts › label': 1,
   'tests/unit/core-determinism-lint.test.ts › lint': 1,
-  'tests/unit/every-commit-ci.test.ts › checks out that ref, the event’s own commit when it is empty': 1,
-  'tests/unit/every-commit-ci.test.ts › checks out the pull request’s head with its whole history': 1,
-  'tests/unit/every-commit-ci.test.ts › judges with the verdict script, given the list, both results and a token': 1,
-  'tests/unit/every-commit-ci.test.ts › lists the commits between the pull request’s base and head': 1,
-  'tests/unit/every-commit-ci.test.ts › runs Node from .nvmrc, with no npm ci': 1,
-  'tests/unit/every-commit.test.ts › ignores the run’s other jobs': 1,
-  'tests/unit/every-commit.test.ts › passes a list of exactly the matrix limit': 1,
-  'tests/unit/every-commit.test.ts › reads no output as no commits': 1,
-  'tests/unit/every-commit.test.ts › reads no output, from a list job that failed, as no commits': 1,
 };
