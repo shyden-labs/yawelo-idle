@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { scanCollection } from './collection-calls';
-import { helperModules, type HelperReach } from './helper-modules';
+import {
+  dataReaders,
+  helperLoaders,
+  helperModules,
+  type HelperLoaders,
+  type HelperReach,
+} from './helper-modules';
 
 /**
  * The helper modules a test file loads (#554): every module it reaches by a
@@ -99,6 +105,231 @@ describe('the follower loads what a test imports', () => {
         'src/y.ts': 'export const y = 1;',
       }).imports,
     ).toEqual(['t/a.test.ts: ./h', 't/h.ts: ../src/y']);
+  });
+});
+
+/**
+ * Which entries load each helper (#659): of a changed helper, the mutation
+ * judge asks which non-unit tests load it, directly or through other helpers.
+ */
+describe('helperLoaders maps each helper to the entries that load it (#659)', () => {
+  const loaders = (
+    files: Readonly<Record<string, string>>,
+    entries: readonly string[],
+  ): HelperLoaders => helperLoaders(entries, (path) => files[path]);
+
+  it('directly', () => {
+    expect(
+      loaders(
+        {
+          't/a.test.ts': "import { x } from './h';",
+          't/h.ts': 'export const x = 1;',
+        },
+        ['t/a.test.ts'],
+      ).loadedBy,
+    ).toEqual(new Map([['t/h.ts', ['t/a.test.ts']]]));
+  });
+
+  it('through other helpers, to any depth', () => {
+    expect(
+      loaders(
+        {
+          't/a.test.ts': "import { x } from './h1';",
+          't/h1.ts': "export { y as x } from './h2';",
+          't/h2.ts': "import { z } from './h3'; export const y = z;",
+          't/h3.ts': 'export const z = 1;',
+        },
+        ['t/a.test.ts'],
+      ).loadedBy,
+    ).toEqual(
+      new Map([
+        ['t/h1.ts', ['t/a.test.ts']],
+        ['t/h2.ts', ['t/a.test.ts']],
+        ['t/h3.ts', ['t/a.test.ts']],
+      ]),
+    );
+  });
+
+  it('naming every entry that reaches it, sorted, and no entry that does not', () => {
+    expect(
+      loaders(
+        {
+          't/b.test.ts': "import { y } from './h2';",
+          't/a.test.ts': "import { x } from './h1';",
+          't/h1.ts': "import { y } from './h2'; export const x = y;",
+          't/h2.ts': 'export const y = 1;',
+        },
+        ['t/b.test.ts', 't/a.test.ts'],
+      ).loadedBy,
+    ).toEqual(
+      new Map([
+        ['t/h1.ts', ['t/a.test.ts']],
+        ['t/h2.ts', ['t/a.test.ts', 't/b.test.ts']],
+      ]),
+    );
+  });
+
+  it('once each, through a cycle entered at either end', () => {
+    expect(
+      loaders(
+        {
+          't/a.test.ts': "import { x } from './h1';",
+          't/b.test.ts': "import { y } from './h2';",
+          't/h1.ts': "import { y } from './h2'; export const x = y;",
+          't/h2.ts': "import { x } from './h1'; export const y = 1;",
+        },
+        ['t/a.test.ts', 't/b.test.ts'],
+      ).loadedBy,
+    ).toEqual(
+      new Map([
+        ['t/h1.ts', ['t/a.test.ts', 't/b.test.ts']],
+        ['t/h2.ts', ['t/a.test.ts', 't/b.test.ts']],
+      ]),
+    );
+  });
+
+  it('carrying what the follower cannot follow, and the population it read', () => {
+    expect(
+      loaders({ 't/a.test.ts': "import { x } from './gone';" }, [
+        't/a.test.ts',
+      ]),
+    ).toEqual({
+      helpers: [],
+      imports: ['t/a.test.ts: ./gone'],
+      unresolved: ['t/a.test.ts: ./gone names no file'],
+      loadedBy: new Map(),
+    });
+  });
+});
+
+/**
+ * Which entries read each data file (#659): a test reads a fixture from disk,
+ * not by an import, so the follower counts a test as reading one when the
+ * test, or a helper it loads, names it in a string: by its bare file name, by
+ * a relative path that resolves to it, or by its repository path.
+ */
+describe('dataReaders maps each data file to the entries whose code names it (#659)', () => {
+  const readers = (
+    files: Readonly<Record<string, string>>,
+    data: readonly string[],
+    entries: readonly string[] = ['t/a.test.ts'],
+  ): ReadonlyMap<string, readonly string[]> =>
+    dataReaders(entries, (path) => files[path], data);
+
+  it.each([
+    ['its bare file name', "readFileSync(join(dir, 'x.json'));"],
+    ['its bare file name in a template', 'readFileSync(join(dir, `x.json`));'],
+    [
+      'a relative path that resolves to it',
+      "readFileSync('./fixtures/x.json');",
+    ],
+    ['its repository path', "readFileSync('t/fixtures/x.json');"],
+    [
+      'a template whose substitution stands for any text',
+      'readFileSync(`t/fixtures/${name}.json`);',
+    ],
+    [
+      'a relative path up a folder that resolves to it',
+      "readFileSync('../t/fixtures/x.json');",
+    ],
+    [
+      'its repository path written from the root with ./',
+      "readFileSync('./t/fixtures/x.json');",
+    ],
+    [
+      'its folder written from the root with ./, and its extension',
+      "const DIR = './t/fixtures'; read(join(DIR, `${name}.json`));",
+    ],
+    [
+      'a relative template up a folder that resolves to its folder',
+      'read(`../t/fixtures/${name}.json`);',
+    ],
+    [
+      'its folder, up a folder, and its extension, written apart',
+      "const DIR = '../t/fixtures'; read(join(DIR, `${name}.json`));",
+    ],
+    [
+      'its folder with a trailing slash and its extension, written apart',
+      "const DIR = 't/fixtures/'; read(DIR + `${name}.json`);",
+    ],
+    [
+      'its folder and its extension, written apart',
+      "const DIR = 't/fixtures'; read(join(DIR, `${name}.json`));",
+    ],
+  ])('named in the test by %s', (_how, code) => {
+    expect(readers({ 't/a.test.ts': code }, ['t/fixtures/x.json'])).toEqual(
+      new Map([['t/fixtures/x.json', ['t/a.test.ts']]]),
+    );
+  });
+
+  it('named in a helper the test loads, at any depth', () => {
+    expect(
+      readers(
+        {
+          't/a.test.ts': "import { x } from './h1';",
+          't/h1.ts': "export { y as x } from './h2';",
+          't/h2.ts': "export const y = read('x.json');",
+        },
+        ['t/fixtures/x.json'],
+      ),
+    ).toEqual(new Map([['t/fixtures/x.json', ['t/a.test.ts']]]));
+  });
+
+  it('naming every entry that names it, sorted', () => {
+    expect(
+      readers(
+        {
+          't/b.test.ts': "read('x.json');",
+          't/a.test.ts': "import { x } from './h';",
+          't/h.ts': "export const x = read('x.json');",
+        },
+        ['t/fixtures/x.json'],
+        ['t/b.test.ts', 't/a.test.ts'],
+      ),
+    ).toEqual(new Map([['t/fixtures/x.json', ['t/a.test.ts', 't/b.test.ts']]]));
+  });
+
+  it.each([
+    ['a relative path that resolves elsewhere', "read('../other/x.json');"],
+    ['a path that does not end with it', "read('other/x.json');"],
+    ['a name that only ends like it', "read('ax.json');"],
+    ['a name that only starts like it', "read('x.json.bak');"],
+    ['a template that resolves elsewhere', 'read(`t/other/${name}.json`);'],
+    ['a template of another kind of file', 'read(`t/fixtures/${name}.yml`);'],
+    [
+      'a template with no folder, which could name any such file',
+      'read(join(dir, `${name}.json`));',
+    ],
+    [
+      'a template whose folder is partly built at run time',
+      'read(`t/${dir}/${name}.json`);',
+    ],
+    ['a template that fixes no extension', 'read(`t/fixtures/${name}`);'],
+    [
+      'a path that ends like it but not on a folder boundary',
+      "read('ixtures/x.json');",
+    ],
+    ['its extension alone', "path.endsWith('.json');"],
+    [
+      'a template whose folder is built at run time',
+      'read(`${dir}/fixtures/${name}.json`);',
+    ],
+    [
+      'its folder with another extension',
+      "const DIR = 't/fixtures'; read(join(DIR, `${name}.yml`));",
+    ],
+    [
+      'another folder with its extension',
+      "const DIR = 't/other'; read(join(DIR, `${name}.json`));",
+    ],
+  ])('not named by %s, beside a test that names it', (_how, code) => {
+    expect(
+      readers(
+        { 't/a.test.ts': code, 't/b.test.ts': "read('x.json');" },
+        ['t/fixtures/x.json'],
+        ['t/a.test.ts', 't/b.test.ts'],
+      ),
+    ).toEqual(new Map([['t/fixtures/x.json', ['t/b.test.ts']]]));
   });
 });
 
