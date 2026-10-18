@@ -8,6 +8,7 @@
  */
 import { onAllowlist } from './ci-scope.ts';
 import { UNIT_SUITE } from './mutate.ts';
+import { FILE_SEPARATOR, type MutationFile } from './mutation-file.ts';
 
 /** One path a diff names, with git's status letter (a rename: its new path). */
 export interface Changed {
@@ -77,20 +78,37 @@ export function nonUnitTests(
 }
 
 /**
+ * The test files some row of `files` predicts red: the `<file>` of each
+ * `red` key. A target whose every row is predicted green is not among them,
+ * since a row that stays green proves nothing about it.
+ */
+export function testsPredictedRed(files: readonly MutationFile[]): Set<string> {
+  return new Set(
+    files.flatMap(({ mutations }) =>
+      mutations.flatMap(({ red }) =>
+        Object.keys(red).map((key) =>
+          key.slice(0, key.indexOf(FILE_SEPARATOR)),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
  * Each non-unit test among `changed` that exists after the change and that
- * no target of a changed mutation file names, in diff order.
+ * no row of a changed mutation file predicts red, in diff order.
  */
 export function unprovedTests(
   changed: readonly Changed[],
   nonUnit: ReadonlyMap<string, string>,
-  targeted: ReadonlySet<string>,
+  predictedRed: ReadonlySet<string>,
 ): string[] {
   return changed.flatMap(({ status, path }) => {
     const suite = nonUnit.get(path);
-    return status === 'D' || suite === undefined || targeted.has(path)
+    return status === 'D' || suite === undefined || predictedRed.has(path)
       ? []
       : [
-          `${path} (${suite}): no mutation file this pull request adds or changes targets it`,
+          `${path} (${suite}): no row of a mutation file this pull request adds or changes predicts it red`,
         ];
   });
 }

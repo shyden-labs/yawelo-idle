@@ -5,8 +5,10 @@ import {
   nonUnitTests,
   readNameStatus,
   summary,
+  testsPredictedRed,
   unprovedTests,
 } from '../../scripts/mutations-changed';
+import type { MutationFile } from '../../scripts/mutation-file';
 import { againstControl } from '../searched';
 
 /**
@@ -136,6 +138,52 @@ describe('nonUnitTests', () => {
   });
 });
 
+describe('testsPredictedRed', () => {
+  // A row predicted green proves nothing about a test, so only `red` keys
+  // count, never `targets` (a side agent's note, 2026-10-18).
+  const row = (
+    name: string,
+    red: Readonly<Record<string, string>>,
+  ): MutationFile['mutations'][number] => ({
+    name,
+    file: 'scripts/x.ts',
+    anchor: 'a',
+    replacement: 'b',
+    red,
+  });
+
+  it('collects the file of every test a row of any file predicts red', () => {
+    expect(
+      testsPredictedRed([
+        {
+          targets: ['tests/guards/a.test.ts'],
+          mutations: [row('one', { 'tests/guards/a.test.ts › d > t': 'x' })],
+        },
+        {
+          targets: ['tests/guards/b.test.ts'],
+          mutations: [
+            row('two', { 'tests/guards/b.test.ts › d > e > t': 'y' }),
+          ],
+        },
+      ]),
+    ).toEqual(new Set(['tests/guards/a.test.ts', 'tests/guards/b.test.ts']));
+  });
+
+  it('leaves out a target whose every row is predicted green', () => {
+    expect(
+      testsPredictedRed([
+        {
+          targets: ['tests/guards/a.test.ts', 'tests/guards/c.test.ts'],
+          mutations: [
+            row('red', { 'tests/guards/a.test.ts › d > t': 'x' }),
+            row('green', {}),
+          ],
+        },
+      ]),
+    ).toEqual(new Set(['tests/guards/a.test.ts']));
+  });
+});
+
 describe('unprovedTests', () => {
   const NON_UNIT = new Map([
     ['tests/guards/a.test.ts', 'guards suite'],
@@ -143,9 +191,9 @@ describe('unprovedTests', () => {
     ['apps/web/tests/c.test.ts', 'game harness'],
   ]);
   const unproved = (path: string, suite: string): string =>
-    `${path} (${suite}): no mutation file this pull request adds or changes targets it`;
+    `${path} (${suite}): no row of a mutation file this pull request adds or changes predicts it red`;
 
-  it('names each non-unit test added, changed or renamed in that no changed mutation file targets', () => {
+  it('names each non-unit test added, changed or renamed in that no changed mutation file predicts red', () => {
     expect(
       unprovedTests(
         [
@@ -163,7 +211,7 @@ describe('unprovedTests', () => {
     ]);
   });
 
-  it('passes a changed non-unit test that a changed mutation file targets', () => {
+  it('passes a changed non-unit test that a changed mutation file predicts red', () => {
     expect(
       unprovedTests(
         [
