@@ -9,8 +9,8 @@
   "one-test-per-case/allowed-test-describe": 1,
   "one-test-per-case/annotation-calls": 1,
   "one-test-per-case/describe-modifier-calls": 2,
-  "one-test-per-case/files-with-test-calls": 212,
+  "one-test-per-case/files-with-test-calls": 210,
   "one-test-per-case/refused-calls": 1,
-  "one-test-per-case/repo-calls": 2674,
-  "one-test-per-case/repo-test-calls": 2672
+  "one-test-per-case/repo-calls": 2600,
+  "one-test-per-case/repo-test-calls": 2598
 }
