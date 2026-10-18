@@ -5,7 +5,7 @@
   "supply-chain/grouped-action-repos": 4,
   "supply-chain/node-modules-walk": 637,
   "supply-chain/ordered-action-repos": 4,
-  "supply-chain/pinned-uses": 41,
+  "supply-chain/pinned-uses": 37,
   "supply-chain/playwright-images": 4,
-  "supply-chain/versioned-uses": 41
+  "supply-chain/versioned-uses": 37
 }

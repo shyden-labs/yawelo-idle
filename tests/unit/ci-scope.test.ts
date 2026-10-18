@@ -12,8 +12,7 @@ import { searched } from '../searched';
 
 /**
  * The docs-only fast path (#360). build-and-test classifies the change it
- * tests (the pull request's merge commit, or one commit under every-commit)
- * against its first parent. Docs-only means every changed path is
+ * tests (the pull request's merge commit) against its first parent. Docs-only means every changed path is
  * HANDOVER.md or Markdown under docs/, and then only Format and the unit
  * suite run. Anything else, and anything the classifier cannot read, is
  * full: every step runs as before.
@@ -106,10 +105,10 @@ describe('the classification (AC1, AC4)', () => {
   });
 
   it('is full for one code path, and names it', () => {
-    const result = classify([change('M', 'scripts/every-commit.ts')]);
+    const result = classify([change('M', 'scripts/ci-scope.ts')]);
     expect(result.scope).toBe('full');
-    expect(result.reason).toContain('scripts/every-commit.ts');
-    expect(result.judged).toEqual(['scripts/every-commit.ts']);
+    expect(result.reason).toContain('scripts/ci-scope.ts');
+    expect(result.judged).toEqual(['scripts/ci-scope.ts']);
   });
 
   it('is full for a deletion off the allowlist', () => {

@@ -139,7 +139,7 @@ The five floors files that hold only these properties' ids (`core-automation`, `
 
 1. Build §5 with the properties still at their counts, seeds removed. Open the pull request as a draft at the first push, before CI concludes: until the minimums are recorded its properties step is red by design, and `pr-on-red-ci` refuses a pull request on a head whose required check has already gone red. Label `record-minimums`: **round 1** measures. Fetch: sound ids are written, small ones are listed with `k`.
 2. Move log into the logs suite (§5.12). Raise each other listed property's `numRuns` by its `k`, saying in a comment at the count why it is above the restored count (Ruling 4, the figures). Label again: **round 2**. Repeat until the fetch lists nothing. Post every round's table on #84.
-3. Squash into one commit (floors move), label `record-floors`, fetch, and fold the floors into that commit, so that every commit is green.
+3. Label `record-floors`, fetch, and commit the floors as a new commit, pushed normally. (Amended 2026-10-19 by #679: pull requests into `develop` merge by squash alone, so the one squash commit is what lands; no branch is squashed or amended by hand.)
 4. Measure the properties step's CI time before and after the raise and give both in the pull request (Ruling 4's cost).
 
 ## 7. Verification

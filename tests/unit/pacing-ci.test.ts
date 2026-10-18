@@ -54,10 +54,8 @@ describe('the pacing suite in CI (#35)', () => {
     // #360's docs-only skip, in ci-fast-path.test.ts; the pacing step's own
     // outcome in the test below (#353).
     expect(step?.if).toMatch(/^\$\{\{ !cancelled\(\) && /);
-    // Called once per commit inside one every-commit run (#348), where an
-    // artifact name may appear once, so a called run names its commit.
     expect(step?.with).toEqual({
-      name: "${{ inputs.ref && format('pacing-report-{0}', inputs.ref) || 'pacing-report' }}",
+      name: 'pacing-report',
       path: 'pacing-report.json',
       'if-no-files-found': 'error',
     });

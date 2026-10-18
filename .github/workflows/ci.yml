@@ -17,12 +17,6 @@ name: build-and-test
 on:
   pull_request:
   workflow_call:
-    inputs:
-      ref:
-        description: The commit to test; empty tests the event's own commit (every-commit.yml passes each commit of a pull request, #348)
-        type: string
-        required: false
-        default: ''
 
 permissions:
   contents: read
@@ -58,7 +52,6 @@ jobs:
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           # The commit and its parents: classify diffs HEAD^1..HEAD.
           fetch-depth: 2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -70,6 +63,17 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
         run: node scripts/ci-scope.ts
+      # A pull request into develop merges by squash alone (#679, Shyden
+      # 2026-10-18), so fetched floors go in as a normal commit and the commit
+      # that lands is the tree this job judged. It reads the rules GitHub
+      # applies to develop with the run's own token (they are public), needs
+      # no install, and runs on docs-only too: a ruleset can change between
+      # any two pull requests.
+      - name: Develop merges by squash only (#679)
+        timeout-minutes: 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/develop-squash-only.ts "$GITHUB_REPOSITORY"
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
       - name: Format
@@ -117,9 +121,7 @@ jobs:
         if: ${{ !cancelled() && steps.classify.outputs.scope != 'docs-only' && (steps.pacing.outcome == 'success' || steps.pacing.outcome == 'failure') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          # every-commit.yml calls this once per commit in one run, where an
-          # artifact name may appear once, so a called run names its commit.
-          name: ${{ inputs.ref && format('pacing-report-{0}', inputs.ref) || 'pacing-report' }}
+          name: pacing-report
           path: pacing-report.json
           if-no-files-found: error
       # Each suite below: one measured limit, at least 3 times its slowest

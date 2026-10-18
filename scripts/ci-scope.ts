@@ -11,9 +11,9 @@
  *
  * The change judged is `HEAD^1..HEAD` of what the job checked out. On a
  * pull_request event that is GitHub's merge commit, whose first parent is
- * the base, so the diff is exactly what the pull request brings. Under
- * every-commit it is one commit against its parent. deploy-dev's call is a
- * push event and always runs in full, as does any event but pull_request.
+ * the base, so the diff is exactly what the pull request brings.
+ * deploy-dev's call is a push event and always runs in full, as does any
+ * event but pull_request.
  *
  * Every doubt is full: an empty diff, a change kind it does not judge, a
  * diff it cannot read or parse, a missing EVENT. A missing GITHUB_OUTPUT
