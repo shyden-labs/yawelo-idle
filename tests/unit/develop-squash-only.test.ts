@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { developSquashOnly } from '../../scripts/develop-squash-only';
-import type { Gh } from '../../scripts/board-progress';
+import {
+  developSquashOnly,
+  type Get,
+  type Reply,
+} from '../../scripts/develop-squash-only';
 
 /**
  * scripts/develop-squash-only.ts (#679): a pull request into `develop` can be
@@ -8,18 +11,15 @@ import type { Gh } from '../../scripts/board-progress';
  * and no branch needs a force-push (Shyden 2026-10-18). The check reads the
  * rules GitHub applies to `develop`, fails unless every pull-request rule
  * together allows squash alone, and fails closed when it cannot read them.
- * In-process with `gh` stood in: a unit test starts no process.
+ * In-process with the request stood in: a unit test reaches no network.
  */
 
 const REPO = 'shyden-labs/yawelo-idle';
+const ENV = { GH_TOKEN: 'run-token' };
 
-/** The call the check makes for a branch's rules. */
-const rulesCall = (branch: string) => [
-  'api',
-  '--paginate',
-  '--slurp',
-  `repos/${REPO}/rules/branches/${branch}?per_page=100`,
-];
+/** The request the check makes for a branch's rules. */
+const rulesUrl = (branch: string) =>
+  `https://api.github.com/repos/${REPO}/rules/branches/${branch}?per_page=100`;
 
 /** A rule as GitHub lists it for a branch, from ruleset `id`. */
 function rule(
@@ -43,27 +43,36 @@ const pullRule = (id: number, methods: unknown) =>
     allowed_merge_methods: methods,
   });
 
+/** A 200 reply holding `body`, as JSON unless it is already text. */
+const ok = (body: unknown): Reply => ({
+  status: 200,
+  link: null,
+  text: typeof body === 'string' ? body : JSON.stringify(body),
+});
+
 /**
- * `gh` answering each branch's rules call with that branch's rules, as one
- * slurped page; any other call throws, so a check that asks for the wrong
- * thing reads nothing.
+ * A request answering each branch's rules URL with that branch's reply; any
+ * other URL, or a request without the run's token, throws, so a check that
+ * asks for the wrong thing reads nothing.
  */
-function ghFor(byBranch: Readonly<Record<string, unknown>>): Gh {
-  return (args) => {
-    for (const [branch, rules] of Object.entries(byBranch)) {
-      if (JSON.stringify(args) === JSON.stringify(rulesCall(branch)))
-        return typeof rules === 'string' ? rules : JSON.stringify([rules]);
+function getFor(byBranch: Readonly<Record<string, Reply>>): Get {
+  return (url, token) => {
+    if (token !== ENV.GH_TOKEN)
+      return Promise.reject(new Error(`sent token ${JSON.stringify(token)}`));
+    for (const [branch, reply] of Object.entries(byBranch)) {
+      if (url === rulesUrl(branch)) return Promise.resolve(reply);
     }
-    throw new Error(`unexpected call: gh ${args.join(' ')}`);
+    return Promise.reject(new Error(`unexpected request: ${url}`));
   };
 }
 
-const develop = (rules: unknown) => ghFor({ develop: rules });
+const develop = (body: unknown) => getFor({ develop: ok(body) });
+
+const check = (get: Get) => developSquashOnly([REPO], ENV, get);
 
 describe('develop allows squash merges only (#679)', () => {
-  it('passes when its one pull-request rule allows squash alone', () => {
-    const result = developSquashOnly(
-      [REPO],
+  it('passes when its one pull-request rule allows squash alone', async () => {
+    const result = await check(
       develop([rule('deletion', 7), pullRule(7, ['squash'])]),
     );
     expect(result).toEqual({
@@ -74,9 +83,8 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('passes when two rules together allow squash alone', () => {
-    const result = developSquashOnly(
-      [REPO],
+  it('passes when two rules together allow squash alone', async () => {
+    const result = await check(
       develop([
         pullRule(7, ['squash']),
         pullRule(8, ['merge', 'squash', 'rebase']),
@@ -90,8 +98,8 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('fails when no pull-request rule applies to develop', () => {
-    const result = developSquashOnly([REPO], develop([rule('deletion', 7)]));
+  it('fails when no pull-request rule applies to develop', async () => {
+    const result = await check(develop([rule('deletion', 7)]));
     expect(result).toEqual({
       ok: false,
       lines: [
@@ -100,8 +108,8 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('fails when develop has no rules at all', () => {
-    const result = developSquashOnly([REPO], develop([]));
+  it('fails when develop has no rules at all', async () => {
+    const result = await check(develop([]));
     expect(result).toEqual({
       ok: false,
       lines: [
@@ -110,11 +118,8 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('fails, naming the extra method, when the rule also allows merge commits', () => {
-    const result = developSquashOnly(
-      [REPO],
-      develop([pullRule(7, ['merge', 'squash'])]),
-    );
+  it('fails, naming the extra method, when the rule also allows merge commits', async () => {
+    const result = await check(develop([pullRule(7, ['merge', 'squash'])]));
     expect(result).toEqual({
       ok: false,
       lines: [
@@ -123,11 +128,8 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('fails, naming the extra method, when the rule also allows rebase', () => {
-    const result = developSquashOnly(
-      [REPO],
-      develop([pullRule(7, ['squash', 'rebase'])]),
-    );
+  it('fails, naming the extra method, when the rule also allows rebase', async () => {
+    const result = await check(develop([pullRule(7, ['squash', 'rebase'])]));
     expect(result).toEqual({
       ok: false,
       lines: [
@@ -136,9 +138,8 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('fails when the rules together allow no merge method', () => {
-    const result = developSquashOnly(
-      [REPO],
+  it('fails when the rules together allow no merge method', async () => {
+    const result = await check(
       develop([pullRule(7, ['squash']), pullRule(8, ['rebase'])]),
     );
     expect(result).toEqual({
@@ -149,84 +150,117 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('reads the rules on develop, not on another branch', () => {
-    const result = developSquashOnly(
-      [REPO],
-      ghFor({ develop: [], main: [pullRule(9, ['squash'])] }),
+  it('reads the rules on develop, not on another branch', async () => {
+    const result = await check(
+      getFor({ develop: ok([]), main: ok([pullRule(9, ['squash'])]) }),
     );
     expect(result.ok).toBe(false);
     expect(result.lines[0]).toMatch(/^No pull-request rule applies to develop/);
   });
 
-  it('refuses without the repository', () => {
-    expect(() => developSquashOnly([], develop([]))).toThrow(
+  it('refuses without the repository', async () => {
+    await expect(developSquashOnly([], ENV, develop([]))).rejects.toThrow(
       'usage: node scripts/develop-squash-only.ts <owner/repo>',
     );
   });
 
-  it('fails closed, naming the read, when gh fails', () => {
-    expect(() => developSquashOnly([REPO], ghFor({}))).toThrow(
-      /^could not read the rules on develop: unexpected call: gh api/,
+  it('refuses without a token, reading nothing', async () => {
+    await expect(developSquashOnly([REPO], {}, develop([]))).rejects.toThrow(
+      'GH_TOKEN is not set, so the rules on develop cannot be read',
     );
   });
 
-  it('fails closed when the reply is not JSON', () => {
-    expect(() => developSquashOnly([REPO], develop('not json'))).toThrow(
+  it('fails closed, naming the read, when the request fails', async () => {
+    await expect(check(getFor({}))).rejects.toThrow(
+      /^could not read the rules on develop: unexpected request: https:\/\/api\.github\.com\//,
+    );
+  });
+
+  it('fails closed, naming the status, when GitHub answers other than 200', async () => {
+    await expect(
+      check(getFor({ develop: { status: 403, link: null, text: '{}' } })),
+    ).rejects.toThrow(
+      'could not read the rules on develop: GitHub answered 403',
+    );
+  });
+
+  it('fails closed when the rules run past one page', async () => {
+    await expect(
+      check(
+        getFor({
+          develop: {
+            status: 200,
+            link: `<${rulesUrl('develop')}&page=2>; rel="next"`,
+            text: '[]',
+          },
+        }),
+      ),
+    ).rejects.toThrow(
+      'could not read the rules on develop: they run past one page of 100',
+    );
+  });
+
+  it('reads a reply whose links name no next page', async () => {
+    const result = await check(
+      getFor({
+        develop: {
+          status: 200,
+          link: `<${rulesUrl('develop')}&page=1>; rel="first"`,
+          text: JSON.stringify([pullRule(7, ['squash'])]),
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('fails closed when the reply is not JSON', async () => {
+    await expect(check(develop('not json'))).rejects.toThrow(
       /^could not read the rules on develop: .*"not json" is not valid JSON$/,
     );
   });
 
-  it('fails closed when the reply is not a list of pages', () => {
-    expect(() => developSquashOnly([REPO], develop('{"rules":[]}'))).toThrow(
-      'could not read the rules on develop: the reply is not a list of pages',
+  it('fails closed when the reply is not a list of rules', async () => {
+    await expect(check(develop({ rules: [] }))).rejects.toThrow(
+      'could not read the rules on develop: the reply is not a list of rules',
     );
   });
 
-  it('fails closed when a rule has no type', () => {
-    expect(() =>
-      developSquashOnly([REPO], develop([{ ruleset_id: 7 }])),
-    ).toThrow('could not read the rules on develop: a rule has no type');
+  it('fails closed when a rule has no type', async () => {
+    await expect(check(develop([{ ruleset_id: 7 }]))).rejects.toThrow(
+      'could not read the rules on develop: a rule has no type',
+    );
   });
 
-  it('fails closed when a pull-request rule has no ruleset id', () => {
-    expect(() =>
-      developSquashOnly(
-        [REPO],
-        develop([{ type: 'pull_request', parameters: {} }]),
-      ),
-    ).toThrow(
+  it('fails closed when a pull-request rule has no ruleset id', async () => {
+    await expect(
+      check(develop([{ type: 'pull_request', parameters: {} }])),
+    ).rejects.toThrow(
       'could not read the rules on develop: a pull-request rule has no ruleset id',
     );
   });
 
-  it('fails closed when a pull-request rule names no merge methods', () => {
-    expect(() =>
-      developSquashOnly([REPO], develop([rule('pull_request', 7, {})])),
-    ).toThrow(
+  it('fails closed when a pull-request rule names no merge methods', async () => {
+    await expect(check(develop([rule('pull_request', 7, {})]))).rejects.toThrow(
       'could not read the rules on develop: ruleset 7’s pull-request rule names no merge methods',
     );
   });
 
-  it('fails closed when a pull-request rule has no parameters', () => {
-    expect(() =>
-      developSquashOnly([REPO], develop([rule('pull_request', 7)])),
-    ).toThrow(
+  it('fails closed when a pull-request rule has no parameters', async () => {
+    await expect(check(develop([rule('pull_request', 7)]))).rejects.toThrow(
       'could not read the rules on develop: ruleset 7’s pull-request rule names no merge methods',
     );
   });
 
-  it('fails closed when the merge methods are not a list', () => {
-    expect(() =>
-      developSquashOnly([REPO], develop([pullRule(7, 'squash')])),
-    ).toThrow(
+  it('fails closed when the merge methods are not a list', async () => {
+    await expect(check(develop([pullRule(7, 'squash')]))).rejects.toThrow(
       'could not read the rules on develop: ruleset 7’s pull-request rule names no merge methods',
     );
   });
 
-  it('fails closed on a merge method it does not know', () => {
-    expect(() =>
-      developSquashOnly([REPO], develop([pullRule(7, ['squash', 'ff'])])),
-    ).toThrow(
+  it('fails closed on a merge method it does not know', async () => {
+    await expect(
+      check(develop([pullRule(7, ['squash', 'ff'])])),
+    ).rejects.toThrow(
       'could not read the rules on develop: ruleset 7’s pull-request rule names an unknown merge method "ff"',
     );
   });

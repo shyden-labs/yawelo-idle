@@ -14,18 +14,34 @@
  * every pull-request rule allows it: the check passes when that intersection
  * is squash alone, and fails when it holds anything else or when no
  * pull-request rule applies (the repository's own settings then allow every
- * method it enables). The rules are public, so the run's own token reads them,
- * Dependabot's runs included. Anything it cannot read or does not know, such
- * as a pull-request rule naming no merge methods or a method it has never
- * seen, fails it by name.
+ * method it enables).
+ *
+ * build-and-test runs in a container with no `gh` (run 39172896739: `spawnSync
+ * gh ENOENT`), so it asks GitHub's REST API with Node's own `fetch` and the
+ * run's token; it needs no install. Anything it cannot read or does not know
+ * fails it by name: no token, a status other than 200, a second page, a reply
+ * that is not a list of rules, a pull-request rule naming no merge methods or
+ * a method it has never seen.
  */
-import { execFileSync } from 'node:child_process';
-import type { Gh } from './board-progress.ts';
-import { entries, isRecord, read } from './gh-reads.ts';
+import { isRecord, readLater } from './gh-reads.ts';
+
+/** The parts of GitHub's reply the check reads. */
+export interface Reply {
+  status: number;
+  /** The `Link` header, or null when there is none. */
+  link: string | null;
+  text: string;
+}
+
+/** A GET of `url` sent with `token`, stood in by the unit tests. */
+export type Get = (url: string, token: string) => Promise<Reply>;
 
 const USAGE = 'usage: node scripts/develop-squash-only.ts <owner/repo>';
 
 const BRANCH = 'develop';
+
+/** The most rules one page holds; a branch never comes near it. */
+const PAGE = 100;
 
 /** The merge methods a pull-request rule can allow, in GitHub's order. */
 const METHODS = ['merge', 'squash', 'rebase'] as const;
@@ -42,11 +58,13 @@ interface PullRule {
 const plural = (n: number, one: string, many: string) =>
   `${String(n)} ${n === 1 ? one : many}`;
 
-/** The rules' types, and each pull-request rule's ruleset and methods. */
-function parseRules(out: string): { count: number; pulls: PullRule[] } {
-  const rules = entries(out);
+/** The rules' count, and each pull-request rule's ruleset and methods. */
+function parseRules(text: string): { count: number; pulls: PullRule[] } {
+  const rules = JSON.parse(text) as unknown;
+  if (!Array.isArray(rules))
+    throw new Error('the reply is not a list of rules');
   const pulls: PullRule[] = [];
-  for (const r of rules) {
+  for (const r of rules as unknown[]) {
     if (!isRecord(r) || typeof r.type !== 'string')
       throw new Error('a rule has no type');
     if (r.type !== 'pull_request') continue;
@@ -71,24 +89,34 @@ function parseRules(out: string): { count: number; pulls: PullRule[] } {
 }
 
 /**
- * Whether the gate passes, and the lines it prints. Throws, naming what it
+ * Whether the gate passes, and the lines it prints. Rejects, naming what it
  * could not read, when it cannot look.
  */
-export function developSquashOnly(
+export async function developSquashOnly(
   args: readonly string[],
-  gh: Gh,
-): { ok: boolean; lines: string[] } {
+  env: Readonly<Record<string, string | undefined>>,
+  get: Get,
+): Promise<{ ok: boolean; lines: string[] }> {
   const [repo] = args;
   if (repo === undefined) throw new Error(USAGE);
-  const { count, pulls } = read(`the rules on ${BRANCH}`, () =>
-    parseRules(
-      gh([
-        'api',
-        '--paginate',
-        '--slurp',
-        `repos/${repo}/rules/branches/${BRANCH}?per_page=100`,
-      ]),
-    ),
+  const token = env.GH_TOKEN;
+  if (token === undefined || token === '')
+    throw new Error(
+      `GH_TOKEN is not set, so the rules on ${BRANCH} cannot be read`,
+    );
+  const { count, pulls } = await readLater(
+    `the rules on ${BRANCH}`,
+    async () => {
+      const reply = await get(
+        `https://api.github.com/repos/${repo}/rules/branches/${BRANCH}?per_page=${String(PAGE)}`,
+        token,
+      );
+      if (reply.status !== 200)
+        throw new Error(`GitHub answered ${String(reply.status)}`);
+      if (reply.link?.includes('rel="next"'))
+        throw new Error(`they run past one page of ${String(PAGE)}`);
+      return parseRules(reply.text);
+    },
   );
   const sizes = `Read ${plural(count, 'rule', 'rules')} on ${BRANCH}.`;
   if (pulls.length === 0) {
@@ -121,12 +149,27 @@ export function developSquashOnly(
 }
 
 if (import.meta.main) {
+  /** One GET with the run's token, given up after 30 seconds. */
+  const get: Get = async (url, token) => {
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+    return {
+      status: response.status,
+      link: response.headers.get('link'),
+      text: await response.text(),
+    };
+  };
   try {
-    const { ok, lines } = developSquashOnly(process.argv.slice(2), (args) =>
-      execFileSync('gh', args, {
-        encoding: 'utf8',
-        maxBuffer: 64 * 1024 * 1024,
-      }),
+    const { ok, lines } = await developSquashOnly(
+      process.argv.slice(2),
+      process.env,
+      get,
     );
     for (const line of lines) process.stdout.write(`${line}\n`);
     if (!ok) {
