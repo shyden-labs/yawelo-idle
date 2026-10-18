@@ -10,7 +10,10 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
 const PRE_PUSH = 'tests/integration/pre-push.test.ts';
 const HOOK_CASE = `${PRE_PUSH} › the pre-push hook (#123 AC2) > `;
 const LOADS = 'tests/integration/script-loads.test.ts';
-const LOAD_CASE = `${LOADS} › the scripts load under Node’s own loader (#391) > scripts/develop-squash-only.ts loads without running its main`;
+const SUITE = `${LOADS} › the scripts load under Node’s own loader (#391) >`;
+const LOAD_CASE = `${SUITE} scripts/develop-squash-only.ts loads without running its main`;
+const LISTED = `${SUITE} lists every script with a main, as git has them, at the recorded floor`;
+const SCRIPT = 'scripts/develop-squash-only.ts';
 const RETIRED = 'check:ci-scripts';
 
 export default mutationFile({
@@ -44,12 +47,33 @@ export default mutationFile({
     },
     {
       // Importing the script runs the check: mutations.yml's mutate step sets
-      // no GH_TOKEN, so it refuses before any request and exits 1.
+      // no GH_TOKEN, so it refuses before any request and exits 1. The
+      // replacement also drops the `import.meta.main` text the list derives
+      // from, so the list reds too. That red was added after CI run
+      // 39174825654 showed it (a hindsight prediction); the two rows below
+      // split the causes and were predicted before their first run.
       name: 'main-runs-on-import',
-      file: 'scripts/develop-squash-only.ts',
+      file: SCRIPT,
       anchor: 'if (import.meta.main) {',
       replacement: 'if (true) {',
+      red: { [LISTED]: SCRIPT, [LOAD_CASE]: 'expected 1 to be +0' },
+    },
+    {
+      // The main runs on import, but the text stays, so the list still has it.
+      name: 'main-runs-with-the-text-kept',
+      file: SCRIPT,
+      anchor: 'if (import.meta.main) {',
+      replacement: 'if (import.meta.main || true) {',
       red: { [LOAD_CASE]: 'expected 1 to be +0' },
+    },
+    {
+      // The same guard spelt so the text is gone: the script still loads
+      // without running its main, and only the list misses it.
+      name: 'main-hidden-from-the-list',
+      file: SCRIPT,
+      anchor: 'if (import.meta.main) {',
+      replacement: "if (import.meta['main']) {",
+      red: { [LISTED]: SCRIPT },
     },
   ],
 });
