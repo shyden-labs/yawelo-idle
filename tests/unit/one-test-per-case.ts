@@ -61,6 +61,13 @@ const NOT_TESTS = new Set([
   'todo',
 ]);
 
+/**
+ * The members of NOT_TESTS that belong inside a running test: Playwright
+ * throws "can only be called from a test" for the first two and "while test
+ * is running" for `info` (#678). Annotations are read inside a test too.
+ */
+const IN_A_TEST = new Set(['step', 'setTimeout', 'info']);
+
 const isTestName = (node: ts.Expression): boolean =>
   ts.isIdentifier(node) && (node.text === 'it' || node.text === 'test');
 
@@ -281,7 +288,41 @@ export function scanTests(source: string, fileName: string): TestScan {
   const unclassified: string[] = [];
   const testCalls: string[] = [];
   let examined = 0;
+  /**
+   * Classifies a call inside test `title`'s body (#678): an annotation or a
+   * member that belongs in a test is read; anything else on `it` or `test`
+   * is refused by line, as Vitest and Playwright refuse a test or suite
+   * declared inside a test. False when the reader stops at the call.
+   */
+  const readInTest = (title: string, call: ts.CallExpression): boolean => {
+    const kind = kindOf(call);
+    if (kind === 'none') return true;
+    examined += 1;
+    const at = `line ${String(lineOf(sf, call))}`;
+    const callee = call.expression.getText(sf);
+    if (kind === 'unknown') {
+      unclassified.push(
+        `${at}: ${callee} is neither a test form nor a known non-test`,
+      );
+      return true;
+    }
+    if (kind === 'test') {
+      unclassified.push(
+        `${at}: ${callee}('${titleOf(sf, call)}') is nested inside test '${title}'`,
+      );
+      return false;
+    }
+    if (kind === 'table') {
+      unclassified.push(`${at}: ${callee} is nested inside test '${title}'`);
+      return false;
+    }
+    const [member = ''] = membersOf(call.expression) ?? [];
+    if (NOT_TESTS.has(member) && !IN_A_TEST.has(member))
+      unclassified.push(`${at}: ${callee} is called inside test '${title}'`);
+    return true;
+  };
   const inTest = (title: string, node: ts.Node): void => {
+    if (ts.isCallExpression(node) && !readInTest(title, node)) return;
     const loop = loopParts(sf, node);
     if (loop && actsPerPass(loop.body) && !declared(sf, node))
       cases.push({

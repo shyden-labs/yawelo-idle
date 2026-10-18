@@ -345,6 +345,7 @@ test('t', async ({ isMobile }) => {
   test.fixme(({ browserName }) => browserName === 'webkit', 'no WebGL');
 });`);
     expect(scan.tests).toBe(1);
+    expect(scan.examined, 'the test and its three annotations (#678)').toBe(4);
     expect(
       searched(scan.unclassified, { of: scan.examined, what: 'calls on test' }),
     ).toEqual([]);
@@ -370,6 +371,73 @@ test.skip.sometimes('y', () => {});`).unclassified,
       'line 3: test.skip.sometimes is neither a test form nor a known non-test',
     ]);
   });
+
+  it('refuses a member it does not know inside a test body, by line and name (#678)', () => {
+    expect(
+      read(`it('t', () => {
+  test.skp();
+});`).unclassified,
+    ).toEqual(['line 2: test.skp is neither a test form nor a known non-test']);
+  });
+
+  it('refuses a test nested inside a test, by line and both titles (#678)', () => {
+    const scan = read(`it('outer', () => {
+  it('inner', () => {});
+});`);
+    expect(scan.unclassified).toEqual([
+      "line 2: it('inner') is nested inside test 'outer'",
+    ]);
+    expect(scan.tests, 'the nested test is not counted as a test').toBe(1);
+  });
+
+  it('refuses a table form nested inside a test, once, by line and both titles (#678)', () => {
+    expect(
+      read(`it('outer', () => {
+  it.each(XS)('inner %s', () => {});
+});`).unclassified,
+    ).toEqual([
+      "line 2: it.each(XS)('inner %s') is nested inside test 'outer'",
+    ]);
+  });
+
+  // [what, member call as written inside the test body]
+  const NOT_IN_A_TEST: readonly (readonly [string, string])[] = [
+    ['a suite', "test.describe('d', () => {})"],
+    ['a hook', 'test.beforeEach(() => {})'],
+    ['test.use', "test.use({ locale: 'id' })"],
+  ];
+  for (const [what, call] of NOT_IN_A_TEST)
+    it(`refuses ${what} called inside a test, by line and name (#678)`, () => {
+      const callee = call.slice(0, call.indexOf('('));
+      expect(
+        read(`test('outer', () => {
+  ${call};
+});`).unclassified,
+      ).toEqual([`line 2: ${callee} is called inside test 'outer'`]);
+    });
+
+  // [what, floor id, member call as written inside the test body]
+  const IN_A_TEST: readonly (readonly [string, string, string])[] = [
+    ['test.step', 'step', "await test.step('s', async () => {})"],
+    ['test.info', 'info', "test.info().annotations.push({ type: 't' })"],
+    ['test.setTimeout', 'set-timeout', 'test.setTimeout(60_000)'],
+  ];
+  for (const [what, id, call] of IN_A_TEST)
+    it(`reads ${what} inside a test as no test and refuses nothing (#678)`, () => {
+      const scan = read(`test('t', async () => {
+  ${call};
+});`);
+      expect(scan.tests).toBe(1);
+      expect(
+        searched(scan.unclassified, {
+          of: scan.examined,
+          what: 'calls on test',
+        }),
+      ).toEqual([]);
+      expect(
+        floorBreach(`one-test-per-case/body-${id}-calls`, scan.examined),
+      ).toBeUndefined();
+    });
 
   it('counts a refused call as no test', () => {
     const scan = read(`it.todoo('x', () => {});`);
