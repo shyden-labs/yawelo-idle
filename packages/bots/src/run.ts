@@ -224,14 +224,18 @@ export function reachedAt<S>(
  * the sail before: each sail starts a new run, toward a new goal.
  */
 export class SailLog<S> {
+  private readonly meets: Meets<S>;
+  private readonly dayOf: (ms: number) => number;
   private leg: Seen<S>[];
   private readonly timed: Sail[] = [];
 
   constructor(
     initial: Seen<S>,
-    private readonly meets: Meets<S>,
-    private readonly dayOf: (ms: number) => number,
+    meets: Meets<S>,
+    dayOf: (ms: number) => number,
   ) {
+    this.meets = meets;
+    this.dayOf = dayOf;
     this.leg = [initial];
   }
 

@@ -3,6 +3,7 @@
   // workspace under apps/ and packages/ has its own tsconfig.json and is
   // checked by its own `typecheck` script.
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",

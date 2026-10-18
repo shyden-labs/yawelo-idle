@@ -5,6 +5,7 @@
   // Node-only API cannot typecheck here. `test/` is included so the AC5
   // type-level drift test is checked by `npm run typecheck`.
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",
