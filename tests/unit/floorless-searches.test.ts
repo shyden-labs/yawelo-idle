@@ -789,10 +789,11 @@ describe('walkDisagreements', () => {
 /**
  * The burn-down list's size: 115 sites in 103 scopes when the meta-guard
  * landed (#361), lowered to the list's measured size (#475: 113 in 101;
- * #544: 106 in 98; #368: 84 in 81; #369: 69 in 66; #370: 60 in 57). It only shrinks.
+ * #544: 106 in 98; #368: 84 in 81; #369: 69 in 66; #370: 60 in 57;
+ * #373: 40 in 37). It only shrinks.
  */
-const CEILING_SITES = 60;
-const CEILING_SCOPES = 57;
+const CEILING_SITES = 40;
+const CEILING_SCOPES = 37;
 
 describe('every absence search is proved, or listed (#361)', () => {
   it('only shrinks the burn-down list', () => {

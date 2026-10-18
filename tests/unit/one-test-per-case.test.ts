@@ -131,14 +131,18 @@ ${close}`),
       ).toEqual([{ test: 't', loop: 'for (const c of CASES)', line: 3 }]);
     });
 
-  const ALLOWED: readonly (readonly [string, string, number])[] = [
+  // [what, floor id, fixture, tests it holds]. A fixture whose loop sits outside
+  // any test holds one test beside it, so the reader is seen reading (#373).
+  const ALLOWED: readonly (readonly [string, string, string, number])[] = [
     [
       'a loop that generates one test per case',
+      'generated',
       'for (const c of CASES) it(`${c}`, () => expect(c).toBe(1));',
       1,
     ],
     [
       'a loop with no assertion or page change in it',
+      'no-assertion',
       `it('t', () => {
   const out = [];
   for (const c of CASES) out.push(c);
@@ -148,50 +152,63 @@ ${close}`),
     ],
     [
       'a loop in a describe body',
+      'describe-body',
       `describe('d', () => {
   for (const c of CASES) expect(c).toBe(1);
+  it('t', () => {});
 });`,
-      0,
+      1,
     ],
     [
       'a loop in test.describe',
+      'test-describe',
       `test.describe('d', () => {
   for (const c of CASES) expect(c).toBe(1);
+  test('t', () => {});
 });`,
-      0,
+      1,
     ],
     [
       'a loop in a hook',
+      'hook',
       `beforeEach(() => {
   for (const c of CASES) expect(c).toBe(1);
-});`,
-      0,
+});
+it('t', () => {});`,
+      1,
     ],
     [
       'a runtime population, declared above the loop',
+      'runtime-population',
       inTest(`// runtime population: the rows f() returned
   for (const r of f()) expect(r).toBe(1);`),
       1,
     ],
     [
       'one scenario, declared above the loop',
+      'one-scenario',
       inTest(`// one scenario: each answer moves the state the next one reads
   for (const a of ANSWERS) expect((s = answer(s, a))).toBeDefined();`),
       1,
     ],
     [
       'a runtime population, declared above the statement holding the loop',
+      'runtime-population-statement',
       inTest(`// runtime population: the rows f() returned
   await Promise.all(f().map(async (r) => expect(r).toBe(1)));`),
       1,
     ],
   ];
-  for (const [what, source, tests] of ALLOWED)
+  for (const [what, id, source, tests] of ALLOWED)
     it(`leaves alone ${what}`, () => {
-      expect(read(source).tests, 'the tests the fixture holds were read').toBe(
-        tests,
-      );
-      expect(found(source)).toEqual([]);
+      const scan = read(source);
+      expect(
+        searched(scan.looped, { of: scan.testCalls, what: 'test calls' }),
+      ).toEqual([]);
+      expect(
+        floorBreach(`one-test-per-case/allowed-${id}`, scan.testCalls.length),
+      ).toBeUndefined();
+      expect(scan.tests, 'the tests the fixture holds were read').toBe(tests);
     });
 
   const NOT_A_MARKER: readonly (readonly [string, string])[] = [
@@ -313,9 +330,11 @@ test.describe.configure({ mode: 'serial' });`);
       searched(scan.testCalls, { of: scan.examined, what: 'calls on test' }),
     ).toEqual([]);
     expect(
+      searched(scan.unclassified, { of: scan.examined, what: 'calls on test' }),
+    ).toEqual([]);
+    expect(
       floorBreach('one-test-per-case/describe-modifier-calls', scan.examined),
     ).toBeUndefined();
-    expect(scan.unclassified).toEqual([]);
   });
 
   it('reads a Playwright annotation inside a test as no test', () => {
@@ -326,7 +345,12 @@ test('t', async ({ isMobile }) => {
   test.fixme(({ browserName }) => browserName === 'webkit', 'no WebGL');
 });`);
     expect(scan.tests).toBe(1);
-    expect(scan.unclassified).toEqual([]);
+    expect(
+      searched(scan.unclassified, { of: scan.examined, what: 'calls on test' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('one-test-per-case/annotation-calls', scan.examined),
+    ).toBeUndefined();
   });
 
   it('refuses a test whose body it cannot see, by line and title', () => {

@@ -24,11 +24,22 @@ const problems = (source: string) =>
 describe('scanWorkflow', () => {
   it('accepts a secret in a job that declares the dev environment', () => {
     const scan = scanWorkflow('w.yml', workflow(job('    environment: dev\n')));
+    expect(
+      searched(scan.findings, {
+        of: scan.references,
+        what: 'secret references',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach(
+        'workflow-secrets/dev-environment-references',
+        scan.references.length,
+      ),
+    ).toBeUndefined();
     expect(scan.secretReferences).toBe(1);
     expect(scan.references).toEqual([
       'w.yml: jobs.deploy: secrets.CLOUDFLARE_API_TOKEN',
     ]);
-    expect(scan.findings).toEqual([]);
   });
 
   it('accepts the long form, environment: { name: production, url }', () => {
@@ -40,8 +51,19 @@ describe('scanWorkflow', () => {
         ),
       ),
     );
+    expect(
+      searched(scan.findings, {
+        of: scan.references,
+        what: 'secret references',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach(
+        'workflow-secrets/long-form-references',
+        scan.references.length,
+      ),
+    ).toBeUndefined();
     expect(scan.secretReferences).toBe(1);
-    expect(scan.findings).toEqual([]);
   });
 
   it('accepts a secret in a job that declares the board-read environment (#580)', () => {
@@ -119,10 +141,12 @@ describe('scanWorkflow', () => {
     expect(searched(scan.references, { of: scan.jobs, what: 'jobs' })).toEqual(
       [],
     );
+    expect(searched(scan.findings, { of: scan.jobs, what: 'jobs' })).toEqual(
+      [],
+    );
     expect(
       floorBreach('workflow-secrets/github-token-jobs', scan.jobs),
     ).toBeUndefined();
-    expect(scan.findings).toEqual([]);
   });
 
   it('is not satisfied or tripped by a comment', () => {
@@ -133,10 +157,12 @@ describe('scanWorkflow', () => {
     expect(searched(scan.references, { of: scan.jobs, what: 'jobs' })).toEqual(
       [],
     );
+    expect(searched(scan.findings, { of: scan.jobs, what: 'jobs' })).toEqual(
+      [],
+    );
     expect(
       floorBreach('workflow-secrets/commented-secret-jobs', scan.jobs),
     ).toBeUndefined();
-    expect(scan.findings).toEqual([]);
   });
 
   it('refuses pull_request_target outright', () => {
@@ -167,8 +193,14 @@ describe('this repo’s workflows keep every secret inside an environment', () =
       1,
     );
     expect(
-      scans.filter(({ scan }) => scan.jobs === 0).map(({ file }) => file),
+      searched(
+        scans.filter(({ scan }) => scan.jobs === 0).map(({ file }) => file),
+        { of: scans, what: 'workflows' },
+      ),
     ).toEqual([]);
+    expect(
+      floorBreach('workflow-secrets/workflows', scans.length),
+    ).toBeUndefined();
   });
 
   it('judges every job, counted as jobs, not files (Refs #82)', () => {
@@ -187,10 +219,16 @@ describe('this repo’s workflows keep every secret inside an environment', () =
     // Measured 1 at b2a6f3f (#82): deploy-dev.yml.
     expect(naming.length).toBeGreaterThan(0);
     expect(
-      naming
-        .filter(({ scan }) => scan.secretReferences < 1)
-        .map(({ file }) => file),
+      searched(
+        naming
+          .filter(({ scan }) => scan.secretReferences < 1)
+          .map(({ file }) => file),
+        { of: naming, what: 'workflows naming a stored secret' },
+      ),
     ).toEqual([]);
+    expect(
+      floorBreach('workflow-secrets/secret-naming-workflows', naming.length),
+    ).toBeUndefined();
   });
 
   it('finds the deploy secrets it is guarding (liveness)', () => {
@@ -205,6 +243,15 @@ describe('this repo’s workflows keep every secret inside an environment', () =
   });
 
   it('no secret is read outside a protected environment', () => {
-    expect(scanAll().flatMap(({ scan }) => scan.findings)).toEqual([]);
+    const scans = scanAll();
+    // Every job the scans read, counted as each is read (#373).
+    const jobs = scans.reduce((n, { scan }) => n + scan.jobs, 0);
+    expect(
+      searched(
+        scans.flatMap(({ scan }) => scan.findings),
+        { of: jobs, what: 'jobs' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('workflow-secrets/repo-jobs', jobs)).toBeUndefined();
   });
 });
