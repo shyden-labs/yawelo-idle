@@ -4,9 +4,10 @@ import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
 import { floorBreach } from '../../../tests/floors';
 import { searched } from '../../../tests/searched';
+import { watched } from '../../../tests/watched';
 import { PERSONAS } from '../src/personas';
 import { pacingReport } from '../src/report';
-import type { PersonaRun } from '../src/run';
+import type { PersonaRun, Sail } from '../src/run';
 import {
   CI_BOUNDS,
   clickingNeverWins,
@@ -87,6 +88,16 @@ async function run(name: string): Promise<PersonaRun> {
   return runOf(await played, name);
 }
 
+/**
+ * `name`'s run with watched sails: `read` is the sails a check read `key` of
+ * (#368, #370), so each floor counts what the check read, not the run.
+ */
+async function watchingSails(name: string, key: keyof Sail) {
+  const r = await run(name);
+  const { items, read } = watched(r.sails, key);
+  return { run: { ...r, sails: items }, read };
+}
+
 describe('the pacing suite', () => {
   it('asserts exactly the personas marked asserted', () => {
     expect(ASSERTED).toEqual(
@@ -99,59 +110,128 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
   it.each(ASSERTED)(
     '(a) %s sets sail for the first time after 30 to 60 minutes',
     async (name) => {
-      expect(firstSail(await run(name), CI_BOUNDS)).toEqual([]);
+      const first = await watchingSails(name, 'day');
+      expect(
+        searched(firstSail(first.run, CI_BOUNDS), {
+          of: first.read,
+          what: 'sails firstSail read',
+        }),
+      ).toEqual([]);
+      expect(
+        floorBreach(`pacing/first-sail-${name}`, first.read.length),
+      ).toBeUndefined();
     },
   );
 
   it('(b) the Casual Learner reaches each later destination 1 to 3 days after the one before', async () => {
-    expect(gaps(await run('casual'), CI_BOUNDS)).toEqual([]);
+    const casual = await watchingSails('casual', 'day');
+    expect(
+      searched(gaps(casual.run, CI_BOUNDS), {
+        of: casual.read,
+        what: 'sails gaps read',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('pacing/gaps-casual', casual.read.length),
+    ).toBeUndefined();
   });
 
   it('(c) the Casual Learner reaches the finale in 3 to 5 weeks', async () => {
-    expect(finale(await run('casual'), CI_BOUNDS)).toEqual([]);
+    const { items, read } = watched([await run('casual')], 'finaleDay');
+    expect(
+      searched(
+        items.flatMap((r) => finale(r, CI_BOUNDS)),
+        { of: read, what: 'runs whose finale finale read' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('pacing/finale-casual', read.length)).toBeUndefined();
   });
 
   it('(d) the Idler reaches the finale within 10 weeks', async () => {
-    expect(idlerFinishes(await run('idler'), CI_BOUNDS)).toEqual([]);
+    const { items, read } = watched([await run('idler')], 'finaleDay');
+    expect(
+      searched(
+        items.flatMap((r) => idlerFinishes(r, CI_BOUNDS)),
+        { of: read, what: 'runs whose finale idlerFinishes read' },
+      ),
+    ).toEqual([]);
+    expect(floorBreach('pacing/idler-finishes', read.length)).toBeUndefined();
   });
 
+  // The opens are judged as the run plays them, each recorded in openDays
+  // (run.ts), so openDays is the population decisions reports on.
   it.each(ASSERTED)(
     '(e) every open of %s offers a meaningful decision',
     async (name) => {
       const r = await run(name);
       expect(r.openDays.length).toBeGreaterThan(10);
-      expect(decisions(r)).toEqual([]);
+      expect(
+        searched(decisions(r), { of: r.openDays, what: 'opens judged' }),
+      ).toEqual([]);
+      expect(
+        floorBreach(`pacing/opens-${name}`, r.openDays.length),
+      ).toBeUndefined();
     },
   );
 
   it('(f) learning pays: the Casual Learner reaches the finale at least 20% sooner than the Non-learner', async () => {
+    const {
+      items: [casual, nonlearner],
+      read,
+    } = watched([await run('casual'), await run('nonlearner')], 'finaleDay');
     expect(
-      learningPays(await run('casual'), await run('nonlearner'), CI_BOUNDS),
+      searched(
+        casual && nonlearner
+          ? learningPays(casual, nonlearner, CI_BOUNDS)
+          : ['a run was not watched'],
+        { of: read, what: 'runs whose finale learningPays read' },
+      ),
     ).toEqual([]);
+    expect(floorBreach('pacing/learning-pays', read.length)).toBeUndefined();
   });
 
   it('(f) the Diligent Learner finishes no later than the Casual Learner, nor the Casual Learner than the Idler', async () => {
+    const {
+      items: [diligent, casual, idler],
+      read,
+    } = watched(
+      [await run('diligent'), await run('casual'), await run('idler')],
+      'finaleDay',
+    );
     expect(
-      learnersOrder(
-        await run('diligent'),
-        await run('casual'),
-        await run('idler'),
+      searched(
+        diligent && casual && idler
+          ? learnersOrder(diligent, casual, idler)
+          : ['a run was not watched'],
+        { of: read, what: 'runs whose finale learnersOrder read' },
       ),
     ).toEqual([]);
+    expect(floorBreach('pacing/learners-order', read.length)).toBeUndefined();
   });
 
   it('(g) clicking never beats idling: the Clicker takes at least 95% of the Casual Learner’s time to reach each sail’s goal', async () => {
+    const clicker = await watchingSails('clicker', 'reachedDay');
     expect(
-      clickingNeverWins(await run('clicker'), await run('casual'), CI_BOUNDS),
+      searched(clickingNeverWins(clicker.run, await run('casual'), CI_BOUNDS), {
+        of: clicker.read,
+        what: 'Clicker sails whose goal moment clickingNeverWins read',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('pacing/clicker-goal-moments', clicker.read.length),
+    ).toBeUndefined();
   });
 
+  // `views` counts every view the run judged for insane values (run.ts).
   it.each(ASSERTED)(
     '(h) %s meets no NaN, negative or infinite value',
     async (name) => {
       const r = await run(name);
       expect(r.events).toBeGreaterThan(1_000);
-      expect(sanity(r)).toEqual([]);
+      expect(
+        searched(sanity(r), { of: r.views, what: 'views judged' }),
+      ).toEqual([]);
+      expect(floorBreach(`pacing/views-${name}`, r.views)).toBeUndefined();
     },
   );
 

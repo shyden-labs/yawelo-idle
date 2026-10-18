@@ -1,0 +1,23 @@
+{
+  "pacing/clicker-goal-moments": 12,
+  "pacing/finale-casual": 1,
+  "pacing/first-sail-casual": 1,
+  "pacing/first-sail-clicker": 1,
+  "pacing/first-sail-diligent": 1,
+  "pacing/first-sail-idler": 1,
+  "pacing/first-sail-nonlearner": 1,
+  "pacing/gaps-casual": 12,
+  "pacing/idler-finishes": 1,
+  "pacing/learners-order": 3,
+  "pacing/learning-pays": 2,
+  "pacing/opens-casual": 74,
+  "pacing/opens-clicker": 74,
+  "pacing/opens-diligent": 120,
+  "pacing/opens-idler": 95,
+  "pacing/opens-nonlearner": 127,
+  "pacing/views-casual": 21860,
+  "pacing/views-clicker": 21823,
+  "pacing/views-diligent": 25668,
+  "pacing/views-idler": 17411,
+  "pacing/views-nonlearner": 20182
+}

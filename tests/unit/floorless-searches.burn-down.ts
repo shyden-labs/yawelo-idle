@@ -10,15 +10,6 @@
  * lowered. It only shrinks.
  */
 export const UNPROVED: Readonly<Record<string, number>> = {
-  'packages/bots/pacing/pacing.test.ts › (a) %s sets sail for the first time after 30 to 60 minutes': 1,
-  'packages/bots/pacing/pacing.test.ts › (b) the Casual Learner reaches each later destination 1 to 3 days after the one before': 1,
-  'packages/bots/pacing/pacing.test.ts › (c) the Casual Learner reaches the finale in 3 to 5 weeks': 1,
-  'packages/bots/pacing/pacing.test.ts › (d) the Idler reaches the finale within 10 weeks': 1,
-  'packages/bots/pacing/pacing.test.ts › (e) every open of %s offers a meaningful decision': 1,
-  'packages/bots/pacing/pacing.test.ts › (f) learning pays: the Casual Learner reaches the finale at least 20% sooner than the Non-learner': 1,
-  'packages/bots/pacing/pacing.test.ts › (f) the Diligent Learner finishes no later than the Casual Learner, nor the Casual Learner than the Idler': 1,
-  'packages/bots/pacing/pacing.test.ts › (g) clicking never beats idling: the Clicker takes at least 95% of the Casual Learner’s time to reach each sail’s goal': 1,
-  'packages/bots/pacing/pacing.test.ts › (h) %s meets no NaN, negative or infinite value': 1,
   'packages/core/test/automation.test.ts › buys nothing when nothing is owned and nothing is affordable': 1,
   'packages/core/test/cards.test.ts › is not shown while no card is held': 1,
   'packages/core/test/grammar.test.ts › is empty with no node owned': 1,
