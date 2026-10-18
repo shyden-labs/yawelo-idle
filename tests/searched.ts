@@ -19,7 +19,7 @@
  * blind to PART of its population still passes while one unit is read. So
  * every search also checks its population's recorded floor in the same test
  * (`floorBreach` in `tests/floors.ts`), and `floorless-searches.test.ts`
- * holds that.
+ * holds that. (#659 planted control: a comment-only change to this helper.)
  */
 export function searched<T>(
   findings: readonly T[],
