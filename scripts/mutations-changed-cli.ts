@@ -16,13 +16,14 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { asMutationFile } from './mutation-file.ts';
+import { asMutationFile, type MutationFile } from './mutation-file.ts';
 import {
   mutationFilesIn,
   needsListings,
   nonUnitTests,
   readNameStatus,
   summary,
+  testsPredictedRed,
   unprovedTests,
 } from './mutations-changed.ts';
 import { SUITES, suiteFiles } from './record-floors.ts';
@@ -61,14 +62,14 @@ async function main(): Promise<void> {
     throw new Error(`git diff failed: ${diff.stderr.trim()}`);
   const changed = readNameStatus(diff.stdout);
   const files = mutationFilesIn(changed);
-  const targeted = new Set<string>();
+  const loaded: MutationFile[] = [];
   for (const file of files) {
-    const loaded = (await import(pathToFileURL(resolve(file)).href)) as {
+    const module = (await import(pathToFileURL(resolve(file)).href)) as {
       readonly default?: unknown;
     };
-    for (const target of asMutationFile(loaded.default).targets)
-      targeted.add(target);
+    loaded.push(asMutationFile(module.default));
   }
+  const predictedRed = testsPredictedRed(loaded);
   const nonUnit = needsListings(changed)
     ? nonUnitTests(listings())
     : new Map<string, string>();
@@ -86,7 +87,7 @@ async function main(): Promise<void> {
     console.log('  docs only: no suite listed, as no test can be among them');
   for (const { path } of tests) console.log(`  test: ${path}`);
   for (const file of files) console.log(`  mutation file: ${file}`);
-  const unproved = unprovedTests(changed, nonUnit, targeted);
+  const unproved = unprovedTests(changed, nonUnit, predictedRed);
   if (unproved.length > 0) {
     console.error(
       `✗ ${String(unproved.length)} changed non-unit test${unproved.length === 1 ? '' : 's'} with no mutation file (#619):\n  ${unproved.join('\n  ')}`,
