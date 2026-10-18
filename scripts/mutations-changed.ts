@@ -85,14 +85,14 @@ export function nonUnitTests(
 export function testsPredictedRed(files: readonly MutationFile[]): Set<string> {
   return new Set(
     files.flatMap(({ mutations }) =>
-      mutations.flatMap(({ red }) =>
-        Object.keys(red).map((key) =>
-          key.slice(0, key.indexOf(FILE_SEPARATOR)),
-        ),
-      ),
+      mutations.flatMap(({ red }) => Object.keys(red).map(redTestFile)),
     ),
   );
 }
+
+/** The test file a `red` key names: the part before its first separator. */
+const redTestFile = (key: string): string =>
+  key.slice(0, key.indexOf(FILE_SEPARATOR));
 
 /**
  * Each non-unit test among `changed` that exists after the change and that
@@ -125,11 +125,176 @@ export function needsListings(changed: readonly Changed[]): boolean {
 const counted = (n: number, one: string, many: string): string =>
   `${String(n)} ${n === 1 ? one : many}`;
 
-/** How many non-unit tests and mutation files changed of how many paths judged: never a silent pass. */
+/** How many non-unit tests, helpers and mutation files changed of how many paths judged: never a silent pass. */
 export function summary(counts: {
   readonly tests: number;
+  readonly helpers: number;
   readonly files: number;
   readonly judged: number;
 }): string {
-  return `${counted(counts.tests, 'non-unit test', 'non-unit tests')} and ${counted(counts.files, 'mutation file', 'mutation files')} changed of ${String(counts.judged)} paths judged`;
+  return `${counted(counts.tests, 'non-unit test', 'non-unit tests')}, ${counted(counts.helpers, 'helper', 'helpers')} and ${counted(counts.files, 'mutation file', 'mutation files')} changed of ${String(counts.judged)} paths judged`;
+}
+
+/**
+ * Whether `path` sits in a test folder (#659): `tests/` at the root, or a
+ * `test/` or `tests/` folder directly inside a workspace that `workspaces`
+ * (package.json's patterns: `<folder>` or `<folder>/*`) names.
+ */
+export function inTestFolder(
+  path: string,
+  workspaces: readonly string[],
+): boolean {
+  const roots = workspaces.map((pattern) => {
+    const wildcard = pattern.endsWith('/*');
+    const parent = (wildcard ? pattern.slice(0, -2) : pattern).split('/');
+    if (parent.some((part) => !/^[A-Za-z0-9._-]+$/.test(part)))
+      throw new Error(
+        `package.json names the workspace ${pattern}, which is neither <folder> nor <folder>/*`,
+      );
+    return { parent, folder: parent.length + (wildcard ? 1 : 0) };
+  });
+  const parts = path.split('/');
+  const testFolderAt = (folder: number): boolean =>
+    parts[folder] === 'test' || parts[folder] === 'tests';
+  return (
+    parts[0] === 'tests' ||
+    roots.some(
+      ({ parent, folder }) =>
+        parent.every((part, i) => parts[i] === part) && testFolderAt(folder),
+    )
+  );
+}
+
+/** A module the import follower reads (`tests/unit/helper-modules.ts`). */
+const TYPESCRIPT = /\.[cm]?ts$/;
+/** A module it does not read, so cannot judge. */
+const JAVASCRIPT = /\.[cm]?js$/;
+
+/**
+ * The helpers among `changed` (#659 AC1): each file added, changed or
+ * renamed in a test folder that no suite lists (`listed`), in diff order.
+ * A TypeScript one is a helper a test imports; any other but JavaScript is
+ * data a test may read from disk; a JavaScript one is refused by name, as
+ * the import follower cannot read it. A file in one of the `recorded`
+ * folders, whose counts CI alone writes and their own checks compare
+ * exactly, is listed apart and judged no further (Shyden, 2026-10-18).
+ */
+export function changedHelpers(
+  changed: readonly Changed[],
+  listed: ReadonlySet<string>,
+  workspaces: readonly string[],
+  recorded: readonly string[],
+): {
+  helpers: string[];
+  data: string[];
+  recorded: string[];
+  unreadable: string[];
+} {
+  const inTests = changed.filter(
+    ({ status, path }) =>
+      status !== 'D' && !listed.has(path) && inTestFolder(path, workspaces),
+  );
+  const isRecorded = (path: string): boolean =>
+    recorded.some((folder) => path.startsWith(`${folder}/`));
+  const candidates = inTests.filter(({ path }) => !isRecorded(path));
+  return {
+    recorded: inTests
+      .filter(({ path }) => isRecorded(path))
+      .map(({ path }) => path),
+    helpers: candidates
+      .filter(({ path }) => TYPESCRIPT.test(path))
+      .map(({ path }) => path),
+    data: candidates
+      .filter(({ path }) => !TYPESCRIPT.test(path) && !JAVASCRIPT.test(path))
+      .map(({ path }) => path),
+    unreadable: candidates
+      .filter(({ path }) => JAVASCRIPT.test(path))
+      .map(
+        ({ path }) =>
+          `${path}: a JavaScript file in a test folder, which the import follower does not read`,
+      ),
+  };
+}
+
+/**
+ * Each file a row of `files` plants in, to the test files its rows predict
+ * red. A file whose every row is predicted green is left out: a row that
+ * stays green proves nothing.
+ */
+export function redByPlantedFile(
+  files: readonly MutationFile[],
+): Map<string, Set<string>> {
+  const red = new Map<string, Set<string>>();
+  for (const { mutations } of files)
+    for (const row of mutations)
+      for (const key of Object.keys(row.red)) {
+        const tests = red.get(row.file) ?? new Set<string>();
+        tests.add(redTestFile(key));
+        red.set(row.file, tests);
+      }
+  return red;
+}
+
+/** How many tests a failure names before it says how many more. */
+const NAMED_LOADERS = 5;
+
+/**
+ * Each changed helper a non-unit test loads (`loadedBy`) that no row of a
+ * changed mutation file plants in and predicts red for one of those tests
+ * (`planted`, from `redByPlantedFile`), named with the first five tests that
+ * load it (#659 AC2). A helper no non-unit test loads passes (AC3).
+ */
+export function unprovedHelpers(
+  helpers: readonly string[],
+  loadedBy: ReadonlyMap<string, readonly string[]>,
+  planted: ReadonlyMap<string, ReadonlySet<string>>,
+): string[] {
+  return helpers.flatMap((helper) => {
+    const loaders = loadedBy.get(helper) ?? [];
+    const red = planted.get(helper);
+    if (loaders.length === 0 || loaders.some((test) => red?.has(test)))
+      return [];
+    const more =
+      loaders.length > NAMED_LOADERS
+        ? `, and ${String(loaders.length - NAMED_LOADERS)} more`
+        : '';
+    return [
+      `${helper}: loaded by ${counted(loaders.length, 'non-unit test', 'non-unit tests')} (${loaders.slice(0, NAMED_LOADERS).join(', ')}${more}); no row of a mutation file this pull request adds or changes plants in it and predicts one of them red`,
+    ];
+  });
+}
+
+/**
+ * `loadedBy` with only the tests `nonUnit` lists among each file's loaders,
+ * leaving out a file only unit tests load: those need no mutation (#659 AC3).
+ */
+export function nonUnitLoaders(
+  loadedBy: ReadonlyMap<string, readonly string[]>,
+  nonUnit: ReadonlyMap<string, string>,
+): Map<string, string[]> {
+  return new Map(
+    [...loadedBy]
+      .map(([file, loaders]): [string, string[]] => [
+        file,
+        loaders.filter((test) => nonUnit.has(test)),
+      ])
+      .filter(([, loaders]) => loaders.length > 0),
+  );
+}
+
+/**
+ * Each changed data file that no test, nor a helper one loads, names
+ * (`readBy`, every suite's tests): it may still be read by a path built at
+ * run time, so the judge cannot pass it as read by none.
+ */
+export function unnamedData(
+  data: readonly string[],
+  readBy: ReadonlyMap<string, readonly string[]>,
+): string[] {
+  return data
+    .filter((path) => (readBy.get(path) ?? []).length === 0)
+    .map(
+      (path) =>
+        `${path}: no test, nor a helper one loads, names it, so the judge cannot tell which tests read it`,
+    );
 }

@@ -43,10 +43,11 @@ export default mutationFile({
     {
       name: 'targets-count-as-proof',
       file: JUDGE,
+      // Anchors moved when #659 gave the key's file one home (redTestFile).
       anchor:
-        '  return new Set(\n    files.flatMap(({ mutations }) =>\n      mutations.flatMap(({ red }) =>\n        Object.keys(red).map((key) =>\n          key.slice(0, key.indexOf(FILE_SEPARATOR)),\n        ),\n      ),\n    ),\n  );',
+        '  return new Set(\n    files.flatMap(({ mutations }) =>\n      mutations.flatMap(({ red }) => Object.keys(red).map(redTestFile)),\n    ),\n  );',
       replacement:
-        '  return new Set([\n    ...files.flatMap(({ targets }) => targets),\n    ...files.flatMap(({ mutations }) =>\n      mutations.flatMap(({ red }) =>\n        Object.keys(red).map((key) =>\n          key.slice(0, key.indexOf(FILE_SEPARATOR)),\n        ),\n      ),\n    ),\n  ]);',
+        '  return new Set([\n    ...files.flatMap(({ targets }) => targets),\n    ...files.flatMap(({ mutations }) =>\n      mutations.flatMap(({ red }) => Object.keys(red).map(redTestFile)),\n    ),\n  ]);',
       red: {
         [`${CHANGED} › testsPredictedRed > leaves out a target whose every row is predicted green`]:
           'tests/guards/c.test.ts',
@@ -55,8 +56,8 @@ export default mutationFile({
     {
       name: 'whole-key-kept',
       file: JUDGE,
-      anchor: '          key.slice(0, key.indexOf(FILE_SEPARATOR)),\n',
-      replacement: '          key,\n',
+      anchor: 'Object.keys(red).map(redTestFile)',
+      replacement: 'Object.keys(red)',
       red: {
         [`${CHANGED} › testsPredictedRed > collects the file of every test a row of any file predicts red`]:
           'tests/guards/a.test.ts › d > t',
