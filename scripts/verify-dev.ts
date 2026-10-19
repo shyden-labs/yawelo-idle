@@ -464,13 +464,19 @@ const ROADMAP_CHECK_MAX_AGE_MS = 20 * 60_000;
 const shown = (value: unknown): string =>
   typeof value === 'string' ? value : JSON.stringify(value);
 
-/** The fields of `/api/roadmap/health` this judges (#341). */
+/** A health time in a message: a field the health left out says so. */
+const stamped = (value: unknown): string =>
+  value === undefined ? 'missing' : shown(value);
+
+/** The fields of `/api/roadmap/health` this judges or names (#341, #689). */
 interface RoadmapHealth {
   version?: unknown;
   drift?: unknown;
   readFailingSince?: unknown;
   readError?: unknown;
   lastCheckAt?: unknown;
+  lastEventAt?: unknown;
+  lastDriftAt?: unknown;
 }
 
 /**
@@ -514,7 +520,9 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
       problem: () =>
         body.drift === 0
           ? undefined
-          : `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed`,
+          : // The times the judgement rests on, so the next drift is measured
+            // from verify's own output, not inferred (#689).
+            `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift ${stamped(body.lastDriftAt)}, last event ${stamped(body.lastEventAt)}, last check ${stamped(body.lastCheckAt)})`,
     },
     {
       name: 'reads',

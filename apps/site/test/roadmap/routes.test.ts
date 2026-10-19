@@ -99,6 +99,25 @@ describe('/hooks/github', () => {
     expect(await boardReads()).toBe(1);
   });
 
+  // #689: the hook hands the delivery's card and time to the roadmap. A
+  // change stamped far ahead of the fixture is one no read can show yet.
+  it('hands the delivery’s card and time to the roadmap, which counts a read behind it as late', async () => {
+    const staleReads = async () =>
+      (
+        (await (
+          await call('/api/roadmap/health', { headers: AUTH })
+        ).json()) as { staleReads: number }
+      ).staleReads;
+    const before = await staleReads();
+    const response = await deliver('issues', {
+      action: 'edited',
+      issue: { number: 9, updated_at: '2999-01-01T00:00:00Z' },
+      repository: { full_name: FIXTURE_REPO },
+    });
+    expect(response.status).toBe(202);
+    expect(await staleReads()).toBe(before + 1);
+  });
+
   it('answers a signed ping without reading', async () => {
     const response = await deliver('ping', { zen: 'Design for failure.' });
     expect(response.status).toBe(204);

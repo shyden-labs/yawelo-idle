@@ -3,14 +3,19 @@
  * snapshot of the board the public roadmap shows, its version, and the
  * health of the two ways it learns of changes.
  *
- * - An accepted webhook (`changed`) means only "something changed": reads are
- *   coalesced, so any burst costs at most two, the last of which saw every
- *   event.
+ * - An accepted webhook (`changed`) names the card it changed and when (its
+ *   witness, worker/witness.ts) and asks for a read: reads are coalesced, so
+ *   any burst costs at most two.
+ * - Every good read accounts for what changed since the last one, card by
+ *   card (#689): a change is explained only by a witness naming that card
+ *   that the read shows. A witness the read does not show yet (GitHub
+ *   answering from before its own webhook) stays owed for the next read, and
+ *   the read is counted as late; it explains nothing else.
  * - The scheduled check (`check`, every 10 minutes) reads the whole board on
- *   its own. A difference no event explains is drift, made loud by
- *   `/api/roadmap/health` and dev verify until a webhook is seen delivering a
- *   change again; it is an independent reading of the source of truth, not a
- *   retry.
+ *   its own. A difference no witness explains within the grace is drift,
+ *   made loud by `/api/roadmap/health` and dev verify until a webhook is seen
+ *   delivering a change again; it is an independent reading of the source of
+ *   truth, not a retry.
  * - A failed read keeps the last snapshot and says since when reads fail.
  *   Nothing reads again by itself: the next event or check is the next read.
  *
@@ -27,9 +32,23 @@ import {
   type Progress,
 } from '@yawelo-idle/progress';
 import { installationToken, readBoardPages } from './github';
+import {
+  account,
+  numberOf,
+  readStamps,
+  type Owed,
+  type Stamps,
+  type Witness,
+} from './witness';
 
-/** A late webhook is believed for this long after the check that saw its change. */
+/**
+ * A late webhook is believed for this long after the read that saw its
+ * change, and a check drops a witness still unseen this long after its event.
+ */
 export const GRACE_MS = 120_000;
+
+/** No read's stamps: a card's number then comes from the cards known before. */
+const NO_STAMPS: Stamps = { items: new Map(), issues: new Map() };
 
 /**
  * The App's key, a Worker secret, which `wrangler types` cannot see; the
@@ -90,7 +109,19 @@ export interface Health {
   drift: number;
   driftTotal: number;
   lastDriftAt: string | null;
+  /** The earliest unexplained change still within its grace. */
   pendingDriftSince: string | null;
+  /**
+   * Good reads that did not yet show a change a webhook had announced
+   * (#689): GitHub answering from before its own webhook. Never reset.
+   */
+  staleReads: number;
+  lastStaleReadAt: string | null;
+  /**
+   * Announced changes no read showed within the grace of a check, dropped
+   * so they cannot explain later changes. Never reset.
+   */
+  unseenEvents: number;
   readFailingSince: string | null;
   readError: string | null;
   /** What the last good read left off. */
@@ -99,14 +130,20 @@ export interface Health {
 
 interface State {
   snapshot: Snapshot | null;
-  /** When the read behind the current snapshot (or its last confirmation) began. */
-  lastReadStartedAt: number | null;
+  /** Witnesses no read has shown yet. */
+  owed: Owed[];
+  /** Each card id the last good read had → its issue number. */
+  known: Record<string, number>;
+  /** Issue number → when a read found its change unexplained, within the grace. */
+  pending: Record<string, number>;
   lastEventAt: number | null;
   lastCheckAt: number | null;
-  pendingDriftSince: number | null;
   drift: number;
   driftTotal: number;
   lastDriftAt: number | null;
+  staleReads: number;
+  lastStaleReadAt: number | null;
+  unseenEvents: number;
   readFailingSince: number | null;
   readError: string | null;
   dropped: DroppedCounts;
@@ -114,13 +151,17 @@ interface State {
 
 const EMPTY: State = {
   snapshot: null,
-  lastReadStartedAt: null,
+  owed: [],
+  known: {},
+  pending: {},
   lastEventAt: null,
   lastCheckAt: null,
-  pendingDriftSince: null,
   drift: 0,
   driftTotal: 0,
   lastDriftAt: null,
+  staleReads: 0,
+  lastStaleReadAt: null,
+  unseenEvents: 0,
   readFailingSince: null,
   readError: null,
   dropped: { draft: 0, pullRequest: 0, anotherRepository: 0 },
@@ -128,6 +169,21 @@ const EMPTY: State = {
 
 const iso = (ms: number | null): string | null =>
   ms === null ? null : new Date(ms).toISOString();
+
+/** The earliest of the pending changes' times, or null when none waits. */
+const earliest = (pending: Record<string, number>): number | null => {
+  const times = Object.values(pending);
+  return times.length === 0 ? null : Math.min(...times);
+};
+
+/** Each of this repository's cards in a read → its issue number. */
+function knownNumbers(stamps: Stamps): Record<string, number> {
+  const known: Record<string, number> = {};
+  // A runtime population: the cards this read returned.
+  for (const [id, { number }] of stamps.items)
+    if (number !== null) known[id] = number;
+  return known;
+}
 
 async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest(
@@ -154,6 +210,8 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     ctx.setWebSocketAutoResponse(
       new WebSocketRequestResponsePair('ping', 'pong'),
     );
+    // State saved before #689 also holds `lastReadStartedAt` and a single
+    // `pendingDriftSince`; nothing reads either any more.
     void ctx.blockConcurrencyWhile(async () => {
       this.state = {
         ...EMPTY,
@@ -167,13 +225,22 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     return Date.now();
   }
 
-  /** An accepted webhook: something on the board changed. */
-  async changed(): Promise<void> {
+  /**
+   * An accepted webhook: the card it names changed. A delivery that names no
+   * card (null) still causes a read but explains no change.
+   */
+  async changed(witness: Witness | null): Promise<void> {
     const now = this.now();
     this.promoteStalePending(now);
-    const pending = this.state.pendingDriftSince;
-    if (pending !== null && now - pending <= GRACE_MS)
-      this.state.pendingDriftSince = null;
+    if (witness !== null) {
+      // A late webhook for a change a read already found explains that card
+      // alone, and only within the grace.
+      const number = numberOf(witness, NO_STAMPS, this.state.known);
+      this.keepPending(
+        ([card, since]) => card !== String(number) || now - since > GRACE_MS,
+      );
+      this.state.owed.push({ witness, at: now });
+    }
     this.state.lastEventAt = now;
     await this.save();
     this.dirty = true;
@@ -202,7 +269,10 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       drift: s.drift,
       driftTotal: s.driftTotal,
       lastDriftAt: iso(s.lastDriftAt),
-      pendingDriftSince: iso(s.pendingDriftSince),
+      pendingDriftSince: iso(earliest(s.pending)),
+      staleReads: s.staleReads,
+      lastStaleReadAt: iso(s.lastStaleReadAt),
+      unseenEvents: s.unseenEvents,
       readFailingSince: iso(s.readFailingSince),
       readError: s.readError,
       dropped: s.dropped,
@@ -269,18 +339,35 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       const { items, dropped } = roadmapItems(pages, env.ROADMAP_REPO);
       const sorted = [...items].sort((a, b) => a.number - b.number);
       const hash = await sha256(JSON.stringify(sorted));
+      // From here to the save nothing awaits, so every witness that arrived
+      // during the read is in the accounting and none is lost.
       const previous = this.state.snapshot;
+      const stamps = readStamps(pages, env.ROADMAP_REPO);
+      const counted = account({
+        previous: previous?.items ?? null,
+        items: sorted,
+        stamps,
+        owed: this.state.owed,
+        known: this.state.known,
+        startedAt,
+        expiresBefore: source === 'check' ? startedAt - GRACE_MS : null,
+      });
+      this.state.owed = counted.owed;
+      this.state.known = knownNumbers(stamps);
+      if (counted.behind) {
+        this.state.staleReads += 1;
+        this.state.lastStaleReadAt = startedAt;
+      }
+      this.state.unseenEvents += counted.unseen;
+      // A runtime population: the cards this read found changed unexplained.
+      for (const number of counted.unexplained)
+        this.state.pending[String(number)] ??= startedAt;
+      // A webhook delivered a change before any read found it without one:
+      // the delivery path works, so earlier drift is fixed.
+      if (counted.explained.length > 0) this.state.drift = 0;
       if (previous?.hash !== hash) {
         const today = new Date(startedAt).toISOString().slice(0, 10);
         const measured = progress(sorted, today);
-        const unexplained =
-          source === 'check' &&
-          previous !== null &&
-          !(
-            this.state.lastEventAt !== null &&
-            this.state.lastReadStartedAt !== null &&
-            this.state.lastEventAt >= this.state.lastReadStartedAt
-          );
         this.state.snapshot = {
           version: (previous?.version ?? 0) + 1,
           readAt: new Date(startedAt).toISOString(),
@@ -289,14 +376,9 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
           progress: measured,
           lines: formatLines(measured, today),
         };
-        if (unexplained) this.state.pendingDriftSince ??= startedAt;
-        // A webhook delivered this change before any check saw it: the
-        // delivery path works, so earlier drift is fixed.
-        if (source === 'event') this.state.drift = 0;
         this.broadcast();
       }
       this.state.dropped = countDropped(dropped);
-      this.state.lastReadStartedAt = startedAt;
       this.state.readFailingSince = null;
       this.state.readError = null;
     } catch (error) {
@@ -307,14 +389,22 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     await this.save();
   }
 
-  /** A pending difference no late webhook explained within the grace is drift. */
+  /** Each card's change no late webhook explained within the grace is drift. */
   private promoteStalePending(now: number): void {
-    const pending = this.state.pendingDriftSince;
-    if (pending === null || now - pending <= GRACE_MS) return;
-    this.state.drift += 1;
-    this.state.driftTotal += 1;
-    this.state.lastDriftAt = pending;
-    this.state.pendingDriftSince = null;
+    this.keepPending(([, since]) => {
+      if (now - since <= GRACE_MS) return true;
+      this.state.drift += 1;
+      this.state.driftTotal += 1;
+      this.state.lastDriftAt = Math.max(this.state.lastDriftAt ?? since, since);
+      return false;
+    });
+  }
+
+  /** Keeps the pending changes `keep` accepts, by card number and time. */
+  private keepPending(keep: (entry: [string, number]) => boolean): void {
+    this.state.pending = Object.fromEntries(
+      Object.entries(this.state.pending).filter(keep),
+    );
   }
 
   private broadcast(): void {

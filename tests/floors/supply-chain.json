@@ -1,9 +1,9 @@
 {
-  "supply-chain/action-file-walk": 646,
+  "supply-chain/action-file-walk": 649,
   "supply-chain/dependabot-ecosystems": 2,
   "supply-chain/digest-images": 4,
   "supply-chain/grouped-action-repos": 4,
-  "supply-chain/node-modules-walk": 646,
+  "supply-chain/node-modules-walk": 649,
   "supply-chain/ordered-action-repos": 4,
   "supply-chain/pinned-uses": 37,
   "supply-chain/playwright-images": 4,

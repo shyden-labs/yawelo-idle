@@ -524,8 +524,30 @@ describe('roadmapProblems (#341)', () => {
   });
 
   it('fails drift, naming a missed webhook, however old it is', () => {
-    expect(roadmapProblems(health({ drift: 1, driftTotal: 1 }), NOW)).toEqual([
-      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed',
+    expect(
+      roadmapProblems(
+        health({
+          drift: 1,
+          driftTotal: 1,
+          lastDriftAt: '2026-10-06T12:41:00.000Z',
+        }),
+        NOW,
+      ),
+    ).toEqual([
+      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
+    ]);
+  });
+
+  // #689: the drift on 2026-10-19 could only be inferred, because verify
+  // printed the judgement and not the times it rests on.
+  it('names a time the health left out as missing, not as a time', () => {
+    expect(
+      roadmapProblems(
+        health({ drift: 2, lastEventAt: null, lastDriftAt: undefined }),
+        NOW,
+      ),
+    ).toEqual([
+      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -821,9 +843,14 @@ describe('verifyDev', () => {
 
   it('fails a site whose roadmap missed a webhook (#341)', async () => {
     reset();
-    roadmap = { ...roadmap, drift: 1, driftTotal: 1 };
+    roadmap = {
+      ...roadmap,
+      drift: 1,
+      driftTotal: 1,
+      lastDriftAt: '2026-10-19T00:50:00.000Z',
+    };
     expect(await verifyDev(target(), { polls: 1, pollMs: 0 })).toEqual([
-      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed',
+      `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
     ]);
   });
 

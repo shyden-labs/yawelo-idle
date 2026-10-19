@@ -23,6 +23,7 @@ import {
   showsHolding,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
+import { eventWitness } from './witness';
 
 export { Roadmap };
 
@@ -62,13 +63,13 @@ async function hook(
   } catch {
     return new Response(null, { status: 400 });
   }
-  const verdict = classifyEvent(
-    request.headers.get('X-GitHub-Event') ?? '',
-    payload,
-    { id: env.ROADMAP_BOARD_ID, repo: env.ROADMAP_REPO },
-  );
+  const name = request.headers.get('X-GitHub-Event') ?? '';
+  const verdict = classifyEvent(name, payload, {
+    id: env.ROADMAP_BOARD_ID,
+    repo: env.ROADMAP_REPO,
+  });
   if (verdict !== 'read') return new Response(null, { status: 204 });
-  ctx.waitUntil(roadmap(env).changed());
+  ctx.waitUntil(roadmap(env).changed(eventWitness(name, payload)));
   return new Response(null, { status: 202 });
 }
 
