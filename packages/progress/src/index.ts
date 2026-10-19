@@ -223,16 +223,20 @@ export function formatLines(p: Progress, today: string): [string, string] {
 }
 
 const LABELS_PER_ISSUE = 20;
-/** Every item of a board with what the maths reads, 100 to a page. */
+/**
+ * Every item of a board with what the maths reads, 100 to a page, and each
+ * card's id and last change and each issue's last change, which the live
+ * roadmap checks a read against the webhook that caused it (#689).
+ */
 export const BOARD_QUERY = `query($id: ID!, $endCursor: String) {
   node(id: $id) { ... on ProjectV2 { title
     items(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor }
-      nodes {
+      nodes { id updatedAt
         estimate: fieldValueByName(name: "Estimate") { ... on ProjectV2ItemFieldNumberValue { number } }
         content { __typename
           ... on DraftIssue { title }
           ... on PullRequest { title }
-          ... on Issue { number title state stateReason createdAt closedAt
+          ... on Issue { number title state stateReason createdAt closedAt updatedAt
             repository { nameWithOwner }
             labels(first: ${String(LABELS_PER_ISSUE)}) { totalCount nodes { name } } }
         } } } } } }`;

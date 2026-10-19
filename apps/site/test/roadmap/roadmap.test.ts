@@ -4,6 +4,7 @@ import {
   boardPages,
   FIXTURE_REPO,
   FIXTURE_TITLE,
+  fixtureCardId,
 } from '../../../../packages/progress/test/board-fixture';
 import { roadmapWorld, type RoadmapWorld } from './harness';
 
@@ -51,9 +52,16 @@ interface Health {
   lastCheckAt: string | null;
   lastDriftAt: string | null;
   pendingDriftSince: string | null;
+  staleReads: number;
+  lastStaleReadAt: string | null;
+  unseenEvents: number;
   readFailingSince: string | null;
   readError: string | null;
 }
+/** worker/witness.ts's Witness: the card a webhook changed, and when (#689). */
+type Witness =
+  | { kind: 'issue'; number: number; updatedAt: string }
+  | { kind: 'item'; id: string; updatedAt: string; gone: boolean };
 /** The socket a 101 carries: workerd's, which is accepted before use. */
 interface Socket {
   accept(): void;
@@ -66,7 +74,7 @@ interface Socket {
 interface RoadmapStub {
   setClock(at: number): Promise<void>;
   check(): Promise<void>;
-  changed(): Promise<void>;
+  changed(witness: Witness | null): Promise<void>;
   health(): Promise<Health>;
   snapshot(): Promise<Snapshot | null>;
   fetch(
@@ -102,9 +110,13 @@ async function inRoadmap<T>(
   const clock = { at: T0 };
   const at =
     <K extends keyof Calls>(method: K) =>
-    async (): Promise<Awaited<ReturnType<Calls[K]>>> => {
+    async (
+      ...args: Parameters<Calls[K]>
+    ): Promise<Awaited<ReturnType<Calls[K]>>> => {
       await target.setClock(clock.at);
-      return (await target[method]()) as Awaited<ReturnType<Calls[K]>>;
+      return (await Reflect.apply(target[method], target, args)) as Awaited<
+        ReturnType<Calls[K]>
+      >;
     };
   return body(
     {
@@ -117,15 +129,27 @@ async function inRoadmap<T>(
   );
 }
 
+/** When the changes these tests make happened, by GitHub's stamps (#689). */
+const CHANGED_AT = new Date(T0).toISOString();
+
+interface FixtureNode {
+  id: string;
+  updatedAt: string;
+  content: {
+    number: number;
+    title: string;
+    state: string;
+    stateReason: string | null;
+    closedAt: string | null;
+    updatedAt: string;
+  };
+}
+type FixturePages = { data: { node: { items: { nodes: FixtureNode[] } } } }[];
+
+const fixturePages = () => boardPages(today()) as FixturePages;
+
 /** The fixture board with more stories, numbered from 99, so it hashes differently. */
-function boardWithExtraStory(extra = 1): unknown[] {
-  const pages = boardPages(today()) as {
-    data: {
-      node: {
-        items: { nodes: { content: { number: number; title: string } }[] };
-      };
-    };
-  }[];
+function boardWithExtraStory(extra = 1, pages = fixturePages()): unknown[] {
   const last = pages.at(-1)?.data.node.items.nodes;
   const template = last?.at(-1);
   if (last === undefined || template === undefined)
@@ -133,14 +157,67 @@ function boardWithExtraStory(extra = 1): unknown[] {
   for (let n = 0; n < extra; n += 1)
     last.push({
       ...structuredClone(template),
+      id: fixtureCardId(99 + n),
+      updatedAt: CHANGED_AT,
       content: {
         ...structuredClone(template.content),
         number: 99 + n,
         title: `Extra story ${String(99 + n)}`,
+        updatedAt: CHANGED_AT,
       },
     });
   return pages;
 }
+
+/** The fixture board with story #9 closed at CHANGED_AT, as #678 closed. */
+function boardWithStoryNineClosed(pages = fixturePages()): FixturePages {
+  const nine = pages
+    .flatMap((p) => p.data.node.items.nodes)
+    .find((n) => n.content.number === 9);
+  if (nine === undefined) throw new Error('the fixture has no story 9');
+  nine.updatedAt = CHANGED_AT;
+  Object.assign(nine.content, {
+    state: 'CLOSED',
+    stateReason: 'COMPLETED',
+    closedAt: CHANGED_AT,
+    updatedAt: CHANGED_AT,
+  });
+  return pages;
+}
+
+/** The fixture board without story #9's card, as an archived card leaves it. */
+function boardWithoutStoryNine(): unknown[] {
+  const pages = fixturePages();
+  for (const page of pages)
+    page.data.node.items.nodes = page.data.node.items.nodes.filter(
+      (n) => n.content.number !== 9,
+    );
+  return pages;
+}
+
+/** The webhooks for those changes. */
+const extraStoryClosed: Witness = {
+  kind: 'issue',
+  number: 99,
+  updatedAt: CHANGED_AT,
+};
+const storyNineClosed: Witness = {
+  kind: 'issue',
+  number: 9,
+  updatedAt: CHANGED_AT,
+};
+const extraCardAdded: Witness = {
+  kind: 'item',
+  id: fixtureCardId(99),
+  updatedAt: CHANGED_AT,
+  gone: false,
+};
+const storyNineArchived: Witness = {
+  kind: 'item',
+  id: fixtureCardId(9),
+  updatedAt: CHANGED_AT,
+  gone: true,
+};
 
 /** GraphQL first-page reads the fake has served: one per board read. */
 const boardReads = async () =>
@@ -181,7 +258,7 @@ describe('reading the board', () => {
     const snapshot = await inRoadmap(async (r) => {
       await r.check();
       await configureFake({ pages: boardWithExtraStory() });
-      await r.changed();
+      await r.changed(extraCardAdded);
       return r.snapshot();
     });
     expect(snapshot?.version).toBe(2);
@@ -193,7 +270,9 @@ describe('reading the board', () => {
       await r.check();
       const before = await boardReads();
       await configureFake({ pages: boardWithExtraStory() });
-      await Promise.all(Array.from({ length: 10 }, () => r.changed()));
+      await Promise.all(
+        Array.from({ length: 10 }, () => r.changed(extraCardAdded)),
+      );
       return {
         reads: (await boardReads()) - before,
         snapshot: await r.snapshot(),
@@ -264,9 +343,12 @@ describe('reading the board', () => {
         'lastCheckAt',
         'lastDriftAt',
         'lastEventAt',
+        'lastStaleReadAt',
         'pendingDriftSince',
         'readError',
         'readFailingSince',
+        'staleReads',
+        'unseenEvents',
         'version',
       ]);
       expect(health.readError).toBeNull();
@@ -299,7 +381,7 @@ describe('a failed read', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502, pages: boardWithExtraStory() });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(extraCardAdded);
       return { health: await r.health(), snapshot: await r.snapshot() };
     });
     expect(snapshot?.version).toBe(1);
@@ -312,9 +394,9 @@ describe('a failed read', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502 });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(null);
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(null);
       return r.health();
     });
     expect(health.readFailingSince).toBe(new Date(T0 + 60_000).toISOString());
@@ -324,9 +406,9 @@ describe('a failed read', () => {
     const health = await inRoadmap(async (r) => {
       await r.check();
       await configureFake({ graphqlStatus: 502 });
-      await r.changed();
+      await r.changed(null);
       await configureFake({ graphqlStatus: 200 });
-      await r.changed();
+      await r.changed(null);
       return r.health();
     });
     expect(health.readFailingSince).toBeNull();
@@ -338,7 +420,7 @@ describe('a failed read', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502 });
       const before = await boardReads();
-      await r.changed();
+      await r.changed(null);
       return (await boardReads()) - before;
     });
     expect(reads).toBe(1);
@@ -370,7 +452,7 @@ describe('drift', () => {
       clock.at += 600_000;
       await r.check();
       clock.at += GRACE_MS;
-      await r.changed();
+      await r.changed(extraCardAdded);
       clock.at += GRACE_MS + 1;
       return r.health();
     });
@@ -385,18 +467,18 @@ describe('drift', () => {
       clock.at += 600_000;
       await r.check();
       clock.at += GRACE_MS + 1;
-      await r.changed();
+      await r.changed(extraCardAdded);
       return r.health();
     });
     expect(health.drift).toBe(1);
   });
 
-  it('counts no drift when an event came after the last good read began, its own read having failed', async () => {
+  it('counts no drift when an event’s own read failed and the check finds its change', async () => {
     const health = await inRoadmap(async (r, clock) => {
       await r.check();
       await configureFake({ graphqlStatus: 502, pages: boardWithExtraStory() });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(extraCardAdded);
       await configureFake({ graphqlStatus: 200 });
       clock.at += 600_000;
       await r.check();
@@ -445,7 +527,7 @@ describe('drift', () => {
       expect((await r.health()).drift).toBe(1);
       await configureFake({ pages: boardWithExtraStory(2) });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed({ ...extraCardAdded, id: fixtureCardId(100) });
       return r.health();
     });
     expect(health.drift).toBe(0);
@@ -470,6 +552,173 @@ describe('drift', () => {
     });
     expect(health.drift).toBe(1);
     expect(health.driftTotal).toBe(1);
+  });
+});
+
+/**
+ * #689: on 2026-10-19 every webhook was delivered and accepted, yet dev
+ * reported drift: the read #678's closure caused most likely got the board
+ * from before it. Each webhook now names its card and when it changed; a
+ * read is judged card by card against those witnesses.
+ */
+describe('a read behind its webhook (#689)', () => {
+  it('counts no drift when an event’s read is behind its webhook and the check then finds the change', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      // The fake still serves the board from before #9 closed.
+      await r.changed(storyNineClosed);
+      await configureFake({ pages: boardWithStoryNineClosed() });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.driftTotal).toBe(0);
+    expect(health.staleReads).toBe(1);
+    expect(health.lastStaleReadAt).toBe(new Date(T0 + 60_000).toISOString());
+    expect(health.unseenEvents).toBe(0);
+  });
+
+  // Blind spot 1: a late read used to excuse every change until the check.
+  it('counts drift for a change no webhook named, though another card’s webhook was owed', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      await configureFake({
+        pages: boardWithExtraStory(1, boardWithStoryNineClosed()),
+      });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(1);
+    expect(health.staleReads).toBe(1);
+  });
+
+  // Blind spot 2: a card added to the board but not yet in the read.
+  it('counts no drift when an event’s read is behind a card added to the board', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(extraCardAdded);
+      await configureFake({ pages: boardWithExtraStory() });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(1);
+  });
+
+  it('does not count a read late for an issue that is not on the board', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(extraStoryClosed);
+      return r.health();
+    });
+    expect(health.staleReads).toBe(0);
+    expect(health.lastStaleReadAt).toBeNull();
+  });
+
+  it('counts drift for a change an event’s read found that no webhook named', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({
+        pages: boardWithExtraStory(1, boardWithStoryNineClosed()),
+      });
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(1);
+    expect(health.lastDriftAt).toBe(new Date(T0 + 60_000).toISOString());
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('lets a late webhook within the grace explain its own card, not another', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({
+        pages: boardWithExtraStory(1, boardWithStoryNineClosed()),
+      });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.drift).toBe(1);
+    expect(health.driftTotal).toBe(1);
+  });
+
+  it('counts no drift when an archived card leaves the board by webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithoutStoryNine() });
+      clock.at += 60_000;
+      await r.changed(storyNineArchived);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('drops a webhook no check shows within the grace, counting it unseen', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += 600_000;
+      await r.check();
+      return r.health();
+    });
+    expect(health.unseenEvents).toBe(1);
+    expect(health.staleReads).toBe(2);
+    expect(health.drift).toBe(0);
+  });
+
+  it('lets a dropped webhook explain no later change', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += 600_000;
+      await r.check();
+      await configureFake({ pages: boardWithStoryNineClosed() });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.unseenEvents).toBe(1);
+    expect(health.drift).toBe(1);
+  });
+
+  it('explains nothing by a delivery that names no card', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithExtraStory() });
+      clock.at += 60_000;
+      await r.changed(null);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(1);
   });
 });
 
@@ -585,7 +834,7 @@ describe('the live socket', () => {
     const socket = await open(stub);
     expect((await socket.next()).version).toBe(1);
     await configureFake({ pages: boardWithExtraStory() });
-    await inRoadmap((r) => r.changed(), stub);
+    await inRoadmap((r) => r.changed(extraCardAdded), stub);
     expect((await socket.next()).version).toBe(2);
   });
 

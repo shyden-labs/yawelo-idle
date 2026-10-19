@@ -28,9 +28,21 @@ interface Story {
   stateReason?: 'COMPLETED' | 'NOT_PLANNED';
 }
 
+/** A fixture card's id, as GitHub's `PVTI_` node ids look (#689). */
+export const fixtureCardId = (number: number): string =>
+  `PVTI_fixture_${String(number)}`;
+
 function node(today: string, story: Story): unknown {
   const labels = story.labels ?? [];
+  // A card and its issue last changed when the issue closed, else when it
+  // was filed.
+  const updatedAt =
+    story.closed === undefined
+      ? daysBefore(today, 30)
+      : daysBefore(today, story.closed);
   return {
+    id: fixtureCardId(story.number),
+    updatedAt,
     estimate: story.estimate === null ? null : { number: story.estimate },
     content: {
       __typename: 'Issue',
@@ -42,6 +54,7 @@ function node(today: string, story: Story): unknown {
       createdAt: daysBefore(today, 30),
       closedAt:
         story.closed === undefined ? null : daysBefore(today, story.closed),
+      updatedAt,
       labels: {
         totalCount: labels.length,
         nodes: labels.map((name) => ({ name })),

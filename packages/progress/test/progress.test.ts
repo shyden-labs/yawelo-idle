@@ -653,6 +653,17 @@ describe('BOARD_QUERY', () => {
       expect(BOARD_QUERY).toMatch(new RegExp(`\\b${field}\\b`));
     });
   }
+
+  // The roadmap's witnesses (#689) read each card's id and last change and
+  // each issue's last change. Pinned where they sit: `id` alone would match
+  // the query's own `$id`.
+  it('asks GitHub for each card’s id and last change', () => {
+    expect(BOARD_QUERY).toMatch(/\bnodes \{\s+id updatedAt\b/);
+  });
+
+  it('asks GitHub for each issue’s last change', () => {
+    expect(BOARD_QUERY).toMatch(/\.\.\. on Issue \{[^}]*\bupdatedAt\b/);
+  });
 });
 
 describe('assertTitle', () => {
