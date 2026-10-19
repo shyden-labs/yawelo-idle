@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
+import { OWNED, codeownersRules as rules } from '../../scripts/owner-review';
 
 /**
  * Who must approve what (#374). A bad twin (`againstTwin`) proves the run was
@@ -10,21 +11,9 @@ import { existsSync, readFileSync } from 'node:fs';
  * the twin list's line and merge with no one asked.
  *
  * Every other path has no owner, so agents still merge into develop on a
- * green head as before.
+ * green head as before. The rules live in scripts/owner-review.ts, which the
+ * daily check (#687) reads too.
  */
-
-const OWNED = [
-  ['/tests/unit/floorless-searches.twins.ts', '@ShydenMcM'],
-  ['/.github/CODEOWNERS', '@ShydenMcM'],
-];
-
-/** Each rule as its words: blank lines and `#` comments carry none. */
-const rules = (text: string): string[][] =>
-  text
-    .split('\n')
-    .map((line) => line.replace(/#.*/, '').trim())
-    .filter((line) => line !== '')
-    .map((line) => line.split(/\s+/));
 
 describe('.github/CODEOWNERS', () => {
   it('names Shyden as the one owner of exactly the twin list and itself', () => {
