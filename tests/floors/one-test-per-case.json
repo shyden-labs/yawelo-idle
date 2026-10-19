@@ -7,10 +7,13 @@
   "one-test-per-case/allowed-runtime-population": 1,
   "one-test-per-case/allowed-runtime-population-statement": 1,
   "one-test-per-case/allowed-test-describe": 1,
-  "one-test-per-case/annotation-calls": 1,
+  "one-test-per-case/annotation-calls": 4,
+  "one-test-per-case/body-info-calls": 2,
+  "one-test-per-case/body-set-timeout-calls": 2,
+  "one-test-per-case/body-step-calls": 2,
   "one-test-per-case/describe-modifier-calls": 2,
   "one-test-per-case/files-with-test-calls": 210,
   "one-test-per-case/refused-calls": 1,
-  "one-test-per-case/repo-calls": 2600,
-  "one-test-per-case/repo-test-calls": 2598
+  "one-test-per-case/repo-calls": 2605,
+  "one-test-per-case/repo-test-calls": 2603
 }
