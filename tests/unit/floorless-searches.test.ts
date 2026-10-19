@@ -259,6 +259,14 @@ describe('searchSitesIn: bare absence forms', () => {
     ['expect(r).toEqual({ count: 0, xs: [] });', 'empty'],
     ['expect(r).toEqual({\n  a: [],\n  b: [],\n});', 'empty'],
     ['expect.soft(r).toEqual({ a: [] });', 'empty'],
+    // A false or null flag beside an empty value is the same claim (#692).
+    ['expect(r).toEqual({ found: [], truncated: false });', 'empty'],
+    ['expect(r).toEqual({ found: [], error: null });', 'empty'],
+    [
+      'expect(r).toStrictEqual({ outer: { found: [], done: false } });',
+      'empty',
+    ],
+    ['expect(r).toEqual({ flags: { done: false }, found: [] });', 'empty'],
   ])('reads %s as a bare %s site, never proved', (assertion, form) => {
     expect(read(`it('t', () => {\n${assertion}\n});`)).toEqual(one({ form }));
   });
@@ -289,6 +297,36 @@ describe('searchSitesIn: bare absence forms', () => {
       'expect(r).toEqual({ found });',
     ],
     ['a set with members (#558)', 'expect(r).toEqual({ a: new Set([1]) });'],
+    // A flag alone claims the key is there with that value: a dead reader
+    // returning nothing fails it, so it is no absence (#692).
+    [
+      'an object of a false flag alone (#692)',
+      'expect(r).toEqual({ ok: false });',
+    ],
+    [
+      'an object of nulls alone (#692)',
+      'expect(r).toEqual({ a: null, b: null });',
+    ],
+    [
+      'a nested object of a flag alone (#692)',
+      'expect(r).toEqual({ outer: { done: false } });',
+    ],
+    [
+      'true beside an empty finding (#692)',
+      'expect(r).toEqual({ found: [], truncated: true });',
+    ],
+    [
+      'a non-zero number beside an empty finding (#692)',
+      'expect(r).toEqual({ found: [], seen: 1 });',
+    ],
+    [
+      'a non-empty string beside an empty finding (#692)',
+      "expect(r).toEqual({ found: [], name: 'x' });",
+    ],
+    [
+      'a population beside a false flag (#692)',
+      'expect(r).toEqual({ found: [1], done: false });',
+    ],
   ])('reads %s as no site', (_what, assertion) => {
     expect(read(`it('t', () => {\n${assertion}\n});`)).toEqual({
       sites: [],

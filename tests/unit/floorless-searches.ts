@@ -379,23 +379,44 @@ const isEmptyCollection = (node: ts.Node): boolean =>
   (node.arguments ?? []).length === 0;
 
 /**
- * An object literal whose every value says "empty": `[]`, `{}`, an empty
- * `Set` or `Map`, `0`, or such an object nested (#558). It asserts the same
- * as `toEqual([])`, nothing found, with no population beside it. A spread
- * or a shorthand value is not read as empty.
+ * What a value in an object literal says: `empty` (`[]`, `{}`, an empty
+ * `Set` or `Map`, `0`), a `flag` (`false` or `null`, #692), or something.
+ * An object reads as empty when it holds an empty value and every other is
+ * empty or a flag, as a flag when it holds flags alone, nested too.
+ */
+type Reading = 'empty' | 'flag' | 'something';
+
+const valueReading = (node: ts.Expression): Reading => {
+  if (isEmptyLiteral(node) || isEmptyCollection(node) || isZero(node))
+    return 'empty';
+  if (
+    node.kind === ts.SyntaxKind.FalseKeyword ||
+    node.kind === ts.SyntaxKind.NullKeyword
+  )
+    return 'flag';
+  if (!ts.isObjectLiteralExpression(node)) return 'something';
+  let reading: Reading = 'flag';
+  for (const member of node.properties) {
+    if (!ts.isPropertyAssignment(member)) return 'something';
+    const value = valueReading(member.initializer);
+    if (value === 'something') return 'something';
+    if (value === 'empty') reading = 'empty';
+  }
+  return reading;
+};
+
+/**
+ * An object literal whose values say "empty", with at most a `false` or
+ * `null` flag beside them (#558, #692). It asserts the same as
+ * `toEqual([])`, nothing found, with no population beside it. Flags alone
+ * claim a key holds that value, which a dead reader fails, so they are not
+ * read as empty; nor is a spread or a shorthand value.
  */
 const isEmptyRecord = (node: ts.Node | undefined): boolean =>
   node !== undefined &&
   ts.isObjectLiteralExpression(node) &&
   node.properties.length > 0 &&
-  node.properties.every(
-    (member) =>
-      ts.isPropertyAssignment(member) &&
-      (isEmptyLiteral(member.initializer) ||
-        isEmptyCollection(member.initializer) ||
-        isZero(member.initializer) ||
-        isEmptyRecord(member.initializer)),
-  );
+  valueReading(node) === 'empty';
 
 /**
  * The absence form a matcher call asserts, or undefined: the bare forms only.

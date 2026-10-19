@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import 'typescript';
 import { describe, expect, it } from 'vitest';
 import { findFloorCallers, readFloorCaller } from '../../scripts/record-floors';
+import { againstTwin } from '../searched';
 
 /**
  * The floor recorder's reading of each file that calls `floorBreach` (#448),
@@ -19,6 +20,16 @@ const TEST_PATH = 'tests/unit/a.test.ts';
 const CALL = "expect(floorBreach('a/b', 1)).toBeUndefined();";
 const reads = (source: string, path = TEST_PATH) =>
   readFloorCaller(path, source);
+
+/** A real call of `floorBreach` through a namespace no case here names. */
+const planted = (floors: string): string =>
+  `import * as twinFloors from '${floors}';\ntwinFloors.floorBreach('a/b', 1);`;
+
+/** What the reader found in `source`: a call, then each refusal. */
+const found = (source: string): readonly string[] => {
+  const { calls, refusals } = reads(source);
+  return calls ? ['calls floorBreach', ...refusals] : refusals;
+};
 
 describe('readFloorCaller: every import form TypeScript accepts (#448 AC2)', () => {
   it.each([
@@ -97,29 +108,61 @@ describe('readFloorCaller: the name in text is no call (#448 AC1)', () => {
       "import * as floors from '../floors';\nfloors.readFloors();",
     ],
     ['an import never used', "import { floorBreach } from '../floors';"],
-  ])('reads %s as no caller', (_what, source) => {
-    expect(reads(source)).toEqual({ calls: false, refusals: [] });
+  ])('reads %s as no caller', async (_what, source) => {
+    // Proved by a twin with a real call planted (#692, Shyden 2026-10-20).
+    expect(
+      await againstTwin(found, {
+        input: source,
+        twin: `${source}\n${planted('../floors')}`,
+      }),
+    ).toEqual([]);
   });
 
+  // A file read from disk cannot take a twin, whose sample is text written
+  // in the test (#374), so each asserts its clean reading beside the reading
+  // of the same text with a call planted: a dead reader cannot give both
+  // (#692).
   it.each([
-    ['the floors module itself', 'tests/floors.ts'],
     [
       'the recorder, which names it in prose and messages',
       'scripts/record-floors.ts',
+      '../tests/floors',
     ],
     [
       'the floorless-searches guard, which names it in strings',
       'tests/unit/floorless-searches.ts',
+      '../floors',
     ],
     [
       'the literal-floors guard, which names it in strings',
       'tests/unit/literal-floors.ts',
+      '../floors',
     ],
-  ])('reads %s as no caller', (_what, path) => {
-    expect(reads(readFileSync(path, 'utf8'), path)).toEqual({
-      calls: false,
-      refusals: [],
-    });
+  ])(
+    'reads %s as no caller, and as one with a call planted',
+    (_what, path, floors) => {
+      const text = readFileSync(path, 'utf8');
+      expect([
+        reads(text, path),
+        reads(`${text}\n${planted(floors)}`, path),
+      ]).toEqual([
+        { calls: false, refusals: [] },
+        { calls: true, refusals: [] },
+      ]);
+    },
+  );
+
+  it('reads the floors module itself as no caller, though its text elsewhere calls and is refused', () => {
+    const text = `${readFileSync('tests/floors.ts', 'utf8')}\n${planted('./floors')}`;
+    expect([reads(text, 'tests/floors.ts'), reads(text, 'tests/a.ts')]).toEqual(
+      [
+        { calls: false, refusals: [] },
+        {
+          calls: true,
+          refusals: ['tests/a.ts: declares its own floorBreach'],
+        },
+      ],
+    );
   });
 });
 
