@@ -22,8 +22,8 @@ const T0 = '2026-10-19T00:40:45Z';
 const BEFORE = '2026-10-19T00:40:00Z';
 const AFTER = '2026-10-19T00:41:30Z';
 
-const issueEvent = (over: Record<string, unknown> = {}) => ({
-  action: 'closed',
+const issueEvent = (over: Record<string, unknown> = {}, action = 'closed') => ({
+  action,
   issue: { number: 678, updated_at: T0, ...over },
   repository: { full_name: REPO },
 });
@@ -39,12 +39,31 @@ const itemEvent = (action: string, over: Record<string, unknown> = {}) => ({
 });
 
 describe('eventWitness', () => {
-  it('names the issue and its last change for an issues event', () => {
-    expect(eventWitness('issues', issueEvent())).toEqual({
-      kind: 'issue',
-      number: 678,
-      updatedAt: T0,
+  // A deleted issue, or one transferred to another repository, leaves this
+  // repository's board read for good, so it is seen by its absence (#689;
+  // GitHub's recorded issues.deleted and issues.transferred payloads, read
+  // 2026-10-19, name the old repository and number).
+  const ISSUE_ACTIONS: [string, boolean][] = [
+    ['closed', false],
+    ['deleted', true],
+    ['edited', false],
+    ['transferred', true],
+  ];
+  for (const [action, gone] of ISSUE_ACTIONS) {
+    it(`names the issue of an issues ${action} event, ${gone ? 'gone' : 'present'}`, () => {
+      expect(eventWitness('issues', issueEvent({}, action))).toEqual({
+        kind: 'issue',
+        number: 678,
+        updatedAt: T0,
+        gone,
+      });
     });
+  }
+
+  it('names nothing for an issues event without an action', () => {
+    expect(
+      eventWitness('issues', { ...issueEvent(), action: undefined }),
+    ).toBeNull();
   });
 
   // GitHub's projects_v2_item actions (docs, read 2026-10-19). The board
@@ -200,7 +219,13 @@ const stampsOf = (
   ),
   issues: new Map(issues),
 });
-const issueWitness: Witness = { kind: 'issue', number: 678, updatedAt: T0 };
+const issueWitness: Witness = {
+  kind: 'issue',
+  number: 678,
+  updatedAt: T0,
+  gone: false,
+};
+const goneIssue: Witness = { ...issueWitness, gone: true };
 const itemWitness: Witness = {
   kind: 'item',
   id: 'PVTI_678',
@@ -224,6 +249,14 @@ describe('sees', () => {
 
   it('does not see an issue the read does not have', () => {
     expect(sees(stampsOf([]), issueWitness)).toBe(false);
+  });
+
+  it('sees a deleted or transferred issue by its absence', () => {
+    expect(sees(stampsOf([], [[1, T0]]), goneIssue)).toBe(true);
+  });
+
+  it('does not see a gone issue the read still has, however new its stamp', () => {
+    expect(sees(stampsOf([], [[678, AFTER]]), goneIssue)).toBe(false);
   });
 
   it('sees a card whose stamp is the witness’s', () => {
@@ -443,6 +476,38 @@ describe('account', () => {
       unexplained: [],
       owed: [],
       behind: false,
+      unseen: 0,
+    });
+  });
+
+  it('explains a deleted issue’s card leaving the board', () => {
+    const result = account({
+      ...base,
+      items: [item(1)],
+      stamps: stampsOf([], [[1, T0]]),
+      owed: [owed(goneIssue)],
+    });
+    expect(result).toEqual({
+      explained: [678],
+      unexplained: [],
+      owed: [],
+      behind: false,
+      unseen: 0,
+    });
+  });
+
+  it('keeps a gone issue owed while the read still has it, and marks the read behind', () => {
+    const result = account({
+      ...base,
+      items: base.previous,
+      stamps: stampsOf([], [[678, BEFORE]]),
+      owed: [owed(goneIssue)],
+    });
+    expect(result).toEqual({
+      explained: [],
+      unexplained: [],
+      owed: [owed(goneIssue)],
+      behind: true,
       unseen: 0,
     });
   });
