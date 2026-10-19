@@ -3,10 +3,12 @@ import type { Gh } from '../../scripts/board-progress';
 import {
   ISSUE_TITLE,
   OWNED,
-  codeownersProblems,
+  codeownersJudgement,
   ownerReview,
-  protectionProblems,
+  protectionJudgement,
 } from '../../scripts/owner-review';
+import { floorBreach } from '../floors';
+import { searched } from '../searched';
 
 /**
  * The daily check that develop still asks Shyden to review the twin list
@@ -35,95 +37,108 @@ const OFF = JSON.stringify({
   required_approving_review_count: 0,
 });
 
-describe('protectionProblems', () => {
+const SETTING = 'require_code_owner_reviews';
+const TWINS_RULE = '/tests/unit/floorless-searches.twins.ts @ShydenMcM';
+const SELF_RULE = '/.github/CODEOWNERS @ShydenMcM';
+const off = (shown: string) =>
+  `develop does not require review from code owners (require_code_owner_reviews is ${shown}): Settings > Branches > develop > "Require review from Code Owners"`;
+const lacks = (rule: string) =>
+  `.github/CODEOWNERS on develop lacks the rule "${rule}"`;
+
+describe('protectionJudgement', () => {
   it('finds nothing when develop requires code-owner review', () => {
-    expect(protectionProblems(ON)).toEqual([]);
+    const judged = protectionJudgement(ON);
+    expect(
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'review settings judged',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('owner-review/settings-checked', judged.checked.length),
+    ).toBeUndefined();
   });
 
   it('names the setting and where it is set when it is off', () => {
-    expect(protectionProblems(OFF)).toEqual([
-      'develop does not require review from code owners (require_code_owner_reviews is false): Settings > Branches > develop > "Require review from Code Owners"',
-    ]);
+    expect(protectionJudgement(OFF)).toEqual({
+      checked: [SETTING],
+      problems: [off('false')],
+    });
   });
 
   it('reads a missing setting as off, never as on', () => {
-    expect(protectionProblems('{"required_approving_review_count":0}')).toEqual(
-      [
-        'develop does not require review from code owners (require_code_owner_reviews is missing): Settings > Branches > develop > "Require review from Code Owners"',
-      ],
-    );
+    expect(
+      protectionJudgement('{"required_approving_review_count":0}'),
+    ).toEqual({ checked: [], problems: [off('missing')] });
   });
 
   it('reads a truthy value that is not true as off', () => {
-    expect(protectionProblems('{"require_code_owner_reviews":"true"}')).toEqual(
-      [
-        'develop does not require review from code owners (require_code_owner_reviews is "true"): Settings > Branches > develop > "Require review from Code Owners"',
-      ],
-    );
+    expect(
+      protectionJudgement('{"require_code_owner_reviews":"true"}'),
+    ).toEqual({ checked: [SETTING], problems: [off('"true"')] });
   });
 
   it('fails closed on a reply that is not JSON', () => {
-    expect(protectionProblems('<html>')).toEqual([
-      "could not parse develop's review settings: the reply is not JSON",
-    ]);
+    expect(protectionJudgement('<html>')).toEqual({
+      checked: [],
+      problems: [
+        "could not parse develop's review settings: the reply is not JSON",
+      ],
+    });
   });
 
   it('fails closed on JSON that is not an object', () => {
-    expect(protectionProblems('[true]')).toEqual([
-      "could not parse develop's review settings: the reply is not an object",
-    ]);
+    expect(protectionJudgement('[true]')).toEqual({
+      checked: [],
+      problems: [
+        "could not parse develop's review settings: the reply is not an object",
+      ],
+    });
   });
 });
 
-describe('codeownersProblems', () => {
+describe('codeownersJudgement', () => {
   it("finds nothing in develop's file", () => {
-    expect(codeownersProblems(CODEOWNERS)).toEqual([]);
+    const judged = codeownersJudgement(CODEOWNERS);
+    expect(
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'CODEOWNERS rules',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('owner-review/codeowners-rules', judged.checked.length),
+    ).toBeUndefined();
   });
 
   it('names the twin-list rule when its line is gone', () => {
     expect(
-      codeownersProblems(
-        CODEOWNERS.replace(
-          '/tests/unit/floorless-searches.twins.ts @ShydenMcM\n',
-          '',
-        ),
-      ),
-    ).toEqual([
-      '.github/CODEOWNERS on develop lacks the rule "/tests/unit/floorless-searches.twins.ts @ShydenMcM"',
-    ]);
+      codeownersJudgement(CODEOWNERS.replace(`${TWINS_RULE}\n`, '')),
+    ).toEqual({ checked: [SELF_RULE], problems: [lacks(TWINS_RULE)] });
   });
 
   it('names the rule when its owner changed', () => {
     expect(
-      codeownersProblems(
-        CODEOWNERS.replace(
-          '/.github/CODEOWNERS @ShydenMcM',
-          '/.github/CODEOWNERS @someone',
-        ),
+      codeownersJudgement(
+        CODEOWNERS.replace(SELF_RULE, '/.github/CODEOWNERS @someone'),
       ),
-    ).toEqual([
-      '.github/CODEOWNERS on develop lacks the rule "/.github/CODEOWNERS @ShydenMcM"',
-    ]);
+    ).toEqual({
+      checked: [TWINS_RULE, '/.github/CODEOWNERS @someone'],
+      problems: [lacks(SELF_RULE)],
+    });
   });
 
   it('reads a commented-out rule as gone', () => {
     expect(
-      codeownersProblems(
-        CODEOWNERS.replace(
-          '/tests/unit/floorless-searches.twins.ts',
-          '# /tests/unit/floorless-searches.twins.ts',
-        ),
-      ),
-    ).toEqual([
-      '.github/CODEOWNERS on develop lacks the rule "/tests/unit/floorless-searches.twins.ts @ShydenMcM"',
-    ]);
+      codeownersJudgement(CODEOWNERS.replace(TWINS_RULE, `# ${TWINS_RULE}`)),
+    ).toEqual({ checked: [SELF_RULE], problems: [lacks(TWINS_RULE)] });
   });
 
   it('names every rule when the file is empty', () => {
-    expect(codeownersProblems('')).toEqual([
-      '.github/CODEOWNERS on develop lacks the rule "/tests/unit/floorless-searches.twins.ts @ShydenMcM"',
-      '.github/CODEOWNERS on develop lacks the rule "/.github/CODEOWNERS @ShydenMcM"',
-    ]);
+    expect(codeownersJudgement('')).toEqual({
+      checked: [],
+      problems: [lacks(TWINS_RULE), lacks(SELF_RULE)],
+    });
   });
 
   it('pins the rules develop must hold, the same two codeowners.test.ts reads', () => {

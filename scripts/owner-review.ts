@@ -44,32 +44,57 @@ export const codeownersRules = (text: string): string[][] =>
     .filter((line) => line !== '')
     .map((line) => line.split(/\s+/));
 
-/** What is wrong in develop's review settings, as GitHub's API returned them. */
-export function protectionProblems(out: string): string[] {
+/** A judgement: what it read, and what it found wrong in what it read. */
+export interface Judgement {
+  checked: string[];
+  problems: string[];
+}
+
+/** Develop's review settings, as GitHub's API returned them, judged. */
+export function protectionJudgement(out: string): Judgement {
   let reply: unknown;
   try {
     reply = JSON.parse(out);
   } catch {
-    return ["could not parse develop's review settings: the reply is not JSON"];
+    return {
+      checked: [],
+      problems: [
+        "could not parse develop's review settings: the reply is not JSON",
+      ],
+    };
   }
   if (!isRecord(reply) || Array.isArray(reply))
-    return [
-      "could not parse develop's review settings: the reply is not an object",
-    ];
+    return {
+      checked: [],
+      problems: [
+        "could not parse develop's review settings: the reply is not an object",
+      ],
+    };
   const value = reply.require_code_owner_reviews;
-  if (value === true) return [];
+  const checked = value === undefined ? [] : ['require_code_owner_reviews'];
+  if (value === true) return { checked, problems: [] };
   const shown = value === undefined ? 'missing' : JSON.stringify(value);
-  return [
-    `develop does not require review from code owners (require_code_owner_reviews is ${shown}): ${WHERE}`,
-  ];
+  return {
+    checked,
+    problems: [
+      `develop does not require review from code owners (require_code_owner_reviews is ${shown}): ${WHERE}`,
+    ],
+  };
 }
 
-/** Each rule in `OWNED` that develop's CODEOWNERS text does not hold. */
-export function codeownersProblems(text: string): string[] {
-  const held = new Set(codeownersRules(text).map((words) => words.join(' ')));
-  return OWNED.map((rule) => rule.join(' '))
-    .filter((rule) => !held.has(rule))
-    .map((rule) => `.github/CODEOWNERS on develop lacks the rule "${rule}"`);
+/**
+ * Develop's CODEOWNERS text judged: the rules it holds, and each rule in
+ * `OWNED` it lacks.
+ */
+export function codeownersJudgement(text: string): Judgement {
+  const rules = codeownersRules(text).map((words) => words.join(' '));
+  const held = new Set(rules);
+  return {
+    checked: rules,
+    problems: OWNED.map((rule) => rule.join(' '))
+      .filter((rule) => !held.has(rule))
+      .map((rule) => `.github/CODEOWNERS on develop lacks the rule "${rule}"`),
+  };
 }
 
 const message = (error: unknown): string =>
@@ -95,12 +120,12 @@ function problemsIn(
   } else {
     try {
       problems.push(
-        ...protectionProblems(
+        ...protectionJudgement(
           reads.admin([
             'api',
             `repos/${repo}/branches/develop/protection/required_pull_request_reviews`,
           ]),
-        ),
+        ).problems,
       );
     } catch (error) {
       problems.push(
@@ -110,14 +135,14 @@ function problemsIn(
   }
   try {
     problems.push(
-      ...codeownersProblems(
+      ...codeownersJudgement(
         reads.repo([
           'api',
           '-H',
           'Accept: application/vnd.github.raw',
           `repos/${repo}/contents/.github/CODEOWNERS?ref=develop`,
         ]),
-      ),
+      ).problems,
     );
   } catch (error) {
     problems.push(
