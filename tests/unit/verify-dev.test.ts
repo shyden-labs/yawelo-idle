@@ -493,6 +493,16 @@ describe('healthProblems', () => {
 });
 
 describe('roadmapProblems (#341)', () => {
+  /** Every check roadmapJudgement runs, in order. */
+  const ALL_ROADMAP_CHECKS = [
+    'status',
+    'JSON',
+    'version',
+    'drift',
+    'reads',
+    'check age',
+    'noindex',
+  ];
   const NOW = Date.parse('2026-10-06T13:00:00Z');
   const healthy = {
     lastEventAt: '2026-10-06T12:58:00.000Z',
@@ -551,7 +561,7 @@ describe('roadmapProblems (#341)', () => {
     ]);
   });
 
-  it('fails reads that are failing, with the reason', () => {
+  it('fails reads still failing at a later check, with the reason', () => {
     expect(
       roadmapProblems(
         health({
@@ -561,7 +571,66 @@ describe('roadmapProblems (#341)', () => {
         NOW,
       ),
     ).toEqual([
-      'roadmap: reads failing since 2026-10-06T12:40:00.000Z: GitHub refused POST /graphql: HTTP 502',
+      'roadmap: reads failing since 2026-10-06T12:40:00.000Z, the check at 2026-10-06T12:51:00.000Z included: GitHub refused POST /graphql: HTTP 502',
+    ]);
+  });
+
+  // #693 (Shyden, 2026-10-19): one failed read is red only once a later
+  // check has failed too. A check stamps lastCheckAt as it starts and a
+  // failed read stamps readFailingSince with its own start, so a later
+  // check that also failed is lastCheckAt after readFailingSince.
+  it('fails a read failure one millisecond before the last check', () => {
+    expect(
+      roadmapProblems(
+        health({
+          readFailingSince: '2026-10-06T12:50:59.999Z',
+          readError:
+            'GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
+        }),
+        NOW,
+      ),
+    ).toEqual([
+      'roadmap: reads failing since 2026-10-06T12:50:59.999Z, the check at 2026-10-06T12:51:00.000Z included: GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
+    ]);
+  });
+
+  it('passes a read that failed at the last check, until the next check reads again', () => {
+    const judged = roadmapJudgement(
+      health({
+        readFailingSince: '2026-10-06T12:51:00.000Z',
+        readError:
+          'GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
+      }),
+      NOW,
+    );
+    // The whole judgement: every check ran, the reads check included, and
+    // none found a problem. The proved empty search lives in the healthy
+    // case above, which owns this floor (#693).
+    expect(judged).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
+  });
+
+  it('passes an event read that failed after the last check', () => {
+    const judged = roadmapJudgement(
+      health({
+        readFailingSince: '2026-10-06T12:55:00.000Z',
+        readError: 'GitHub refused POST /graphql: HTTP 502',
+      }),
+      NOW,
+    );
+    // The whole judgement: every check ran, the reads check included, and
+    // none found a problem. The proved empty search lives in the healthy
+    // case above, which owns this floor (#693).
+    expect(judged).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
+  });
+
+  it('fails a failing read whose time it cannot compare, rather than pass it', () => {
+    expect(
+      roadmapProblems(
+        health({ readFailingSince: 'soon', readError: 'GitHub refused' }),
+        NOW,
+      ),
+    ).toEqual([
+      'roadmap: reads failing since soon, the check at 2026-10-06T12:51:00.000Z included: GitHub refused',
     ]);
   });
 
