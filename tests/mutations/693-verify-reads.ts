@@ -24,7 +24,7 @@ export default mutationFile({
         '        if (Number.isFinite(since) && Number.isFinite(check) && check <= since)\n',
       replacement:
         '        if (Number.isFinite(since) && Number.isFinite(check) && check < since)\n',
-      red: { [AT_THE_CHECK]: 'to deeply equal []' },
+      red: { [AT_THE_CHECK]: 'to deeply equal' },
     },
     {
       name: 'any-failure-red',
@@ -33,8 +33,8 @@ export default mutationFile({
         '        if (Number.isFinite(since) && Number.isFinite(check) && check <= since)\n          return undefined;\n',
       replacement: '',
       red: {
-        [AT_THE_CHECK]: 'to deeply equal []',
-        [AFTER_THE_CHECK]: 'to deeply equal []',
+        [AT_THE_CHECK]: 'to deeply equal',
+        [AFTER_THE_CHECK]: 'to deeply equal',
       },
     },
     {

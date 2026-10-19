@@ -493,6 +493,16 @@ describe('healthProblems', () => {
 });
 
 describe('roadmapProblems (#341)', () => {
+  /** Every check roadmapJudgement runs, in order. */
+  const ALL_ROADMAP_CHECKS = [
+    'status',
+    'JSON',
+    'version',
+    'drift',
+    'reads',
+    'check age',
+    'noindex',
+  ];
   const NOW = Date.parse('2026-10-06T13:00:00Z');
   const healthy = {
     lastEventAt: '2026-10-06T12:58:00.000Z',
@@ -593,12 +603,10 @@ describe('roadmapProblems (#341)', () => {
       }),
       NOW,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'roadmap checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/roadmap-checks', judged.checked.length),
-    ).toBeUndefined();
+    // The whole judgement: every check ran, the reads check included, and
+    // none found a problem. The proved empty search lives in the healthy
+    // case above, which owns this floor (#693).
+    expect(judged).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
   });
 
   it('passes an event read that failed after the last check', () => {
@@ -609,12 +617,10 @@ describe('roadmapProblems (#341)', () => {
       }),
       NOW,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'roadmap checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/roadmap-checks', judged.checked.length),
-    ).toBeUndefined();
+    // The whole judgement: every check ran, the reads check included, and
+    // none found a problem. The proved empty search lives in the healthy
+    // case above, which owns this floor (#693).
+    expect(judged).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
   });
 
   it('fails a failing read whose time it cannot compare, rather than pass it', () => {
