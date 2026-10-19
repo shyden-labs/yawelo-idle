@@ -11,6 +11,8 @@ export const TWINS: Readonly<Record<string, number>> = {
   'tests/unit/core-determinism-lint.test.ts › is scoped to packages/core/src: the same code elsewhere is not banned': 2,
   'tests/unit/core-determinism-lint.test.ts › label': 1,
   'tests/unit/core-determinism-lint.test.ts › lint': 1,
+  'tests/unit/record-floors-callers.test.ts › reads %s as no caller': 1,
+  'tests/unit/scheduled-workflows.test.ts › judges no job of a workflow with no schedule, even one naming production': 1,
   'tests/unit/searched.test.ts › awaits a run that answers later, as a linter does': 1,
   'tests/unit/searched.test.ts › leaves a run that ignores its sample to fail the absence assertion': 1,
   'tests/unit/searched.test.ts › returns what the run finds in the clean sample': 1,
