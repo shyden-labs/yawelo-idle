@@ -119,11 +119,15 @@ export function callOpening(code: string, at: number): number {
 }
 
 /**
- * Whether `subject` starts with a `searched(…)` or `againstControl(…)` call,
- * whatever is read from it after: `againstControl(…).size`.
+ * Whether `subject` starts with a `searched(…)`, `againstControl(…)` or
+ * `againstTwin(…)` call, after an `await` and whatever is read from it after:
+ * `againstControl(…).size`, `await againstTwin(…)`.
  */
 function startsWithWrapper(subject: string): boolean {
-  const name = /^(?:searched|againstControl)(?![\w$])/.exec(subject);
+  const name =
+    /^(?:await\s+)?(?:searched|againstControl|againstTwin)(?![\w$])/.exec(
+      subject,
+    );
   return name !== null && callOpening(subject, name[0].length) !== -1;
 }
 
@@ -182,19 +186,19 @@ export function bareAbsencesWritten(code: string): number {
 }
 
 /**
- * How many `searched` and `againstControl` calls `code` writes: after
+ * How many `searched`, `againstControl` and `againstTwin` calls `code` writes: after
  * anything but a name character or a property dot, so `[...searched(` counts
  * and `obj.searched(` does not. A definition, `function searched<T>(`, is no
  * call.
  */
 export function searchesWritten(code: string): number {
   const calls = code.replace(
-    /(?<![\w$])function\s+(?:searched|againstControl)(?![\w$])/g,
+    /(?<![\w$])function\s+(?:searched|againstControl|againstTwin)(?![\w$])/g,
     'function _',
   );
   return [
     ...calls.matchAll(
-      /(?<![\w$])(?<!(?<!\.\.)\.)(?:searched|againstControl)(?![\w$])/g,
+      /(?<![\w$])(?<!(?<!\.\.)\.)(?:searched|againstControl|againstTwin)(?![\w$])/g,
     ),
   ].filter((match) => callOpening(calls, match.index + match[0].length) !== -1)
     .length;

@@ -57,7 +57,7 @@ import {
  * otherwise not see.
  */
 export type Form =
-  'searched' | 'control' | 'empty' | 'no-match' | 'not-contained';
+  'searched' | 'control' | 'twin' | 'empty' | 'no-match' | 'not-contained';
 
 export interface SearchSite {
   /** 1-based line of the wrapper call, or of a bare form's `expect(`. */
@@ -88,7 +88,8 @@ export interface SearchReading {
 
 const SEARCHED = 'searched';
 const CONTROLLED = 'againstControl';
-const WRAPPERS = [SEARCHED, CONTROLLED];
+const TWINNED = 'againstTwin';
+const WRAPPERS = [SEARCHED, CONTROLLED, TWINNED];
 const EXPECT = 'expect';
 const FLOOR = 'floorBreach';
 const MINIMUM = 'minimumBreach';
@@ -206,7 +207,11 @@ function isBoundControl(call: ts.CallExpression): boolean {
   const [run, options] = call.arguments;
   const input = propertyOf(options, 'input');
   if (!run || !input || !propertyOf(options, 'control')) return false;
-  if (!isEmptyInput(input)) return false;
+  return isEmptyInput(input) && readsItsArgument(run);
+}
+
+/** A function's name, or a function of one parameter its body reads. */
+function readsItsArgument(run: ts.Expression): boolean {
   if (ts.isIdentifier(run) || ts.isPropertyAccessExpression(run)) return true;
   if (!isFunction(run) || run.parameters.length !== 1) return false;
   const [parameter] = run.parameters as unknown as [ts.ParameterDeclaration];
@@ -216,13 +221,125 @@ function isBoundControl(call: ts.CallExpression): boolean {
 }
 
 /**
- * Whether `subject`, through any property reads and calls on it, starts
- * from a `searched` or `againstControl` call: `againstControl(…).size`.
+ * An `againstTwin` call of the shape the operator decided (2026-10-19):
+ * one sample, a `twin:`, and a `run` that is a function's name or a
+ * function of one parameter its body reads. The sample is text written in
+ * place, or a name no binding in the file fills from a call: a sample read
+ * from a file is a population, which checks a recorded floor. A name the
+ * file only takes as a parameter cannot be followed further, so every use
+ * is also listed (`floorless-searches.twins.ts`) for review.
+ */
+function isBoundTwin(sf: ts.SourceFile, call: ts.CallExpression): boolean {
+  const [run, options] = call.arguments;
+  const input = propertyOf(options, 'input');
+  if (!run || !input || !propertyOf(options, 'twin')) return false;
+  const text =
+    ts.isStringLiteral(input) ||
+    ts.isNoSubstitutionTemplateLiteral(input) ||
+    (ts.isIdentifier(input) && !filledByCall(sf, input.text, new Set()));
+  return text && readsItsArgument(run);
+}
+
+/** A call, an `await`, a `new` or a tagged template anywhere in `node`. */
+function holdsCall(node: ts.Node): boolean {
+  if (
+    ts.isCallExpression(node) ||
+    ts.isAwaitExpression(node) ||
+    ts.isNewExpression(node) ||
+    ts.isTaggedTemplateExpression(node)
+  )
+    return true;
+  return ts.forEachChild(node, holdsCall) === true;
+}
+
+/** Whether a binding name, or any name in a destructuring pattern, is `name`. */
+function bindsName(binding: ts.BindingName, name: string): boolean {
+  if (ts.isIdentifier(binding)) return binding.text === name;
+  return binding.elements.some(
+    (element) =>
+      !ts.isOmittedExpression(element) && bindsName(element.name, name),
+  );
+}
+
+/**
+ * Whether any binding of `name` in the file can hold what a call returned,
+ * by name and so failing closed on a second binding of the same name: an
+ * import, a declaration with no initializer, a later assignment, or a
+ * declaration (a loop's included) whose source holds a call or a name that
+ * does, followed to a fixed point. A parameter is not followed.
+ */
+function filledByCall(
+  sf: ts.SourceFile,
+  name: string,
+  seen: Set<string>,
+): boolean {
+  if (seen.has(name)) return false;
+  seen.add(name);
+  let filled = false;
+  const sourceOf = (
+    declaration: ts.VariableDeclaration,
+  ): ts.Expression | undefined => {
+    const list = declaration.parent;
+    const loop = ts.isVariableDeclarationList(list) ? list.parent : undefined;
+    if (loop && (ts.isForOfStatement(loop) || ts.isForInStatement(loop)))
+      return loop.expression;
+    return declaration.initializer;
+  };
+  const followed = (source: ts.Expression): boolean => {
+    if (holdsCall(source)) return true;
+    let found = false;
+    const visit = (child: ts.Node): void => {
+      if (
+        ts.isIdentifier(child) &&
+        !(
+          ts.isPropertyAccessExpression(child.parent) &&
+          child.parent.name === child
+        ) &&
+        !(
+          ts.isPropertyAssignment(child.parent) && child.parent.name === child
+        ) &&
+        filledByCall(sf, child.text, seen)
+      )
+        found = true;
+      if (!found) ts.forEachChild(child, visit);
+    };
+    visit(source);
+    return found;
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      (ts.isImportSpecifier(node) ||
+        ts.isNamespaceImport(node) ||
+        ts.isImportClause(node)) &&
+      node.name?.text === name
+    )
+      filled = true;
+    else if (ts.isVariableDeclaration(node) && bindsName(node.name, name)) {
+      const source = sourceOf(node);
+      if (source === undefined || followed(source)) filled = true;
+    } else if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(node.left) &&
+      node.left.text === name
+    )
+      filled = true;
+    if (!filled) ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return filled;
+}
+
+/**
+ * Whether `subject`, through an `await` and any property reads and calls on
+ * it, starts from a wrapper call: `againstControl(…).size`,
+ * `await againstTwin(…)`.
  */
 function startsFromWrapper(subject: ts.Expression): boolean {
   let at: ts.Expression = subject;
   for (;;) {
-    if (ts.isCallExpression(at)) {
+    if (ts.isAwaitExpression(at)) at = at.expression;
+    else if (ts.isCallExpression(at)) {
       if (
         ts.isIdentifier(at.expression) &&
         WRAPPERS.includes(at.expression.text)
@@ -323,6 +440,7 @@ function bareForm(
  * `expect(…).toThrow(…)` or `.toThrowError(…)`, not negated.
  */
 function onlyProvesItThrows(call: ts.CallExpression): boolean {
+  if (onlyProvesItRejects(call)) return true;
   let body: ts.Node = call;
   if (ts.isExpressionStatement(call.parent)) {
     const statement = call.parent;
@@ -341,6 +459,26 @@ function onlyProvesItThrows(call: ts.CallExpression): boolean {
     return false;
   const matcher = expectation.parent;
   return (
+    (matcher.name.text === 'toThrow' || matcher.name.text === 'toThrowError') &&
+    ts.isCallExpression(matcher.parent) &&
+    matcher.parent.expression === matcher
+  );
+}
+
+/** `expect(<call>).rejects.toThrow(…)` or `.toThrowError(…)`, not negated (#374). */
+function onlyProvesItRejects(call: ts.CallExpression): boolean {
+  const expectation = call.parent;
+  if (!isCallTo(expectation, EXPECT) || expectation.arguments[0] !== call)
+    return false;
+  const rejects = expectation.parent;
+  if (
+    !ts.isPropertyAccessExpression(rejects) ||
+    rejects.name.text !== 'rejects'
+  )
+    return false;
+  const matcher = rejects.parent;
+  return (
+    ts.isPropertyAccessExpression(matcher) &&
     (matcher.name.text === 'toThrow' || matcher.name.text === 'toThrowError') &&
     ts.isCallExpression(matcher.parent) &&
     matcher.parent.expression === matcher
@@ -373,7 +511,9 @@ export function searchSitesIn(sf: ts.SourceFile): SearchReading {
         call !== undefined &&
         (form === 'control'
           ? isBoundControl(call)
-          : floorsPopulation(sf, place.node, call)),
+          : form === 'twin'
+            ? isBoundTwin(sf, call)
+            : floorsPopulation(sf, place.node, call)),
     });
   };
 
@@ -389,7 +529,12 @@ export function searchSitesIn(sf: ts.SourceFile): SearchReading {
       );
     if (ts.isIdentifier(node) && WRAPPERS.includes(node.text)) {
       const parent = node.parent;
-      const form: Form = node.text === SEARCHED ? 'searched' : 'control';
+      const form: Form =
+        node.text === SEARCHED
+          ? 'searched'
+          : node.text === CONTROLLED
+            ? 'control'
+            : 'twin';
       if (ts.isCallExpression(parent) && parent.expression === node) {
         if (onlyProvesItThrows(parent)) refusalChecks += 1;
         else site(parent, form, parent);
@@ -506,3 +651,31 @@ export const burnDownFindings = (
       list: 'tests/unit/floorless-searches.burn-down.ts',
     },
   );
+
+/**
+ * Every scope whose `againstTwin` uses differ from the twin list, both ways
+ * (#374). A twin proves the run was working, not that it read the whole
+ * sample, so Shyden chose (2026-10-19, "Visible list") that every use is
+ * listed, and a new one shows in the change that adds it. A use counts
+ * whether or not its shape is proved: an unproved one is on the burn-down
+ * list as well.
+ */
+export const twinListFindings = (
+  sites: readonly (FiledSite & { form: Form })[],
+  listed: Readonly<Record<string, number>>,
+): string[] =>
+  listFindings(
+    sites.filter(({ form }) => form === 'twin'),
+    listed,
+    {
+      noun: 'proved by a twin',
+      fix:
+        'A twin proves the run was working, not that it read the whole ' +
+        'sample, so each use is reviewed (operator, 2026-10-19). Prefer a ' +
+        `recorded floor; where a twin is right, list it in ${TWIN_LIST}.`,
+      list: TWIN_LIST,
+      stale: `Lower or remove the entry in ${TWIN_LIST}: it names the twins in use.`,
+    },
+  );
+
+const TWIN_LIST = 'tests/unit/floorless-searches.twins.ts';

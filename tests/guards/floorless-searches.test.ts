@@ -10,12 +10,14 @@ import {
   burnDownFindings,
   scalarZerosIn,
   searchSitesIn,
+  twinListFindings,
   type FiledSite,
   type Form,
   type SearchReading,
   type ZeroReading,
 } from '../unit/floorless-searches';
 import { UNPROVED } from '../unit/floorless-searches.burn-down';
+import { TWINS } from '../unit/floorless-searches.twins';
 import { scopeKey, walkDisagreements } from '../unit/burn-down';
 import { floorBreach } from '../floors';
 import { searched } from '../searched';
@@ -88,6 +90,20 @@ describe('every absence search is proved, or listed (#361)', () => {
     ).toEqual([]);
     expect(
       floorBreach('floorless-searches/sites', SITES.length),
+    ).toBeUndefined();
+  });
+});
+
+describe('every bad twin is listed for review (#374)', () => {
+  it('finds every scope using againstTwin exactly as the twin list holds', () => {
+    const TWIN_SITES = repository().sites.filter(({ form }) => form === 'twin');
+    const findings = twinListFindings(TWIN_SITES, TWINS);
+    expect(
+      searched(findings, { of: TWIN_SITES, what: 'twin sites' }),
+      findings.join('\n'),
+    ).toEqual([]);
+    expect(
+      floorBreach('floorless-searches/twin-sites', TWIN_SITES.length),
     ).toBeUndefined();
   });
 });
