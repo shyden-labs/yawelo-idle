@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { againstTwin, searched } from '../searched';
 import { withoutYamlComments } from './source-text';
 import { SCHEDULED_ENVIRONMENTS, scanSchedule } from './scheduled-workflows';
 
@@ -114,10 +114,8 @@ describe('scanSchedule', () => {
     expect(scan).toEqual({ scheduled: true, jobs: 1, findings: [] });
   });
 
-  it('judges no job of a workflow with no schedule, even one naming production', () => {
-    const scan = scanSchedule(
-      'release.yml',
-      `on:
+  it('judges no job of a workflow with no schedule, even one naming production', async () => {
+    const workflow = `on:
   workflow_dispatch:
 jobs:
   deploy:
@@ -125,10 +123,22 @@ jobs:
     environment: production
     steps:
       - run: echo
-`,
-      noLocal,
-    );
-    expect(scan).toEqual({ scheduled: false, jobs: 0, findings: [] });
+`;
+    // Anything judged is a finding here, so a dead scan that judges nothing
+    // fails the twin, the same workflow on a schedule (#692, Shyden
+    // 2026-10-20).
+    const judged = (yaml: string) => {
+      const scan = scanSchedule('release.yml', yaml, noLocal);
+      return scan.scheduled || scan.jobs > 0 || scan.findings.length > 0
+        ? [scan]
+        : [];
+    };
+    expect(
+      await againstTwin(judged, {
+        input: workflow,
+        twin: workflow.replace('on:\n', SCHEDULE),
+      }),
+    ).toEqual([]);
   });
 
   it('reads schedule inside an on: list as scheduled', () => {
