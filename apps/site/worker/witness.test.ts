@@ -171,16 +171,22 @@ describe('readStamps', () => {
     expect([...stamps.issues.keys()]).toEqual([1, 2]);
   });
 
-  it('records no card without an id or a stamp, so no witness can be seen in it', () => {
+  // An issue witness is judged on the issue's own stamp, so a card without
+  // one of its own still gives its issue's (found by #691's fixture mutation).
+  it('records no card without an id or a stamp, but still its issue’s last change', () => {
     const noId = { ...issueNode(1, T0), id: undefined };
-    const noStamp = { ...issueNode(2, T0), updatedAt: undefined };
+    const noStamp = { ...issueNode(2, BEFORE), updatedAt: undefined };
     const stamps = readStamps(
       [page([noId, noStamp, issueNode(3, AFTER)])],
       REPO,
     );
     expect(stamps).toEqual({
       items: new Map([['PVTI_3', { number: 3, updatedAt: AFTER }]]),
-      issues: new Map([[3, AFTER]]),
+      issues: new Map([
+        [1, T0],
+        [2, BEFORE],
+        [3, AFTER],
+      ]),
     });
   });
 });

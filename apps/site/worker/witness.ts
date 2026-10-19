@@ -84,7 +84,9 @@ export function eventWitness(name: string, payload: unknown): Witness | null {
 
 /**
  * The stamps of every card on the pages BOARD_QUERY returned. A card without
- * an id or a stamp is left out, so no witness is ever seen in it.
+ * an id or a stamp is left out, so no card witness is ever seen in it; its
+ * issue's own stamp is still read, since an issue witness is judged on that
+ * alone.
  */
 export function readStamps(pages: unknown[], repo: string): Stamps {
   const stamps: Stamps = { items: new Map(), issues: new Map() };
@@ -96,22 +98,22 @@ export function readStamps(pages: unknown[], repo: string): Stamps {
     if (!Array.isArray(nodes)) continue;
     // A runtime population: the cards GitHub returned on this page.
     for (const node of nodes) {
-      const id = field(node, 'id');
-      const updatedAt = stamp(field(node, 'updatedAt'));
-      if (typeof id !== 'string' || updatedAt === null) continue;
       const content = field(node, 'content');
       const number = field(content, 'number');
       const ours =
         field(content, '__typename') === 'Issue' &&
         field(field(content, 'repository'), 'nameWithOwner') === repo &&
         Number.isInteger(number);
+      const issueAt = stamp(field(content, 'updatedAt'));
+      if (ours && issueAt !== null)
+        stamps.issues.set(number as number, issueAt);
+      const id = field(node, 'id');
+      const updatedAt = stamp(field(node, 'updatedAt'));
+      if (typeof id !== 'string' || updatedAt === null) continue;
       stamps.items.set(id, {
         number: ours ? (number as number) : null,
         updatedAt,
       });
-      const issueAt = stamp(field(content, 'updatedAt'));
-      if (ours && issueAt !== null)
-        stamps.issues.set(number as number, issueAt);
     }
   }
   return stamps;
