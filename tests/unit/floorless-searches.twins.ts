@@ -1,7 +1,7 @@
 /**
  * Every scope proving a clean sample's empty reply by a bad twin
  * (`againstTwin`), by `file › test title as written` (or the named
- * function), with how many (#374). A twin proves the run was working, not
+ * function), with how many uses (#374). A twin proves the run was working, not
  * that it read the whole sample, so Shyden chose (2026-10-19, "Visible
  * list") that each use is listed here, and a new one shows in the change
  * that adds it. Checked for equality both ways by the guards suite's
