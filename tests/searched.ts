@@ -87,3 +87,49 @@ export function againstControl<I, R>(
     );
   return run(input);
 }
+
+/**
+ * A clean sample's empty reply, proved live by a bad twin that must be
+ * flagged (#374, operator decision 2026-10-19: "Bad twin", widening the
+ * empty-input rule above to one clean sample).
+ *
+ * A linter handed clean code reports nothing, so there is no population to
+ * count and no floor to record, yet `expect(await bans(code)).toEqual([])`
+ * is green for a dead linter too:
+ *
+ *     expect(await againstTwin(bans, { input: code, twin: `${code}\n${BANNED}` })).toEqual([]);
+ *
+ * runs `run` on the twin, which must find something, then returns what it
+ * finds in the sample. As with `againstControl`, a `run` that ignored its
+ * argument returns the same thing twice and fails by itself. It proves the
+ * run was working, not that it read the whole sample, so it takes one sample
+ * written as text, never a list; `floorless-searches.test.ts` holds the rest.
+ * The checks on the samples are made before anything runs, so a refusal is
+ * thrown, not returned as a rejected promise.
+ */
+export function againstTwin<R>(
+  run: (sample: string) => R | Promise<R>,
+  { input, twin }: { input: string; twin: string },
+): Promise<R> {
+  if (typeof input !== 'string' || typeof twin !== 'string')
+    throw new Error(
+      'againstTwin takes one sample written as text, and its twin; a list ' +
+        'is a population, which checks a recorded floor instead',
+    );
+  if (!isSubstantive(input))
+    throw new Error(
+      'an empty input takes againstControl, which proves it by a control',
+    );
+  if (twin === input)
+    throw new Error(
+      'the twin must differ from the sample, or the two runs prove nothing',
+    );
+  return (async () => {
+    if (!isSubstantive(await run(twin)))
+      throw new Error(
+        'the twin found nothing, so this cannot tell a clean sample from a ' +
+          'dead function',
+      );
+    return run(input);
+  })();
+}

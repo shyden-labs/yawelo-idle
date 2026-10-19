@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { floorBreach } from '../floors';
-import { againstControl, searched } from '../searched';
+import { againstControl, againstTwin, searched } from '../searched';
 
 /**
  * `searched` puts the population a finding list was drawn from inside the
@@ -118,5 +118,74 @@ describe('againstControl', () => {
     expect(againstControl(ignoring, { input: '', control: 'a' })).toEqual([
       'always',
     ]);
+  });
+});
+
+/** Every `bad` word in a sample: a clean sample finds nothing. */
+const bad = (sample: string): string[] =>
+  sample.split(' ').filter((word) => word === 'bad');
+
+describe('againstTwin', () => {
+  it('returns what the run finds in the clean sample', async () => {
+    expect(
+      await againstTwin(bad, { input: 'good text', twin: 'good bad text' }),
+    ).toEqual([]);
+  });
+
+  it('runs the twin first, then the sample, and returns the sample’s result', async () => {
+    const seen: string[] = [];
+    const run = (given: string): string[] => {
+      seen.push(given);
+      return bad(given);
+    };
+    expect(await againstTwin(run, { input: 'good', twin: 'bad' })).toEqual([]);
+    expect(seen).toEqual(['bad', 'good']);
+  });
+
+  it('awaits a run that answers later, as a linter does', async () => {
+    const later = (sample: string): Promise<string[]> =>
+      Promise.resolve(bad(sample));
+    expect(await againstTwin(later, { input: 'good', twin: 'bad' })).toEqual(
+      [],
+    );
+  });
+
+  it('refuses an empty sample: that is againstControl’s', () => {
+    expect(() => againstTwin(bad, { input: ' ', twin: 'bad' })).toThrow(
+      /an empty input takes againstControl/,
+    );
+  });
+
+  it('refuses a sample that is not text: a list is a population', () => {
+    expect(() =>
+      againstTwin(bad, { input: ['good'] as unknown as string, twin: 'bad' }),
+    ).toThrow(/one sample written as text/);
+  });
+
+  it('refuses a twin that is not text', () => {
+    expect(() =>
+      againstTwin(bad, { input: 'good', twin: ['bad'] as unknown as string }),
+    ).toThrow(/one sample written as text/);
+  });
+
+  it('refuses a twin the same as the sample: it proves nothing', () => {
+    expect(() => againstTwin(bad, { input: 'good', twin: 'good' })).toThrow(
+      /the twin must differ from the sample/,
+    );
+  });
+
+  it('refuses a twin that finds nothing: a dead run passes otherwise', async () => {
+    await expect(
+      againstTwin(bad, { input: 'good', twin: 'also good' }),
+    ).rejects.toThrow(/the twin found nothing/);
+  });
+
+  it('leaves a run that ignores its sample to fail the absence assertion', async () => {
+    // Its twin finds something, so its sample finds the same thing, and the
+    // `toEqual([])` a real use writes would fail.
+    const ignoring = (): string[] => ['always'];
+    expect(await againstTwin(ignoring, { input: 'good', twin: 'bad' })).toEqual(
+      ['always'],
+    );
   });
 });

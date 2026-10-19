@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ESLint, type Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { coreDeterminismBlock } from '../../eslint.core-determinism';
+import { againstTwin } from '../searched';
 
 /**
  * The determinism ban on packages/core/src (M1 design §2.1 and §3, #26 AC3).
@@ -12,6 +13,10 @@ import { coreDeterminismBlock } from '../../eslint.core-determinism';
  * disk. A fixture that fails to parse reports an error too, so every
  * expectation also asserts there was no fatal parse error; without that a
  * typo in a fixture would pass as a ban.
+ *
+ * Clean code gets an empty reply on purpose, so each "reports nothing" is
+ * proved by a bad twin that must be reported (#374, operator 2026-10-19):
+ * the same sample with a ban added, or the same code at a core path.
  */
 
 const BAN_RULES = new Set([
@@ -42,20 +47,37 @@ const eslint = new ESLint({
 await eslint.lintText('export {};\n', { filePath: CORE_FIXTURE });
 
 async function lint(
-  code: string,
+  sample: string,
   filePath: string,
 ): Promise<Linter.LintMessage[]> {
-  const [result] = await eslint.lintText(code, { filePath });
-  if (result === undefined) throw new Error(`no lint result for ${filePath}`);
-  const fatal = result.messages.filter((m) => m.fatal === true);
-  expect(fatal, `fixture must parse: ${code}`).toEqual([]);
-  return result.messages;
+  // Each text is linted once: the twin's check and the sample's messages
+  // share the sample's reading.
+  const read = new Map<string, Linter.LintMessage[]>();
+  const messagesOf = async (text: string): Promise<Linter.LintMessage[]> => {
+    const known = read.get(text);
+    if (known !== undefined) return known;
+    const [result] = await eslint.lintText(text, { filePath });
+    if (result === undefined) throw new Error(`no lint result for ${filePath}`);
+    read.set(text, result.messages);
+    return result.messages;
+  };
+  const fatalIn = async (text: string) =>
+    (await messagesOf(text)).filter((m) => m.fatal === true);
+  // The twin, with a stray bracket, cannot parse: a fatal error must show.
+  expect(
+    await againstTwin(fatalIn, { input: sample, twin: `${sample}\n)` }),
+    `fixture must parse: ${sample}`,
+  ).toEqual([]);
+  return messagesOf(sample);
 }
 
 async function bans(code: string, filePath = CORE_FIXTURE) {
   const messages = await lint(code, filePath);
   return messages.filter((m) => m.ruleId !== null && BAN_RULES.has(m.ruleId));
 }
+
+/** A ban added to a clean sample makes its bad twin. */
+const TWIN_BAN = 'export const twin = Math.random();';
 
 const MATH = [
   'pow',
@@ -168,16 +190,33 @@ describe('the ban leaves deterministic code alone', () => {
       "import { pow } from './det-math';\nexport const x = pow(1.15, 3);",
     ],
   ];
-  for (const [label, code] of ALLOWED) {
+  for (const [label, sample] of ALLOWED) {
     it(label, async () => {
-      expect(await bans(code), code).toEqual([]);
+      expect(
+        await againstTwin(bans, {
+          input: sample,
+          twin: `${sample}\n${TWIN_BAN}`,
+        }),
+        sample,
+      ).toEqual([]);
     });
   }
 
   it('is scoped to packages/core/src: the same code elsewhere is not banned', async () => {
     const code = 'export const x = Math.pow(2, 3) + Date.now();';
-    expect(await bans(code, 'packages/core/test/fixture.test.ts')).toEqual([]);
-    expect(await bans(code, 'apps/web/src/fixture.ts')).toEqual([]);
+    const at = (filePath: string) => bans(code, filePath);
+    expect(
+      await againstTwin(at, {
+        input: 'packages/core/test/fixture.test.ts',
+        twin: CORE_FIXTURE,
+      }),
+    ).toEqual([]);
+    expect(
+      await againstTwin(at, {
+        input: 'apps/web/src/fixture.ts',
+        twin: CORE_FIXTURE,
+      }),
+    ).toEqual([]);
     // Liveness: the same text IS banned at a core source path.
     expect(await bans(code)).toHaveLength(2);
   });

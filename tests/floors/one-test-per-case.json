@@ -12,8 +12,8 @@
   "one-test-per-case/body-set-timeout-calls": 2,
   "one-test-per-case/body-step-calls": 2,
   "one-test-per-case/describe-modifier-calls": 2,
-  "one-test-per-case/files-with-test-calls": 210,
+  "one-test-per-case/files-with-test-calls": 211,
   "one-test-per-case/refused-calls": 1,
-  "one-test-per-case/repo-calls": 2605,
-  "one-test-per-case/repo-test-calls": 2603
+  "one-test-per-case/repo-calls": 2624,
+  "one-test-per-case/repo-test-calls": 2622
 }

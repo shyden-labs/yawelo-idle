@@ -8,7 +8,7 @@ import {
   type Change,
 } from '../../scripts/ci-scope';
 import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { againstControl, searched } from '../searched';
 
 /**
  * The docs-only fast path (#360). build-and-test classifies the change it
@@ -76,7 +76,12 @@ describe('reading git diff --name-status -z (AC4)', () => {
   });
 
   it('reads an empty diff as no changes', () => {
-    expect(parseNameStatus('')).toEqual([]);
+    expect(
+      againstControl(parseNameStatus, {
+        input: '',
+        control: z('M', 'HANDOVER.md'),
+      }),
+    ).toEqual([]);
   });
 
   it.each([
@@ -122,7 +127,17 @@ describe('the classification (AC1, AC4)', () => {
     ]);
     expect(result.scope).toBe('full');
     expect(result.reason).toContain('package.json');
-    expect(result.reason).not.toContain('HANDOVER.md');
+    expect(
+      searched(
+        result.judged.filter(
+          (path) => path !== 'package.json' && result.reason.includes(path),
+        ),
+        { of: result.judged, what: 'judged paths' },
+      ),
+    ).toEqual([]);
+    expect(
+      floorBreach('ci-scope/code-first judged paths', result.judged.length),
+    ).toBeUndefined();
     expect(result.judged).toEqual(['package.json', 'HANDOVER.md']);
   });
 
@@ -145,7 +160,12 @@ describe('the classification (AC1, AC4)', () => {
     const result = classify([]);
     expect(result.scope).toBe('full');
     expect(result.reason).toMatch(/empty/);
-    expect(result.judged).toEqual([]);
+    expect(
+      againstControl((changes: Change[]) => classify(changes).judged, {
+        input: [],
+        control: [change('M', 'HANDOVER.md')],
+      }),
+    ).toEqual([]);
   });
 
   it('is full for a rename record, which --no-renames never asks git for', () => {

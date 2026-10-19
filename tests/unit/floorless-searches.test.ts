@@ -10,6 +10,7 @@ import {
   burnDownFindings,
   scalarZerosIn,
   searchSitesIn,
+  twinListFindings,
   type FiledSite,
   type Form,
   type SearchReading,
@@ -370,6 +371,162 @@ describe('searchSitesIn: againstControl', () => {
   });
 });
 
+describe('searchSitesIn: againstTwin (#374)', () => {
+  // Proved by its shape: a sample that is text written in place or a name
+  // nothing in the file fills from a call, a twin, and a run that reads its
+  // one argument (operator, 2026-10-19: "Bad twin"). Every use is also
+  // listed, which the guards suite holds.
+  const inTest = (before: string, call: string): string =>
+    `${before}it('t', async () => {\nexpect(await ${call}).toEqual([]);\n});`;
+  const lineAfter = (before: string): number => before.split('\n').length + 1;
+
+  it.each([
+    ['a function name', '', 'againstTwin(bans, { input: code, twin: BAD })'],
+    [
+      'a sample written in place',
+      '',
+      "againstTwin(at, { input: 'apps/web/src/x.ts', twin: CORE })",
+    ],
+    [
+      'a sample in a plain template',
+      '',
+      'againstTwin(at, { input: `apps/web/src/x.ts`, twin: CORE })',
+    ],
+    [
+      'an arrow reading its sample',
+      '',
+      'againstTwin((s) => lint(s, path), { input: code, twin: BAD })',
+    ],
+    [
+      'a name declared from text',
+      "const code = 'export {};' + '\\n';\n",
+      'againstTwin(bans, { input: code, twin: `${code}\\n${BANNED}` })',
+    ],
+    [
+      'a loop binding over a table of text',
+      "const ROWS = [['a', 'x;']];\nfor (const [label, code] of ROWS) {}\n",
+      'againstTwin(bans, { input: code, twin: BAD })',
+    ],
+  ])('reads a twin over %s as proved', (_what, before, call) => {
+    expect(read(inTest(before, call))).toEqual(
+      one({ form: 'twin', proved: true, line: lineAfter(before) }),
+    );
+  });
+
+  it.each([
+    [
+      'a sample read by a call in place',
+      '',
+      "againstTwin(bans, { input: readFileSync(p, 'utf8'), twin: BAD })",
+    ],
+    [
+      'a sample awaited in place',
+      '',
+      'againstTwin(bans, { input: await read(p), twin: BAD })',
+    ],
+    [
+      'a sample in a template with a substitution',
+      '',
+      'againstTwin(bans, { input: `${read(p)}`, twin: BAD })',
+    ],
+    [
+      'a sample read from a property',
+      '',
+      'againstTwin(bans, { input: fixture.code, twin: BAD })',
+    ],
+    [
+      'a name filled by a call',
+      "const code = readFileSync(p, 'utf8');\n",
+      'againstTwin(bans, { input: code, twin: BAD })',
+    ],
+    [
+      'a name filled by a call in a second declaration',
+      "const code = 'a';\nfunction g() { const code = read(); }\n",
+      'againstTwin(bans, { input: code, twin: BAD })',
+    ],
+    [
+      'a loop binding over a table built by calls',
+      'const ROWS = NAMES.map((n) => [n, n]);\nfor (const [label, code] of ROWS) {}\n',
+      'againstTwin(bans, { input: code, twin: BAD })',
+    ],
+    [
+      'an imported name',
+      "import { code } from './samples';\n",
+      'againstTwin(bans, { input: code, twin: BAD })',
+    ],
+    ['no twin', '', 'againstTwin(bans, { input: code })'],
+    [
+      'a run that ignores its sample',
+      '',
+      'againstTwin((s) => scan(files), { input: code, twin: BAD })',
+    ],
+    [
+      'a run of two arguments',
+      '',
+      'againstTwin((a, b) => f(a, b), { input: code, twin: BAD })',
+    ],
+    ['samples held in a name', '', 'againstTwin(bans, SAMPLES)'],
+  ])('reads a twin over %s as unproved', (_what, before, call) => {
+    expect(read(inTest(before, call))).toEqual(
+      one({ form: 'twin', line: lineAfter(before) }),
+    );
+  });
+
+  it('counts a twin that only proves it rejects as a refusal check, not a site', () => {
+    expect(
+      read(
+        "it('t', async () => {\nawait expect(againstTwin(f, { input: 'a', twin: 'b' })).rejects.toThrow(/twin/);\n});",
+      ),
+    ).toEqual({
+      sites: [],
+      tests: ['t'],
+      refusalChecks: 1,
+      unplaced: 0,
+      refused: [],
+    });
+  });
+
+  it.each([
+    [
+      'a negated rejection',
+      "await expect(againstTwin(f, { input: 'a', twin: 'b' })).rejects.not.toThrow();",
+    ],
+    [
+      'a resolution',
+      "await expect(againstTwin(f, { input: 'a', twin: 'b' })).resolves.toEqual([]);",
+    ],
+  ])('reads a twin in %s as a site', (_what, assertion) => {
+    const { sites, refusalChecks } = read(
+      `it('t', async () => {\n${assertion}\n});`,
+    );
+    expect({ forms: sites.map(({ form }) => form), refusalChecks }).toEqual({
+      forms: ['twin'],
+      refusalChecks: 0,
+    });
+  });
+
+  it.each([
+    [
+      'imported under another name',
+      "const x = 1;\nimport { againstTwin as t } from '../searched';",
+      'againstTwin imported under another name, t',
+    ],
+    [
+      'read as a value',
+      'const x = 1;\nrows.map(againstTwin);',
+      'againstTwin read as a value, not called',
+    ],
+  ])('refuses a twin %s by line', (_what, source, why) => {
+    expect(read(source)).toEqual({
+      sites: [],
+      tests: [],
+      refusalChecks: 0,
+      unplaced: 0,
+      refused: [`fixture.test.ts:2: ${why}`],
+    });
+  });
+});
+
 /** The scalar zeros a source holds, as the reader returns them (#367). */
 const ZERO_CASES = [
   ['a scalar toBe(0)', 'expect(x).toBe(0);', ['line 1: expect(x).toBe(0)'], 1],
@@ -552,10 +709,23 @@ describe('the text counts', () => {
       1,
     ],
     ['a control', "againstControl(f, { input: '', control: x });", 1],
+    ['a twin (#374)', "againstTwin(f, { input: 'a', twin: x });", 1],
+    // Each beside a bare twin, so a count that missed the twin and read the
+    // bare form instead cannot reach the total by accident.
+    [
+      'an awaited twin inside a bare form (#374)',
+      "againstTwin(f, { input: 'a', twin: x });\nexpect(await againstTwin(f, { input: 'a', twin: x })).toEqual([]);",
+      2,
+    ],
+    [
+      'an awaited twin read from inside a bare form (#374)',
+      "againstTwin(f, { input: 'a', twin: x });\nexpect(await againstTwin(f, { input: 'a', twin: x }).length).toBe(0);",
+      2,
+    ],
     ['a method of the same name', 'obj.searched(f);', 0],
     [
       'the definitions',
-      'export function searched<T>(f: T[]) {}\nfunction againstControl() {}',
+      'export function searched<T>(f: T[]) {}\nfunction againstControl() {}\nfunction againstTwin() {}',
       0,
     ],
     [
@@ -764,6 +934,78 @@ describe('burnDownFindings', () => {
   });
 });
 
+const used = (
+  label: string,
+  form: Form = 'twin',
+): FiledSite & { form: Form } => ({
+  file: 'a.test.ts',
+  label,
+  proved: true,
+  form,
+});
+
+describe('twinListFindings (#374)', () => {
+  it('finds nothing when every twin is listed at its count', () => {
+    const sites = [used('t'), used('t'), used('u', 'searched')];
+    expect(
+      searched(twinListFindings(sites, { 'a.test.ts › t': 2 }), {
+        of: sites,
+        what: 'planted sites',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('floorless-searches/fixture-twins-listed', sites.length),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    [
+      'a twin not listed',
+      [used('t')],
+      {},
+      '1 proved by a twin, 0 listed. A twin proves the run was working, ' +
+        'not that it read the whole sample, so each use is reviewed ' +
+        '(operator, 2026-10-19). Prefer a recorded floor; where a twin is ' +
+        'right, list it in tests/unit/floorless-searches.twins.ts.',
+    ],
+    [
+      'more twins than listed',
+      [used('t'), used('t')],
+      { 'a.test.ts › t': 1 },
+      '2 proved by a twin, 1 listed. A twin proves',
+    ],
+    [
+      'an unproved twin, which is still a use',
+      [{ ...used('t'), proved: false }],
+      {},
+      '1 proved by a twin, 0 listed.',
+    ],
+    [
+      'fewer twins than listed',
+      [used('t')],
+      { 'a.test.ts › t': 2 },
+      '1 proved by a twin, 2 listed. Lower or remove the entry in ' +
+        'tests/unit/floorless-searches.twins.ts: it names the twins in use.',
+    ],
+    [
+      'a listed scope whose search is no twin',
+      [used('t', 'searched')],
+      { 'a.test.ts › t': 1 },
+      '0 proved by a twin, 1 listed. Lower or remove',
+    ],
+    [
+      'an entry of zero',
+      [used('t')],
+      { 'a.test.ts › t': 0 },
+      'listed as 0, not a count',
+    ],
+  ])('finds %s', (_what, sites, listed, message) => {
+    expect(twinListFindings(sites, listed)).toEqual([
+      expect.stringContaining(`a.test.ts › t: ${message}`),
+    ]);
+  });
+});
+
 describe('walkDisagreements', () => {
   it('names a path on either side alone', () => {
     expect(walkDisagreements(['a.ts', 'b.ts'], ['b.ts', 'c.ts'])).toEqual([
@@ -790,10 +1032,11 @@ describe('walkDisagreements', () => {
  * The burn-down list's size: 115 sites in 103 scopes when the meta-guard
  * landed (#361), lowered to the list's measured size (#475: 113 in 101;
  * #544: 106 in 98; #368: 84 in 81; #369: 69 in 66; #370: 60 in 57;
- * #373: 40 in 37). It only shrinks.
+ * #373: 40 in 37; #374: 21 in 19, the 9 entries #679 deleted with the
+ * every-commit tests among the 19 sites and 18 scopes). It only shrinks.
  */
-const CEILING_SITES = 40;
-const CEILING_SCOPES = 37;
+const CEILING_SITES = 21;
+const CEILING_SCOPES = 19;
 
 describe('every absence search is proved, or listed (#361)', () => {
   it('only shrinks the burn-down list', () => {

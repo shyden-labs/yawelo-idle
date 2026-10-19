@@ -1,0 +1,9 @@
+# Who must approve a change before it merges (#374). Pinned by
+# tests/unit/codeowners.test.ts. Every other path has no owner.
+
+# A bad twin proves the run was working, not that it read the whole sample:
+# Shyden approves each new use (2026-10-19, "GitHub asks you").
+/tests/unit/floorless-searches.twins.ts @ShydenMcM
+
+# This file, so no change can drop the line above unasked.
+/.github/CODEOWNERS @ShydenMcM

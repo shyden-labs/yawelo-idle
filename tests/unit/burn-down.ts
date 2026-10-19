@@ -34,6 +34,11 @@ export interface ListWording {
   readonly fix: string;
   /** The list's path, to lower an entry in. */
   readonly list: string;
+  /**
+   * What to do about an entry above what is read, for a list that does not
+   * only shrink; by default, lower it.
+   */
+  readonly stale?: string;
 }
 
 /**
@@ -63,7 +68,10 @@ export function listFindings(
     if (read > count) return [`${counted} ${wording.fix}`];
     if (read < count)
       return [
-        `${counted} Lower the entry in ${wording.list}: the list only shrinks.`,
+        `${counted} ${
+          wording.stale ??
+          `Lower the entry in ${wording.list}: the list only shrinks.`
+        }`,
       ];
     return [];
   });
