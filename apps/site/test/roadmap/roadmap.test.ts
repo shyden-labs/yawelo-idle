@@ -60,7 +60,7 @@ interface Health {
 }
 /** worker/witness.ts's Witness: the card a webhook changed, and when (#689). */
 type Witness =
-  | { kind: 'issue'; number: number; updatedAt: string }
+  | { kind: 'issue'; number: number; updatedAt: string; gone: boolean }
   | { kind: 'item'; id: string; updatedAt: string; gone: boolean };
 /** The socket a 101 carries: workerd's, which is accepted before use. */
 interface Socket {
@@ -142,6 +142,7 @@ interface FixtureNode {
     stateReason: string | null;
     closedAt: string | null;
     updatedAt: string;
+    repository: { nameWithOwner: string };
   };
 }
 type FixturePages = { data: { node: { items: { nodes: FixtureNode[] } } } }[];
@@ -195,17 +196,35 @@ function boardWithoutStoryNine(): unknown[] {
   return pages;
 }
 
+/**
+ * The fixture board with story #9 transferred to another repository: its
+ * card stays, holding the issue's new home (#689).
+ */
+function boardWithStoryNineTransferred(): unknown[] {
+  const pages = fixturePages();
+  const nine = pages
+    .flatMap((p) => p.data.node.items.nodes)
+    .find((n) => n.content.number === 9);
+  if (nine === undefined) throw new Error('the fixture has no story 9');
+  nine.content.repository = { nameWithOwner: 'shyden-labs/elsewhere' };
+  return pages;
+}
+
 /** The webhooks for those changes. */
 const extraStoryClosed: Witness = {
   kind: 'issue',
   number: 99,
   updatedAt: CHANGED_AT,
+  gone: false,
 };
 const storyNineClosed: Witness = {
   kind: 'issue',
   number: 9,
   updatedAt: CHANGED_AT,
+  gone: false,
 };
+/** #9 deleted, or transferred to another repository: gone from this one. */
+const storyNineGone: Witness = { ...storyNineClosed, gone: true };
 // Functions, so the fixture's card ids are made at test time, never at
 // collection (tests/guards/collection-calls.test.ts).
 const cardAdded = (number = 99): Witness => ({
@@ -663,6 +682,36 @@ describe('a read behind its webhook (#689)', () => {
     });
     expect(health.drift).toBe(1);
     expect(health.driftTotal).toBe(1);
+  });
+
+  // A deleted or transferred issue never shows in this repository's read
+  // again, so its witness is seen by its absence (#689, found after #691).
+  it('counts no drift when a deleted issue’s card leaves the board by webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithoutStoryNine() });
+      clock.at += 60_000;
+      await r.changed(storyNineGone);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('counts no drift when a transferred issue leaves the roadmap by webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithStoryNineTransferred() });
+      clock.at += 60_000;
+      await r.changed(storyNineGone);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(0);
   });
 
   it('counts no drift when an archived card leaves the board by webhook', async () => {
