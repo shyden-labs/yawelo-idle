@@ -464,6 +464,10 @@ const ROADMAP_CHECK_MAX_AGE_MS = 20 * 60_000;
 const shown = (value: unknown): string =>
   typeof value === 'string' ? value : JSON.stringify(value);
 
+/** A health time in milliseconds, or NaN for anything but a parseable string. */
+const timeOf = (value: unknown): number =>
+  typeof value === 'string' ? Date.parse(value) : Number.NaN;
+
 /** A health time in a message: a field the health left out says so. */
 const stamped = (value: unknown): string =>
   value === undefined ? 'missing' : shown(value);
@@ -482,8 +486,9 @@ interface RoadmapHealth {
 /**
  * The live roadmap's health (#341): the board has been read, no missed webhook
  * is outstanding (drift stays until a webhook is seen delivering a change
- * again, operator decision 2026-10-06), reads are not failing, and the
- * 10-minute check ran within two intervals.
+ * again, operator decision 2026-10-06), reads are not still failing at a
+ * check after the one that failed (#693), and the 10-minute check ran within
+ * two intervals.
  */
 export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
   let body: RoadmapHealth = {};
@@ -526,10 +531,18 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
     },
     {
       name: 'reads',
-      problem: () =>
-        body.readFailingSince === null
-          ? undefined
-          : `roadmap: reads failing since ${shown(body.readFailingSince)}: ${shown(body.readError)}`,
+      problem: () => {
+        if (body.readFailingSince === null) return undefined;
+        // A check stamps lastCheckAt as it starts, and a failed read stamps
+        // readFailingSince with its own start: a failure no later check has
+        // met yet is not red (#693, Shyden 2026-10-19). Times that cannot be
+        // compared are red.
+        const since = timeOf(body.readFailingSince);
+        const check = timeOf(body.lastCheckAt);
+        if (Number.isFinite(since) && Number.isFinite(check) && check <= since)
+          return undefined;
+        return `roadmap: reads failing since ${shown(body.readFailingSince)}, the check at ${stamped(body.lastCheckAt)} included: ${shown(body.readError)}`;
+      },
     },
     {
       name: 'check age',
