@@ -206,18 +206,20 @@ const storyNineClosed: Witness = {
   number: 9,
   updatedAt: CHANGED_AT,
 };
-const extraCardAdded: Witness = {
+// Functions, so the fixture's card ids are made at test time, never at
+// collection (tests/guards/collection-calls.test.ts).
+const cardAdded = (number = 99): Witness => ({
   kind: 'item',
-  id: fixtureCardId(99),
+  id: fixtureCardId(number),
   updatedAt: CHANGED_AT,
   gone: false,
-};
-const storyNineArchived: Witness = {
+});
+const storyNineArchived = (): Witness => ({
   kind: 'item',
   id: fixtureCardId(9),
   updatedAt: CHANGED_AT,
   gone: true,
-};
+});
 
 /** GraphQL first-page reads the fake has served: one per board read. */
 const boardReads = async () =>
@@ -258,7 +260,7 @@ describe('reading the board', () => {
     const snapshot = await inRoadmap(async (r) => {
       await r.check();
       await configureFake({ pages: boardWithExtraStory() });
-      await r.changed(extraCardAdded);
+      await r.changed(cardAdded());
       return r.snapshot();
     });
     expect(snapshot?.version).toBe(2);
@@ -271,7 +273,7 @@ describe('reading the board', () => {
       const before = await boardReads();
       await configureFake({ pages: boardWithExtraStory() });
       await Promise.all(
-        Array.from({ length: 10 }, () => r.changed(extraCardAdded)),
+        Array.from({ length: 10 }, () => r.changed(cardAdded())),
       );
       return {
         reads: (await boardReads()) - before,
@@ -381,7 +383,7 @@ describe('a failed read', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502, pages: boardWithExtraStory() });
       clock.at += 60_000;
-      await r.changed(extraCardAdded);
+      await r.changed(cardAdded());
       return { health: await r.health(), snapshot: await r.snapshot() };
     });
     expect(snapshot?.version).toBe(1);
@@ -452,7 +454,7 @@ describe('drift', () => {
       clock.at += 600_000;
       await r.check();
       clock.at += GRACE_MS;
-      await r.changed(extraCardAdded);
+      await r.changed(cardAdded());
       clock.at += GRACE_MS + 1;
       return r.health();
     });
@@ -467,7 +469,7 @@ describe('drift', () => {
       clock.at += 600_000;
       await r.check();
       clock.at += GRACE_MS + 1;
-      await r.changed(extraCardAdded);
+      await r.changed(cardAdded());
       return r.health();
     });
     expect(health.drift).toBe(1);
@@ -478,7 +480,7 @@ describe('drift', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502, pages: boardWithExtraStory() });
       clock.at += 60_000;
-      await r.changed(extraCardAdded);
+      await r.changed(cardAdded());
       await configureFake({ graphqlStatus: 200 });
       clock.at += 600_000;
       await r.check();
@@ -527,7 +529,7 @@ describe('drift', () => {
       expect((await r.health()).drift).toBe(1);
       await configureFake({ pages: boardWithExtraStory(2) });
       clock.at += 60_000;
-      await r.changed({ ...extraCardAdded, id: fixtureCardId(100) });
+      await r.changed(cardAdded(100));
       return r.health();
     });
     expect(health.drift).toBe(0);
@@ -606,7 +608,7 @@ describe('a read behind its webhook (#689)', () => {
     const health = await inRoadmap(async (r, clock) => {
       await r.check();
       clock.at += 60_000;
-      await r.changed(extraCardAdded);
+      await r.changed(cardAdded());
       await configureFake({ pages: boardWithExtraStory() });
       clock.at += 600_000;
       await r.check();
@@ -668,7 +670,7 @@ describe('a read behind its webhook (#689)', () => {
       await r.check();
       await configureFake({ pages: boardWithoutStoryNine() });
       clock.at += 60_000;
-      await r.changed(storyNineArchived);
+      await r.changed(storyNineArchived());
       clock.at += GRACE_MS + 1;
       return r.health();
     });
@@ -834,7 +836,7 @@ describe('the live socket', () => {
     const socket = await open(stub);
     expect((await socket.next()).version).toBe(1);
     await configureFake({ pages: boardWithExtraStory() });
-    await inRoadmap((r) => r.changed(extraCardAdded), stub);
+    await inRoadmap((r) => r.changed(cardAdded()), stub);
     expect((await socket.next()).version).toBe(2);
   });
 

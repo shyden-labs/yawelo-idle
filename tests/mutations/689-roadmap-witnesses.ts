@@ -7,7 +7,10 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * counted, the witness never handed on, an archived card never seen, one
  * card's webhook excusing another's change, a late read forgetting what it
  * owed, a late webhook clearing every card, unseen webhooks not counted, and
- * drift cleared by a read no webhook explained.
+ * drift cleared by a read no webhook explained. One row plants in the shared
+ * board fixture, which #689 changed: without each card's stamp, the board's
+ * own cards are not known by number, so an archived card's webhook explains
+ * nothing.
  */
 
 const ROADMAP = 'apps/site/test/roadmap/roadmap.test.ts';
@@ -19,6 +22,16 @@ const HANDED_ON = `${ROUTES} › /hooks/github > hands the delivery’s card and
 export default mutationFile({
   targets: [ROADMAP, ROUTES],
   mutations: [
+    {
+      name: 'fixture-cards-unstamped',
+      file: 'packages/progress/test/board-fixture.ts',
+      anchor: '    id: fixtureCardId(story.number),\n    updatedAt,\n',
+      replacement: '    id: fixtureCardId(story.number),\n',
+      red: {
+        [`${BEHIND} counts no drift when an archived card leaves the board by webhook`]:
+          'expected 1 to be +0',
+      },
+    },
     {
       name: 'stale-read-not-counted',
       file: 'apps/site/worker/roadmap.ts',

@@ -135,13 +135,14 @@ describe('readStamps', () => {
 
   it('records another repository’s card with no number, and not its issue', () => {
     const stamps = readStamps(
-      [page([issueNode(5, T0, 'shyden-labs/other')])],
+      [page([issueNode(5, T0, 'shyden-labs/other'), issueNode(6, AFTER)])],
       REPO,
     );
     expect([...stamps.items]).toEqual([
       ['PVTI_5', { number: null, updatedAt: T0 }],
+      ['PVTI_6', { number: 6, updatedAt: AFTER }],
     ]);
-    expect([...stamps.issues]).toEqual([]);
+    expect([...stamps.issues]).toEqual([[6, AFTER]]);
   });
 
   it('records a draft card with no number', () => {
@@ -173,8 +174,14 @@ describe('readStamps', () => {
   it('records no card without an id or a stamp, so no witness can be seen in it', () => {
     const noId = { ...issueNode(1, T0), id: undefined };
     const noStamp = { ...issueNode(2, T0), updatedAt: undefined };
-    const stamps = readStamps([page([noId, noStamp])], REPO);
-    expect([...stamps.items]).toEqual([]);
+    const stamps = readStamps(
+      [page([noId, noStamp, issueNode(3, AFTER)])],
+      REPO,
+    );
+    expect(stamps).toEqual({
+      items: new Map([['PVTI_3', { number: 3, updatedAt: AFTER }]]),
+      issues: new Map([[3, AFTER]]),
+    });
   });
 });
 
@@ -313,8 +320,13 @@ describe('account', () => {
       stamps: stampsOf([['PVTI_678', 678, T0]]),
       owed: [owed(itemWitness)],
     });
-    expect(result.explained).toEqual([678]);
-    expect(result.unexplained).toEqual([]);
+    expect(result).toEqual({
+      explained: [678],
+      unexplained: [],
+      owed: [],
+      behind: false,
+      unseen: 0,
+    });
   });
 
   it('leaves a change unexplained when no event named it', () => {
@@ -324,8 +336,13 @@ describe('account', () => {
       stamps: stampsOf([]),
       owed: [],
     });
-    expect(result.unexplained).toEqual([1]);
-    expect(result.explained).toEqual([]);
+    expect(result).toEqual({
+      explained: [],
+      unexplained: [1],
+      owed: [],
+      behind: false,
+      unseen: 0,
+    });
   });
 
   // Blind spot 1 (#689): one card's webhook used to explain every difference.
@@ -363,8 +380,13 @@ describe('account', () => {
       stamps: stampsOf([], [[678, T0]]),
       owed: [owed(issueWitness, STARTED - 600_000)],
     });
-    expect(result.explained).toEqual([678]);
-    expect(result.owed).toEqual([]);
+    expect(result).toEqual({
+      explained: [678],
+      unexplained: [],
+      owed: [],
+      behind: false,
+      unseen: 0,
+    });
   });
 
   // Blind spot 2 (#689): a card added to the board but not in the read yet.
@@ -410,8 +432,13 @@ describe('account', () => {
       owed: [owed(goneWitness)],
       known: { PVTI_678: 678 },
     });
-    expect(result.explained).toEqual([678]);
-    expect(result.unexplained).toEqual([]);
+    expect(result).toEqual({
+      explained: [678],
+      unexplained: [],
+      owed: [],
+      behind: false,
+      unseen: 0,
+    });
   });
 
   it('leaves a removed card unexplained when no event named it', () => {
@@ -434,16 +461,21 @@ describe('account', () => {
     expect(result.unexplained).toEqual([99]);
   });
 
-  it('judges no change on the first read', () => {
+  it('judges no change on the first read, though it still accounts for witnesses', () => {
     const result = account({
       ...base,
       previous: null,
       items: [item(1)],
-      stamps: stampsOf([]),
-      owed: [],
+      stamps: stampsOf([], [[678, BEFORE]]),
+      owed: [owed(issueWitness)],
     });
-    expect(result.explained).toEqual([]);
-    expect(result.unexplained).toEqual([]);
+    expect(result).toEqual({
+      explained: [],
+      unexplained: [],
+      owed: [owed(issueWitness)],
+      behind: true,
+      unseen: 0,
+    });
   });
 
   it('drops a witness unseen past the expiry, counting it when the read had its card', () => {
@@ -454,20 +486,32 @@ describe('account', () => {
       owed: [owed(issueWitness, STARTED - 200_000)],
       expiresBefore: STARTED - 120_000,
     });
-    expect(result.owed).toEqual([]);
-    expect(result.unseen).toBe(1);
+    expect(result).toEqual({
+      explained: [],
+      unexplained: [],
+      owed: [],
+      behind: true,
+      unseen: 1,
+    });
   });
 
   it('drops an expired witness for an issue not on this board without counting it', () => {
+    // A young witness beside it is kept: only the expired one goes.
+    const young = owed(itemWitness, STARTED - 60_000);
     const result = account({
       ...base,
       items: base.previous,
       stamps: stampsOf([]),
-      owed: [owed(issueWitness, STARTED - 200_000)],
+      owed: [owed(issueWitness, STARTED - 200_000), young],
       expiresBefore: STARTED - 120_000,
     });
-    expect(result.owed).toEqual([]);
-    expect(result.unseen).toBe(0);
+    expect(result).toEqual({
+      explained: [],
+      unexplained: [],
+      owed: [young],
+      behind: true,
+      unseen: 0,
+    });
   });
 
   it('keeps an unseen witness younger than the expiry', () => {
