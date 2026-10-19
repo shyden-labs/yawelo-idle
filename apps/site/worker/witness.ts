@@ -15,7 +15,8 @@ import type { BoardItem } from '@yawelo-idle/progress';
 
 /** One card an event changed, and the time GitHub stamped the change. */
 export type Witness =
-  | { kind: 'issue'; number: number; updatedAt: string }
+  /** `gone`: deleted, or transferred to another repository. */
+  | { kind: 'issue'; number: number; updatedAt: string; gone: boolean }
   /** `gone`: archived or deleted, which the board query no longer returns. */
   | { kind: 'item'; id: string; updatedAt: string; gone: boolean };
 
@@ -38,6 +39,14 @@ export interface Owed {
  * cards that are not archived (`archivedStates = [NOT_ARCHIVED]`, GraphQL
  * schema read 2026-10-19).
  */
+/**
+ * The `issues` actions after which the issue is no longer this repository's
+ * (GitHub's recorded issues.deleted and issues.transferred payloads, read
+ * 2026-10-19: both name the old repository and number). Every other action
+ * leaves it where it was.
+ */
+const ISSUE_GONE: ReadonlySet<string> = new Set(['deleted', 'transferred']);
+
 const GONE: Readonly<Record<string, boolean>> = {
   archived: true,
   converted: false,
@@ -64,11 +73,18 @@ const stamp = (value: unknown): string | null =>
  */
 export function eventWitness(name: string, payload: unknown): Witness | null {
   if (name === 'issues') {
+    const action = field(payload, 'action');
     const issue = field(payload, 'issue');
     const number = field(issue, 'number');
     const updatedAt = stamp(field(issue, 'updated_at'));
+    if (typeof action !== 'string') return null;
     if (!Number.isInteger(number) || updatedAt === null) return null;
-    return { kind: 'issue', number: number as number, updatedAt };
+    return {
+      kind: 'issue',
+      number: number as number,
+      updatedAt,
+      gone: ISSUE_GONE.has(action),
+    };
   }
   if (name === 'projects_v2_item') {
     const action = field(payload, 'action');
@@ -126,6 +142,8 @@ const atOrAfter = (read: string, witness: string): boolean =>
 export function sees(stamps: Stamps, witness: Witness): boolean {
   if (witness.kind === 'issue') {
     const read = stamps.issues.get(witness.number);
+    // A gone issue never comes back under its number: seen once absent.
+    if (witness.gone) return read === undefined;
     return read !== undefined && atOrAfter(read, witness.updatedAt);
   }
   const read = stamps.items.get(witness.id);
