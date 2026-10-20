@@ -15,7 +15,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import type { Gh } from './board-progress.ts';
-import { entries, isRecord } from './gh-reads.ts';
+import { isRecord } from './gh-reads.ts';
+import { report } from './issue-report.ts';
 
 /**
  * The rules develop's CODEOWNERS must hold, each as its words: Shyden owns
@@ -30,8 +31,6 @@ export const OWNED: readonly (readonly [string, string])[] = [
 /** The issue this check opens, and finds again while it is open. */
 export const ISSUE_TITLE =
   'develop no longer asks Shyden to review the twin list (daily check, #687)';
-
-const ASSIGNEE = 'ShydenMcM';
 
 const WHERE =
   'Settings > Branches > develop > "Require review from Code Owners"';
@@ -152,26 +151,6 @@ function problemsIn(
   return problems;
 }
 
-/** The open issue (never a pull request) carrying this check's title. */
-function openReport(repo: string, gh: Gh): number | undefined {
-  const found = entries(
-    gh([
-      'api',
-      '--paginate',
-      '--slurp',
-      `repos/${repo}/issues?state=open&per_page=100`,
-    ]),
-  ).find(
-    (item) =>
-      isRecord(item) &&
-      item.title === ISSUE_TITLE &&
-      item.pull_request === undefined,
-  );
-  return isRecord(found) && typeof found.number === 'number'
-    ? found.number
-    : undefined;
-}
-
 /**
  * Judges develop and reports what it finds: `ok` only when nothing is wrong.
  * A report reuses the issue already open, and opens one only when none is.
@@ -189,55 +168,15 @@ export function ownerReview(
         `develop requires review from code owners, and .github/CODEOWNERS holds all ${String(OWNED.length)} rules.`,
       ],
     };
-  const notes: string[] = [];
-  let open: number | undefined;
-  try {
-    open = openReport(repo, reads.repo);
-  } catch (error) {
-    notes.push(
-      `could not search the open issues for an earlier report: ${message(error)}`,
-    );
-  }
-  const body = [
-    'The daily owner-review check (#687) found:',
-    '',
-    ...problems.map((p) => `- ${p}`),
-    ...notes.map((n) => `- ${n}`),
-    '',
-    'Until this is fixed, a change to the twin list (`tests/unit/floorless-searches.twins.ts`) can merge without asking you (#374). The rules are pinned by `tests/unit/codeowners.test.ts`.',
-  ].join('\n');
-  if (open === undefined) {
-    reads.repo([
-      'api',
-      '-X',
-      'POST',
-      `repos/${repo}/issues`,
-      '-f',
-      `title=${ISSUE_TITLE}`,
-      '-f',
-      `body=${body}`,
-      '-f',
-      `assignees[]=${ASSIGNEE}`,
-    ]);
-  } else {
-    reads.repo([
-      'api',
-      '-X',
-      'POST',
-      `repos/${repo}/issues/${String(open)}/comments`,
-      '-f',
-      `body=${body}`,
-    ]);
-  }
   return {
     ok: false,
-    lines: [
-      open === undefined
-        ? `Opened an issue for ${ASSIGNEE}:`
-        : `Commented on #${String(open)}:`,
-      ...problems,
-      ...notes,
-    ],
+    lines: report(repo, reads.repo, {
+      title: ISSUE_TITLE,
+      lead: 'The daily owner-review check (#687) found:',
+      problems,
+      footer:
+        'Until this is fixed, a change to the twin list (`tests/unit/floorless-searches.twins.ts`) can merge without asking you (#374). The rules are pinned by `tests/unit/codeowners.test.ts`.',
+    }),
   };
 }
 

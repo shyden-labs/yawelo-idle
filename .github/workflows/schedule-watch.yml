@@ -1,0 +1,49 @@
+# Every third-party `uses:` is a full 40-hex commit SHA with a trailing
+# `# vX.Y.Z` comment, as in ci.yml (tests/unit/supply-chain.test.ts).
+#
+# The schedule watch (#710): a daily check that does not run tells nobody,
+# so a missed day must be noticed by something that does not hang on that
+# check's schedule. Every push to develop runs this, which needs no schedule
+# at all, and so does its own slot, twelve and a half hours from
+# owner-review's, so a dropped run of either is seen by the other. It also
+# watches itself (scripts/schedule-watch.ts `WATCHED`, held equal to every
+# scheduled workflow on disk by tests/unit/schedule-watch.test.ts).
+#
+# It reads GitHub's own record of each scheduled workflow with the run's
+# token (actions: read): still enabled, its newest scheduled run within 36
+# hours, and that run passed. Each one found wrong gets one issue assigned
+# to ShydenMcM, or a comment on the one already open. It holds no stored key
+# and names no environment. Runs queue rather than overlap, so two pushes
+# cannot open two issues for one outage.
+name: schedule-watch
+on:
+  push:
+    branches: [develop]
+  schedule:
+    - cron: '47 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: schedule-watch
+  cancel-in-progress: false
+
+jobs:
+  schedule-watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Every scheduled workflow ran on time and passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/schedule-watch.ts "$GITHUB_REPOSITORY"

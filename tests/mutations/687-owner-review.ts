@@ -4,10 +4,13 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * The daily owner-review check (#687), predicted before the first run. Each
  * row puts back one way it could pass while develop no longer asks Shyden:
  * a setting read loosely, a reply of the wrong shape read as fine, a
- * CODEOWNERS rule counted by the wrong words, a failed read or a missing
- * token passed over (AC3), and a report that lands on the wrong issue or is
- * not assigned to him (AC1). The last three take part of each judge's
+ * CODEOWNERS rule counted by the wrong words, and a failed read or a
+ * missing token passed over (AC3). The last three take part of each judge's
  * population away, or add to it, so the floors on what each read go red.
+ *
+ * The rows on a report that lands on the wrong issue or is not assigned to
+ * him (AC1) moved to 710-schedule-watch.ts with the code they mutate,
+ * `scripts/issue-report.ts`, which both daily checks share.
  */
 
 const CHECK = 'tests/unit/owner-review.test.ts';
@@ -106,58 +109,6 @@ export default mutationFile({
       red: {
         [`${REPORT} opens the issue, reading nothing as admin, when there is no admin token (AC3)`]:
           'to deeply equal',
-      },
-    },
-    {
-      name: 'search-failure-unsaid',
-      file: SCRIPT,
-      anchor:
-        '    notes.push(\n      `could not search the open issues for an earlier report: ${message(error)}`,\n    );\n',
-      replacement: '    void error;\n',
-      red: {
-        [`${REPORT} still opens an issue when the open issues cannot be searched, saying so`]:
-          'to contain',
-      },
-    },
-    {
-      name: 'any-title-reused',
-      file: SCRIPT,
-      anchor: '      item.title === ISSUE_TITLE &&\n',
-      replacement: '      true &&\n',
-      red: {
-        [`${REPORT} comments on the issue already open rather than opening another`]:
-          'to deeply equal',
-      },
-    },
-    {
-      name: 'pull-request-reused',
-      file: SCRIPT,
-      anchor:
-        '      item.title === ISSUE_TITLE &&\n      item.pull_request === undefined,\n',
-      replacement: '      item.title === ISSUE_TITLE,\n',
-      red: {
-        [`${REPORT} never reuses a pull request that carries the title`]:
-          'to deeply equal',
-      },
-    },
-    {
-      name: 'always-a-new-issue',
-      file: SCRIPT,
-      anchor: '  if (open === undefined) {\n',
-      replacement: '  if (true) {\n',
-      red: {
-        [`${REPORT} comments on the issue already open rather than opening another`]:
-          'to deeply equal',
-      },
-    },
-    {
-      name: 'not-assigned',
-      file: SCRIPT,
-      anchor: "      '-f',\n      `assignees[]=${ASSIGNEE}`,\n",
-      replacement: '',
-      red: {
-        [`${REPORT} opens one issue assigned to Shyden when the setting is off and none is open`]:
-          'to include',
       },
     },
     {
