@@ -51,6 +51,7 @@ const SCRIPTS = [
   'scripts/token-reach.ts',
   'scripts/verify-dev.ts',
   'scripts/verify-prod.ts',
+  'scripts/verify-roadmap.ts',
 ] as const;
 
 describe('the scripts load under Node’s own loader (#391)', () => {
