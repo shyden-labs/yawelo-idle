@@ -5,7 +5,10 @@
  * that it read the whole sample, so Shyden chose (2026-10-19, "Visible
  * list") that each use is listed here, and a new one shows in the change
  * that adds it. Checked for equality both ways by the guards suite's
- * `floorless-searches.test.ts`.
+ * `floorless-searches.test.ts`. An agent asks Shyden before adding an
+ * entry: `.github/CODEOWNERS` has GitHub request his review, but develop
+ * requires 0 approvals, so the request alone does not stop a merge (#688,
+ * #690).
  */
 export const TWINS: Readonly<Record<string, number>> = {
   'tests/unit/core-determinism-lint.test.ts › is scoped to packages/core/src: the same code elsewhere is not banned': 2,

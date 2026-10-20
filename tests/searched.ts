@@ -106,6 +106,11 @@ export function againstControl<I, R>(
  * written as text, never a list; `floorless-searches.test.ts` holds the rest.
  * The checks on the samples are made before anything runs, so a refusal is
  * thrown, not returned as a rejected promise.
+ *
+ * Each use is listed in `floorless-searches.twins.ts`, and an agent asks
+ * Shyden before adding one: GitHub requests his review of that list, but
+ * develop requires 0 approvals, so the request alone does not stop a merge
+ * (#688, #690).
  */
 export function againstTwin<R>(
   run: (sample: string) => R | Promise<R>,
