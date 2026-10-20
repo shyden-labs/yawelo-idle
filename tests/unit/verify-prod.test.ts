@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Probe } from '../../scripts/verify-dev';
-import type { MediaHost } from '../../apps/site/src/media';
+import { DEV_MEDIA, type MediaHost } from '../../apps/site/src/media';
 import {
   mediaJudgement,
   mediaProblems,
@@ -499,15 +499,27 @@ describe('a promo media file, asked for a range past its end', () => {
     ]);
   });
 
-  // The dev store's r2.dev address answers 416 with no Content-Range
-  // (measured 2026-10-20, #713), and its verify expects exactly that.
+  // The dev store's r2.dev address answers 416 with no Content-Range, CORP or
+  // nosniff (measured 2026-10-20, #713), and its verify expects exactly that.
   it('passes a 416 with no Content-Range from a host that sends none', () => {
+    const judged = pastEndJudgement(
+      URL_,
+      mediaAnswer(416, [], {}),
+      SOURCE,
+      DEV_MEDIA,
+    );
     expect(
-      pastEndProblems(URL_, mediaAnswer(416, [], SENT), SOURCE, {
-        ...HOST,
-        sizeOnPastEnd: false,
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'dev media past-end checks',
       }),
     ).toEqual([]);
+    expect(
+      floorBreach(
+        'verify-prod/dev-media-past-end-checks',
+        judged.checked.length,
+      ),
+    ).toBeUndefined();
   });
 
   it('names a Content-Range from a host that sends none, so a change is seen', () => {

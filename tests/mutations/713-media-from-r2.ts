@@ -115,6 +115,8 @@ export default mutationFile({
       red: {
         [`${MEDIA} › the promo media > are judged on the dev store by exactly what its r2.dev address sends`]:
           'to deeply equal',
+        [`${PAST} passes a 416 with no Content-Range from a host that sends none`]:
+          'to deeply equal',
       },
     },
     {
@@ -204,6 +206,8 @@ export default mutationFile({
       red: {
         [`${PAST} passes when it is 416 naming the tracked size, with the host’s headers`]:
           'verify-prod/media-past-end-checks',
+        [`${PAST} passes a 416 with no Content-Range from a host that sends none`]:
+          'verify-prod/dev-media-past-end-checks',
         [`${PAST} names a missing header`]: 'to deeply equal',
       },
     },
