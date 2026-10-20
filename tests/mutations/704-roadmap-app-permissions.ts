@@ -62,6 +62,22 @@ export default mutationFile({
       },
     },
     {
+      // contract.ts is a changed helper (#659). READ_ONLY is read by
+      // github.test.ts only, while INSTALLED (the fake's default) is written
+      // out, so this row reaches the two tests that use READ_ONLY on its own.
+      name: 'contract-read-only-gains-contents',
+      file: 'apps/site/test/github-fake/contract.ts',
+      anchor: 'export const READ_ONLY: Permissions = {\n',
+      replacement:
+        "export const READ_ONLY: Permissions = {\n  contents: 'read',\n",
+      red: {
+        [`${FAKE} narrows the token to the permissions the request names`]:
+          'to be 201',
+        [`${TOKEN} refuses an installation without Administration: read, so a change to the App is seen (#704)`]:
+          '{"contents":"read","issues":"read"',
+      },
+    },
+    {
       name: 'fake-names-none-gives-nothing',
       file: 'apps/site/test/github-fake/fake-github.ts',
       anchor: '  if (requested === undefined) return { ...installation };\n',

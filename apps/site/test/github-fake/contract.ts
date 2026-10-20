@@ -25,11 +25,14 @@ export const READ_ONLY: Permissions = {
 /**
  * The installation as it stands since 2026-10-20: the three reads and
  * Administration: read for the owner-review check (#687, website spec §5.2
- * item 3).
+ * item 3). Written out, not spread from READ_ONLY, so the token's rights
+ * and the installation's are each stated once.
  */
 export const INSTALLED: Permissions = {
   administration: 'read',
-  ...READ_ONLY,
+  issues: 'read',
+  metadata: 'read',
+  organization_projects: 'read',
 };
 
 /** What a test can change; `reset` puts every field back. */
