@@ -29,8 +29,9 @@ import { roadmapWorld, type RoadmapWorld } from './harness';
 
 /**
  * The roadmap's read-only GitHub App (#341, spec §5.2 item 3): a JWT signed
- * with the App's key, an installation token for the one repository whose
- * rights must be exactly the three reads, and every page of the board.
+ * with the App's key, an installation holding the three reads and
+ * Administration: read (#687), a token for the one repository asking for
+ * and holding exactly the three reads (#704), and every page of the board.
  * worker/github.ts runs here in Node with every `fetch` answered by the fake
  * GitHub (test/github-fake), which verifies the JWT with the App's public key
  * as GitHub would; the same module runs inside workerd, with the PKCS#1 key

@@ -1,10 +1,14 @@
 /**
  * The roadmap's read-only GitHub App, `yawelo-idle-roadmap` (#341, website
  * spec §5.2 item 3): a JWT signed with the App's key, an installation token
- * for the one repository, and every page of the board. The installation and
- * the issued token must each hold exactly the three reads, or nothing is read:
- * a public-facing Worker never holds a key that can write, and a write right
- * added to the App later turns dev verify red rather than going unnoticed.
+ * for the one repository, and every page of the board. The installation must
+ * hold exactly the three reads and Administration: read, which Shyden granted
+ * on 2026-10-20 for the owner-review check (#687, spec §5.2 item 3). The token
+ * asks for the three reads by name, and must hold exactly those, because a
+ * token minted without naming them would carry Administration too (#704).
+ * Otherwise nothing is read: a public-facing Worker never holds a key that
+ * can write, and a right added to the App later turns dev verify red rather
+ * than going unnoticed.
  *
  * The same checks as `~/.claude/scripts/github-app/app_token.py`, which mints
  * the agent's tokens: an installation on selected repositories only, and the
@@ -15,11 +19,16 @@ import { BOARD_QUERY } from '@yawelo-idle/progress';
 const API = 'https://api.github.com';
 /** GitHub refuses any request without a User-Agent. */
 export const USER_AGENT = 'yawelo-idle-roadmap';
-/** The App's rights: Issues, Metadata and the org's Projects, read only. */
+/** The token's rights: Issues, Metadata and the org's Projects, read only. */
 export const PERMISSIONS: Readonly<Record<string, string>> = {
   issues: 'read',
   metadata: 'read',
   organization_projects: 'read',
+};
+/** The installation's rights: the token's, and Administration: read (#687). */
+export const INSTALLATION_PERMISSIONS: Readonly<Record<string, string>> = {
+  administration: 'read',
+  ...PERMISSIONS,
 };
 /** 2,000 items at 100 a page: a board that claims more is broken, not big. */
 const MAX_PAGES = 20;
@@ -158,16 +167,17 @@ export async function installationToken(
     throw new Error(
       `the roadmap App is installed on every ${app.org} repository; install it on ${app.repoName} only`,
     );
-  const pinned = canonical(PERMISSIONS);
-  if (canonical(installation.permissions) !== pinned)
+  const installed = canonical(INSTALLATION_PERMISSIONS);
+  if (canonical(installation.permissions) !== installed)
     throw new Error(
-      `the roadmap App’s installation has ${canonical(installation.permissions)}, not exactly ${pinned}`,
+      `the roadmap App’s installation has ${canonical(installation.permissions)}, not exactly ${installed}`,
     );
+  const pinned = canonical(PERMISSIONS);
   const issued = (await call(
     'POST',
     `/app/installations/${String(installation.id)}/access_tokens`,
     jwt,
-    { repositories: [app.repoName] },
+    { repositories: [app.repoName], permissions: PERMISSIONS },
   )) as {
     token: string;
     permissions: unknown;
