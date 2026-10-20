@@ -149,7 +149,7 @@ TDD throughout: each test is written and seen failing before its code (red again
 - **Rendered (Playwright, one test per page × language × width, never looped):** axe accessibility; contrast measured on the render against the tokens the page serves; no horizontal scroll at 320, 375, 768, 1280 and 1920 px; reduced motion stops every animation; print ink is measured against white; the development strip is visible on every page.
 - **Privacy guard:** a recorder of every request and `Set-Cookie` on every page asserts **zero third-party hosts and zero cookies**, with liveness (a counted first-party request total, `searched(...)` style) so an empty recorder cannot pass.
 - **Visual regression:** in the pinned container, as the house rule says (threshold and ratio both set, `{platform}` in the path).
-- **End-to-end on dev:** a real board edit is made and the open roadmap page is observed to update. The latency is measured and recorded in the PR and in `reference-live-roadmap.md`. The health endpoint is checked in `verify-dev`.
+- **End-to-end on dev:** a real board edit is made and the open roadmap page is observed to update. The latency is measured and recorded in the PR and in `reference-live-roadmap.md`. The health endpoint is checked by deploy-dev's `verify-roadmap` job, from the first check the deployed code makes (#708).
 - **Guards:** every new guard proves what it saw, counted at the level it judges, with a recorded floor and an independent cross-check (global rule).
 
 ## 9. Delivery
