@@ -47,6 +47,7 @@ const SCRIPTS = [
   'scripts/prod-version.ts',
   'scripts/record-floors.ts',
   'scripts/sample-minimums.ts',
+  'scripts/schedule-watch.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
   'scripts/verify-dev.ts',
