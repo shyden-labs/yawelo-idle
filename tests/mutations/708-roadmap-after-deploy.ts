@@ -65,7 +65,8 @@ export default mutationFile({
       replacement: '      name: AFTER_DEPLOY,\n',
       red: {
         [BEFORE]: 'to deeply equal',
-        [WAITS]: 'to deeply equal',
+        // It returns the stale record's problem after one look.
+        [WAITS]: 'to be 3',
         [CEILING]: 'to deeply equal',
         [PASSWORD]: 'to have a length of 2',
       },

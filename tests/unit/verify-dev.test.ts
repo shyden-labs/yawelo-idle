@@ -978,15 +978,25 @@ describe('verifyDev', () => {
         { ...roadmap, lastCheckAt: before(at) },
         { ...roadmap, lastCheckAt: before(at) },
       ];
-      expect(
-        await verifyRoadmap(target(), at, { polls: 3, pollMs: 0 }),
-      ).toEqual([]);
-      expect(looks()).toBe(3);
+      const problems = await verifyRoadmap(target(), at, {
+        polls: 3,
+        pollMs: 0,
+      });
+      // The exact looks first: a floor that moved would otherwise stop the
+      // test before they were checked (measured on #332).
+      const looked = looks();
+      expect(looked).toBe(3);
       expect(seenAuthorization).toEqual([
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
       ]);
+      expect(searched(problems, { of: looked, what: 'roadmap looks' })).toEqual(
+        [],
+      );
+      expect(
+        floorBreach('verify-dev/roadmap-wait-looks', looked),
+      ).toBeUndefined();
     });
 
     it('fails at its ceiling, naming the last check the old code made', async () => {
