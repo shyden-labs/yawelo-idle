@@ -59,6 +59,35 @@ const thisPull: Pull = {
   head: { ref: 'chore/unrelated' },
 };
 
+/** develop's head commit in every fixture's branch list. */
+const DEVELOP_SHA = 'd'.repeat(40);
+
+/** A closed pull request in the whole-repository read (#702). */
+interface ClosedPull {
+  number: number;
+  merged_at: string | null;
+  merge_commit_sha: string | null;
+  head: { ref: string; repo: { full_name: string } | null };
+}
+
+/** A merged pull request whose branch was in this repository. */
+const mergedPull = (
+  number: number,
+  ref: string,
+  over: Partial<ClosedPull> = {},
+): ClosedPull => ({
+  number,
+  merged_at: '2026-10-19T00:00:00Z',
+  merge_commit_sha: 'e'.repeat(40),
+  head: { ref, repo: { full_name: REPO } },
+  ...over,
+});
+
+/** The merged pull request develop's head came from, naming nothing: the read's known positive. */
+const developPull = mergedPull(899, 'chore/earlier', {
+  merge_commit_sha: DEVELOP_SHA,
+});
+
 interface Fixture {
   items: unknown[];
   title?: string;
@@ -66,8 +95,10 @@ interface Fixture {
   pulls?: Pull[];
   /** Each branch's closed pull requests, merged or closed without merging. */
   closed?: Readonly<Record<string, ReadonlyArray<'merged' | 'unmerged'>>>;
+  /** Every closed pull request of the repository, branches deleted or not (#702). */
+  allClosed?: unknown[];
   /** A read named here throws as `gh` does when it exits non-zero. */
-  failing?: 'board' | 'branches' | 'pulls' | 'closed';
+  failing?: 'board' | 'branches' | 'pulls' | 'closed' | 'allClosed';
 }
 
 const BRANCHES_CALL = [
@@ -81,6 +112,12 @@ const PULLS_CALL = [
   '--paginate',
   '--slurp',
   `repos/${REPO}/pulls?state=open&per_page=100`,
+];
+const ALL_CLOSED_CALL = [
+  'api',
+  '--paginate',
+  '--slurp',
+  `repos/${REPO}/pulls?state=closed&per_page=100`,
 ];
 const closedCall = (branch: string) => [
   'api',
@@ -110,11 +147,20 @@ function reads(f: Fixture): OrphanReads {
   const repo: Gh = (args) => {
     if (same(args, BRANCHES_CALL)) {
       if (f.failing === 'branches') throw new Error('HTTP 502: Bad Gateway');
-      return JSON.stringify([branches.map((name) => ({ name }))]);
+      return JSON.stringify([
+        branches.map((name) => ({
+          name,
+          commit: { sha: name === 'develop' ? DEVELOP_SHA : 'f'.repeat(40) },
+        })),
+      ]);
     }
     if (same(args, PULLS_CALL)) {
       if (f.failing === 'pulls') throw new Error('HTTP 502: Bad Gateway');
       return JSON.stringify([pulls]);
+    }
+    if (same(args, ALL_CLOSED_CALL)) {
+      if (f.failing === 'allClosed') throw new Error('HTTP 502: Bad Gateway');
+      return JSON.stringify([f.allClosed ?? [developPull]]);
     }
     const branch = branches.find((b) => same(args, closedCall(b)));
     if (branch !== undefined) {
@@ -154,7 +200,7 @@ describe('boardOrphans passes a ticket something names (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12: branch board/12-orphan-check',
       ],
     });
@@ -203,7 +249,7 @@ describe('boardOrphans passes a ticket something names (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 2 board items, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 2 board items, 2 branches, 1 open pull request, 1 merged pull request.',
         '#13: branch x/13-y',
       ],
     });
@@ -220,7 +266,7 @@ describe('boardOrphans fails on an orphan, by name (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: false,
       lines: [
-        '1 orphan: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 1 board item, 2 branches, 1 open pull request.',
+        '1 orphan: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12 story 12',
       ],
     });
@@ -253,7 +299,7 @@ describe('boardOrphans fails on an orphan, by name (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12: branch board/12-orphan-check (merged, awaiting close)',
       ],
     });
@@ -307,10 +353,71 @@ describe('boardOrphans fails on an orphan, by name (#580 AC1, AC3)', () => {
       }),
     );
     expect(result.lines).toEqual([
-      '2 orphans: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 2 board items, 2 branches, 1 open pull request.',
+      '2 orphans: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 2 board items, 2 branches, 1 open pull request, 1 merged pull request.',
       '#12 story 12',
       '#14 story 14',
     ]);
+  });
+});
+
+describe('boardOrphans counts a merged pull request whose branch is gone (#702)', () => {
+  /** #12 In Progress, its branch deleted at merge, so only `allClosed` can name it. */
+  const judge = (allClosed: unknown[]) =>
+    boardOrphans(
+      ARGS,
+      ENV,
+      reads({ items: [rawIssue(12, 'In Progress')], allClosed }),
+    );
+
+  it("passes a ticket a merged pull request's branch names, until the ticket closes", () => {
+    expect(judge([developPull, mergedPull(850, 'ci/12-orphan-check')])).toEqual(
+      {
+        ok: true,
+        lines: [
+          'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 2 merged pull requests.',
+          '#12: pull request #850 (merged, awaiting close)',
+        ],
+      },
+    );
+  });
+
+  it('does not count a pull request closed without merging', () => {
+    const abandoned = mergedPull(850, 'ci/12-orphan-check', {
+      merged_at: null,
+      merge_commit_sha: null,
+    });
+    const result = judge([developPull, abandoned]);
+    expect(result.ok).toBe(false);
+    expect(result.lines[0]).toContain('1 merged pull request.');
+  });
+
+  it('does not take a merged branch /120- as naming #12', () => {
+    expect(judge([developPull, mergedPull(850, 'ci/120-other')]).ok).toBe(
+      false,
+    );
+  });
+
+  it('does not take #12 in a merged title or body as naming it: history keeps every mention', () => {
+    const mention = {
+      ...mergedPull(850, 'docs/unrelated'),
+      title: 'docs: unrelated (Refs #12)',
+      body: 'Refs #12',
+    };
+    expect(judge([developPull, mention]).ok).toBe(false);
+  });
+
+  it("does not count a merged pull request from another repository's branch", () => {
+    const fork = mergedPull(850, 'ci/12-orphan-check', {
+      head: { ref: 'ci/12-orphan-check', repo: { full_name: 'someone/fork' } },
+    });
+    expect(judge([developPull, fork]).ok).toBe(false);
+  });
+
+  it('does not count a merged pull request whose head repository is gone', () => {
+    const gone = mergedPull(850, 'ci/12-orphan-check', {
+      head: { ref: 'ci/12-orphan-check', repo: null },
+    });
+    expect(judge([developPull, gone]).ok).toBe(false);
   });
 });
 
@@ -414,6 +521,74 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     ).toThrow(
       `the open pull requests read does not hold this one, #${String(THIS_PR)}, so it is not the whole list`,
     );
+  });
+
+  it('fails, naming the read, when the closed pull requests cannot be read (#702)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(12, 'Todo')], failing: 'allClosed' }),
+      ),
+    ).toThrow('could not read the closed pull requests: HTTP 502: Bad Gateway');
+  });
+
+  it("refuses a closed pull request list without develop's head, its known positive (#702)", () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(12, 'Todo')], allClosed: [] }),
+      ),
+    ).toThrow(
+      `the closed pull requests read holds no merged pull request for develop's head ${DEVELOP_SHA}, so it is not the whole list`,
+    );
+  });
+
+  it('refuses a develop branch entry with no commit SHA (#702)', () => {
+    const r = reads({ items: [rawIssue(12, 'Todo')] });
+    const repo: Gh = (args) =>
+      same(args, BRANCHES_CALL)
+        ? JSON.stringify([[{ name: 'develop', commit: {} }]])
+        : r.repo(args);
+    expect(() => boardOrphans(ARGS, ENV, { ...r, repo })).toThrow(
+      'could not read the branches: develop has no commit SHA',
+    );
+  });
+
+  const withClosed = (entry: unknown) => () =>
+    boardOrphans(
+      ARGS,
+      ENV,
+      reads({ items: [rawIssue(12, 'Todo')], allClosed: [developPull, entry] }),
+    );
+  const CLOSED_SHAPE =
+    'could not read the closed pull requests: an entry has no number, merged_at, merge_commit_sha, head branch and head repository';
+  const closedWithout = (key: keyof ClosedPull) =>
+    Object.fromEntries(
+      Object.entries(mergedPull(850, 'x/1-y')).filter(([k]) => k !== key),
+    );
+
+  it('refuses a closed pull request entry with no number (#702)', () => {
+    expect(withClosed(closedWithout('number'))).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no merged_at field (#702)', () => {
+    expect(withClosed(closedWithout('merged_at'))).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no merge_commit_sha field (#702)', () => {
+    expect(withClosed(closedWithout('merge_commit_sha'))).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no head branch (#702)', () => {
+    const entry = { ...mergedPull(850, 'x/1-y'), head: { repo: null } };
+    expect(withClosed(entry)).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no head repository field (#702)', () => {
+    const entry = { ...mergedPull(850, 'x/1-y'), head: { ref: 'x/1-y' } };
+    expect(withClosed(entry)).toThrow(CLOSED_SHAPE);
   });
 
   it('refuses a branch entry with no name', () => {
@@ -526,7 +701,7 @@ describe("boardOrphans reads Dependabot's pull requests too (#661)", () => {
     ).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12: branch board/12-orphan-check',
       ],
     });
