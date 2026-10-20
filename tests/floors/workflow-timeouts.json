@@ -3,6 +3,6 @@
   "workflow-timeouts/inside-bound-jobs": 1,
   "workflow-timeouts/local-call-calls": 1,
   "workflow-timeouts/repo-calls": 2,
-  "workflow-timeouts/repo-jobs": 21,
-  "workflow-timeouts/workflows": 10
+  "workflow-timeouts/repo-jobs": 22,
+  "workflow-timeouts/workflows": 11
 }
