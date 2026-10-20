@@ -196,9 +196,16 @@ describe('offBoardBlockers names each blocker the board does not hold (operator 
   });
 });
 
-/** One board page as GitHub returns it, holding these item nodes. */
-function page(nodes: unknown[], title = TITLE): unknown {
-  return { data: { node: { title, items: { nodes } } } };
+/**
+ * One board page as GitHub returns it, holding these item nodes, with the
+ * board's item count (#703): by default a board these nodes are all of.
+ */
+function page(
+  nodes: unknown[],
+  title = TITLE,
+  totalCount = nodes.length,
+): unknown {
+  return { data: { node: { title, items: { totalCount, nodes } } } };
 }
 
 /** A raw item node for an open issue. */
@@ -282,6 +289,54 @@ describe('parseNextItems reads the board whole (#576)', () => {
   it('refuses a page whose board title differs', () => {
     expect(() => parseNextItems([page([], 'ShyTalk Stories')], TITLE)).toThrow(
       'ShyTalk Stories',
+    );
+  });
+});
+
+describe('parseNextItems refuses a read that is not the whole board (#703)', () => {
+  it('asks GitHub how many items the board holds', () => {
+    expect(NEXT_QUERY).toMatch(
+      /\bitems\(first: 100, after: \$endCursor\) \{ totalCount pageInfo\b/,
+    );
+  });
+
+  it('reads a whole board of two pages', () => {
+    const read = parseNextItems(
+      [
+        page([rawIssue(1), rawIssue(2)], TITLE, 3),
+        page([rawIssue(3)], TITLE, 3),
+      ],
+      TITLE,
+    );
+    expect(read.map((item) => item.number)).toEqual([1, 2, 3]);
+  });
+
+  it('refuses a short page, giving both numbers', () => {
+    expect(() =>
+      parseNextItems(
+        [page([rawIssue(1)], TITLE, 3), page([rawIssue(3)], TITLE, 3)],
+        TITLE,
+      ),
+    ).toThrow('the board has 3 items and 2 were read: nothing read');
+  });
+
+  it('refuses a read missing a page, giving both numbers', () => {
+    expect(() =>
+      parseNextItems([page([rawIssue(1), rawIssue(2)], TITLE, 3)], TITLE),
+    ).toThrow('the board has 3 items and 2 were read: nothing read');
+  });
+
+  it('names a board that changed while it was read', () => {
+    expect(() =>
+      parseNextItems(
+        [
+          page([rawIssue(1), rawIssue(2)], TITLE, 3),
+          page([rawIssue(3)], TITLE, 4),
+        ],
+        TITLE,
+      ),
+    ).toThrow(
+      'the board changed while it was read (its pages report 3, then 4 items): nothing read',
     );
   });
 });
@@ -384,6 +439,15 @@ describe('boardNext (#576)', () => {
     const { gh } = ghPrinting([page([])]);
     expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
       'Next: nothing is open.',
+    );
+  });
+
+  it('refuses a short read, naming no ticket (#703)', () => {
+    // As on 2026-10-20: the board's P0 was not in the read, and a P2 was named.
+    const p2 = { ...(rawIssue(2) as object), priority: { name: 'P2' } };
+    const { gh } = ghPrinting([page([p2], TITLE, 2)]);
+    expect(() => boardNext(['PVT_fixture', TITLE], gh)).toThrow(
+      'the board has 2 items and 1 were read: nothing read',
     );
   });
 

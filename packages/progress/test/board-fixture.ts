@@ -64,27 +64,31 @@ function node(today: string, story: Story): unknown {
   };
 }
 
-function page(today: string, stories: Story[]): unknown {
+/** One page, with the count of every item on the board that GitHub gives each page (#703). */
+function page(today: string, stories: Story[], totalCount: number): unknown {
   return {
     data: {
       node: {
         title: FIXTURE_TITLE,
-        items: { nodes: stories.map((story) => node(today, story)) },
+        items: {
+          totalCount,
+          nodes: stories.map((story) => node(today, story)),
+        },
       },
     },
   };
 }
 
 export function boardPages(today: string): unknown[] {
-  return [
-    page(today, [
+  const pages: Story[][] = [
+    [
       { number: 1, title: 'Epic M1: Core', estimate: null },
       { number: 2, title: 'Story two', estimate: 5, closed: 1 },
       { number: 3, title: 'Story three', estimate: 3, closed: 3 },
       { number: 4, title: 'Story four', estimate: null, closed: 20 },
       { number: 5, title: 'Story five', estimate: 8 },
-    ]),
-    page(today, [
+    ],
+    [
       { number: 6, title: 'Story six', estimate: 13 },
       {
         number: 7,
@@ -100,6 +104,8 @@ export function boardPages(today: string): unknown[] {
         stateReason: 'NOT_PLANNED',
       },
       { number: 9, title: 'Story nine', estimate: 3 },
-    ]),
+    ],
   ];
+  const totalCount = pages.flat().length;
+  return pages.map((stories) => page(today, stories, totalCount));
 }

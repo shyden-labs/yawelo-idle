@@ -90,6 +90,8 @@ const developPull = mergedPull(899, 'chore/earlier', {
 
 interface Fixture {
   items: unknown[];
+  /** The board's item count GitHub reports (#703); by default, `items` is all of it. */
+  totalCount?: number;
   title?: string;
   branches?: string[];
   pulls?: Pull[];
@@ -140,7 +142,15 @@ function reads(f: Fixture): OrphanReads {
     if (f.failing === 'board') throw new Error('HTTP 401: Bad credentials');
     return JSON.stringify([
       {
-        data: { node: { title: f.title ?? TITLE, items: { nodes: f.items } } },
+        data: {
+          node: {
+            title: f.title ?? TITLE,
+            items: {
+              totalCount: f.totalCount ?? f.items.length,
+              nodes: f.items,
+            },
+          },
+        },
       },
     ]);
   };
@@ -426,6 +436,19 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     expect(() =>
       boardOrphans(ARGS, ENV, reads({ items: [], failing: 'board' })),
     ).toThrow('could not read the board: HTTP 401: Bad credentials');
+  });
+
+  // The board holds an orphan the read lost: passing would let it through.
+  it('fails, naming the board, when the read is short of the board (#703)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(12, 'Todo')], totalCount: 2 }),
+      ),
+    ).toThrow(
+      'could not read the board: the board has 2 items and 1 were read: nothing read',
+    );
   });
 
   it('fails, naming the branches, when they cannot be read', () => {

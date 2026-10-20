@@ -13,7 +13,7 @@
  * takes at least the level of what waits on it (operator 2026-10-13, #578).
  */
 import { execFileSync } from 'node:child_process';
-import { assertTitle } from '../packages/progress/src/index.ts';
+import { assertBoard } from '../packages/progress/src/index.ts';
 import type { Gh } from './board-progress.ts';
 import { PRIORITY_LEVELS } from './board-setup.ts';
 
@@ -143,7 +143,7 @@ export function nextTicket(items: NextItem[]): NextItem | null {
 
 export const NEXT_QUERY = `query($id: ID!, $endCursor: String) {
   node(id: $id) { ... on ProjectV2 { title
-    items(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor }
+    items(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
       nodes {
         status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
         priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
@@ -184,13 +184,14 @@ interface RawPage {
 
 /**
  * The board's issues from the pages `gh api graphql --paginate --slurp`
- * returns for NEXT_QUERY, every page's title asserted first. Anything that
- * is not a whole issue is refused by name, and so is an issue with more
- * blockers than one read returns.
+ * returns for NEXT_QUERY, every page's title asserted first and the pages
+ * proved to hold the whole board (#703). Anything that is not a whole issue
+ * is refused by name, and so is an issue with more blockers than one read
+ * returns.
  */
 export function parseNextItems(pages: unknown[], title: string): NextItem[] {
+  assertBoard(pages, title);
   const typed = pages as RawPage[];
-  for (const page of typed) assertTitle(page.data.node.title, title);
   return typed.flatMap((page) =>
     page.data.node.items.nodes.map((node): NextItem => {
       const c = node.content;
