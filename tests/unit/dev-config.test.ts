@@ -464,3 +464,54 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
     expect(holdingDeploy()).toBeLessThan(deployIn('apps/site'));
   });
 });
+
+describe('the roadmap, judged once the deployed code has checked the board (#708)', () => {
+  interface Job {
+    needs?: string | string[];
+    'timeout-minutes'?: number;
+    environment?: unknown;
+    outputs?: Record<string, string>;
+    steps?: (Step & { id?: string; 'timeout-minutes'?: number })[];
+  }
+  const jobs = (): Record<string, Job> =>
+    (
+      parse(
+        readFileSync(join(ROOT, '.github/workflows/deploy-dev.yml'), 'utf8'),
+      ) as { jobs: Record<string, Job> }
+    ).jobs;
+  const roadmapStep = () =>
+    jobs()['verify-roadmap']?.steps?.find(
+      (step) => runOf(step) === 'node scripts/verify-roadmap.ts',
+    );
+
+  it('stamps the deploy time, to the millisecond, as the deploy job’s last step', () => {
+    const last = jobs()['deploy']?.steps?.at(-1);
+    expect(last?.id).toBe('deployed');
+    expect(runOf(last ?? {})).toBe(
+      'echo "at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_OUTPUT"',
+    );
+    expect(jobs()['deploy']?.outputs).toEqual({
+      'deployed-at': '${{ steps.deployed.outputs.at }}',
+    });
+  });
+
+  it('runs in its own job after the deploy, in the dev environment, at its own limit', () => {
+    const job = jobs()['verify-roadmap'];
+    expect(job?.needs).toBe('deploy');
+    expect(job?.environment).toStrictEqual({
+      name: 'dev',
+      url: 'https://dev.yawelo-idle.shyden.co.uk',
+    });
+    // 12 minutes of looks, under the step's 13 and the job's 15.
+    expect(roadmapStep()?.['timeout-minutes']).toBe(13);
+    expect(job?.['timeout-minutes']).toBe(15);
+  });
+
+  it('hands the check the deploy time, the front door and the password', () => {
+    expect(roadmapStep()?.env).toStrictEqual({
+      DEV_WEB_URL: 'https://dev.yawelo-idle.shyden.co.uk/',
+      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
+      DEPLOYED_AT: '${{ needs.deploy.outputs.deployed-at }}',
+    });
+  });
+});

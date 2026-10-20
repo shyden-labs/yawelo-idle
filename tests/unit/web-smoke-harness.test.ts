@@ -168,7 +168,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     ).toBeUndefined();
   });
 
-  it('posts dev-verified only once the dev smoke and the holding page’s dev copy have passed (#621)', () => {
+  it('posts dev-verified only once the dev smoke, the holding page’s dev copy (#621) and the roadmap (#708) have passed', () => {
     const posting = Object.entries(deployDev.jobs).filter(([, job]) =>
       (job.steps ?? []).some((step) =>
         /context=dev-verified\b/.test(runOf(step)),
@@ -178,6 +178,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     expect(needsOf(deployDev.jobs['dev-verified'])).toEqual([
       'smoke',
       'verify-holding',
+      'verify-roadmap',
     ]);
   });
 });

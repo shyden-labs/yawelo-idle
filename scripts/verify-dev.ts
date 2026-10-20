@@ -460,6 +460,9 @@ export function healthJudgement(probe: Probe, sha: string): Judgement {
 /** Two of the roadmap's 10-minute checks (website spec §5.2 item 6). */
 const ROADMAP_CHECK_MAX_AGE_MS = 20 * 60_000;
 
+/** The roadmap check that the record was made after the deploy (#708). */
+const AFTER_DEPLOY = 'after deploy';
+
 /** A health field in a message: a string as it is, anything else as JSON. */
 const shown = (value: unknown): string =>
   typeof value === 'string' ? value : JSON.stringify(value);
@@ -488,9 +491,14 @@ interface RoadmapHealth {
  * is outstanding (drift stays until a webhook is seen delivering a change
  * again, operator decision 2026-10-06), reads are not still failing at a
  * check after the one that failed (#693), and the 10-minute check ran within
- * two intervals.
+ * two intervals. Only a record whose last check came at or after
+ * `deployedAtMs` is judged: an earlier one is the previous code's (#708).
  */
-export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
+export function roadmapJudgement(
+  probe: Probe,
+  nowMs: number,
+  deployedAtMs: number,
+): Judgement {
   let body: RoadmapHealth = {};
   return judge([
     {
@@ -514,6 +522,20 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
       },
     },
     {
+      // A record the previous code made says nothing about this deploy's
+      // code, so none of it is judged (#708: deploy-dev run 39353024750
+      // judged the old Worker's check). A last check that is not a time is
+      // left to the check-age check, which names it.
+      name: AFTER_DEPLOY,
+      gate: true,
+      problem: () => {
+        const check = timeOf(body.lastCheckAt);
+        return Number.isFinite(check) && check < deployedAtMs
+          ? `roadmap: last check ${shown(body.lastCheckAt)} was made before the deploy at ${new Date(deployedAtMs).toISOString()}, by the code that deploy replaced`
+          : undefined;
+      },
+    },
+    {
       name: 'version',
       problem: () =>
         typeof body.version === 'number' && body.version >= 1
@@ -531,18 +553,15 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
     },
     {
       name: 'reads',
-      problem: () => {
-        if (body.readFailingSince === null) return undefined;
-        // A check stamps lastCheckAt as it starts, and a failed read stamps
-        // readFailingSince with its own start: a failure no later check has
-        // met yet is not red (#693, Shyden 2026-10-19). Times that cannot be
-        // compared are red.
-        const since = timeOf(body.readFailingSince);
-        const check = timeOf(body.lastCheckAt);
-        if (Number.isFinite(since) && Number.isFinite(check) && check <= since)
-          return undefined;
-        return `roadmap: reads failing since ${shown(body.readFailingSince)}, the check at ${stamped(body.lastCheckAt)} included: ${shown(body.readError)}`;
-      },
+      // Any failed read is red (Shyden, 2026-10-20, on #708: "treat any
+      // failure as red"). The record's last check came after the deploy, so
+      // the failure is the deployed code's, or the old code's with the new
+      // code's check failing too. #693's wait for a second failed check
+      // would let a deploy that breaks reads pass on its first.
+      problem: () =>
+        body.readFailingSince === null
+          ? undefined
+          : `roadmap: reads failing since ${stamped(body.readFailingSince)} (last check ${stamped(body.lastCheckAt)}): ${shown(body.readError)}`,
     },
     {
       name: 'check age',
@@ -556,8 +575,59 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
     noIndexCheck('roadmap', probe),
   ]);
 }
-export function roadmapProblems(probe: Probe, nowMs: number): string[] {
-  return [...roadmapJudgement(probe, nowMs).problems];
+export function roadmapProblems(
+  probe: Probe,
+  nowMs: number,
+  deployedAtMs: number,
+): string[] {
+  return [...roadmapJudgement(probe, nowMs, deployedAtMs).problems];
+}
+
+/**
+ * The live roadmap's health as the deployed code reports it (#708): waits
+ * for the site's first 10-minute check at or after `deployedAtMs`, looking
+ * `polls` times `pollMs` apart, then judges that record once. A record the
+ * previous code made is waited past, never judged; anything else (a failed
+ * request, a wrong status, a record from after the deploy with a problem)
+ * fails at once. At the last look it fails naming the last check it saw.
+ */
+export async function verifyRoadmap(
+  target: Pick<Target, 'webUrl' | 'password'>,
+  deployedAtMs: number,
+  { polls, pollMs }: Wait,
+): Promise<string[]> {
+  if (!Number.isFinite(deployedAtMs))
+    throw new RangeError(
+      `the deploy time must be a time, got ${String(deployedAtMs)}`,
+    );
+  if (!Number.isInteger(polls) || polls < 1)
+    throw new RangeError(
+      `polls must be a whole number of at least 1, got ${String(polls)}`,
+    );
+  const url = new URL('/api/roadmap/health', target.webUrl).href;
+  const headers = { Authorization: basicAuthorization(target.password) };
+  let previous: readonly string[] = [];
+  for (let poll = 1; poll <= polls; poll += 1) {
+    // The judgement the probe got, or none when the request failed outright.
+    const seen: { judged?: Judgement } = {};
+    const outcome = await check('roadmap', url, headers, (p) => {
+      seen.judged = roadmapJudgement(p, Date.now(), deployedAtMs);
+      return [...seen.judged.problems];
+    });
+    const { judged } = seen;
+    const madeBefore =
+      judged !== undefined &&
+      judged.problems.length > 0 &&
+      judged.checked.at(-1) === AFTER_DEPLOY;
+    if (!madeBefore) return outcome.problems;
+    previous = judged.problems;
+    if (poll < polls)
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  return [
+    `roadmap: no check after the deploy at ${new Date(deployedAtMs).toISOString()} in ${String(polls)} looks ${String(pollMs)} ms apart`,
+    ...previous,
+  ];
 }
 
 export function healthProblems(probe: Probe, sha: string): string[] {
@@ -841,8 +911,10 @@ async function lookAtPages(
  * The rest of checks 3, 5, 6 and 7, once every page serves the expected
  * commit: the holding page's stylesheet (named by the front door's home page,
  * `home`, #673), the game's script (named by the shell among `pages`), the
- * gate in front of the game and of the site Worker's own address, the game's
- * retired address, and the live roadmap's health (#341).
+ * gate in front of the game and of the site Worker's own address, and the
+ * game's retired address. The live roadmap's health (#341) is judged by
+ * `verifyRoadmap`, in its own job, once the deployed code has checked the
+ * board (#708).
  */
 async function lookAtTheRest(
   look: Look,
@@ -876,14 +948,12 @@ async function lookAtTheRest(
       gateProblems('site without credentials', p),
     ),
     await check('game address', target.gameUrl, {}, retiredProblems),
-    await look('web', 'roadmap health', at('/api/roadmap/health'), right, (p) =>
-      roadmapProblems(p, Date.now()),
-    ),
   );
   return outcomes;
 }
 
-function required(name: string): string {
+/** An environment variable the run needs, refused when unset or empty. */
+export function required(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === '')
     throw new Error(`${name} is not set`);

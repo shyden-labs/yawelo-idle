@@ -1,16 +1,17 @@
 {
-  "verify-dev/broken-site-problems": 22,
+  "verify-dev/broken-site-problems": 24,
   "verify-dev/game-shell-checks": 4,
   "verify-dev/gate-checks": 3,
   "verify-dev/health-checks": 4,
-  "verify-dev/healthy-site-probes": 16,
+  "verify-dev/healthy-site-probes": 15,
   "verify-dev/holding-checks": 4,
-  "verify-dev/roadmap-checks": 7,
-  "verify-dev/roadmap-checks-at-the-bound": 7,
+  "verify-dev/roadmap-checks": 8,
+  "verify-dev/roadmap-checks-at-the-bound": 8,
+  "verify-dev/roadmap-wait-looks": 3,
   "verify-dev/robots-checks": 2,
   "verify-dev/site-checks": 4,
-  "verify-dev/stale-page-probes": 34,
-  "verify-dev/stale-site-probes": 24,
+  "verify-dev/stale-page-probes": 33,
+  "verify-dev/stale-site-probes": 23,
   "verify-dev/stylesheet-checks": 3,
   "verify-dev/web-checks": 3
 }

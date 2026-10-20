@@ -39,6 +39,9 @@ jobs:
     environment:
       name: dev
       url: https://dev.yawelo-idle.shyden.co.uk
+    # When the deploy finished, for verify-roadmap (#708).
+    outputs:
+      deployed-at: ${{ steps.deployed.outputs.at }}
     # The Cloudflare token is NOT here: it is given only to the steps that call
     # Cloudflare (#395), so npm ci's install scripts and the build never hold it.
     env:
@@ -158,6 +161,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"
+      # Last, so every deploy above has returned: a roadmap check that began
+      # before this time may be the previous site Worker's, and verify-roadmap
+      # waits past it (#708).
+      - name: Note when the deploy finished
+        id: deployed
+        run: echo "at=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_OUTPUT"
 
   verify:
     needs: deploy
@@ -188,6 +197,32 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
+
+  # The live roadmap's health, from the first check the deployed site Worker
+  # made (#708). The site reads the board every 10 minutes, so this waits up
+  # to 12 for a check after the deploy (Shyden, 2026-10-20: wait, no new
+  # endpoint). Its own job, so the wait holds back neither verify nor smoke.
+  verify-roadmap:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: dev
+      url: https://dev.yawelo-idle.shyden.co.uk
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Verify the roadmap as the deployed code checked it (waits up to 12 minutes for its first check)
+        timeout-minutes: 13
+        env:
+          DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
+          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          DEPLOYED_AT: ${{ needs.deploy.outputs.deployed-at }}
+        run: node scripts/verify-roadmap.ts
 
   # The game's browser smoke (tests/web), re-run against dev once verify has
   # seen this commit served there (#123 DoD). Same pinned image as CI's
@@ -249,9 +284,9 @@ jobs:
         run: node scripts/verify-prod.ts --dev-copy
 
   # dev-verified means every check above passed: verify-dev, then the smoke,
-  # and the holding page's dev copy (#621).
+  # the holding page's dev copy (#621), and the roadmap (#708).
   dev-verified:
-    needs: [smoke, verify-holding]
+    needs: [smoke, verify-holding, verify-roadmap]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions:
@@ -263,5 +298,5 @@ jobs:
         run: >-
           gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
           -f state=success -f context=dev-verified
-          -f description="Live on dev: password-gated, this commit, game behind the site, D1 answers, smoke clean, holding copy noindex"
+          -f description="Live on dev: password-gated, this commit, game behind the site, D1 answers, smoke clean, holding copy noindex, roadmap fresh"
           -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

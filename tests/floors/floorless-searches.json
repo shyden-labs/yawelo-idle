@@ -1,11 +1,11 @@
 {
-  "floorless-searches/files": 452,
+  "floorless-searches/files": 454,
   "floorless-searches/fixture-listed": 3,
   "floorless-searches/fixture-twins-listed": 3,
   "floorless-searches/fixture-walk": 2,
-  "floorless-searches/scalar-zeros": 70,
-  "floorless-searches/sites": 270,
-  "floorless-searches/tests": 2760,
+  "floorless-searches/scalar-zeros": 71,
+  "floorless-searches/sites": 271,
+  "floorless-searches/tests": 2770,
   "floorless-searches/twin-sites": 10,
-  "floorless-searches/zero-checked-files": 452
+  "floorless-searches/zero-checked-files": 454
 }

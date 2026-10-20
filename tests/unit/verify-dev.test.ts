@@ -21,6 +21,7 @@ import {
   PREVIEW_PAGES,
   roadmapJudgement,
   roadmapProblems,
+  verifyRoadmap,
   retiredJudgement,
   retiredProblems,
   robotsJudgement,
@@ -497,6 +498,7 @@ describe('roadmapProblems (#341)', () => {
   const ALL_ROADMAP_CHECKS = [
     'status',
     'JSON',
+    'after deploy',
     'version',
     'drift',
     'reads',
@@ -504,6 +506,8 @@ describe('roadmapProblems (#341)', () => {
     'noindex',
   ];
   const NOW = Date.parse('2026-10-06T13:00:00Z');
+  /** The deploy each record is judged against: before every check below (#708). */
+  const DEPLOYED = Date.parse('2026-10-06T12:30:00Z');
   const healthy = {
     lastEventAt: '2026-10-06T12:58:00.000Z',
     lastCheckAt: '2026-10-06T12:51:00.000Z',
@@ -518,7 +522,7 @@ describe('roadmapProblems (#341)', () => {
     probe(200, JSON.stringify({ ...healthy, ...over }), noindex);
 
   it('accepts a read board with no drift, no failing reads and a recent check', () => {
-    const judged = roadmapJudgement(health(), NOW);
+    const judged = roadmapJudgement(health(), NOW, DEPLOYED);
     expect(
       searched(judged.problems, { of: judged.checked, what: 'roadmap checks' }),
     ).toEqual([]);
@@ -528,7 +532,7 @@ describe('roadmapProblems (#341)', () => {
   });
 
   it('fails a board never read', () => {
-    expect(roadmapProblems(health({ version: 0 }), NOW)).toEqual([
+    expect(roadmapProblems(health({ version: 0 }), NOW, DEPLOYED)).toEqual([
       'roadmap: version 0: the board has never been read',
     ]);
   });
@@ -542,6 +546,7 @@ describe('roadmapProblems (#341)', () => {
           lastDriftAt: '2026-10-06T12:41:00.000Z',
         }),
         NOW,
+        DEPLOYED,
       ),
     ).toEqual([
       'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
@@ -555,88 +560,70 @@ describe('roadmapProblems (#341)', () => {
       roadmapProblems(
         health({ drift: 2, lastEventAt: null, lastDriftAt: undefined }),
         NOW,
+        DEPLOYED,
       ),
     ).toEqual([
       'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
-  it('fails reads still failing at a later check, with the reason', () => {
+  // #708 (Shyden, 2026-10-20: "treat any failure as red"): only a record
+  // whose last check came after the deploy is judged, so a failed read it
+  // carries is the deployed code's, or the old code's with the new code's
+  // check failing too. Either is red at once: #693's wait for a second
+  // failed check would let a deploy that breaks reads pass on its first.
+  it.each([
+    [
+      'still failing at a later check',
+      '2026-10-06T12:40:00.000Z',
+      'GitHub refused POST /graphql: HTTP 502',
+    ],
+    [
+      'one millisecond before the last check',
+      '2026-10-06T12:50:59.999Z',
+      'GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
+    ],
+    [
+      'at the last check, the first after the deploy',
+      '2026-10-06T12:51:00.000Z',
+      'GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
+    ],
+    [
+      'in an event read after the last check',
+      '2026-10-06T12:55:00.000Z',
+      'GitHub refused POST /graphql: HTTP 502',
+    ],
+    ['at a time it cannot read', 'soon', 'GitHub refused'],
+  ])('fails a read that failed %s, with the reason', (_label, since, error) => {
     expect(
-      roadmapProblems(
-        health({
-          readFailingSince: '2026-10-06T12:40:00.000Z',
-          readError: 'GitHub refused POST /graphql: HTTP 502',
-        }),
+      roadmapJudgement(
+        health({ readFailingSince: since, readError: error }),
         NOW,
+        DEPLOYED,
       ),
-    ).toEqual([
-      'roadmap: reads failing since 2026-10-06T12:40:00.000Z, the check at 2026-10-06T12:51:00.000Z included: GitHub refused POST /graphql: HTTP 502',
-    ]);
+    ).toEqual({
+      checked: ALL_ROADMAP_CHECKS,
+      problems: [
+        `roadmap: reads failing since ${since} (last check 2026-10-06T12:51:00.000Z): ${error}`,
+      ],
+    });
   });
 
-  // #693 (Shyden, 2026-10-19): one failed read is red only once a later
-  // check has failed too. A check stamps lastCheckAt as it starts and a
-  // failed read stamps readFailingSince with its own start, so a later
-  // check that also failed is lastCheckAt after readFailingSince.
-  it('fails a read failure one millisecond before the last check', () => {
+  it('fails a read failure the health left out of its fields', () => {
     expect(
-      roadmapProblems(
-        health({
-          readFailingSince: '2026-10-06T12:50:59.999Z',
-          readError:
-            'GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
-        }),
-        NOW,
-      ),
+      roadmapProblems(health({ readFailingSince: undefined }), NOW, DEPLOYED),
     ).toEqual([
-      'roadmap: reads failing since 2026-10-06T12:50:59.999Z, the check at 2026-10-06T12:51:00.000Z included: GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
-    ]);
-  });
-
-  it('passes a read that failed at the last check, until the next check reads again', () => {
-    const judged = roadmapJudgement(
-      health({
-        readFailingSince: '2026-10-06T12:51:00.000Z',
-        readError:
-          'GitHub refused GET /orgs/shyden-labs/installation: HTTP 520',
-      }),
-      NOW,
-    );
-    // The whole judgement: every check ran, the reads check included, and
-    // none found a problem. The proved empty search lives in the healthy
-    // case above, which owns this floor (#693).
-    expect(judged).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
-  });
-
-  it('passes an event read that failed after the last check', () => {
-    const judged = roadmapJudgement(
-      health({
-        readFailingSince: '2026-10-06T12:55:00.000Z',
-        readError: 'GitHub refused POST /graphql: HTTP 502',
-      }),
-      NOW,
-    );
-    // The whole judgement: every check ran, the reads check included, and
-    // none found a problem. The proved empty search lives in the healthy
-    // case above, which owns this floor (#693).
-    expect(judged).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
-  });
-
-  it('fails a failing read whose time it cannot compare, rather than pass it', () => {
-    expect(
-      roadmapProblems(
-        health({ readFailingSince: 'soon', readError: 'GitHub refused' }),
-        NOW,
-      ),
-    ).toEqual([
-      'roadmap: reads failing since soon, the check at 2026-10-06T12:51:00.000Z included: GitHub refused',
+      'roadmap: reads failing since missing (last check 2026-10-06T12:51:00.000Z): null',
     ]);
   });
 
   it('fails a last check more than 20 minutes old', () => {
     expect(
-      roadmapProblems(health({ lastCheckAt: '2026-10-06T12:39:59.000Z' }), NOW),
+      roadmapProblems(
+        health({ lastCheckAt: '2026-10-06T12:39:59.000Z' }),
+        NOW,
+        DEPLOYED,
+      ),
     ).toEqual([
       'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago: the cron is not running',
     ]);
@@ -646,6 +633,7 @@ describe('roadmapProblems (#341)', () => {
     const judged = roadmapJudgement(
       health({ lastCheckAt: '2026-10-06T12:40:00.000Z' }),
       NOW,
+      DEPLOYED,
     );
     expect(
       searched(judged.problems, { of: judged.checked, what: 'roadmap checks' }),
@@ -659,16 +647,63 @@ describe('roadmapProblems (#341)', () => {
   });
 
   it('fails a check that never ran', () => {
-    expect(roadmapProblems(health({ lastCheckAt: null }), NOW)).toEqual([
+    expect(
+      roadmapProblems(health({ lastCheckAt: null }), NOW, DEPLOYED),
+    ).toEqual([
       'roadmap: last check null, more than 20 minutes ago: the cron is not running',
     ]);
   });
 
+  // #708: deploy-dev run 39353024750 judged the old Worker's 01:20:56 check
+  // after the 01:28:39 deploy. A record made before the deploy is the
+  // previous code's, so it is not judged at all: the rest of its checks
+  // would judge the old code too.
+  it('refuses a check made before the deploy, naming both times, and judges nothing after it', () => {
+    const judged = roadmapJudgement(
+      health({
+        lastCheckAt: '2026-10-06T12:29:59.999Z',
+        drift: 1,
+        version: 0,
+      }),
+      NOW,
+      DEPLOYED,
+    );
+    expect(judged).toEqual({
+      checked: ['status', 'JSON', 'after deploy'],
+      problems: [
+        'roadmap: last check 2026-10-06T12:29:59.999Z was made before the deploy at 2026-10-06T12:30:00.000Z, by the code that deploy replaced',
+      ],
+    });
+  });
+
+  it('judges a check made at the deploy’s own millisecond as today', () => {
+    expect(
+      roadmapJudgement(
+        health({ lastCheckAt: '2026-10-06T12:30:00.000Z' }),
+        Date.parse('2026-10-06T12:31:00Z'),
+        DEPLOYED,
+      ),
+    ).toEqual({ checked: ALL_ROADMAP_CHECKS, problems: [] });
+  });
+
+  // A last check that cannot be read as a time is not called "before the
+  // deploy": the check-age check names it, as before #708.
+  it('leaves a last check that is not a time to the check-age check', () => {
+    expect(
+      roadmapJudgement(health({ lastCheckAt: 'soon' }), NOW, DEPLOYED),
+    ).toEqual({
+      checked: ALL_ROADMAP_CHECKS,
+      problems: [
+        'roadmap: last check soon, more than 20 minutes ago: the cron is not running',
+      ],
+    });
+  });
+
   it('fails a non-JSON body and a non-200', () => {
-    expect(roadmapProblems(probe(200, 'oops', noindex), NOW)).toEqual([
-      'roadmap: /api/roadmap/health did not return JSON',
-    ]);
-    expect(roadmapProblems(probe(401, '', noindex), NOW)).toEqual([
+    expect(roadmapProblems(probe(200, 'oops', noindex), NOW, DEPLOYED)).toEqual(
+      ['roadmap: /api/roadmap/health did not return JSON'],
+    );
+    expect(roadmapProblems(probe(401, '', noindex), NOW, DEPLOYED)).toEqual([
       'roadmap: /api/roadmap/health status 401, expected 200',
     ]);
   });
@@ -678,6 +713,7 @@ describe('roadmapProblems (#341)', () => {
       roadmapProblems(
         probe(200, JSON.stringify(healthy), { 'x-robots-tag': 'noindex' }),
         NOW,
+        DEPLOYED,
       ),
     ).toEqual([`roadmap: X-Robots-Tag is "noindex", expected "${NO_INDEX}"`]);
   });
@@ -741,6 +777,11 @@ describe('verifyDev', () => {
   const seenAuthorization: string[] = [];
   /** What /api/roadmap/health answers to an authorised request (#341). */
   let roadmap: Record<string, unknown> = {};
+  /** Records answered first, one per look, before `roadmap` (#708). */
+  let roadmapLooks: Record<string, unknown>[] = [];
+  let roadmapStatus = 200;
+  /** Drops the roadmap request's connection, so the request fails outright. */
+  let roadmapDrops = false;
 
   /** One fake for both addresses: `role` says which Worker's pages it plays. */
   const handle =
@@ -762,8 +803,16 @@ describe('verifyDev', () => {
         return;
       }
       if (req.url === '/api/roadmap/health' && authorised) {
-        res.writeHead(200, { 'content-type': 'application/json', ...tag });
-        res.end(JSON.stringify(roadmap));
+        if (roadmapDrops) {
+          req.socket.destroy();
+          return;
+        }
+        const record = roadmapLooks.shift() ?? roadmap;
+        res.writeHead(roadmapStatus, {
+          'content-type': 'application/json',
+          ...tag,
+        });
+        res.end(JSON.stringify(record));
         return;
       }
       if (req.url === '/retired-game/') {
@@ -908,19 +957,125 @@ describe('verifyDev', () => {
       readFailingSince: null,
       readError: null,
     };
+    roadmapLooks = [];
+    roadmapStatus = 200;
+    roadmapDrops = false;
   };
 
-  it('fails a site whose roadmap missed a webhook (#341)', async () => {
-    reset();
-    roadmap = {
-      ...roadmap,
-      drift: 1,
-      driftTotal: 1,
-      lastDriftAt: '2026-10-19T00:50:00.000Z',
-    };
-    expect(await verifyDev(target(), { polls: 1, pollMs: 0 })).toEqual([
-      `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
-    ]);
+  describe('verifyRoadmap (#708)', () => {
+    const ROADMAP = '/api/roadmap/health';
+    const looks = () => seenUrls.filter((url) => url === ROADMAP).length;
+    /** A minute ago: the reset record's check, stamped at reset, is after it. */
+    const deployed = () => Date.now() - 60_000;
+    const before = (at: number) => new Date(at - 1).toISOString();
+    const replaced = (at: number) =>
+      `roadmap: last check ${before(at)} was made before the deploy at ${new Date(at).toISOString()}, by the code that deploy replaced`;
+
+    it('waits past checks the old code made, then judges the first one after the deploy, with the password', async () => {
+      reset();
+      const at = deployed();
+      roadmapLooks = [
+        { ...roadmap, lastCheckAt: before(at) },
+        { ...roadmap, lastCheckAt: before(at) },
+      ];
+      const problems = await verifyRoadmap(target(), at, {
+        polls: 3,
+        pollMs: 0,
+      });
+      // The exact looks first: a floor that moved would otherwise stop the
+      // test before they were checked (measured on #332).
+      const looked = looks();
+      expect(looked).toBe(3);
+      expect(seenAuthorization).toEqual([
+        basicAuthorization(PASSWORD),
+        basicAuthorization(PASSWORD),
+        basicAuthorization(PASSWORD),
+      ]);
+      expect(searched(problems, { of: looked, what: 'roadmap looks' })).toEqual(
+        [],
+      );
+      expect(
+        floorBreach('verify-dev/roadmap-wait-looks', looked),
+      ).toBeUndefined();
+    });
+
+    it('fails at its ceiling, naming the last check the old code made', async () => {
+      reset();
+      const at = deployed();
+      roadmap = { ...roadmap, lastCheckAt: before(at) };
+      expect(
+        await verifyRoadmap(target(), at, { polls: 3, pollMs: 0 }),
+      ).toEqual([
+        `roadmap: no check after the deploy at ${new Date(at).toISOString()} in 3 looks 0 ms apart`,
+        replaced(at),
+      ]);
+      expect(looks()).toBe(3);
+    });
+
+    it('fails a check after the deploy that missed a webhook, without looking again (#341)', async () => {
+      reset();
+      roadmap = {
+        ...roadmap,
+        drift: 1,
+        driftTotal: 1,
+        lastDriftAt: '2026-10-19T00:50:00.000Z',
+      };
+      expect(
+        await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
+      ).toEqual([
+        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
+      ]);
+      expect(looks()).toBe(1);
+    });
+
+    it('fails a check after the deploy served without the noindex header', async () => {
+      reset();
+      tagged = false;
+      expect(
+        await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
+      ).toEqual([
+        'roadmap: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"',
+      ]);
+      expect(looks()).toBe(1);
+    });
+
+    it('fails a status other than 200 at once, without waiting', async () => {
+      reset();
+      roadmapStatus = 503;
+      expect(
+        await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
+      ).toEqual(['roadmap: /api/roadmap/health status 503, expected 200']);
+      expect(looks()).toBe(1);
+    });
+
+    it('fails a request that fails outright at once, without waiting', async () => {
+      reset();
+      roadmapDrops = true;
+      expect(
+        await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
+      ).toEqual([
+        `roadmap: request to ${new URL(ROADMAP, base).href} failed: fetch failed`,
+      ]);
+      expect(looks()).toBe(1);
+    });
+
+    // Every comparison with NaN is false, so a deploy time that is not a time
+    // would pass the old code's record as the new code's.
+    it('refuses a deploy time that is not a time', async () => {
+      reset();
+      await expect(
+        verifyRoadmap(target(), Number.NaN, { polls: 3, pollMs: 0 }),
+      ).rejects.toThrow('the deploy time must be a time, got NaN');
+      expect(looks()).toBe(0);
+    });
+
+    it.each([0, 1.5])('refuses %s looks', async (polls) => {
+      await expect(
+        verifyRoadmap(target(), deployed(), { polls, pollMs: 0 }),
+      ).rejects.toThrow(
+        `polls must be a whole number of at least 1, got ${String(polls)}`,
+      );
+    });
   });
 
   const notServed = (polls: number) =>
@@ -944,7 +1099,6 @@ describe('verifyDev', () => {
       '/play/',
       'site:/',
       '/retired-game/',
-      '/api/roadmap/health',
     ]);
     expect(seenAuthorization).toEqual([
       '',
@@ -959,7 +1113,6 @@ describe('verifyDev', () => {
       '',
       '',
       '',
-      basicAuthorization(PASSWORD),
     ]);
     expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
     expect(
@@ -1042,8 +1195,9 @@ describe('verifyDev', () => {
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     // The exact count first: a floor that moved would otherwise stop the
     // test before it ran (measured on #332).
-    // The last look's sixteenth probe is the roadmap's health (#341).
-    expect(requests, 'two looks of nine probes, then one of sixteen').toBe(34);
+    // The roadmap's health is no longer among the last look's probes: its
+    // own job judges it once a check after the deploy exists (#708).
+    expect(requests, 'two looks of nine probes, then one of fifteen').toBe(33);
     expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
     expect(
       floorBreach('verify-dev/stale-page-probes', requests),
@@ -1118,8 +1272,8 @@ describe('verifyDev', () => {
     // test before it ran (measured on #332).
     expect(
       requests,
-      'two stale looks of four probes, then one of sixteen',
-    ).toBe(24);
+      'two stale looks of four probes, then one of fifteen',
+    ).toBe(23);
     expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
     expect(
       floorBreach('verify-dev/stale-site-probes', requests),
@@ -1165,7 +1319,7 @@ describe('verifyDev', () => {
       'web without credentials: answered 302, expected 401; the password gate is not in front of it',
       'web without credentials: no Basic WWW-Authenticate challenge',
     ]);
-    expect(requests, 'one look of sixteen probes').toBe(16);
+    expect(requests, 'one look of fifteen probes').toBe(15);
   });
 
   it('fails at once when a host that has answered drops a connection', async () => {
@@ -1188,7 +1342,7 @@ describe('verifyDev', () => {
         new RegExp(`^robots\\.txt: request to ${base}/robots\\.txt failed: `),
       ),
     ]);
-    expect(requests, 'one look of sixteen probes').toBe(16);
+    expect(requests, 'one look of fifteen probes').toBe(15);
   });
 
   it('fails when the noindex header is missing everywhere', async () => {
@@ -1207,7 +1361,6 @@ describe('verifyDev', () => {
       ),
       `web ${STYLESHEET}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       `web ${SCRIPT}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
-      'roadmap: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"',
     ]);
   });
 
@@ -1260,12 +1413,30 @@ describe('verifyDev', () => {
       { ...target(), webUrl: `${origin}/`, syncUrl: origin },
       once,
     );
+    // The roadmap's own job (#708): its ceiling, and a failed request.
+    reset();
+    const deployedAt = Date.now() + 60_000;
+    const roadmapWaited = await verifyRoadmap(target(), deployedAt, once);
+    const roadmapUnreachable = await verifyRoadmap(
+      { ...target(), webUrl: `${origin}/` },
+      deployedAt,
+      once,
+    );
     // Every kind of message: a judged leak, a wait, judged answers, failed requests.
     expect(leaking).toHaveLength(6);
     expect(stale).toHaveLength(3);
-    expect(untagged).toHaveLength(10);
+    expect(untagged).toHaveLength(9);
     expect(unreachable).toHaveLength(3);
-    const reported = [...leaking, ...stale, ...untagged, ...unreachable];
+    expect(roadmapWaited).toHaveLength(2);
+    expect(roadmapUnreachable).toHaveLength(1);
+    const reported = [
+      ...leaking,
+      ...stale,
+      ...untagged,
+      ...unreachable,
+      ...roadmapWaited,
+      ...roadmapUnreachable,
+    ];
     const credential = basicAuthorization(PASSWORD).slice(6);
     const showingPassword = reported.filter((p) => p.includes(PASSWORD));
     const showingCredential = reported.filter((p) => p.includes(credential));
