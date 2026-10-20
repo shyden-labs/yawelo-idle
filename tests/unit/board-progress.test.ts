@@ -89,6 +89,13 @@ describe('boardProgress (#340, in-process since #490)', () => {
     );
   });
 
+  it('refuses a read missing a page, giving no line (#703)', () => {
+    const { gh } = ghPrinting(boardPages(TODAY).slice(0, 1));
+    expect(() =>
+      boardProgress([NODE_ID, FIXTURE_TITLE, FIXTURE_REPO], gh, TODAY),
+    ).toThrow('the board has 9 items and 5 were read: nothing read');
+  });
+
   it('fails, giving no line, when gh fails', () => {
     const gh: Gh = () => {
       throw new Error('gh: HTTP 502');

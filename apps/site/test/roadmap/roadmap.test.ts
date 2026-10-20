@@ -394,6 +394,16 @@ describe('reading the board', () => {
       'the board is "ShyTalk Stories", not "Fixture Stories": nothing read',
     );
   });
+
+  // The fixture's 9 items, with GitHub counting 10 on the board (#703).
+  it('refuses a read short of the board, keeping nothing from it', async () => {
+    await configureFake({ totalCount: 10 });
+    const health = await inRoadmap((r) => r.health());
+    expect(health.version).toBe(0);
+    expect(health.readError).toBe(
+      'the board has 10 items and 9 were read: nothing read',
+    );
+  });
 });
 
 describe('a failed read', () => {

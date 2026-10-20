@@ -230,7 +230,7 @@ const LABELS_PER_ISSUE = 20;
  */
 export const BOARD_QUERY = `query($id: ID!, $endCursor: String) {
   node(id: $id) { ... on ProjectV2 { title
-    items(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor }
+    items(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
       nodes { id updatedAt
         estimate: fieldValueByName(name: "Estimate") { ... on ProjectV2ItemFieldNumberValue { number } }
         content { __typename
@@ -256,7 +256,9 @@ interface RawNode {
   } | null;
 }
 interface RawPage {
-  data: { node: { title: string; items: { nodes: RawNode[] } } };
+  data: {
+    node: { title: string; items: { totalCount?: unknown; nodes: RawNode[] } };
+  };
 }
 
 /** A page as it may come back: a wrong node id gives `node: null` or `{}`. */
@@ -435,10 +437,42 @@ export function roadmapItems(
 /**
  * Refuse pages that are not all of the board asked for (#341): each page's
  * title is checked, the second and later included, before anything is read
- * from them. The close-out script and the roadmap Worker both call it.
+ * from them, and then that the pages hold every item the board has (#703).
+ * The close-out script, the roadmap Worker, board-next and board-orphans all
+ * call it.
  */
 export function assertBoard(pages: unknown[], title: string): void {
-  for (const page of pages) assertTitle(boardOf(page).title, title);
+  const boards = pages.map(boardOf);
+  for (const board of boards) assertTitle(board.title, title);
+  assertWhole(boards);
+}
+
+/**
+ * Refuse a read short of the board (#703): every page carries GitHub's count
+ * of the board's items, and the pages together must hold exactly that many.
+ * Pages are read one after another, so a card added or removed between two
+ * of them makes their counts differ: that is named as a change, since
+ * nothing is wrong and the next read is whole.
+ */
+function assertWhole(boards: RawPage['data']['node'][]): void {
+  if (boards.length === 0)
+    throw new Error('no page of the board came back: nothing read');
+  const counts = boards.map((board) => board.items.totalCount);
+  if (!counts.every((count) => Number.isInteger(count)))
+    throw new Error(
+      'a page came back without the board’s item count (items.totalCount): nothing read',
+    );
+  const seen = [...new Set(counts)];
+  if (seen.length > 1)
+    throw new Error(
+      `the board changed while it was read (its pages report ${seen.join(', then ')} items): nothing read`,
+    );
+  const total = Number(counts[0]);
+  const read = boards.reduce((sum, board) => sum + board.items.nodes.length, 0);
+  if (read !== total)
+    throw new Error(
+      `the board has ${String(total)} items and ${String(read)} were read: nothing read`,
+    );
 }
 
 /** Refuse to read a board other than the one asked for. */

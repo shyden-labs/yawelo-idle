@@ -41,6 +41,7 @@ const defaults = (): FakeConfig => ({
   graphqlStatus: 200,
   graphqlErrors: null,
   endlessPages: false,
+  totalCount: null,
 });
 
 const json = (body: unknown, status = 200): Response =>
@@ -98,11 +99,27 @@ function verifyJwt(
   return { claims };
 }
 
-/** The fixture page at `index`, with the `pageInfo` GitHub adds. */
-function pageAt(pages: unknown[], index: number, endless: boolean): unknown {
+/** Every item on the pages served, as GitHub counts the board (#703). */
+function itemCount(pages: unknown[]): number {
+  return pages.reduce<number>((sum, page) => {
+    const nodes = (
+      page as { data?: { node?: { items?: { nodes?: unknown } } } }
+    ).data?.node?.items?.nodes;
+    return sum + (Array.isArray(nodes) ? nodes.length : 0);
+  }, 0);
+}
+
+/** The fixture page at `index`, with the `totalCount` and `pageInfo` GitHub adds. */
+function pageAt(
+  pages: unknown[],
+  index: number,
+  endless: boolean,
+  totalCount: number,
+): unknown {
   const page = structuredClone(pages[index]) as {
     data: { node: { items: Record<string, unknown> } };
   };
+  page.data.node.items['totalCount'] = totalCount;
   page.data.node.items['pageInfo'] = {
     hasNextPage: endless || index < pages.length - 1,
     endCursor: String(index + 1),
@@ -233,7 +250,12 @@ export function fakeGitHub(
         config.pages ?? boardPages(new Date().toISOString().slice(0, 10));
       const index = record.cursor === null ? 0 : Number(record.cursor);
       return json(
-        pageAt(pages, config.endlessPages ? 0 : index, config.endlessPages),
+        pageAt(
+          pages,
+          config.endlessPages ? 0 : index,
+          config.endlessPages,
+          config.totalCount ?? itemCount(pages),
+        ),
       );
     }
 

@@ -53,6 +53,11 @@ export interface FakeConfig {
   graphqlErrors: { message: string }[] | null;
   /** Say every page has a next one, as a broken paginator would. */
   endlessPages: boolean;
+  /**
+   * The board's item count each page reports (#703); `null` reports what
+   * GitHub would: every item on every page served.
+   */
+  totalCount: number | null;
 }
 
 /** One request as the fake received it. */

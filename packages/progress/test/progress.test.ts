@@ -664,6 +664,13 @@ describe('BOARD_QUERY', () => {
   it('asks GitHub for each issue’s last change', () => {
     expect(BOARD_QUERY).toMatch(/\.\.\. on Issue \{[^}]*\bupdatedAt\b/);
   });
+
+  // `totalCount` alone would match the labels' count (#703).
+  it('asks GitHub how many items the board holds', () => {
+    expect(BOARD_QUERY).toMatch(
+      /\bitems\(first: 100, after: \$endCursor\) \{ totalCount pageInfo\b/,
+    );
+  });
 });
 
 describe('assertTitle', () => {
@@ -712,6 +719,84 @@ describe('assertBoard (#341)', () => {
   });
 });
 
+describe('assertBoard refuses a read that is not the whole board (#703)', () => {
+  type CountedPages = {
+    data: { node: { items: { totalCount?: unknown; nodes: unknown[] } } };
+  }[];
+  const counted = (): CountedPages => boardPages(TODAY) as CountedPages;
+
+  it('passes a whole read: two pages holding the 9 items each page reports', () => {
+    const pages = counted();
+    expect(pages.map((page) => page.data.node.items.totalCount)).toEqual([
+      9, 9,
+    ]);
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).not.toThrow();
+  });
+
+  it('refuses a short page, giving both numbers', () => {
+    const pages = counted();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    second?.data.node.items.nodes.pop();
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow('the board has 9 items and 8 were read: nothing read');
+  });
+
+  it('refuses a read missing a page, giving both numbers', () => {
+    expect(() => {
+      assertBoard(counted().slice(0, 1), FIXTURE_TITLE);
+    }).toThrow('the board has 9 items and 5 were read: nothing read');
+  });
+
+  // Pages are read one after another, so a card added or removed between
+  // two of them shows here. It is named as a change, not a fault: nothing is
+  // wrong, and the next read (the next run or roadmap check) is whole.
+  it('names a board that changed while it was read, giving each count', () => {
+    const pages = counted();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) second.data.node.items.totalCount = 10;
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow(
+      'the board changed while it was read (its pages report 9, then 10 items): nothing read',
+    );
+  });
+
+  it('refuses a page that gives no count', () => {
+    const pages = counted();
+    const first = pages[0];
+    expect(first).toBeDefined();
+    if (first !== undefined) delete first.data.node.items.totalCount;
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow(
+      'a page came back without the board’s item count (items.totalCount): nothing read',
+    );
+  });
+
+  it('refuses a count that is not a whole number', () => {
+    const pages = counted();
+    const first = pages[0];
+    expect(first).toBeDefined();
+    if (first !== undefined) first.data.node.items.totalCount = '9';
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow(
+      'a page came back without the board’s item count (items.totalCount): nothing read',
+    );
+  });
+
+  it('refuses a read of no pages', () => {
+    expect(() => {
+      assertBoard([], FIXTURE_TITLE);
+    }).toThrow('no page of the board came back: nothing read');
+  });
+});
+
 describe('closeOutLines', () => {
   it('gives both close-out lines for the shared fixture', () => {
     expect(
@@ -738,5 +823,16 @@ describe('closeOutLines', () => {
     ).toThrow(
       'the board is "ShyTalk Stories", not "Fixture Stories": nothing read',
     );
+  });
+
+  it('refuses a read missing a page, giving no lines (#703)', () => {
+    expect(() =>
+      closeOutLines(
+        boardPages(TODAY).slice(0, 1),
+        FIXTURE_TITLE,
+        FIXTURE_REPO,
+        TODAY,
+      ),
+    ).toThrow('the board has 9 items and 5 were read: nothing read');
   });
 });
