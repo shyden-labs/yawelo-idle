@@ -15,13 +15,18 @@
  * until the ticket closes: merged work waits for its dev deploy to be checked
  * before the ticket is closed by hand, and is not abandoned (operator
  * 2026-10-16). A branch whose pull requests all closed without merging
- * names nothing.
+ * names nothing. Merged branches are deleted at merge (#701), so a merged
+ * pull request whose branch, in this repository, has `/N-` names N the same
+ * way until the ticket closes (#702). Its title and body do not: merged
+ * history keeps every mention, and 77 of 302 open tickets had one (measured
+ * 2026-10-20), so a ticket left In Progress would never be flagged.
  *
  * The board is read with the read-only roadmap App's token (BOARD_TOKEN), and
  * the branches and pull requests, which are public, with the run's own token
  * (operator 2026-10-15). Anything it cannot read fails it by name, and each
  * read carries a known positive: the board holds items, the branches hold
- * `develop`, the open pull requests hold this one. It reads the board for
+ * `develop`, the open pull requests hold this one, the closed pull requests
+ * hold the merged one develop's head came from. It reads the board for
  * every author, Dependabot included (#661: a check is green only when it
  * ran); Dependabot's runs get no environment secrets, so theirs read the key
  * from the repository's Dependabot secret.
@@ -52,11 +57,66 @@ const USAGE =
 
 const IN_PROGRESS = 'In Progress';
 
-function parseBranches(out: string): string[] {
-  return entries(out).map((e) => {
+/** A closed pull request: merged or not, and the branch it came from. */
+interface ClosedPull {
+  number: number;
+  merged: boolean;
+  mergeCommit: string | null;
+  branch: string;
+  /** The head branch's repository, `null` when it was deleted. */
+  headRepo: string | null;
+}
+
+/**
+ * The branch names, and develop's head commit (`null` with no develop, which
+ * the caller refuses), the closed pull requests' known positive.
+ */
+function parseBranches(out: string): {
+  names: string[];
+  developSha: string | null;
+} {
+  const list = entries(out);
+  const names = list.map((e) => {
     if (!isRecord(e) || typeof e.name !== 'string')
       throw new Error('an entry has no name');
     return e.name;
+  });
+  const develop = list.find((e) => isRecord(e) && e.name === 'develop');
+  if (!isRecord(develop)) return { names, developSha: null };
+  const commit = develop.commit;
+  if (!isRecord(commit) || typeof commit.sha !== 'string')
+    throw new Error('develop has no commit SHA');
+  return { names, developSha: commit.sha };
+}
+
+function parseClosedPulls(out: string): ClosedPull[] {
+  return entries(out).map((e) => {
+    const head = isRecord(e) ? e.head : undefined;
+    const headRepo = isRecord(head) ? head.repo : undefined;
+    if (
+      !isRecord(e) ||
+      !Number.isInteger(e.number) ||
+      !(typeof e.merged_at === 'string' || e.merged_at === null) ||
+      !(
+        typeof e.merge_commit_sha === 'string' || e.merge_commit_sha === null
+      ) ||
+      !isRecord(head) ||
+      typeof head.ref !== 'string' ||
+      !(
+        headRepo === null ||
+        (isRecord(headRepo) && typeof headRepo.full_name === 'string')
+      )
+    )
+      throw new Error(
+        'an entry has no number, merged_at, merge_commit_sha, head branch and head repository',
+      );
+    return {
+      number: e.number as number,
+      merged: e.merged_at !== null,
+      mergeCommit: e.merge_commit_sha,
+      branch: head.ref,
+      headRepo: isRecord(headRepo) ? (headRepo.full_name as string) : null,
+    };
   });
 }
 
@@ -134,7 +194,7 @@ export function boardOrphans(
   );
   if (items.length === 0)
     throw new Error('the board read holds no items, so nothing was judged');
-  const branches = read('the branches', () =>
+  const { names: branches, developSha } = read('the branches', () =>
     parseBranches(
       gh.repo([
         'api',
@@ -161,6 +221,20 @@ export function boardOrphans(
   if (!pulls.some((p) => p.number === prNumber))
     throw new Error(
       `the open pull requests read does not hold this one, #${String(prNumber)}, so it is not the whole list`,
+    );
+  const merged = read('the closed pull requests', () =>
+    parseClosedPulls(
+      gh.repo([
+        'api',
+        '--paginate',
+        '--slurp',
+        `repos/${repo}/pulls?state=closed&per_page=100`,
+      ]),
+    ),
+  ).filter((p) => p.merged);
+  if (!merged.some((p) => p.mergeCommit === developSha))
+    throw new Error(
+      `the closed pull requests read holds no merged pull request for develop's head ${String(developSha)}, so it is not the whole list`,
     );
 
   const owner = repo.split('/')[0] as string;
@@ -202,6 +276,11 @@ export function boardOrphans(
       if (state === 'merged')
         return `branch ${branch} (merged, awaiting close)`;
     }
+    const landed = merged.find(
+      (p) => p.headRepo === repo && branchNames(p.branch, n),
+    );
+    if (landed !== undefined)
+      return `pull request #${String(landed.number)} (merged, awaiting close)`;
     return null;
   };
 
@@ -216,7 +295,7 @@ export function boardOrphans(
   }
   const named = inProgress.map((i) => ({ ticket: i, by: namer(i) }));
   const orphans = named.filter((x) => x.by === null).map((x) => x.ticket);
-  const sizes = `Read ${plural(items.length, 'board item', 'board items')}, ${plural(branches.length, 'branch', 'branches')}, ${plural(pulls.length, 'open pull request', 'open pull requests')}.`;
+  const sizes = `Read ${plural(items.length, 'board item', 'board items')}, ${plural(branches.length, 'branch', 'branches')}, ${plural(pulls.length, 'open pull request', 'open pull requests')}, ${plural(merged.length, 'merged pull request', 'merged pull requests')}.`;
   if (orphans.length > 0) {
     return {
       ok: false,
