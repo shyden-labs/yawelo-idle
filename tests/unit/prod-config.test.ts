@@ -102,9 +102,9 @@ describe('the holding page’s security headers (#621 AC2)', () => {
   const rules = (): HeaderRules =>
     headerRules(read('apps/site/holding/public/_headers'));
 
-  it('sets a content security policy with no inline script or style, on every path', () => {
+  it('sets a content security policy with no inline script or style, taking images and media from the media host alone (#713), on every path', () => {
     expect(rules().get('/*')?.get('content-security-policy')).toBe(
-      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.shyden.co.uk; media-src https://media.shyden.co.uk; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     );
   });
 
@@ -117,14 +117,10 @@ describe('the holding page’s security headers (#621 AC2)', () => {
     );
   });
 
-  it('lets only Shyden’s own sites embed the video (same site)', () => {
-    expect(rules().get('/media/*')?.get('cross-origin-resource-policy')).toBe(
-      'same-site',
-    );
-  });
-
-  it('declares exactly these two rule paths', () => {
-    expect([...rules().keys()]).toEqual(['/*', '/media/*']);
+  // The media moved to media.shyden.co.uk (#713), whose zone rule sets
+  // Cross-Origin-Resource-Policy: same-site; verify-prod checks it live.
+  it('declares only the every-path rule, since the page serves no media of its own', () => {
+    expect([...rules().keys()]).toEqual(['/*']);
   });
 });
 
@@ -165,7 +161,7 @@ describe('the holding page’s words (#621 AC1)', () => {
 describe('the promo video’s terms (#621)', () => {
   it('is listed as not licensed, all rights reserved', () => {
     expect(read('LICENSE-CONTENT.md')).toContain(
-      'The promo video in `apps/site/holding/public/media/` (all rights reserved, operator 2026-10-16)',
+      'The promo video in `apps/site/media/` (all rights reserved, operator 2026-10-16)',
     );
   });
 });

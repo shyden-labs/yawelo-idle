@@ -8,8 +8,10 @@
  * 2. An unknown path answers the 404 page this commit builds, in its
  *    language, with the headers.
  * 3. `robots.txt` is the one this commit builds.
- * 4. The promo video and its poster answer 200 of their type, at the size
- *    this commit builds, embeddable by the same site only.
+ * 4. Each promo file on its media host (#713) answers 200 of its type, byte
+ *    for byte the copy in apps/site/media/, then 206 of exactly the bytes
+ *    `bytes=0-1` asks for, then 416 for a range past its end, each with the
+ *    headers the host must send.
  *
  *     npm run build:holding --workspace @yawelo-idle/site   # stamped with EXPECTED_SHA
  *     PROD_URL=https://yawelo-idle.shyden.co.uk EXPECTED_SHA=… node scripts/verify-prod.ts
@@ -21,7 +23,13 @@
  * then judges every check once and never retries one (operator rule,
  * 2026-10-02).
  */
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import {
+  DEV_MEDIA,
+  PROD_MEDIA,
+  PROMO,
+  type MediaHost,
+} from '../apps/site/src/media.ts';
 import { headerRules, ruleFor } from './headers-file.ts';
 import {
   judge,
@@ -59,7 +67,11 @@ function headerChecks(
 }
 
 /** A status check that stops the rest when it fails. */
-const statusCheck = (path: string, answer: Probe, expected: number): Check => ({
+const statusCheck = (
+  path: string,
+  answer: { status: number },
+  expected: number,
+): Check => ({
   name: `${path} status`,
   gate: true,
   problem: () =>
@@ -152,45 +164,173 @@ export const notFoundProblems = (
   ...args: Parameters<typeof notFoundJudgement>
 ): readonly string[] => notFoundJudgement(...args).problems;
 
-/** A video or poster file: 200 of its type and built size, embeddable by the same site only. */
+/** A media answer with its body as bytes, which decoding as text would mangle. */
+export interface MediaProbe {
+  status: number;
+  headers: Headers;
+  bytes: Uint8Array;
+}
+
+/** A tracked promo file: its name in apps/site/media/, its content type and its bytes. */
+export interface MediaSource {
+  file: string;
+  type: string;
+  bytes: Uint8Array;
+}
+
+/** The range every media file is asked for, as #629's Worker was. */
+export const FIRST_TWO = 'bytes=0-1';
+
+/** A range that starts at a file's end, which no byte satisfies. */
+export const pastEnd = (size: number): string => `bytes=${String(size)}-`;
+
+const sameBytes = (served: Uint8Array, tracked: Uint8Array): boolean =>
+  served.length === tracked.length &&
+  served.every((byte, at) => byte === tracked[at]);
+
+const typeCheck = (label: string, answer: MediaProbe, type: string): Check => ({
+  name: `${label} content-type`,
+  problem: () => {
+    const served = answer.headers.get('content-type') ?? '';
+    return served.startsWith(type)
+      ? undefined
+      : `${label}: content-type ${served}, expected ${type}`;
+  },
+});
+
+/** One check per header the media host must send, or must not (`null`). */
+const hostHeaderChecks = (
+  label: string,
+  answer: MediaProbe,
+  host: MediaHost,
+): Check[] =>
+  Object.entries(host.headers).map(([name, expected]) => ({
+    name: `${label} ${name}`,
+    problem: () => {
+      const served = answer.headers.get(name);
+      if (expected === null)
+        return served === null
+          ? undefined
+          : `${label}: ${name} is ${served}, expected none`;
+      return served === expected
+        ? undefined
+        : `${label}: ${name} is ${served ?? 'missing'}, expected ${expected}`;
+    },
+  }));
+
+/** A promo file asked for whole: 200 of its type, byte for byte the tracked file, with the host's headers. */
 export function mediaJudgement(
-  path: string,
-  answer: Probe,
-  type: string,
-  bytes: number,
+  url: string,
+  answer: MediaProbe,
+  source: MediaSource,
+  host: MediaHost,
 ): Judgement {
-  const served = answer.headers.get('content-type') ?? '';
   const length = answer.headers.get('content-length');
-  const corp = answer.headers.get('cross-origin-resource-policy');
+  const size = String(source.bytes.length);
   return judge([
-    statusCheck(path, answer, 200),
+    statusCheck(url, answer, 200),
+    typeCheck(url, answer, source.type),
     {
-      name: `${path} content-type`,
+      name: `${url} size`,
       problem: () =>
-        served.startsWith(type)
+        length === size
           ? undefined
-          : `${path}: content-type ${served}, expected ${type}`,
+          : `${url}: Content-Length ${length ?? 'missing'}, expected ${size}`,
     },
     {
-      name: `${path} size`,
+      name: `${url} bytes`,
       problem: () =>
-        length === String(bytes)
+        sameBytes(answer.bytes, source.bytes)
           ? undefined
-          : `${path}: Content-Length ${length ?? 'missing'}, expected ${String(bytes)}`,
+          : `${url}: differs from apps/site/media/${source.file}; upload it (apps/site/media/README.md)`,
     },
-    {
-      name: `${path} embedding`,
-      problem: () =>
-        corp === 'same-site'
-          ? undefined
-          : `${path}: Cross-Origin-Resource-Policy is ${corp ?? 'missing'}, expected same-site`,
-    },
+    ...hostHeaderChecks(url, answer, host),
   ]);
 }
 
 export const mediaProblems = (
   ...args: Parameters<typeof mediaJudgement>
 ): readonly string[] => mediaJudgement(...args).problems;
+
+/** A promo file asked for its first two bytes: 206 of exactly those, of its type, with the host's headers. */
+export function rangeJudgement(
+  url: string,
+  answer: MediaProbe,
+  source: MediaSource,
+  host: MediaHost,
+): Judgement {
+  const label = `${url} ${FIRST_TWO}`;
+  const range = answer.headers.get('content-range');
+  const expected = `bytes 0-1/${String(source.bytes.length)}`;
+  return judge([
+    statusCheck(label, answer, 206),
+    {
+      name: `${label} content-range`,
+      problem: () =>
+        range === expected
+          ? undefined
+          : `${label}: Content-Range ${range ?? 'missing'}, expected ${expected}`,
+    },
+    {
+      name: `${label} bytes`,
+      problem: () =>
+        sameBytes(answer.bytes, source.bytes.subarray(0, 2))
+          ? undefined
+          : `${label}: the ${String(answer.bytes.length)} bytes served are not the first 2 of apps/site/media/${source.file}`,
+    },
+    typeCheck(label, answer, source.type),
+    ...hostHeaderChecks(label, answer, host),
+  ]);
+}
+
+export const rangeProblems = (
+  ...args: Parameters<typeof rangeJudgement>
+): readonly string[] => rangeJudgement(...args).problems;
+
+/**
+ * A promo file asked for a range past its end: 416 with the host's headers,
+ * naming its size where the host does and no Content-Range where it doesn't.
+ */
+export function pastEndJudgement(
+  url: string,
+  answer: MediaProbe,
+  source: MediaSource,
+  host: MediaHost,
+): Judgement {
+  const label = `${url} ${pastEnd(source.bytes.length)}`;
+  const range = answer.headers.get('content-range');
+  const expected = host.sizeOnPastEnd
+    ? `bytes */${String(source.bytes.length)}`
+    : null;
+  return judge([
+    statusCheck(label, answer, 416),
+    {
+      name: `${label} content-range`,
+      problem: () =>
+        range === expected
+          ? undefined
+          : `${label}: Content-Range ${range ?? 'missing'}, expected ${expected ?? 'none'}`,
+    },
+    ...hostHeaderChecks(label, answer, host),
+  ]);
+}
+
+export const pastEndProblems = (
+  ...args: Parameters<typeof pastEndJudgement>
+): readonly string[] => pastEndJudgement(...args).problems;
+
+/** Fetches `url` with `headers`, keeping the body as bytes. */
+export async function mediaProbe(
+  url: string,
+  headers: Record<string, string> = {},
+): Promise<MediaProbe> {
+  const response = await fetch(url, { headers, redirect: 'manual' });
+  return {
+    status: response.status,
+    headers: response.headers,
+    bytes: new Uint8Array(await response.arrayBuffer()),
+  };
+}
 
 export function robotsJudgement(answer: Probe, built: string): Judgement {
   return judge([
@@ -213,11 +353,8 @@ const MISSING: readonly [string, string][] = [
   ['/no-such-page', '404.html'],
   ['/id/no-such-page', 'id/404.html'],
 ];
-const MEDIA: readonly [string, string][] = [
-  ['/media/yawelo-idle-promo.webm', 'video/webm'],
-  ['/media/yawelo-idle-promo.mp4', 'video/mp4'],
-  ['/media/yawelo-idle-promo-poster.jpg', 'image/jpeg'],
-];
+/** The tracked promo files, which every media host must serve byte for byte. */
+const MEDIA_FOLDER = new URL('../apps/site/media/', import.meta.url);
 
 /** Waits for `/` to report `sha`; the last answer (or failure) when it never does. */
 async function waitForCommit(
@@ -248,6 +385,7 @@ export async function verifyProd(
   dist: URL,
   wait: Wait,
   indexable = true,
+  media: MediaHost = PROD_MEDIA,
 ): Promise<string[]> {
   const built = (file: string): string =>
     readFileSync(new URL(file, dist), 'utf8');
@@ -284,15 +422,40 @@ export async function verifyProd(
       ? [robots]
       : robotsProblems(robots, built('robots.txt'))),
   );
-  for (const [path, type] of MEDIA) {
-    // GET, not HEAD: Cloudflare's static assets send no Content-Length on a
-    // HEAD (measured on the dev copy, deploy-dev run 38893672548).
-    const answer = await look(path);
-    const bytes = statSync(new URL(path.slice(1), dist)).size;
+  const ask = async (
+    url: string,
+    range?: string,
+  ): Promise<MediaProbe | string> => {
+    try {
+      return await mediaProbe(url, range === undefined ? {} : { range });
+    } catch (error) {
+      return `${url}${range === undefined ? '' : ` ${range}`}: request failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  };
+  for (const { file, type } of PROMO) {
+    const source: MediaSource = {
+      file,
+      type,
+      bytes: new Uint8Array(readFileSync(new URL(file, MEDIA_FOLDER))),
+    };
+    const url = `${media.origin}/${file}`;
+    const whole = await ask(url);
     problems.push(
-      ...(typeof answer === 'string'
-        ? [answer]
-        : mediaProblems(path, answer, type, bytes)),
+      ...(typeof whole === 'string'
+        ? [whole]
+        : mediaProblems(url, whole, source, media)),
+    );
+    const range = await ask(url, FIRST_TWO);
+    problems.push(
+      ...(typeof range === 'string'
+        ? [range]
+        : rangeProblems(url, range, source, media)),
+    );
+    const past = await ask(url, pastEnd(source.bytes.length));
+    problems.push(
+      ...(typeof past === 'string'
+        ? [past]
+        : pastEndProblems(url, past, source, media)),
     );
   }
   return problems;
@@ -319,6 +482,7 @@ if (import.meta.main) {
     ),
     { polls: 60, pollMs: 10_000 },
     !dev,
+    dev ? DEV_MEDIA : PROD_MEDIA,
   );
   if (problems.length > 0) {
     for (const problem of problems) console.error(`✗ ${problem}`);

@@ -1,11 +1,9 @@
 # The holding page's headers (#621), applied by Cloudflare to every static
 # asset response. No script or style is inline, so the policy needs no hash.
+# The poster and the video come from media.shyden.co.uk (#713), whose zone
+# rule sets their Cross-Origin-Resource-Policy: same-site.
 /*
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.shyden.co.uk; media-src https://media.shyden.co.uk; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
-
-# shyden.co.uk may embed the promo video (same site); other sites may not.
-/media/*
-  Cross-Origin-Resource-Policy: same-site

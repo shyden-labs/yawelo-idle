@@ -15,4 +15,4 @@ Attribute content to **"Yawelo Idle, Shyden Labs"**, together with the upstream 
 
 The Yawelo Idle name and logo are not covered by either licence. See [`TRADEMARKS.md`](TRADEMARKS.md).
 
-The promo video in `apps/site/holding/public/media/` (all rights reserved, operator 2026-10-16) is not covered by either licence: it may be watched where we publish it, and not reused. It also shows the Yawelo Idle wordmark.
+The promo video in `apps/site/media/` (all rights reserved, operator 2026-10-16) is not covered by either licence: it may be watched where we publish it, and not reused. It also shows the Yawelo Idle wordmark.
