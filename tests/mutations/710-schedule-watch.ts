@@ -130,6 +130,14 @@ export default mutationFile({
       red: {
         [`${JUDGE} finds nothing when the newest scheduled run passed within the limit`]:
           'schedule-watch/facts-checked',
+        [`${JUDGE} passes a run exactly at the limit`]:
+          'schedule-watch/at-limit-checked',
+        [`${JUDGE} passes a newest scheduled run still in progress`]:
+          'schedule-watch/running-checked',
+        [`${JUDGE} judges only the newest run, the first GitHub lists`]:
+          'schedule-watch/newest-only-checked',
+        [`${JUDGE} passes a workflow with no scheduled run yet that GitHub first saw within the limit`]:
+          'schedule-watch/never-run-checked',
       },
     },
     {
@@ -140,6 +148,12 @@ export default mutationFile({
       red: {
         [`${JUDGE} finds nothing when the newest scheduled run passed within the limit`]:
           'schedule-watch/facts-checked',
+        [`${JUDGE} passes a run exactly at the limit`]:
+          'schedule-watch/at-limit-checked',
+        [`${JUDGE} passes a newest scheduled run still in progress`]:
+          'schedule-watch/running-checked',
+        [`${JUDGE} judges only the newest run, the first GitHub lists`]:
+          'schedule-watch/newest-only-checked',
       },
     },
     {

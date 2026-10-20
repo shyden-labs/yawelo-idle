@@ -63,14 +63,21 @@ describe('workflowJudgement', () => {
   });
 
   it('passes a run exactly at the limit', () => {
+    const judged = workflowJudgement(
+      FILE,
+      workflowReply(),
+      runsReply({ created_at: hoursAgo(LIMIT_HOURS) }),
+      NOW,
+    );
     expect(
-      workflowJudgement(
-        FILE,
-        workflowReply(),
-        runsReply({ created_at: hoursAgo(LIMIT_HOURS) }),
-        NOW,
-      ).problems,
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'facts read about one scheduled workflow',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('schedule-watch/at-limit-checked', judged.checked.length),
+    ).toBeUndefined();
   });
 
   it('names a run one second past the limit as a missed day', () => {
@@ -101,14 +108,21 @@ describe('workflowJudgement', () => {
   });
 
   it('passes a workflow with no scheduled run yet that GitHub first saw within the limit', () => {
+    const judged = workflowJudgement(
+      FILE,
+      workflowReply({ created_at: hoursAgo(3) }),
+      runsReply(),
+      NOW,
+    );
     expect(
-      workflowJudgement(
-        FILE,
-        workflowReply({ created_at: hoursAgo(3) }),
-        runsReply(),
-        NOW,
-      ).problems,
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'facts read about one scheduled workflow',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('schedule-watch/never-run-checked', judged.checked.length),
+    ).toBeUndefined();
   });
 
   it('names a disabled workflow, and where to enable it', () => {
@@ -151,25 +165,39 @@ describe('workflowJudgement', () => {
   });
 
   it('passes a newest scheduled run still in progress', () => {
+    const judged = workflowJudgement(
+      FILE,
+      workflowReply(),
+      runsReply({ status: 'in_progress', conclusion: null }),
+      NOW,
+    );
     expect(
-      workflowJudgement(
-        FILE,
-        workflowReply(),
-        runsReply({ status: 'in_progress', conclusion: null }),
-        NOW,
-      ).problems,
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'facts read about one scheduled workflow',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('schedule-watch/running-checked', judged.checked.length),
+    ).toBeUndefined();
   });
 
   it('judges only the newest run, the first GitHub lists', () => {
+    const judged = workflowJudgement(
+      FILE,
+      workflowReply(),
+      runsReply({}, { conclusion: 'failure', created_at: hoursAgo(34) }),
+      NOW,
+    );
     expect(
-      workflowJudgement(
-        FILE,
-        workflowReply(),
-        runsReply({}, { conclusion: 'failure', created_at: hoursAgo(34) }),
-        NOW,
-      ).problems,
+      searched(judged.problems, {
+        of: judged.checked,
+        what: 'facts read about one scheduled workflow',
+      }),
     ).toEqual([]);
+    expect(
+      floorBreach('schedule-watch/newest-only-checked', judged.checked.length),
+    ).toBeUndefined();
   });
 
   it('fails closed on a workflow reply that is not JSON', () => {
@@ -379,9 +407,9 @@ describe('WATCHED', () => {
     expect(WATCHED.map((w) => w.file)).toContain('schedule-watch.yml');
   });
 
-  it.each(WATCHED.map((w) => [w.file, w.cron]))(
-    '%s runs once a day, which the limit assumes (%s)',
-    (_file, cron) => {
+  it.each(WATCHED)(
+    '$file runs once a day, which the limit assumes ($cron)',
+    ({ cron }) => {
       expect(cron).toMatch(/^\d{1,2} \d{1,2} \* \* \*$/);
     },
   );
