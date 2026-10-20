@@ -8,8 +8,9 @@ import {
   FAKE_ORG,
   FAKE_REPO_NAME,
   FAKE_TOKEN,
-  READ_ONLY,
+  INSTALLED,
   type FakeConfig,
+  type Permissions,
   type Seen,
 } from './contract';
 
@@ -33,8 +34,8 @@ import {
 
 const defaults = (): FakeConfig => ({
   repositorySelection: 'selected',
-  installationPermissions: { ...READ_ONLY },
-  tokenPermissions: { ...READ_ONLY },
+  installationPermissions: { ...INSTALLED },
+  tokenPermissions: null,
   tokenRepositories: [FAKE_REPO_NAME],
   pages: null,
   graphqlStatus: 200,
@@ -44,6 +45,30 @@ const defaults = (): FakeConfig => ({
 
 const json = (body: unknown, status = 200): Response =>
   Response.json(body, { status });
+
+const LEVELS = ['read', 'write'];
+
+/**
+ * The rights GitHub issues for a token request (REST "Create an installation
+ * access token for an app"): the request's `permissions` when given, each no
+ * higher than the installation's, else every right the installation holds.
+ * `null` when the request asks beyond the installation; the docs name no
+ * status for that, so the fake's 422 is assumed.
+ */
+function issuedRights(
+  requested: unknown,
+  installation: Permissions,
+): Permissions | null {
+  if (requested === undefined) return { ...installation };
+  const asked = requested as Permissions;
+  const within = Object.entries(asked).every(
+    ([right, level]) =>
+      installation[right] !== undefined &&
+      LEVELS.indexOf(level) >= 0 &&
+      LEVELS.indexOf(level) <= LEVELS.indexOf(installation[right]),
+  );
+  return within ? { ...asked } : null;
+}
 
 function decode(part: string): unknown {
   return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
@@ -151,7 +176,10 @@ export function fakeGitHub(
           permissions: config.installationPermissions,
         });
       if (url.pathname === tokens && request.method === 'POST') {
-        const body = (await request.json()) as { repositories?: unknown };
+        const body = (await request.json()) as {
+          repositories?: unknown;
+          permissions?: unknown;
+        };
         if (
           JSON.stringify(body.repositories) !== JSON.stringify([FAKE_REPO_NAME])
         )
@@ -159,11 +187,23 @@ export function fakeGitHub(
             { message: 'the token request must name the one repository' },
             422,
           );
+        const rights = issuedRights(
+          body.permissions,
+          config.installationPermissions,
+        );
+        if (rights === null)
+          return json(
+            {
+              message:
+                'The permissions requested are not granted to this installation.',
+            },
+            422,
+          );
         return json(
           {
             token: FAKE_TOKEN,
             expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-            permissions: config.tokenPermissions,
+            permissions: config.tokenPermissions ?? rights,
             repositories: config.tokenRepositories.map((name) => ({ name })),
           },
           201,
