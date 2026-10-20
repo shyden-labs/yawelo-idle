@@ -22,12 +22,25 @@ export const READ_ONLY: Permissions = {
   metadata: 'read',
   organization_projects: 'read',
 };
+/**
+ * The installation as it stands since 2026-10-20: the three reads and
+ * Administration: read for the owner-review check (#687, website spec §5.2
+ * item 3).
+ */
+export const INSTALLED: Permissions = {
+  administration: 'read',
+  ...READ_ONLY,
+};
 
 /** What a test can change; `reset` puts every field back. */
 export interface FakeConfig {
   repositorySelection: 'selected' | 'all';
   installationPermissions: Permissions;
-  tokenPermissions: Permissions;
+  /**
+   * The issued token's rights, or `null` for what GitHub does: the request's
+   * `permissions` when it names them, else every right of the installation.
+   */
+  tokenPermissions: Permissions | null;
   tokenRepositories: string[];
   /** Raw pages served in order; `null` serves the shared fixture for today. */
   pages: unknown[] | null;
