@@ -14,13 +14,7 @@
  * figure that moved, for the commit to name, and the scratch ref's delete.
  */
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -35,6 +29,7 @@ import {
   fetchedRecordRefusals,
   RECORD_FILE,
   renamesFrom,
+  writeRecord,
 } from './coverage.ts';
 
 /**
@@ -245,11 +240,13 @@ function main(): void {
     if (refusals.length > 0)
       die(`nothing written:\n  ${refusals.join('\n  ')}`);
     const coverage = fetchedCoverage(runId, head, dir);
-    const written = writeFloors(FLOORS_DIR, next);
-    if (coverage !== undefined) {
-      writeFileSync(RECORD_FILE, coverage);
-      written.push(RECORD_FILE);
-    }
+    // The record first: a record that cannot be written leaves the floors as
+    // they were.
+    if (coverage !== undefined) writeRecord(RECORD_FILE, coverage);
+    const written = [
+      ...writeFloors(FLOORS_DIR, next),
+      ...(coverage === undefined ? [] : [RECORD_FILE]),
+    ];
     const moves = describeMoves(local, next);
     console.log(
       moves.length === 0

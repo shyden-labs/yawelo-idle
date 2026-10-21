@@ -11,7 +11,8 @@ apps/dev-hosts/.build/
 apps/dev-hosts/public/
 # Astro's generated types (`astro sync`, run by build and check)
 .astro/
-coverage/
+# The coverage reports at the root, never the record in tests/coverage/ (#728).
+/coverage/
 reports/mutation/
 
 # Test output

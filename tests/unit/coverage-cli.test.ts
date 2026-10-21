@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   childEnv,
   coveragePlan,
@@ -6,7 +9,10 @@ import {
   metaRefusal,
   percent,
   renamesFrom,
+  RECORD_FILE,
+  writeRecord,
 } from '../../scripts/coverage.ts';
+import { isIgnored } from './tracked-files';
 
 describe("a suite's coverage run never carries the record switch (#728)", () => {
   it('drops FLOORS_RECORD_JOB, so the measured code runs as it does on a pull request', () => {
@@ -174,5 +180,34 @@ describe('a count reads as the share of code run (#728)', () => {
     expect(percent({ untested: 0, total: 0 })).toBe(
       '100.0% run (0 of 0 untested)',
     );
+  });
+});
+
+/**
+ * The first record lands in a folder the tree does not hold yet (#728:
+ * PR 2's first floors:fetch died on it, ENOENT, after writing the floors).
+ */
+describe('a coverage record is written where no folder exists yet (#728)', () => {
+  it('makes the folder, then writes the text exactly', () => {
+    const root = mkdtempSync(join(tmpdir(), 'coverage-record-'));
+    const path = join(root, 'tests', 'coverage', 'record.json');
+    writeRecord(path, '{"files":{}}\n');
+    const text = readFileSync(path, 'utf8');
+    rmSync(root, { recursive: true, force: true });
+    expect(text).toBe('{"files":{}}\n');
+  });
+});
+
+/**
+ * The record is committed and the reports are not (#728): `.gitignore`'s
+ * `coverage/` matched every folder of that name, tests/coverage/ included,
+ * so the first record could not be committed.
+ */
+describe('git keeps the record and leaves out the reports (#728)', () => {
+  it('ignores the reports folder at the root, not the record beside the tests', () => {
+    expect([isIgnored('coverage/table.json'), isIgnored(RECORD_FILE)]).toEqual([
+      true,
+      false,
+    ]);
   });
 });

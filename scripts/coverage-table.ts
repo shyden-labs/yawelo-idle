@@ -142,3 +142,46 @@ export function rises(
   }
   return problems;
 }
+
+/** `2/10 and 0/10`: untested statements and branch arms, of how many. */
+const counts = ({ statements, branches }: Untested): string =>
+  `${String(statements.untested)}/${String(statements.total)} and ${String(branches.untested)}/${String(branches.total)}`;
+
+/** The same, with its units named once. */
+const countsNamed = ({ statements, branches }: Untested): string =>
+  `${String(statements.untested)}/${String(statements.total)} statements and ${String(branches.untested)}/${String(branches.total)} branch arms untested`;
+
+const sameCounts = (a: Untested, b: Untested): boolean =>
+  a.statements.untested === b.statements.untested &&
+  a.statements.total === b.statements.total &&
+  a.branches.untested === b.branches.untested &&
+  a.branches.total === b.branches.total;
+
+/**
+ * Every file whose measured counts differ from the record: check (a), a gain
+ * or a loss nobody recorded (Shyden, 2026-10-22: "Must be recorded"). Both
+ * directions, every file named, in path order.
+ */
+export function unrecorded(measured: Table, recorded: Table): string[] {
+  const paths = [
+    ...new Set([...Object.keys(measured), ...Object.keys(recorded)]),
+  ].sort();
+  const problems: string[] = [];
+  for (const path of paths) {
+    const now = measured[path];
+    const then = recorded[path];
+    if (then === undefined)
+      problems.push(`${path} is measured but not recorded`);
+    else if (now === undefined)
+      problems.push(`${path} is recorded but was not measured`);
+    else if (now.measure !== then.measure)
+      problems.push(
+        `${path}: measured by ${now.measure}, recorded by ${then.measure}`,
+      );
+    else if (!sameCounts(now, then))
+      problems.push(
+        `${path}: measured ${countsNamed(now)}, recorded ${counts(then)}`,
+      );
+  }
+  return problems;
+}
