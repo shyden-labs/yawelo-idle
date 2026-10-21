@@ -19,10 +19,29 @@ const RECORDER = 'tests/unit/record-floors.test.ts';
 const FETCH = 'tests/unit/fetch-floors.test.ts';
 const REFUSAL = `${FETCH} › fetchRefusal >`;
 const SCRATCH = `${FETCH} › the scratch ref >`;
+const GUIDANCE = 'tests/unit/minimums.test.ts';
 
 export default mutationFile({
-  targets: [FLOORS, MINIMUMS, RECORDER, FETCH],
+  targets: [FLOORS, MINIMUMS, RECORDER, FETCH, GUIDANCE],
   mutations: [
+    {
+      // The checker's guidance, which nine non-unit suites print (#659),
+      // put back to the label flow.
+      name: 'minimums-guidance-says-label',
+      file: 'tests/minimums.ts',
+      anchor:
+        "  'push the commit to refs/minimums/<branch>, dispatch record-minimums on develop, then run npm run minimums:fetch <run-id>';\n",
+      replacement:
+        "  'label the pull request record-minimums, then run npm run minimums:fetch <run-id>';\n",
+      red: {
+        [`${GUIDANCE} › minimumBreach > names an id that is not recorded, and how to record it`]:
+          'to be',
+        [`${GUIDANCE} › minimumsBreach, for counts named only at runtime > refuses a member the record does not hold: a new kind to record`]:
+          'to be',
+        [`${GUIDANCE} › minimumsBreach, for counts named only at runtime > refuses a family the record holds no member of`]:
+          'to be',
+      },
+    },
     {
       name: 'label-trigger-returned',
       file: '.github/workflows/record-floors.yml',
