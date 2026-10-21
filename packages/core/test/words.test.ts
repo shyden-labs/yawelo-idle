@@ -123,7 +123,7 @@ describe('picking up a word (AC1)', () => {
   });
 
   it('is refused when the pool is empty, never reaching a later destination', () => {
-    let s = rich(1e60);
+    let s = rich(1e6);
     // one scenario: picking up until the pool refuses is one player's walk
     // to an empty pool; the floor below holds how many words that took.
     for (let k = 0; k < 1000; k += 1) {

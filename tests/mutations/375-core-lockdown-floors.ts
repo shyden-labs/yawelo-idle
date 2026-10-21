@@ -8,18 +8,25 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * course, the fault is narrowed to values those were first shown, by reading
  * and by measuring the unbroken code, never to reach (Shyden, same day):
  * 1e35 Understanding or more (the golden replay peaks at 1e20.05; hash's and
- * the log laws' states hold 1e40), 1e50 for Pemandu (the working run holds
- * 1e60, buying all four Encounters on offer) and for word pick-up (the log
- * laws' state holds most of its pool, so its one pick is the pool's last;
- * W1 at 1e35 reached it, the first run's one miss), 1e30 Insight (golden peak
- * 1e4.40), a region or an offer of one Encounter (the synthetic course has
- * six per region), and nothing held with exactly one word (the golden
- * replay's zero-held states hold 0 or 21 words).
+ * the log laws' states hold 1e40), 1e30 Insight (golden peak 1e4.40), a
+ * course with a region of two Encounters (Pemandu; only the automation
+ * course has one), a pick-up pool of at most five words, a region or an
+ * offer of one Encounter (the synthetic course has six per region), and
+ * nothing held with exactly one word (the golden replay's zero-held states
+ * hold 0 or 21 words). Each test stays at its original input.
+ *
+ * Where each row's tests came from (Shyden, 2026-10-21: accepted, labelled):
+ * A1 and W1 name the tests a temporary reach probe of the UNBROKEN code
+ * logged at the choice each fault changes (no fault ran; every test
+ * passed); W1's played() callers were also found by grep, the same 17
+ * lines. Whether each goes red, and its text, was read from the test.
+ * Every other row's tests were found by grep and reading alone.
  */
 export default mutationFile({
   targets: [
     'packages/bots/test/player.test.ts',
     'packages/core/test/automation.test.ts',
+    'packages/core/test/grammar.test.ts',
     'packages/core/test/hash.test.ts',
     'packages/core/test/ladder.test.ts',
     'packages/core/test/log.test.ts',
@@ -130,14 +137,17 @@ export default mutationFile({
       },
     },
     {
-      name: 'A1-pemandu-skips-the-last-when-huge',
+      name: 'A1-pemandu-pricing-is-blind-to-the-last-in-a-course-of-two-encounter-regions',
       file: 'packages/core/src/automation.ts',
-      anchor: '    if (Num.cmp(price, held) > 0) continue;\n',
+      anchor:
+        '  const encounters =\n    same?.encounters ??\n    course.regions.slice(0, reached).flatMap((region) => region.encounters);\n',
       replacement:
-        '    if (Num.cmp(price, held) > 0) continue;\n    if (Num.cmp(held, Num.from(1e50)) >= 0 && i === encounters.length - 1)\n      continue;\n',
+        '  const all =\n    same?.encounters ??\n    course.regions.slice(0, reached).flatMap((region) => region.encounters);\n  const encounters =\n    same === undefined &&\n    course.regions.some((r) => r.encounters.length === 2)\n      ? all.slice(0, -1)\n      : all;\n',
       red: {
         'packages/core/test/automation.test.ts › integrate with Pemandu (AC2) > buys nothing when nothing is owned and nothing is affordable':
           'automation/what Pemandu buys when rich: read 3, recorded 4',
+        'packages/core/test/automation.test.ts › bestPayback (AC2) > breaks a tie by id in code-unit order':
+          "to be 'Zed'",
       },
     },
     {
@@ -152,17 +162,95 @@ export default mutationFile({
       },
     },
     {
-      name: 'W1-pick-up-skips-the-last-word-when-huge',
+      name: 'W1-pick-up-skips-the-last-word-of-a-pool-of-five',
       file: 'packages/core/src/sim.ts',
       anchor:
         '  const next = pool.find((item) => pickedWord(state, item.id) === undefined);\n',
       replacement:
-        '  const next = (\n    state.anchor.understanding[1] >= 50 ? pool.slice(0, -1) : pool\n  ).find((item) => pickedWord(state, item.id) === undefined);\n',
+        '  const next = (pool.length <= 5 ? pool.slice(0, -1) : pool).find(\n    (item) => pickedWord(state, item.id) === undefined,\n  );\n',
       red: {
+        'packages/core/test/words.test.ts › the word bonus (AC2) > M_words is 1 plus the bonus of each word sharing a tag, counted once':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the word bonus (AC2) > over a whole hour with no event, production equals the continuous model to 1e-12':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the word bonus (AC2) > across three hour boundaries, production equals the continuous model to 1e-12':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the word bonus (AC2) > after a review mid-hour, production to the hour’s end equals the continuous model':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the word bonus (AC2) > keeps each word’s mean over the hour through a purchase':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the word bonus (AC2) > takes R on the wall clock, not the simulated one':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the word bonus (AC2) > includes the word multipliers in the rate':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > a wrong answer costs nothing and reschedules the word':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > re-anchors at the answer and restarts every word’s hour mean there':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the view (AC6, DN23) > holds Understanding, the rate and its breakdown (#29), Insight, the queue, the sail preview and the unfold flags (#31), the shop (#35), and nothing else':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the view (AC6, DN23) > shows the rate with the word multipliers and the queue at the view’s time':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › memory ages on the wall clock (AC9) > after a capped 30-day absence, R reflects 30 days and Understanding the cap':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › memory ages on the wall clock (AC9) > after a clipped return mid-hour, production to the hour’s end equals the continuous model':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › test fixtures > played() picks all five words and reviews three, at a sim time mid-hour':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › picking up a word (AC1) > takes the destination’s items in CEFR order, then course order':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › picking up a word (AC1) > charges pickUpCost(4) with 4 already picked':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › picking up a word (AC1) > is refused as empty, not unaffordable, when the next pick-up could not be paid for either':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > a correct due answer to a1-food gives 1 + 0.5 × rank index Insight, by the rank it was asked at':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > a correct due answer to both gives 1 + 0.5 × rank index Insight, by the rank it was asked at':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > a correct due answer to b1-food gives 1 + 0.5 × rank index Insight, by the rank it was asked at':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > refuses later, a word not picked up':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > refuses nope, a word not picked up':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > refuses constructor, a word not picked up':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > refuses __proto__, a word not picked up':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › answering a review (AC5, AC7) > refuses hasOwnProperty, a word not picked up':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > on a1-food changes no currency, no FSRS state and no rank':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > on a1-bus changes no currency, no FSRS state and no rank':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > on both changes no currency, no FSRS state and no rank':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > on toString changes no currency, no FSRS state and no rank':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > on b1-food changes no currency, no FSRS state and no rank':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the floor (AC4) > ranks and memory never change through -86400000 ms of absence':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the floor (AC4) > ranks and memory never change through 0 ms of absence':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the floor (AC4) > ranks and memory never change through 34560000000 ms of absence':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › the floor (AC4) > ranks and memory never change through 12345678 ms of absence':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > is open 0 ms on, due or not, on a1-food':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > is open 86400000 ms on, due or not, on both':
+          'rejected: {"kind":"poolEmpty"}',
+        'packages/core/test/words.test.ts › practice (AC8) > is open 5184000000 ms on, due or not, on toString':
+          'rejected: {"kind":"poolEmpty"}',
         'packages/core/test/words.test.ts › picking up a word (AC1) > is refused when the pool is empty, never reaching a later destination':
           'words/words held when the pool is empty: read 4, recorded 5',
-        'packages/core/test/shop.test.ts › the pick-up offer matches picking a word up > is absent once the pool is empty':
-          'to have a length of 38',
+        'packages/core/test/words.test.ts › no reachable state holds NaN, a negative or an infinite value > over a sequence of pick-ups, answers, purchases and returns':
+          'to deeply equal',
+        'packages/core/test/grammar.test.ts › derived words (#32 AC3) > picks up a derived word once the lexicon is held':
+          'rejected: poolEmpty',
+        "packages/core/test/grammar.test.ts › derived words (#32 AC3) > prices a derived word by the pool's words held: the fourth costs 20 x 1.15^3":
+          'rejected: poolEmpty',
       },
     },
     {

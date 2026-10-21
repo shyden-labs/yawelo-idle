@@ -334,7 +334,7 @@ describe('integrate with Pemandu (AC2)', () => {
     const s = pemandu(at(4, { held: 9 }));
     // The working run: the same Pemandu, rich, buys what it chooses.
     const bought = Object.keys(
-      integrate(course, pemandu(at(4, { held: 1e60 })), 3_600_000).owned,
+      integrate(course, pemandu(at(4, { held: 1e9 })), 3_600_000).owned,
     );
     expect(
       searched(Object.keys(integrate(course, s, 3_600_000).owned), {
