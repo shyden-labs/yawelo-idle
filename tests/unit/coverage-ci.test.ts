@@ -73,3 +73,46 @@ describe('the coverage job (#728)', () => {
     });
   });
 });
+
+/**
+ * The check (#728): a documents-only pull request proves nothing measured
+ * changed (ruling, "Prove nothing changed"); any other measures and is
+ * checked against the record and against the record at the merge base.
+ */
+describe('the coverage job judges every pull request (#728)', () => {
+  const named = (name: string): Step | undefined =>
+    steps().find((s) => s.name === name);
+
+  it('checks out the whole history, so the merge base with develop is there', () => {
+    const checkout = steps().find((s) =>
+      (s.uses ?? '').startsWith('actions/checkout@'),
+    );
+    expect(checkout?.with).toEqual({ 'fetch-depth': 0 });
+  });
+
+  it('classifies the change as build-and-test does, before the install', () => {
+    const classify = named('Classify the change as docs-only or full (#360)');
+    expect([classify?.id, runOf(classify ?? {})]).toEqual([
+      'classify',
+      'node scripts/ci-scope.ts',
+    ]);
+  });
+
+  it('measures and checks anything but a documents-only change', () => {
+    const full = "${{ steps.classify.outputs.scope != 'docs-only' }}";
+    const check = named('Check the record and the ratchet');
+    expect([
+      steps()[at('npm run test:coverage')[0] ?? -1]?.if,
+      check?.if,
+      runOf(check ?? {}),
+    ]).toEqual([full, full, 'node scripts/coverage.ts check']);
+  });
+
+  it('proves a documents-only change measures nothing, and only then', () => {
+    const proof = named('Prove a documents-only change measures nothing');
+    expect([proof?.if, runOf(proof ?? {})]).toEqual([
+      "${{ steps.classify.outputs.scope == 'docs-only' }}",
+      'node scripts/coverage.ts docs-only',
+    ]);
+  });
+});

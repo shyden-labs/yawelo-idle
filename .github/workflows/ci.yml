@@ -144,9 +144,8 @@ jobs:
 
   # Every suite pull-request CI runs, under coverage, one after another, in a
   # job of its own so the unit step above keeps coverage off and its limits
-  # (#728). It measures and keeps the report; the ratchet that judges it, and
-  # this job as a required check, follow once develop's record-floors can
-  # record the figures (#728 design: two pull requests).
+  # (#728). It measures, checks the record and the ratchet, and keeps the
+  # report; a documents-only change proves instead that it measures nothing.
   coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -154,20 +153,39 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
       options: --user 1001
     steps:
+      # The whole history: the check reads the record at the merge base with
+      # develop, and the documents-only proof reads HEAD^1..HEAD.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+      - name: Classify the change as docs-only or full (#360)
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: node scripts/ci-scope.ts
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
       # One measured limit (#476), held in suite-limits.test.ts.
       - name: Measure coverage (every suite pull-request CI runs)
         id: measure
         timeout-minutes: 15
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:coverage
+      # The measured table equals the record, and no file grew against the
+      # record at the merge base (#728 rulings: "Untested count", "Must be
+      # recorded").
+      - name: Check the record and the ratchet
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: node scripts/coverage.ts check
+      # A documents-only change measures nothing, and proves it (ruling on
+      # #728, "Prove nothing changed"); fails closed.
+      - name: Prove a documents-only change measures nothing
+        if: ${{ steps.classify.outputs.scope == 'docs-only' }}
+        run: node scripts/coverage.ts docs-only
       # Only after a measure that ran: an upload after a skipped one would fail
       # on a report nothing wrote, a second red step that misleads (#353).
       - name: Upload the coverage report
