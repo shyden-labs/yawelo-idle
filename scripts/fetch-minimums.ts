@@ -2,22 +2,31 @@
  * Write the measured minimums the record-minimums workflow sampled in CI
  * (#84, spec §5.7): `npm run minimums:fetch <run-id>`.
  *
- * Labelling a pull request `record-minimums` runs the properties suite 200
- * times with fresh seeds, over 4 shards, each recording every reach count
- * (`tests/minimums.ts` in record mode). This script reads every shard back,
+ * The session pushes its unpushed commit to `refs/minimums/<branch>` and
+ * dispatches record-minimums on develop (#718), which runs the properties
+ * suite 200 times at that SHA with fresh seeds, over 4 shards, each
+ * recording every reach count (`tests/minimums.ts` in record mode). This
+ * script refuses a run that measured any commit but the unpushed HEAD,
+ * reads every shard back,
  * refuses a record that cannot be trusted (too few runs, a repeated seed, an
  * id asserted twice or from two places, runs that disagree on what they
  * count, a minimum here the run lacks), and writes the minimum the method
  * gives (`scripts/minimums-method.ts`) for each count it can bound. Each
  * count it cannot is a finding, printed with the table to post on #84, and
  * gets no minimum, so the checker refuses it until it is dealt with. As for
- * floors, CI records and the laptop commits (operator, 2026-10-12).
+ * floors, CI records and the laptop folds the figures into its unpushed
+ * commit (operator, 2026-10-12; global rule 2026-10-21).
  */
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchRefusal, type RecordRun } from './fetch-floors.ts';
+import {
+  deleteScratchRef,
+  fetchRefusal,
+  pushedHead,
+  type RecordRun,
+} from './fetch-floors.ts';
 import {
   assess,
   MIN_RUNS,
@@ -285,12 +294,12 @@ function main(): void {
       'view',
       runId,
       '--json',
-      'workflowName,status,conclusion,headSha,headBranch',
+      'workflowName,status,conclusion,displayTitle',
     ]),
   ) as RecordRun;
   const head = output('git', ['rev-parse', 'HEAD']);
   const branch = output('git', ['branch', '--show-current']);
-  const refusal = fetchRefusal(run, head, branch, WORKFLOW);
+  const refusal = fetchRefusal(run, head, branch, pushedHead(output), WORKFLOW);
   if (refusal !== undefined) die(refusal);
 
   const dir = mkdtempSync(join(tmpdir(), 'minimums-fetch-'));
@@ -335,6 +344,9 @@ function main(): void {
     if (moves.length > 0)
       console.log(`minimums:fetch: moved:\n  ${moves.join('\n  ')}`);
     console.log(`minimums:fetch: wrote ${written.join(', ') || 'nothing'}`);
+    console.log(
+      `minimums:fetch: fold them into the unpushed commit (git commit --amend), push the branch once, then: ${deleteScratchRef(WORKFLOW, branch)}`,
+    );
     if (findings.length > 0)
       die(
         `${String(findings.length)} counts took no minimum, and the checker ` +

@@ -30,7 +30,7 @@ export const sampleRefusal = (
   environment['CI'] !== '' &&
   environment[SAMPLE_JOB_ENV] === WORKFLOW
     ? undefined
-    : `minimums are sampled in CI only, by the ${WORKFLOW} workflow: label the pull request ${WORKFLOW} (#84)`;
+    : `minimums are sampled in CI only, by the ${WORKFLOW} workflow: push the commit to refs/minimums/<branch> and dispatch ${WORKFLOW} on develop (#84, #718)`;
 
 const USAGE =
   'usage: npm run minimums:sample -- --runs <whole number of 1 or more> --out <folder>';

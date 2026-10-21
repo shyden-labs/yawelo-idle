@@ -252,7 +252,7 @@ describe('floorsText', () => {
 
 describe('recordRefusal (#547)', () => {
   const REFUSED =
-    'floors are recorded in CI only, by the record-floors workflow: label the pull request record-floors (#547)';
+    'floors are recorded in CI only, by the record-floors workflow: push the commit to refs/floors/<branch> and dispatch record-floors on develop (#547, #718)';
 
   it('refuses a record on the laptop', () => {
     expect(recordRefusal({})).toBe(REFUSED);
