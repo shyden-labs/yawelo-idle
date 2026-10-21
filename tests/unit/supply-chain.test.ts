@@ -428,3 +428,54 @@ describe('the install is reproducible', () => {
     expect(lock.packages['']?.devDependencies).toEqual(pkg().devDependencies);
   });
 });
+
+/**
+ * The coverage tool is pinned to the test runner (#728). `@vitest/coverage-v8`
+ * peers on one exact Vitest version, and Vitest warns that "running mixed
+ * versions is not supported" when they differ. So a Vitest bump that leaves
+ * the coverage package behind fails here, and Dependabot moves them together.
+ */
+const npmUpdate = (): Record<string, unknown> => {
+  const doc: unknown = parse(dependabot());
+  const updates =
+    isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+  const npm: unknown = updates.find(
+    (u) => isRecord(u) && u['package-ecosystem'] === 'npm',
+  );
+  return isRecord(npm) ? npm : {};
+};
+
+const stringsAt = (record: unknown, key: string): unknown[] =>
+  isRecord(record) && Array.isArray(record[key]) ? record[key] : [];
+
+describe('the coverage tool is pinned to the test runner (#728)', () => {
+  it('package.json names @vitest/coverage-v8 at the installed Vitest version, exactly', () => {
+    const installed = lockedVersion('vitest');
+    expect(installed, 'positive control: the lockfile names vitest').toMatch(
+      /^\d+\.\d+\.\d+$/,
+    );
+    const manifest = JSON.parse(
+      readFileSync('package.json', 'utf8'),
+    ) as PackageJson;
+    expect(manifest.devDependencies['@vitest/coverage-v8']).toBe(installed);
+  });
+
+  it('the lockfile installs @vitest/coverage-v8 at the installed Vitest version', () => {
+    expect(lockedVersion('@vitest/coverage-v8')).toBe(lockedVersion('vitest'));
+  });
+
+  it('Dependabot moves vitest and every @vitest package in one group', () => {
+    const groups = npmUpdate()['groups'];
+    const vitest = isRecord(groups) ? groups['vitest'] : undefined;
+    expect(stringsAt(vitest, 'patterns')).toEqual(['vitest', '@vitest/*']);
+  });
+
+  it("the patch catch-all excludes the vitest group's patterns, since Dependabot scores groups and order decides nothing", () => {
+    const groups = npmUpdate()['groups'];
+    const patch = isRecord(groups) ? groups['patch-updates'] : undefined;
+    expect(stringsAt(patch, 'exclude-patterns')).toEqual([
+      'vitest',
+      '@vitest/*',
+    ]);
+  });
+});

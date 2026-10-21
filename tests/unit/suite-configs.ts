@@ -5,6 +5,11 @@
  * (tests/guards/suite-configs.test.ts, #530).
  */
 export const NON_UNIT_VITEST_CONFIGS = [
+  'vitest.coverage.guards.config.ts',
+  'vitest.coverage.integration.config.ts',
+  'vitest.coverage.pacing.config.ts',
+  'vitest.coverage.properties.config.ts',
+  'vitest.coverage.unit.config.ts',
   'vitest.guards.config.ts',
   'vitest.integration.config.ts',
   'vitest.logs.config.ts',

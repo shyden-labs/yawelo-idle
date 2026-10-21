@@ -32,6 +32,7 @@ const SCRIPTS = [
   'scripts/board-progress.ts',
   'scripts/board-setup.ts',
   'scripts/ci-scope.ts',
+  'scripts/coverage.ts',
   'scripts/d1-binding.ts',
   'scripts/dev-secrets.ts',
   'scripts/develop-squash-only.ts',

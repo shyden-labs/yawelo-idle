@@ -14,7 +14,13 @@
  * figure that moved, for the commit to name, and the scratch ref's delete.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -23,6 +29,13 @@ import {
   readFloorsDir,
   writeFloors,
 } from './record-floors.ts';
+import { parseNameStatus } from './ci-scope.ts';
+import {
+  coveragePlan,
+  fetchedRecordRefusals,
+  RECORD_FILE,
+  renamesFrom,
+} from './coverage.ts';
 
 /**
  * What `gh run view --json` says of a run, as far as a fetch reads it. A
@@ -40,6 +53,17 @@ const WORKFLOW = 'record-floors';
 
 /** The artifact a record uploads: named by the commit it ran on. */
 export const artifactName = (sha: string): string => `floors-${sha}`;
+
+/** The coverage record's artifact (#728): its own, so the floors keep their layout. */
+export const coverageArtifactName = (sha: string): string => `coverage-${sha}`;
+
+/** The `owner/name` a run belongs to, from its URL. */
+export function repoOfRunUrl(url: string): string {
+  const match =
+    /^https:\/\/github\.com\/([^/]+\/[^/]+)\/actions\/runs\/\d+$/.exec(url);
+  if (match === null) throw new Error(`not a run URL: ${url}`);
+  return match[1] as string;
+}
 
 /**
  * The ref a workflow measures a branch's unpushed commit on: not a branch,
@@ -125,6 +149,67 @@ function output(command: string, args: readonly string[]): string {
   return run.stdout.trim();
 }
 
+/**
+ * The run's coverage record (#728), checked before anything is written: no
+ * file's untested code may grow against the record at the merge base with
+ * origin/develop. Undefined when neither the run nor the tree holds one.
+ */
+function fetchedCoverage(
+  runId: string,
+  head: string,
+  dir: string,
+): string | undefined {
+  const repo = repoOfRunUrl(
+    output('gh', ['run', 'view', runId, '--json', 'url', '--jq', '.url']),
+  );
+  const uploaded = output('gh', [
+    'api',
+    `repos/${repo}/actions/runs/${runId}/artifacts`,
+    '--jq',
+    '.artifacts[].name',
+  ]).split('\n');
+  const plan = coveragePlan(
+    uploaded.includes(coverageArtifactName(head)),
+    existsSync(RECORD_FILE),
+  );
+  if (plan === 'skip') {
+    console.log('floors:fetch: no coverage record in the run or the tree');
+    return undefined;
+  }
+  if (plan !== 'fetch') die(plan);
+  const into = join(dir, 'coverage');
+  output('gh', [
+    'run',
+    'download',
+    runId,
+    '--name',
+    coverageArtifactName(head),
+    '--dir',
+    into,
+  ]);
+  const fetched = readFileSync(join(into, 'record.json'), 'utf8');
+  const base = output('git', ['merge-base', 'HEAD', 'origin/develop']);
+  const shown = spawnSync('git', ['show', `${base}:${RECORD_FILE}`], {
+    encoding: 'utf8',
+  });
+  // `output` trims whitespace only, so -z's closing NUL is kept.
+  const renamed = renamesFrom(
+    parseNameStatus(
+      output('git', ['diff', '--name-status', '-z', '-M', base, 'HEAD']),
+    ),
+  );
+  const refusals = fetchedRecordRefusals(
+    shown.status === 0 ? shown.stdout : undefined,
+    fetched,
+    renamed,
+  );
+  if (refusals.length > 0)
+    die(
+      `nothing written, a file's untested code grew:\n  ${refusals.join('\n  ')}`,
+    );
+  return fetched;
+}
+
 function main(): void {
   const id = process.argv[2];
   if (id === undefined || !/^\d+$/.test(id))
@@ -159,7 +244,12 @@ function main(): void {
     const { next, refusals } = fetchedFloors(local, readFloorsDir(dir));
     if (refusals.length > 0)
       die(`nothing written:\n  ${refusals.join('\n  ')}`);
+    const coverage = fetchedCoverage(runId, head, dir);
     const written = writeFloors(FLOORS_DIR, next);
+    if (coverage !== undefined) {
+      writeFileSync(RECORD_FILE, coverage);
+      written.push(RECORD_FILE);
+    }
     const moves = describeMoves(local, next);
     console.log(
       moves.length === 0

@@ -43,6 +43,22 @@ import ts from 'typescript';
  * whose callback returns a truthy value.
  */
 export function codeWithoutLiterals(sf: ts.SourceFile): string {
+  return blankLiterals(sf)
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, '');
+}
+
+/**
+ * Every comment in `sf`, in order (#728): what a guard judging comments
+ * reads, so a string, template or regex spelling a comment is not one. The
+ * literals are blanked first, as above; one left-to-right pattern then reads
+ * a `//` inside a block comment as part of that block.
+ */
+export const commentsOf = (sf: ts.SourceFile): string[] =>
+  blankLiterals(sf).match(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g) ?? [];
+
+/** `sf`'s full text with every literal, outermost only, replaced by `""`. */
+function blankLiterals(sf: ts.SourceFile): string {
   const ranges: [number, number][] = [];
   const visit = (node: ts.Node): void => {
     if (
@@ -61,7 +77,7 @@ export function codeWithoutLiterals(sf: ts.SourceFile): string {
   // End first, so each replacement leaves the earlier ranges where they were.
   for (const [from, to] of ranges.reverse())
     code = code.slice(0, from) + '""' + code.slice(to);
-  return code.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, '');
+  return code;
 }
 
 /**
