@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import { HOUR_MS, wallMs } from '../src/clock';
 import type { Course } from '../src/course';
 import type { GameEvent } from '../src/events';
@@ -313,7 +315,12 @@ describe('a refused event leaves state unchanged (AC2)', () => {
     expect(noisy.refused).toEqual([
       { seq: 11, rejection: { kind: 'unknownUpgrade', id: 'noSuchUpgrade' } },
     ]);
-    expect(plain.refused).toEqual([]);
+    expect(
+      searched(plain.refused, { of: renumbered, what: 'events replayed' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('log/events replayed without the refusal', renumbered.length),
+    ).toBeUndefined();
   });
 });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { againstControl } from '../../../tests/searched';
 import { heldCards } from '../src/cards';
 import { DAY_MS, HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
 import type { Course, CultureCard, Encounter } from '../src/course';
@@ -130,9 +131,15 @@ describe('the cards line (AC4)', () => {
   });
 
   it('is not shown while no card is held', () => {
-    expect(linesOf(holding([]), 'tea').map((l) => l.name)).not.toContain(
-      'cards',
-    );
+    expect(
+      againstControl(
+        (cards: readonly string[]) =>
+          linesOf(holding(cards), 'tea')
+            .map((l) => l.name)
+            .filter((name) => name === 'cards'),
+        { input: [], control: ['satay'] },
+      ),
+    ).toEqual([]);
   });
 
   it('refuses a held card the course does not have', () => {

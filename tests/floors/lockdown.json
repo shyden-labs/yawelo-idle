@@ -1,0 +1,9 @@
+{
+  "lockdown/challenge bodies with a wrong password": 1,
+  "lockdown/challenge bodies with no credentials": 1,
+  "lockdown/requests challenged with a wrong password": 1,
+  "lockdown/requests challenged with no credentials": 1,
+  "lockdown/requests with no password configured": 1,
+  "lockdown/robots.txt requests on the sync host": 1,
+  "lockdown/robots.txt requests on the web host": 1
+}

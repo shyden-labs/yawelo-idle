@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import {
   BLOCKING_ROBOTS_TXT,
   NO_INDEX,
@@ -141,10 +143,12 @@ describe('gateWebRequest', () => {
     ['a wrong password', basic('u:wrong')],
   ])(
     'challenges %s on a non-prod host and never serves',
-    async (_case, authorization) => {
+    async (name, authorization) => {
       const { serve, calls } = recordingServe();
+      const url = `${dev}/`;
+      const sent = [url];
       const response = await gateWebRequest(
-        request(`${dev}/`, authorization),
+        request(url, authorization),
         PASSWORD,
         serve,
       );
@@ -153,34 +157,52 @@ describe('gateWebRequest', () => {
         'Basic realm="Yawelo Idle Non-Prod"',
       );
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-      expect(await response.text()).not.toContain('app bytes');
-      expect(calls).toEqual([]);
+      const bodies = [await response.text()];
+      expect(
+        searched(
+          bodies.filter((b) => b.includes('app bytes')),
+          { of: bodies, what: 'challenge bodies' },
+        ),
+      ).toEqual([]);
+      expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+      expect(
+        floorBreach(`lockdown/challenge bodies with ${name}`, bodies.length),
+      ).toBeUndefined();
+      expect(
+        floorBreach(`lockdown/requests challenged with ${name}`, sent.length),
+      ).toBeUndefined();
     },
   );
 
   it('challenges every request when the password is not configured', async () => {
     const { serve, calls } = recordingServe();
+    const url = `${dev}/`;
+    const sent = [url];
     const response = await gateWebRequest(
-      request(`${dev}/`, basic('u:')),
+      request(url, basic('u:')),
       undefined,
       serve,
     );
     expect(response.status).toBe(401);
-    expect(calls).toEqual([]);
+    expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+    expect(
+      floorBreach('lockdown/requests with no password configured', sent.length),
+    ).toBeUndefined();
   });
 
   it('serves blocking robots.txt on a non-prod host without credentials', async () => {
     const { serve, calls } = recordingServe();
-    const response = await gateWebRequest(
-      request(`${dev}/robots.txt`),
-      PASSWORD,
-      serve,
-    );
+    const url = `${dev}/robots.txt`;
+    const sent = [url];
+    const response = await gateWebRequest(request(url), PASSWORD, serve);
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
     expect(BLOCKING_ROBOTS_TXT).toContain('User-agent: *\nDisallow: /\n');
     expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-    expect(calls).toEqual([]);
+    expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+    expect(
+      floorBreach('lockdown/robots.txt requests on the web host', sent.length),
+    ).toBeUndefined();
   });
 
   it('serves an authorised request with noindex added and the rest kept', async () => {
@@ -214,14 +236,15 @@ describe('markApiRequest', () => {
 
   it('serves blocking robots.txt on a non-prod host', async () => {
     const { serve, calls } = recordingServe();
-    const response = await markApiRequest(
-      request(
-        'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev/robots.txt',
-      ),
-      serve,
-    );
+    const url =
+      'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev/robots.txt';
+    const sent = [url];
+    const response = await markApiRequest(request(url), serve);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
-    expect(calls).toEqual([]);
+    expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+    expect(
+      floorBreach('lockdown/robots.txt requests on the sync host', sent.length),
+    ).toBeUndefined();
   });
 
   it.each(['/health', '/robots.txt'])(

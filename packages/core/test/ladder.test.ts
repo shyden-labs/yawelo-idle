@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import { BALANCE } from '../src/balance';
 import {
   resolveCourse,
@@ -112,8 +114,14 @@ describe('resolveCourse prices each Encounter from its tier and region', () => {
     const keys = resolveCourse(threeRegions()).regions.flatMap((r) =>
       r.encounters.flatMap((e) => Object.keys(e)),
     );
-    expect(keys.filter((k) => k === 'tier')).toEqual([]);
+    expect(
+      searched(
+        keys.filter((k) => k === 'tier'),
+        { of: keys, what: 'Encounter keys' },
+      ),
+    ).toEqual([]);
     expect(keys.filter((k) => k === 'c0')).toHaveLength(4);
+    expect(floorBreach('ladder/encounter keys', keys.length)).toBeUndefined();
   });
 });
 

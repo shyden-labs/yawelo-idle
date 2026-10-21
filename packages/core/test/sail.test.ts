@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
 import type {
   Course,
@@ -244,9 +246,18 @@ describe('the goal (AC1)', () => {
 
   it('never needs a review: unreviewed words and no Insight still sail (D1)', () => {
     const s = at(0);
-    expect(Object.values(s.words).every((w) => w.card.reps === 0)).toBe(true);
+    const words = Object.values(s.words);
+    expect(
+      searched(
+        words.filter((w) => w.card.reps !== 0),
+        { of: words, what: 'words held' },
+      ),
+    ).toEqual([]);
     expect(s.insight).toEqual([0, 0]);
     expect(ok(setSail(course, s)).destination).toBe(1);
+    expect(
+      floorBreach('sail/words held at the first destination', words.length),
+    ).toBeUndefined();
   });
 
   it('refuses a sail one word short, the Understanding met', () => {
@@ -338,7 +349,18 @@ describe('the preview (AC2, DN3)', () => {
     expect(n(preview().resets.understanding)).toBe(
       n(understandingNow(course, before())),
     );
-    expect(after().owned).toEqual({});
+    const encounters = course.regions.flatMap((r) =>
+      r.encounters.map((e) => e.id),
+    );
+    expect(
+      searched(Object.keys(after().owned), {
+        of: encounters,
+        what: 'Encounters in the course',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach('sail/encounters after a sail', encounters.length),
+    ).toBeUndefined();
   });
 
   it('says what Understanding the next run starts with', () => {
@@ -457,12 +479,26 @@ describe('a sail resets only Encounters and Understanding (AC3, DN3)', () => {
   });
 
   it('owns no Encounters and holds only the starting grant, with nothing spent', () => {
-    expect(after().owned).toEqual({});
+    const encounters = course.regions.flatMap((r) =>
+      r.encounters.map((e) => e.id),
+    );
+    expect(
+      searched(Object.keys(after().owned), {
+        of: encounters,
+        what: 'Encounters in the course',
+      }),
+    ).toEqual([]);
     expect(after().anchor).toEqual({
       sim: out().sim,
       understanding: tuple(200),
     });
     expect(after().runSpent).toEqual([0, 0]);
+    expect(
+      floorBreach(
+        'sail/encounters after a sail from a journey',
+        encounters.length,
+      ),
+    ).toBeUndefined();
   });
 
   it('keeps a Journey still out', () => {
@@ -490,7 +526,21 @@ describe('destinations unlock in order (AC4)', () => {
         expect(after.destination).toBe(i + 1);
         expect(after.reached).toBe(i + 1);
         expect(after.finale).toBe(false);
-        expect(after.replays).toEqual({});
+        const destinations = course.regions.flatMap((r) =>
+          r.destinations.map((d) => d.id),
+        );
+        expect(
+          searched(Object.keys(after.replays), {
+            of: destinations,
+            what: 'destinations in the course',
+          }),
+        ).toEqual([]);
+        expect(
+          floorBreach(
+            `sail/destinations after a sail from ${String(i)}`,
+            destinations.length,
+          ),
+        ).toBeUndefined();
       });
 
   it('accepts the next destination named', () => {

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import { BALANCE, type Rank } from '../src/balance';
 import { DAY_MS, HOUR_MS, bucketStart, simMs, wallMs } from '../src/clock';
 import type { Course } from '../src/course';
@@ -125,7 +127,16 @@ describe('picking up a word (AC1)', () => {
     for (let k = 0; k < 5; k++) s = ok(pickUpWord(course, s));
     const r = pickUpWord(course, s);
     expect(r).toEqual({ ok: false, rejection: { kind: 'poolEmpty' } });
-    expect(Object.keys(s.words)).not.toContain('later');
+    const held = Object.keys(s.words);
+    expect(
+      searched(
+        held.filter((id) => id === 'later'),
+        { of: held, what: 'words held' },
+      ),
+    ).toEqual([]);
+    expect(
+      floorBreach('words/words held when the pool is empty', held.length),
+    ).toBeUndefined();
   });
 
   it('is refused as empty, not unaffordable, when the next pick-up could not be paid for either', () => {

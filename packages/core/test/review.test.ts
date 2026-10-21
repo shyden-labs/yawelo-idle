@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { againstControl, searched } from '../../../tests/searched';
 import { fsrs, generatorParameters, Rating, State } from 'ts-fsrs';
 import type { Rank } from '../src/balance';
 import { DAY_MS, wallMs } from '../src/clock';
@@ -325,7 +327,20 @@ describe('the review queue (AC6)', () => {
   });
 
   it('is empty when nothing is due', () => {
-    expect(reviewQueue({}, T0)).toEqual([]);
-    expect(reviewQueue({ x: word('heard', 2) }, wallMs(T0 - 1))).toEqual([]);
+    expect(
+      againstControl(
+        (words: Readonly<Record<string, WordMemory>>) => reviewQueue(words, T0),
+        { input: {}, control: { x: word('heard', 2) } },
+      ),
+    ).toEqual([]);
+    const waiting = { x: word('heard', 2) };
+    const ids = Object.keys(waiting);
+    expect(
+      searched(reviewQueue(waiting, wallMs(T0 - 1)), {
+        of: ids,
+        what: 'words not yet due',
+      }),
+    ).toEqual([]);
+    expect(floorBreach('review/words not yet due', ids.length)).toBeUndefined();
   });
 });
