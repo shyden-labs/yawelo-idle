@@ -38,7 +38,7 @@ export const WATCHED: readonly { file: string; cron: string }[] = [
  * twelve hours for GitHub's delay under load (measured on #710: owner-
  * review's first scheduled run started 320 minutes after its slot).
  */
-export const LIMIT_HOURS = 36;
+export const LIMIT_HOURS = 12;
 
 const HOUR = 3_600_000;
 
