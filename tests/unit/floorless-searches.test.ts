@@ -1071,10 +1071,11 @@ describe('walkDisagreements', () => {
  * landed (#361), lowered to the list's measured size (#475: 113 in 101;
  * #544: 106 in 98; #368: 84 in 81; #369: 69 in 66; #370: 60 in 57;
  * #373: 40 in 37; #374: 21 in 19, the 9 entries #679 deleted with the
- * every-commit tests among the 19 sites and 18 scopes). It only shrinks.
+ * every-commit tests among the 19 sites and 18 scopes; #375: 0 in 0, the
+ * last 21 sites in 19 scopes proved). It only shrinks.
  */
-const CEILING_SITES = 21;
-const CEILING_SCOPES = 19;
+const CEILING_SITES = 0;
+const CEILING_SCOPES = 0;
 
 describe('every absence search is proved, or listed (#361)', () => {
   it('only shrinks the burn-down list', () => {
