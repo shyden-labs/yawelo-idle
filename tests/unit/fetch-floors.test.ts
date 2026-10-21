@@ -4,6 +4,7 @@ import {
   deleteScratchRef,
   fetchedFloors,
   fetchRefusal,
+  pushedHead,
   scratchRef,
   type RecordRun,
 } from '../../scripts/fetch-floors';
@@ -105,6 +106,39 @@ describe('the scratch ref', () => {
     expect(deleteScratchRef('record-floors', BRANCH)).toBe(
       `git push origin --delete refs/floors/${BRANCH}`,
     );
+  });
+});
+
+describe('pushedHead', () => {
+  const PRUNING_FETCH = ['fetch', '--quiet', '--prune', 'origin'];
+  const CONTAINS = ['branch', '--remotes', '--contains', 'HEAD'];
+
+  it('fetches with --prune, then asks which remote branches hold HEAD', () => {
+    const calls: [string, readonly string[]][] = [];
+    pushedHead((command, args) => {
+      calls.push([command, args]);
+      return '';
+    });
+    expect(calls).toEqual([
+      ['git', PRUNING_FETCH],
+      ['git', CONTAINS],
+    ]);
+  });
+
+  it('counts no stale ref of a branch deleted on GitHub (#723)', () => {
+    let pruned = false;
+    const pushed = pushedHead((_command, args) => {
+      if (args[0] === 'fetch') pruned = args.includes('--prune');
+      return pruned ? '' : '  origin/floors-bootstrap/718';
+    });
+    expect(pushed).toBe(false);
+  });
+
+  it('counts a remote branch that still holds HEAD after the prune', () => {
+    const pushed = pushedHead((_command, args) =>
+      args[0] === 'fetch' ? '' : '  origin/ci/723-prune',
+    );
+    expect(pushed).toBe(true);
   });
 });
 

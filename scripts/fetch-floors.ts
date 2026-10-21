@@ -77,11 +77,14 @@ export function fetchRefusal(
   return undefined;
 }
 
-/** Whether HEAD is on any remote branch, read after a fetch. */
+/**
+ * Whether HEAD is on any remote branch, read after a fetch that prunes, so
+ * the ref of a branch deleted on GitHub never counts as pushed (#723).
+ */
 export function pushedHead(
   output: (command: string, args: readonly string[]) => string,
 ): boolean {
-  output('git', ['fetch', '--quiet', 'origin']);
+  output('git', ['fetch', '--quiet', '--prune', 'origin']);
   return output('git', ['branch', '--remotes', '--contains', 'HEAD']) !== '';
 }
 
