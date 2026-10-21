@@ -172,7 +172,7 @@ jobs:
       # One measured limit (#476), held in suite-limits.test.ts.
       - name: Measure coverage (every suite pull-request CI runs)
         id: measure
-        timeout-minutes: 15
+        timeout-minutes: 12
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:coverage
       # The measured table equals the record, and no file grew against the

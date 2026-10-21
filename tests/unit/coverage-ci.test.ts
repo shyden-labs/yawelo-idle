@@ -84,10 +84,15 @@ describe('the coverage job judges every pull request (#728)', () => {
     steps().find((s) => s.name === name);
 
   it('checks out the whole history, so the merge base with develop is there', () => {
-    const checkout = steps().find((s) =>
-      (s.uses ?? '').startsWith('actions/checkout@'),
-    );
-    expect(checkout?.with).toEqual({ 'fetch-depth': 0 });
+    const checkoutIn = (job: Job | undefined) =>
+      (job?.steps ?? []).find((s) =>
+        (s.uses ?? '').startsWith('actions/checkout@'),
+      )?.with;
+    // Beside build-and-test's, which needs only the commit and its parent.
+    expect([
+      checkoutIn(ci.jobs['build-and-test']),
+      checkoutIn(ci.jobs['coverage']),
+    ]).toEqual([{ 'fetch-depth': 2 }, { 'fetch-depth': 0 }]);
   });
 
   it('classifies the change as build-and-test does, before the install', () => {

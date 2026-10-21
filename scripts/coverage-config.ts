@@ -41,6 +41,19 @@ export const COVERAGE_EXCLUDE: readonly string[] = [
 ];
 
 /**
+ * Test files that hold a time budget (CPU per operation, wall time per
+ * run). Instrumentation slows the code they time, and a coverage run carries
+ * no per-test limit (global rule, "Both global"), so the coverage run of
+ * their suite leaves them out. Their budgets stay in force in their own CI
+ * step, and their own lines stay in the record, untested. Measured
+ * 2026-10-21 (PR #741's coverage job): pemandu-perf's fastest purchase took
+ * 183 µs of CPU under coverage against its 100 µs budget.
+ */
+export const BUDGET_TESTS: readonly string[] = [
+  'packages/bots/pacing/pemandu-perf.test.ts',
+];
+
+/**
  * The coverage block every suite's coverage config adds, all but its
  * `reportsDirectory` (`coverage/<suite>`). Data, not a function: the configs
  * are loaded by tests, and a call into workspace code while a test file is

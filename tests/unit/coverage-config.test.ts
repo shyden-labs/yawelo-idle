@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import unit from '../../vitest.config.ts';
 import guards from '../../vitest.guards.config.ts';
+import pacing from '../../vitest.pacing.config.ts';
 import coverageGuards from '../../vitest.coverage.guards.config.ts';
 import coverageIntegration from '../../vitest.coverage.integration.config.ts';
 import coveragePacing from '../../vitest.coverage.pacing.config.ts';
 import coverageProperties from '../../vitest.coverage.properties.config.ts';
 import coverageUnit from '../../vitest.coverage.unit.config.ts';
 import {
+  BUDGET_TESTS,
   COVERAGE_EXCLUDE,
   COVERAGE_SUITES,
   coverageConfigFile,
@@ -78,6 +80,28 @@ describe('the unit suite under coverage (#728)', () => {
       coverageUnit.test.hookTimeout,
     ]).toEqual([0, 0]);
   });
+});
+
+describe('the pacing suite under coverage leaves out its time budgets (#728)', () => {
+  it('excludes exactly the budget tests, beside Vitest’s own defaults', () => {
+    expect(coveragePacing.test.exclude).toEqual([
+      '**/node_modules/**',
+      '**/.git/**',
+      'packages/bots/pacing/pemandu-perf.test.ts',
+    ]);
+  });
+
+  it('while the pacing step itself runs every pacing test, budgets included', () => {
+    expect([pacing.test?.include, pacing.test?.exclude]).toEqual([
+      ['packages/bots/pacing/**/*.test.ts'],
+      undefined,
+    ]);
+  });
+
+  for (const file of BUDGET_TESTS)
+    it(`${file} holds a time budget: it reads a CPU clock`, () => {
+      expect(readFileSync(file, 'utf8')).toContain('threadCpuUsage');
+    });
 });
 
 describe('another suite under coverage keeps its own settings (#728)', () => {

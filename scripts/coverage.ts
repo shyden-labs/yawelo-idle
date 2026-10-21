@@ -169,6 +169,16 @@ export function docsOnlyProblems(
   ]);
 }
 
+/**
+ * The record written where it belongs, its folder made first: the first
+ * record lands in a folder the tree does not hold yet (#728, PR 2's first
+ * floors:fetch died on it with ENOENT).
+ */
+export const writeRecord = (path: string, text: string): void => {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text);
+};
+
 const die = (message: string): never => {
   console.error(`coverage: ${message}`);
   process.exit(1);
@@ -254,8 +264,7 @@ function record(): void {
   const head = output('git', ['rev-parse', 'HEAD']);
   const stale = metaRefusal(readOrUndefined(META_FILE), head);
   if (stale !== undefined) die(stale);
-  mkdirSync(dirname(RECORD_FILE), { recursive: true });
-  writeFileSync(RECORD_FILE, readFileSync(TABLE_FILE, 'utf8'));
+  writeRecord(RECORD_FILE, readFileSync(TABLE_FILE, 'utf8'));
   console.log(`coverage: recorded ${RECORD_FILE} at ${head}`);
 }
 
