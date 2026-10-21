@@ -1,0 +1,28 @@
+# Throwaway probe for #718 AC1: never merged. Does a bare push trigger fire
+# for a commit pushed only to refs/floors/<name>, and what does it check out?
+name: probe-718-bare
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Report the event
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: echo "event=$EVENT ref=$REF sha=$SHA"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the checkout
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          [ "$(git rev-parse HEAD)" = "$SHA" ] && echo "checkout matches github.sha"
