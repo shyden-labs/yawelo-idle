@@ -95,15 +95,14 @@ const SUITES = [
     slowest: 40,
   },
   // Every suite pull-request CI runs, under coverage, one after another, in
-  // its own job (#728). Not yet measured as a step: 300 s is a provisional
-  // figure until its first CI runs, and #728 sets it from them before it
-  // merges (a limit only ever falls).
+  // its own job (#728). Measured 2026-10-21 over its first two CI runs
+  // (39668893827, 39672244793): 222 and 222 s.
   {
     suite: 'coverage',
     run: 'npm run test:coverage',
     job: 'coverage',
-    minutes: 15,
-    slowest: 300,
+    minutes: 12,
+    slowest: 222,
   },
   {
     suite: 'worker',

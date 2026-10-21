@@ -166,7 +166,7 @@ jobs:
       # One measured limit (#476), held in suite-limits.test.ts.
       - name: Measure coverage (every suite pull-request CI runs)
         id: measure
-        timeout-minutes: 15
+        timeout-minutes: 12
         run: npm run test:coverage
       # Only after a measure that ran: an upload after a skipped one would fail
       # on a report nothing wrote, a second red step that misleads (#353).

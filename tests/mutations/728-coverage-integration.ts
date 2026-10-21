@@ -49,6 +49,9 @@ export default mutationFile({
           'to be',
         [`${LOADS} › the scripts load under Node’s own loader (#391) > scripts/fetch-floors.ts loads without running its main`]:
           'to be',
+        // fetch-minimums imports fetch-floors, which imports the CLI.
+        [`${LOADS} › the scripts load under Node’s own loader (#391) > scripts/fetch-minimums.ts loads without running its main`]:
+          'to be',
         [`${C} names its commands when given none`]: 'to deeply equal',
         [`${C} refuses to record outside the record-floors workflow`]:
           'to contain',

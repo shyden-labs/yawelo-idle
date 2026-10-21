@@ -302,10 +302,10 @@ export default mutationFile({
       name: 'measure-step-unlimited',
       file: '.github/workflows/ci.yml',
       anchor:
-        '        timeout-minutes: 15\n        run: npm run test:coverage\n',
+        '        timeout-minutes: 12\n        run: npm run test:coverage\n',
       replacement: '        run: npm run test:coverage\n',
       red: {
-        [`${LIMITS} › each non-unit suite’s one limit is its CI step’s (#476 AC1) > coverage: its step holds it to 15 minute(s)`]:
+        [`${LIMITS} › each non-unit suite’s one limit is its CI step’s (#476 AC1) > coverage: its step holds it to 12 minute(s)`]:
           'to be',
       },
     },
