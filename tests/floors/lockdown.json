@@ -1,0 +1,9 @@
+{
+  "lockdown/challenge sentences for a wrong password": 2,
+  "lockdown/challenge sentences for no credentials": 2,
+  "lockdown/hand-overs off robots.txt on the sync host": 1,
+  "lockdown/hand-overs off robots.txt on the web host": 1,
+  "lockdown/hand-overs once a password is set": 1,
+  "lockdown/hand-overs with the password, for a wrong password": 1,
+  "lockdown/hand-overs with the password, for no credentials": 1
+}

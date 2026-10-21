@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { againstControl } from '../../../tests/searched';
 import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
 import type {
   Course,
@@ -379,7 +380,14 @@ describe('rootFactors (#32 AC2)', () => {
   });
 
   it('is empty with no node owned', () => {
-    expect(rootFactors(course, holding([])).size).toBe(0);
+    expect(
+      againstControl(
+        (grammar: readonly string[]) => [
+          ...rootFactors(course, holding(grammar)).keys(),
+        ],
+        { input: [], control: ['me-'] },
+      ),
+    ).toEqual([]);
   });
 
   it('refuses an owned node the course does not have', () => {

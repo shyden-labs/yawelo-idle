@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { floorBreach } from '../../../tests/floors';
+import { searched } from '../../../tests/searched';
 import { syntheticCourse } from '../fixtures/synthetic-course';
 import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
 import type { Course } from '../src/course';
@@ -244,7 +246,9 @@ describe('stateHash (AC4)', () => {
           original,
       )
       .map(({ path }) => path.join('.'));
-    expect(unchanged).toEqual([]);
+    expect(searched(unchanged, { of: leaves, what: 'numeric fields' })).toEqual(
+      [],
+    );
     // Liveness: every number was reached. A JSON reviver counts them
     // independently of the walk above.
     let counted = 0;
@@ -254,6 +258,7 @@ describe('stateHash (AC4)', () => {
     });
     expect(leaves).toHaveLength(counted);
     expect(counted).toBeGreaterThanOrEqual(NUMERIC_FLOOR);
+    expect(floorBreach('hash/numeric fields', leaves.length)).toBeUndefined();
   });
 
   it('changes when a string or a boolean field changes', () => {
