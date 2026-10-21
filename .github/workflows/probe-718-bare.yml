@@ -1,9 +1,15 @@
 # Throwaway probe for #718 AC1: never merged. Does a bare push trigger fire
 # for a commit pushed only to refs/floors/<name>, and what does it check out?
+# Dispatched with `sha`, can checkout fetch a commit only a scratch ref holds?
 name: probe-718-bare
 on:
   push:
   workflow_dispatch:
+    inputs:
+      sha:
+        description: A full commit SHA to check out
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -18,11 +24,24 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
           SHA: ${{ github.sha }}
-        run: echo "event=$EVENT ref=$REF sha=$SHA"
+          WANTED: ${{ inputs.sha }}
+        run: echo "event=$EVENT ref=$REF sha=$SHA wanted=$WANTED"
+      - name: Refuse anything but a full SHA
+        if: ${{ inputs.sha != '' }}
+        env:
+          WANTED: ${{ inputs.sha }}
+        run: |
+          if ! printf '%s' "$WANTED" | grep -Eqx '[0-9a-f]{40}'; then
+            echo "::error::sha must be 40 lowercase hex characters"
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha || github.sha }}
       - name: Report the checkout
         env:
-          SHA: ${{ github.sha }}
+          WANTED: ${{ inputs.sha || github.sha }}
         run: |
           echo "HEAD=$(git rev-parse HEAD)"
-          [ "$(git rev-parse HEAD)" = "$SHA" ] && echo "checkout matches github.sha"
+          [ "$(git rev-parse HEAD)" = "$WANTED" ] && echo "checkout matches the wanted SHA"
+          ls probe-718-marker.txt 2>&1 || true
