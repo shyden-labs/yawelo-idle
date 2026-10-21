@@ -44,6 +44,7 @@ export interface Workflow {
   readonly on?: unknown;
   readonly env?: Readonly<Record<string, unknown>>;
   readonly permissions?: unknown;
+  readonly concurrency?: unknown;
   readonly jobs?: Readonly<Record<string, WorkflowJob>>;
 }
 

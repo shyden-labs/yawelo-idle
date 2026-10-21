@@ -1,0 +1,7 @@
+{
+  "schedule-watch/at-limit-checked": 2,
+  "schedule-watch/facts-checked": 2,
+  "schedule-watch/never-run-checked": 2,
+  "schedule-watch/newest-only-checked": 2,
+  "schedule-watch/running-checked": 2
+}
