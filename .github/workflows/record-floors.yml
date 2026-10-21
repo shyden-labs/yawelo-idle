@@ -2,25 +2,37 @@
 # `# vX.Y.Z` comment, as in ci.yml (tests/unit/supply-chain.test.ts).
 #
 # Records the guards' floors in CI (#547; global rule 2026-10-09: "Floors
-# are recorded by a separate CI job"). Label a pull request `record-floors`
-# and this runs every suite on its head with the recorder's switch set, then
-# uploads `tests/floors/` as `floors-<head SHA>`. `npm run floors:fetch
-# <run-id>` writes them on the laptop, refusing any other commit, and the
-# commit is pushed from there, so CI runs on it as on any push (operator,
-# 2026-10-12: "CI records, laptop commits"). A pull_request event runs the
-# head's own copy of this file, so a branch that adds it can record its own
-# floors. Nothing here can write to the repository.
+# are recorded by a separate CI job") on a commit not yet pushed to its
+# branch (#718; global rule 2026-10-21: "a CI bot never pushes to a branch").
+# The session pushes the commit to the scratch ref `refs/floors/<branch>`,
+# which starts no run, and dispatches this workflow on develop with the
+# branch and the SHA: `workflow_dispatch` refuses a scratch ref, and a
+# dispatch on develop checks out a scratch-only SHA exactly (#718 AC1, run
+# 39521577298). This runs every suite at that SHA with the recorder's switch
+# set and uploads `tests/floors/` as `floors-<sha>`. `npm run floors:fetch
+# <run-id>` writes them into the unpushed commit, the branch is pushed once,
+# and the scratch ref is deleted. The workflow file is develop's copy; the
+# scripts it runs are the measured commit's. Nothing here can write to the
+# repository.
 name: record-floors
+run-name: record-floors ${{ inputs.branch }} at ${{ inputs.sha }}
 on:
-  pull_request:
-    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: The ticket branch whose scratch ref holds the commit
+        required: true
+        type: string
+      sha:
+        description: The full SHA at refs/floors/<branch>
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   record-floors:
-    if: ${{ github.event.label.name == 'record-floors' }}
     runs-on: ubuntu-24.04
     # The recorder runs every suite with a floor, the browser suites included,
     # each of which ci.yml holds to its own limit; 30 covers them in one job.
@@ -30,22 +42,41 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
       options: --user 1001
     steps:
-      # A release pull request's head is develop, and main is never recorded
-      # into: their floors come from the ticket branches merged into them.
-      - name: Refuse develop and main
+      # develop and main are never recorded into: their floors come from the
+      # ticket branches merged into them. The inputs reach the shell only
+      # through env, and only in the shapes checked here. The SHA alone could
+      # name any commit: only the one the session pushed to the branch's
+      # scratch ref is measured, read from the public repository before
+      # anything is checked out (a failed read leaves the tip empty: refused).
+      - name: Refuse anything but the tip of a ticket branch's scratch ref
         env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BRANCH: ${{ inputs.branch }}
+          SHA: ${{ inputs.sha }}
           REFUSED: develop main
+          REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
         run: |
           for branch in $REFUSED; do
-            if [ "$HEAD_REF" = "$branch" ]; then
-              echo "::error::record-floors records ticket branches, not $HEAD_REF (#547)."
+            if [ "$BRANCH" = "$branch" ]; then
+              echo "::error::record-floors records ticket branches, not $BRANCH (#547)."
               exit 1
             fi
           done
+          if ! printf '%s' "$BRANCH" | grep -Eqx '[A-Za-z0-9._/-]+'; then
+            echo "::error::branch must be a branch name (#718)."
+            exit 1
+          fi
+          if ! printf '%s' "$SHA" | grep -Eqx '[0-9a-f]{40}'; then
+            echo "::error::sha must be 40 lowercase hex characters (#718)."
+            exit 1
+          fi
+          tip="$(git ls-remote "$REPOSITORY" "refs/floors/$BRANCH" | cut -f1)"
+          if ! [ "$tip" = "$SHA" ]; then
+            echo "::error::refs/floors/$BRANCH is at '${tip}', not $SHA (#718)."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ inputs.sha }}
           # The commit and its parent, as ci.yml has them.
           fetch-depth: 2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -61,6 +92,6 @@ jobs:
       - name: Upload the recorded floors
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: floors-${{ github.event.pull_request.head.sha }}
+          name: floors-${{ inputs.sha }}
           path: tests/floors/
           if-no-files-found: error

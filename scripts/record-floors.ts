@@ -436,7 +436,7 @@ export const recordRefusal = (
   environment['CI'] !== '' &&
   environment[RECORD_JOB_ENV] === 'record-floors'
     ? undefined
-    : 'floors are recorded in CI only, by the record-floors workflow: label the pull request record-floors (#547)';
+    : 'floors are recorded in CI only, by the record-floors workflow: push the commit to refs/floors/<branch> and dispatch record-floors on develop (#547, #718)';
 
 /**
  * The next figures, and every reason not to write them. The caller writes

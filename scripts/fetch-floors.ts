@@ -2,15 +2,16 @@
  * Write the floors the record-floors workflow recorded in CI (#547):
  * `npm run floors:fetch <run-id>`.
  *
- * Floors are recorded in CI only (global rule 2026-10-09): labelling a pull
- * request `record-floors` runs every suite on its head and uploads
- * `tests/floors/` as `floors-<head SHA>`. The commit is made here, so the
- * push runs CI as any push does (operator, 2026-10-12: "CI records, laptop
- * commits"; the App's key never leaves the laptop). This script refuses
- * unless the run is record-floors', finished, succeeded, and recorded this
- * branch at its current HEAD; and it refuses figures that fall or a floor
- * the run does not hold, which the recorder itself would never write. It
- * prints each figure that moved, for the commit to name.
+ * Floors are recorded in CI only (global rule 2026-10-09), on a commit not
+ * yet pushed to its branch (#718; global rule 2026-10-21): the session
+ * pushes it to `refs/floors/<branch>` and dispatches record-floors on
+ * develop, which uploads `tests/floors/` as `floors-<sha>`. The figures are
+ * folded into that commit here, and the branch is pushed once, already
+ * green. This script refuses unless the run is record-floors', finished,
+ * succeeded, and measured this branch at its current HEAD, and HEAD is on no
+ * remote branch; and it refuses figures that fall or a floor the run does
+ * not hold, which the recorder itself would never write. It prints each
+ * figure that moved, for the commit to name, and the scratch ref's delete.
  */
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -23,13 +24,16 @@ import {
   writeFloors,
 } from './record-floors.ts';
 
-/** What `gh run view --json` says of a run, as far as a fetch reads it. */
+/**
+ * What `gh run view --json` says of a run, as far as a fetch reads it. A
+ * dispatched run's head is develop's, so the commit it measured is read
+ * from its title, which the workflow's `run-name` sets (#718).
+ */
 export interface RecordRun {
   readonly workflowName: string;
   readonly status: string;
   readonly conclusion: string;
-  readonly headSha: string;
-  readonly headBranch: string;
+  readonly displayTitle: string;
 }
 
 const WORKFLOW = 'record-floors';
@@ -37,11 +41,27 @@ const WORKFLOW = 'record-floors';
 /** The artifact a record uploads: named by the commit it ran on. */
 export const artifactName = (sha: string): string => `floors-${sha}`;
 
-/** Why this run's record must not be written here, or nothing. */
+/**
+ * The ref a workflow measures a branch's unpushed commit on: not a branch,
+ * so it lists nowhere and starts no run (#718 AC1).
+ */
+export const scratchRef = (workflow: string, branch: string): string =>
+  `refs/${workflow.replace(/^record-/, '')}/${branch}`;
+
+/** The command that deletes the scratch ref once the branch is pushed. */
+export const deleteScratchRef = (workflow: string, branch: string): string =>
+  `git push origin --delete ${scratchRef(workflow, branch)}`;
+
+/**
+ * Why this run's record must not be written here, or nothing. `pushed` is
+ * whether HEAD is already on a remote branch: the figures fold into a
+ * commit not yet pushed, never into a commit on top (#718).
+ */
 export function fetchRefusal(
   run: RecordRun,
   head: string,
   branch: string,
+  pushed: boolean,
   workflow: string = WORKFLOW,
 ): string | undefined {
   if (run.workflowName !== workflow)
@@ -49,11 +69,20 @@ export function fetchRefusal(
   if (run.status !== 'completed') return `run is ${run.status}, not finished`;
   if (run.conclusion !== 'success')
     return `run ended ${run.conclusion}: it recorded nothing`;
-  if (run.headBranch !== branch)
-    return `run recorded ${run.headBranch}, not ${branch}`;
-  if (run.headSha !== head)
-    return `run recorded ${run.headSha}, but HEAD is ${head}: label the pull request again after the last push`;
+  const wanted = `${workflow} ${branch} at ${head}`;
+  if (run.displayTitle !== wanted)
+    return `run measured “${run.displayTitle}”, not “${wanted}”: push this commit to ${scratchRef(workflow, branch)} and dispatch ${workflow} on develop for it`;
+  if (pushed)
+    return `HEAD ${head} is already on origin: figures fold into a commit not yet pushed, so measure the commit before its first push (#718)`;
   return undefined;
+}
+
+/** Whether HEAD is on any remote branch, read after a fetch. */
+export function pushedHead(
+  output: (command: string, args: readonly string[]) => string,
+): boolean {
+  output('git', ['fetch', '--quiet', 'origin']);
+  return output('git', ['branch', '--remotes', '--contains', 'HEAD']) !== '';
 }
 
 /**
@@ -104,12 +133,12 @@ function main(): void {
       'view',
       runId,
       '--json',
-      'workflowName,status,conclusion,headSha,headBranch',
+      'workflowName,status,conclusion,displayTitle',
     ]),
   ) as RecordRun;
   const head = output('git', ['rev-parse', 'HEAD']);
   const branch = output('git', ['branch', '--show-current']);
-  const refusal = fetchRefusal(run, head, branch);
+  const refusal = fetchRefusal(run, head, branch, pushedHead(output));
   if (refusal !== undefined) die(refusal);
 
   const dir = mkdtempSync(join(tmpdir(), 'floors-fetch-'));
@@ -135,6 +164,9 @@ function main(): void {
         : `floors:fetch: run ${runId} at ${head} moved ${String(moves.length)}:\n  ${moves.join('\n  ')}`,
     );
     console.log(`floors:fetch: wrote ${written.join(', ') || 'nothing'}`);
+    console.log(
+      `floors:fetch: fold them into the unpushed commit (git commit --amend), push the branch once, then: ${deleteScratchRef(WORKFLOW, branch)}`,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
