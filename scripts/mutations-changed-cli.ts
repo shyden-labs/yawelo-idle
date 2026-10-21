@@ -16,7 +16,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { asMutationFile, type MutationFile } from './mutation-file.ts';
 import {
@@ -34,6 +34,7 @@ import {
   unprovedTests,
 } from './mutations-changed.ts';
 import { MINIMUMS_DIR } from './minimums-method.ts';
+import { RECORD_FILE } from './coverage.ts';
 import { FLOORS_DIR, SUITES, suiteFiles } from './record-floors.ts';
 import { committableFiles } from '../tests/unit/tracked-files.ts';
 
@@ -124,7 +125,12 @@ async function main(): Promise<void> {
   );
   const listed = new Set([...listedBySuite.values()].flat());
   const { helpers, data, recorded, unreadable } = needsListings(changed)
-    ? changedHelpers(changed, listed, workspaces(), [FLOORS_DIR, MINIMUMS_DIR])
+    ? changedHelpers(changed, listed, workspaces(), [
+        FLOORS_DIR,
+        MINIMUMS_DIR,
+        // The coverage record: counts CI writes, as the floors are (#728).
+        posix.dirname(RECORD_FILE),
+      ])
     : { helpers: [], data: [], recorded: [], unreadable: [] };
   // Every suite's tests: a file only unit tests use needs no mutation, but a
   // data file no test names at all fails (unnamedData).
