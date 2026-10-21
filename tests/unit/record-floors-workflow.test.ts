@@ -156,6 +156,39 @@ describe('the record-floors workflow (#547, #718)', () => {
     );
   });
 
+  it('measures coverage without the switch, after the floors, then records it with the switch (#728)', () => {
+    const measure = step('Measure coverage');
+    const record = step('Record coverage');
+    expect([runOf(measure), measure.env]).toEqual([
+      'npm run test:coverage',
+      undefined,
+    ]);
+    expect([runOf(record), record.env]).toEqual([
+      'node scripts/coverage.ts record',
+      { [RECORD_JOB_ENV]: 'record-floors' },
+    ]);
+    const order = (job().steps ?? []).map((s) => s.name);
+    expect([
+      order.indexOf('Upload the recorded floors') <
+        order.indexOf('Measure coverage'),
+      order.indexOf('Measure coverage') < order.indexOf('Record coverage'),
+    ]).toEqual([true, true]);
+  });
+
+  it('uploads the coverage record as its own artifact named by the commit, after recording it (#728)', () => {
+    const upload = step('Upload the coverage record');
+    expect(upload.uses).toMatch(/^actions\/upload-artifact@[0-9a-f]{40}$/);
+    expect(upload.with).toEqual({
+      name: 'coverage-${{ inputs.sha }}',
+      path: 'tests/coverage/record.json',
+      'if-no-files-found': 'error',
+    });
+    const order = (job().steps ?? []).map((s) => s.name);
+    expect(order.indexOf('Upload the coverage record')).toBeGreaterThan(
+      order.indexOf('Record coverage'),
+    );
+  });
+
   it('is the only workflow that sets the recorder’s switch: a run that checks figures never records them', () => {
     const files = workflowFiles();
     const sites = files.flatMap(switchSites);

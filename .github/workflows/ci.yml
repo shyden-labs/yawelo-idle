@@ -141,3 +141,39 @@ jobs:
       - name: Build (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm run build
+
+  # Every suite pull-request CI runs, under coverage, one after another, in a
+  # job of its own so the unit step above keeps coverage off and its limits
+  # (#728). It measures and keeps the report; the ratchet that judges it, and
+  # this job as a required check, follow once develop's record-floors can
+  # record the figures (#728 design: two pull requests).
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      # One measured limit (#476), held in suite-limits.test.ts.
+      - name: Measure coverage (every suite pull-request CI runs)
+        id: measure
+        timeout-minutes: 15
+        run: npm run test:coverage
+      # Only after a measure that ran: an upload after a skipped one would fail
+      # on a report nothing wrote, a second red step that misleads (#353).
+      - name: Upload the coverage report
+        if: ${{ !cancelled() && (steps.measure.outcome == 'success' || steps.measure.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: error

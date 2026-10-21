@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'yaml';
+import coverageGuards from '../../vitest.coverage.guards.config';
+import coverageIntegration from '../../vitest.coverage.integration.config';
+import coveragePacing from '../../vitest.coverage.pacing.config';
+import coverageProperties from '../../vitest.coverage.properties.config';
+import coverageUnit from '../../vitest.coverage.unit.config';
 import guards from '../../vitest.guards.config';
 import integration from '../../vitest.integration.config';
 import logs from '../../vitest.logs.config';
@@ -89,6 +94,17 @@ const SUITES = [
     minutes: 2,
     slowest: 40,
   },
+  // Every suite pull-request CI runs, under coverage, one after another, in
+  // its own job (#728). Not yet measured as a step: 300 s is a provisional
+  // figure until its first CI runs, and #728 sets it from them before it
+  // merges (a limit only ever falls).
+  {
+    suite: 'coverage',
+    run: 'npm run test:coverage',
+    job: 'coverage',
+    minutes: 15,
+    slowest: 300,
+  },
   {
     suite: 'worker',
     run: 'npm run test:worker',
@@ -162,9 +178,10 @@ describe('each non-unit suite’s one limit is its CI step’s (#476 AC1)', () =
     },
   );
 
-  it('lists every suite step in CI, deploy-dev and the logs workflow, and only the unit suite is left to its runner', () => {
+  it('lists every suite step in every CI job, deploy-dev and the logs workflow, and only the unit suite is left to its runner', () => {
     const suiteRuns = [
-      ...(ci.jobs['build-and-test']?.steps ?? []),
+      // Every job: a suite in a job of its own is held to a limit too (#728).
+      ...Object.values(ci.jobs).flatMap((j) => j.steps ?? []),
       ...Object.values(deployDev.jobs).flatMap((j) => j.steps ?? []),
       ...Object.values(logsWorkflow.jobs).flatMap((j) => j.steps ?? []),
     ]
@@ -178,6 +195,11 @@ describe('each non-unit suite’s one limit is its CI step’s (#476 AC1)', () =
 
 describe('no non-unit suite’s config sets a limit of its own (#476 AC2)', () => {
   const VITEST = [
+    ['vitest.coverage.guards.config.ts', coverageGuards],
+    ['vitest.coverage.integration.config.ts', coverageIntegration],
+    ['vitest.coverage.pacing.config.ts', coveragePacing],
+    ['vitest.coverage.properties.config.ts', coverageProperties],
+    ['vitest.coverage.unit.config.ts', coverageUnit],
     ['vitest.guards.config.ts', guards],
     ['vitest.integration.config.ts', integration],
     ['vitest.logs.config.ts', logs],

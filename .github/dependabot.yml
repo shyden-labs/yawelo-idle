@@ -21,9 +21,20 @@ updates:
       - dependency-name: '@types/node'
         versions: ['>=27.0.0']
     groups:
+      # @vitest/coverage-v8 peers on one exact Vitest version (#728), so every
+      # Vitest package moves in one pull request, minor and major too.
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+      # Dependabot scores groups and order decides nothing, so the catch-all
+      # excludes every pattern group's patterns (global rule 2026-10-20, #705).
       patch-updates:
         update-types:
           - 'patch'
+        exclude-patterns:
+          - 'vitest'
+          - '@vitest/*'
 
   - package-ecosystem: 'github-actions'
     directory: '/'

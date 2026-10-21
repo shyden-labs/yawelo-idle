@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   artifactName,
+  coverageArtifactName,
   deleteScratchRef,
   fetchedFloors,
   fetchRefusal,
   pushedHead,
+  repoOfRunUrl,
   scratchRef,
   type RecordRun,
 } from '../../scripts/fetch-floors';
@@ -165,5 +167,27 @@ describe('fetchedFloors', () => {
 describe('artifactName', () => {
   it('names the record by the commit it ran on', () => {
     expect(artifactName(HEAD)).toBe(`floors-${HEAD}`);
+  });
+});
+
+describe('coverageArtifactName (#728)', () => {
+  it('names the coverage record by the commit it ran on, apart from the floors', () => {
+    expect(coverageArtifactName(HEAD)).toBe(`coverage-${HEAD}`);
+  });
+});
+
+describe('repoOfRunUrl (#728)', () => {
+  it("reads the repository from a run's URL", () => {
+    expect(
+      repoOfRunUrl(
+        'https://github.com/shyden-labs/yawelo-idle/actions/runs/39638724811',
+      ),
+    ).toBe('shyden-labs/yawelo-idle');
+  });
+
+  it('refuses a URL that is not a run of a repository', () => {
+    expect(() => repoOfRunUrl('https://github.com/shyden-labs')).toThrow(
+      'not a run URL: https://github.com/shyden-labs',
+    );
   });
 });
