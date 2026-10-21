@@ -333,14 +333,15 @@ describe('the review queue (AC6)', () => {
         { input: {}, control: { x: word('heard', 2) } },
       ),
     ).toEqual([]);
-    const waiting = { x: word('heard', 2) };
-    const ids = Object.keys(waiting);
+    const waiting = { x: word('heard', 2), y: word('recalled', 8) };
+    // The working run: once they are due the queue holds them.
+    const due = reviewQueue(waiting, T0);
     expect(
       searched(reviewQueue(waiting, wallMs(T0 - 1)), {
-        of: ids,
-        what: 'words not yet due',
+        of: due,
+        what: 'the queue once they are due',
       }),
     ).toEqual([]);
-    expect(floorBreach('review/words not yet due', ids.length)).toBeUndefined();
+    expect(floorBreach('review/queue once due', due.length)).toBeUndefined();
   });
 });

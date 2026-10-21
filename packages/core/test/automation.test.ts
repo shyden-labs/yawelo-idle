@@ -332,17 +332,18 @@ describe('integrate with Pemandu (AC2)', () => {
 
   it('buys nothing when nothing is owned and nothing is affordable', () => {
     const s = pemandu(at(4, { held: 9 }));
-    const encounters = course.regions.flatMap((r) =>
-      r.encounters.map((e) => e.id),
+    // The working run: the same Pemandu, rich, buys what it chooses.
+    const bought = Object.keys(
+      integrate(course, pemandu(at(4, { held: 1e60 })), 3_600_000).owned,
     );
     expect(
       searched(Object.keys(integrate(course, s, 3_600_000).owned), {
-        of: encounters,
-        what: 'Encounters in the course',
+        of: bought,
+        what: 'what Pemandu buys when rich',
       }),
     ).toEqual([]);
     expect(
-      floorBreach('automation/encounters in the course', encounters.length),
+      floorBreach('automation/what Pemandu buys when rich', bought.length),
     ).toBeUndefined();
   });
 

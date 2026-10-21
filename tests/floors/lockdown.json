@@ -1,9 +1,9 @@
 {
-  "lockdown/challenge bodies with a wrong password": 1,
-  "lockdown/challenge bodies with no credentials": 1,
-  "lockdown/requests challenged with a wrong password": 1,
-  "lockdown/requests challenged with no credentials": 1,
-  "lockdown/requests with no password configured": 1,
-  "lockdown/robots.txt requests on the sync host": 1,
-  "lockdown/robots.txt requests on the web host": 1
+  "lockdown/challenge sentences for a wrong password": 2,
+  "lockdown/challenge sentences for no credentials": 2,
+  "lockdown/hand-overs off robots.txt on the sync host": 1,
+  "lockdown/hand-overs off robots.txt on the web host": 1,
+  "lockdown/hand-overs once a password is set": 1,
+  "lockdown/hand-overs with the password, for a wrong password": 1,
+  "lockdown/hand-overs with the password, for no credentials": 1
 }

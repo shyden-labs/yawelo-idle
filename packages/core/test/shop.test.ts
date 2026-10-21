@@ -383,11 +383,11 @@ describe('the grammar offers match buying a node', () => {
         { of: offers, what: 'grammar offers' },
       ),
     ).toEqual([]);
-    expect(shopOf(rich).grammar).toHaveLength(12);
-    expect(buyGrammarNode(course(), rich, 'r0-gram-0').ok).toBe(false);
     expect(
       floorBreach('shop/grammar offers before grammar opens', offers.length),
     ).toBeUndefined();
+    expect(shopOf(rich).grammar).toHaveLength(12);
+    expect(buyGrammarNode(course(), rich, 'r0-gram-0').ok).toBe(false);
   });
 
   it('is not affordable for a region not reached', () => {
@@ -425,7 +425,6 @@ describe('the Journey offers match starting a Journey', () => {
 
   it('offers nothing while every open slot is busy', () => {
     const away = accepted(startJourney(course(), fresh(), 0, '8h'));
-    expect(shopOf(away).journeys.slots).toEqual(['away', 'locked', 'locked']);
     const { slots, startable } = shopOf(away).journeys;
     expect(searched(startable, { of: slots, what: 'journey slots' })).toEqual(
       [],
@@ -433,6 +432,7 @@ describe('the Journey offers match starting a Journey', () => {
     expect(
       floorBreach('shop/journey slots while one is away', slots.length),
     ).toBeUndefined();
+    expect(shopOf(away).journeys.slots).toEqual(['away', 'locked', 'locked']);
   });
 
   it('states how long each Journey takes, as starting one schedules it', () => {

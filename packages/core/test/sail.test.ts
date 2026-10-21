@@ -10,7 +10,7 @@ import type {
   Region,
 } from '../src/course';
 import { collectJourney, startJourney } from '../src/journeys';
-import { newWordMemory, type WordMemory } from '../src/memory';
+import { newWordMemory, reviewQueue, type WordMemory } from '../src/memory';
 import { Num, type NumTuple } from '../src/num';
 import { understandingNow } from '../src/production';
 import {
@@ -247,16 +247,18 @@ describe('the goal (AC1)', () => {
   it('never needs a review: unreviewed words and no Insight still sail (D1)', () => {
     const s = at(0);
     const words = Object.values(s.words);
+    // What the code decides is due: every word held, none reviewed yet.
+    const due = reviewQueue(s.words, s.wall);
     expect(
       searched(
         words.filter((w) => w.card.reps !== 0),
-        { of: words, what: 'words held' },
+        { of: due, what: 'the words due for review' },
       ),
     ).toEqual([]);
     expect(s.insight).toEqual([0, 0]);
     expect(ok(setSail(course, s)).destination).toBe(1);
     expect(
-      floorBreach('sail/words held at the first destination', words.length),
+      floorBreach('sail/words due at the first destination', due.length),
     ).toBeUndefined();
   });
 
@@ -349,17 +351,15 @@ describe('the preview (AC2, DN3)', () => {
     expect(n(preview().resets.understanding)).toBe(
       n(understandingNow(course, before())),
     );
-    const encounters = course.regions.flatMap((r) =>
-      r.encounters.map((e) => e.id),
-    );
+    const offered = view(course, after(), after().wall).shop.encounters;
     expect(
       searched(Object.keys(after().owned), {
-        of: encounters,
-        what: 'Encounters in the course',
+        of: offered,
+        what: 'Encounters offered after the sail',
       }),
     ).toEqual([]);
     expect(
-      floorBreach('sail/encounters after a sail', encounters.length),
+      floorBreach('sail/encounters offered after a sail', offered.length),
     ).toBeUndefined();
   });
 
@@ -479,13 +479,11 @@ describe('a sail resets only Encounters and Understanding (AC3, DN3)', () => {
   });
 
   it('owns no Encounters and holds only the starting grant, with nothing spent', () => {
-    const encounters = course.regions.flatMap((r) =>
-      r.encounters.map((e) => e.id),
-    );
+    const offered = view(course, after(), after().wall).shop.encounters;
     expect(
       searched(Object.keys(after().owned), {
-        of: encounters,
-        what: 'Encounters in the course',
+        of: offered,
+        what: 'Encounters offered after the sail',
       }),
     ).toEqual([]);
     expect(after().anchor).toEqual({
@@ -495,8 +493,8 @@ describe('a sail resets only Encounters and Understanding (AC3, DN3)', () => {
     expect(after().runSpent).toEqual([0, 0]);
     expect(
       floorBreach(
-        'sail/encounters after a sail from a journey',
-        encounters.length,
+        'sail/encounters offered after a sail from a journey',
+        offered.length,
       ),
     ).toBeUndefined();
   });
@@ -526,19 +524,20 @@ describe('destinations unlock in order (AC4)', () => {
         expect(after.destination).toBe(i + 1);
         expect(after.reached).toBe(i + 1);
         expect(after.finale).toBe(false);
-        const destinations = course.regions.flatMap((r) =>
-          r.destinations.map((d) => d.id),
+        // The working run: a sail back to a reached destination is a replay.
+        const replayed = Object.keys(
+          ok(setSail(course, at(LAST), 'r1-d2')).replays,
         );
         expect(
           searched(Object.keys(after.replays), {
-            of: destinations,
-            what: 'destinations in the course',
+            of: replayed,
+            what: 'replays a replay sail records',
           }),
         ).toEqual([]);
         expect(
           floorBreach(
-            `sail/destinations after a sail from ${String(i)}`,
-            destinations.length,
+            `sail/replays recorded, against a sail from ${String(i)}`,
+            replayed.length,
           ),
         ).toBeUndefined();
       });

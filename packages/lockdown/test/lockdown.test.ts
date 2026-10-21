@@ -126,6 +126,21 @@ describe('basicAuthOk', () => {
 describe('gateWebRequest', () => {
   const dev = 'https://yawelo-idle-web-dev.shyden-labs-dev.workers.dev';
 
+  /**
+   * What the gate hands on for `url` with the right password: the working
+   * run each "never serves" check is read against, so a recorder or a gate
+   * that hands nothing on cannot pass it (#375, Shyden 2026-10-21).
+   */
+  async function handedOn(url: string): Promise<readonly string[]> {
+    const working = recordingServe();
+    await gateWebRequest(
+      request(url, basic(`tester:${PASSWORD}`)),
+      PASSWORD,
+      working.serve,
+    );
+    return working.calls;
+  }
+
   it('serves the production host untouched, without asking for a password', async () => {
     const { serve, calls } = recordingServe();
     const response = await gateWebRequest(
@@ -146,7 +161,6 @@ describe('gateWebRequest', () => {
     async (name, authorization) => {
       const { serve, calls } = recordingServe();
       const url = `${dev}/`;
-      const sent = [url];
       const response = await gateWebRequest(
         request(url, authorization),
         PASSWORD,
@@ -157,19 +171,28 @@ describe('gateWebRequest', () => {
         'Basic realm="Yawelo Idle Non-Prod"',
       );
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-      const bodies = [await response.text()];
+      const sentences = (await response.text()).split('. ');
       expect(
         searched(
-          bodies.filter((b) => b.includes('app bytes')),
-          { of: bodies, what: 'challenge bodies' },
+          sentences.filter((s) => s.includes('app bytes')),
+          { of: sentences, what: 'sentences of the challenge' },
         ),
       ).toEqual([]);
-      expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+      const handed = await handedOn(url);
       expect(
-        floorBreach(`lockdown/challenge bodies with ${name}`, bodies.length),
+        searched(calls, { of: handed, what: 'hand-overs with the password' }),
+      ).toEqual([]);
+      expect(
+        floorBreach(
+          `lockdown/challenge sentences for ${name}`,
+          sentences.length,
+        ),
       ).toBeUndefined();
       expect(
-        floorBreach(`lockdown/requests challenged with ${name}`, sent.length),
+        floorBreach(
+          `lockdown/hand-overs with the password, for ${name}`,
+          handed.length,
+        ),
       ).toBeUndefined();
     },
   );
@@ -177,31 +200,41 @@ describe('gateWebRequest', () => {
   it('challenges every request when the password is not configured', async () => {
     const { serve, calls } = recordingServe();
     const url = `${dev}/`;
-    const sent = [url];
     const response = await gateWebRequest(
       request(url, basic('u:')),
       undefined,
       serve,
     );
     expect(response.status).toBe(401);
-    expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+    const handed = await handedOn(url);
     expect(
-      floorBreach('lockdown/requests with no password configured', sent.length),
+      searched(calls, { of: handed, what: 'hand-overs once one is set' }),
+    ).toEqual([]);
+    expect(
+      floorBreach('lockdown/hand-overs once a password is set', handed.length),
     ).toBeUndefined();
   });
 
   it('serves blocking robots.txt on a non-prod host without credentials', async () => {
     const { serve, calls } = recordingServe();
-    const url = `${dev}/robots.txt`;
-    const sent = [url];
-    const response = await gateWebRequest(request(url), PASSWORD, serve);
+    const response = await gateWebRequest(
+      request(`${dev}/robots.txt`),
+      PASSWORD,
+      serve,
+    );
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
     expect(BLOCKING_ROBOTS_TXT).toContain('User-agent: *\nDisallow: /\n');
     expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-    expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+    const handed = await handedOn(`${dev}/`);
     expect(
-      floorBreach('lockdown/robots.txt requests on the web host', sent.length),
+      searched(calls, { of: handed, what: 'hand-overs off robots.txt' }),
+    ).toEqual([]);
+    expect(
+      floorBreach(
+        'lockdown/hand-overs off robots.txt on the web host',
+        handed.length,
+      ),
     ).toBeUndefined();
   });
 
@@ -236,14 +269,23 @@ describe('markApiRequest', () => {
 
   it('serves blocking robots.txt on a non-prod host', async () => {
     const { serve, calls } = recordingServe();
-    const url =
-      'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev/robots.txt';
-    const sent = [url];
-    const response = await markApiRequest(request(url), serve);
+    const sync = 'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev';
+    const response = await markApiRequest(request(`${sync}/robots.txt`), serve);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
-    expect(searched(calls, { of: sent, what: 'requests sent' })).toEqual([]);
+    // The working run: off robots.txt the same host hands the request on.
+    const working = recordingServe();
+    await markApiRequest(request(`${sync}/health`), working.serve);
     expect(
-      floorBreach('lockdown/robots.txt requests on the sync host', sent.length),
+      searched(calls, {
+        of: working.calls,
+        what: 'hand-overs off robots.txt',
+      }),
+    ).toEqual([]);
+    expect(
+      floorBreach(
+        'lockdown/hand-overs off robots.txt on the sync host',
+        working.calls.length,
+      ),
     ).toBeUndefined();
   });
 
