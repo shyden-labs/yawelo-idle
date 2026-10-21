@@ -55,7 +55,7 @@ export interface MinimumOptions {
 }
 
 const TO_RECORD =
-  'label the pull request record-minimums, then run npm run minimums:fetch <run-id>';
+  'push the commit to refs/minimums/<branch>, dispatch record-minimums on develop, then run npm run minimums:fetch <run-id>';
 
 const isCount = (n: number): boolean => Number.isInteger(n) && n >= 0;
 

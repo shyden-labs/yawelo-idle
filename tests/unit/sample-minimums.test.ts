@@ -24,7 +24,8 @@ describe('sampleRefusal', () => {
   it('refuses the laptop, which runs no suite but the unit suite', () => {
     expect(sampleRefusal({ [SAMPLE_JOB_ENV]: 'record-minimums' })).toBe(
       'minimums are sampled in CI only, by the record-minimums workflow: ' +
-        'label the pull request record-minimums (#84)',
+        'push the commit to refs/minimums/<branch> and dispatch ' +
+        'record-minimums on develop (#84, #718)',
     );
   });
 

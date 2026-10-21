@@ -109,8 +109,9 @@ describe('minimumBreach', () => {
     expect(
       minimumBreach('group/other', 9, { minimums: MINIMUMS, record: null }),
     ).toBe(
-      'group/other is not recorded in tests/minimums/group.json: label the ' +
-        'pull request record-minimums, then run npm run minimums:fetch <run-id>',
+      'group/other is not recorded in tests/minimums/group.json: push the ' +
+        'commit to refs/minimums/<branch>, dispatch record-minimums on ' +
+        'develop, then run npm run minimums:fetch <run-id>',
     );
   });
 
@@ -178,8 +179,8 @@ describe('minimumsBreach, for counts named only at runtime', () => {
   it('refuses a member the record does not hold: a new kind to record', () => {
     expect(family({ stale: 4, poor: 2, odd: 6 })).toBe(
       'group/refused-odd is a new member of group/refused- with no measured ' +
-        'minimum: label the pull request record-minimums, then run npm run ' +
-        'minimums:fetch <run-id>',
+        'minimum: push the commit to refs/minimums/<branch>, dispatch ' +
+        'record-minimums on develop, then run npm run minimums:fetch <run-id>',
     );
   });
 
@@ -193,8 +194,9 @@ describe('minimumsBreach, for counts named only at runtime', () => {
 
   it('refuses a family the record holds no member of', () => {
     expect(family({ stale: 4 }, { 'group/units': entry(5) })).toBe(
-      'group/refused- has no measured minimums: label the pull request ' +
-        'record-minimums, then run npm run minimums:fetch <run-id>',
+      'group/refused- has no measured minimums: push the commit to ' +
+        'refs/minimums/<branch>, dispatch record-minimums on develop, then ' +
+        'run npm run minimums:fetch <run-id>',
     );
   });
 

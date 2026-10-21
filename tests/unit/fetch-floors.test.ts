@@ -1,31 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import {
   artifactName,
+  deleteScratchRef,
   fetchedFloors,
   fetchRefusal,
+  scratchRef,
   type RecordRun,
 } from '../../scripts/fetch-floors';
 
 /**
- * `npm run floors:fetch <run>` (#547): the floors the record-floors
- * workflow recorded in CI, written here only when the run recorded this
- * branch's HEAD, and only when no figure falls or vanishes.
+ * `npm run floors:fetch <run>` (#547, #718): the floors the record-floors
+ * workflow recorded in CI at a commit pushed only to its scratch ref,
+ * written here only when the run measured this branch's HEAD and that HEAD
+ * is not yet on the remote, and only when no figure falls or vanishes.
  */
 
 const HEAD = 'a'.repeat(40);
 const OTHER = 'b'.repeat(40);
+const BRANCH = 'm1/542-golden-slices';
+const UNPUSHED = false;
 
 const RUN: RecordRun = {
   workflowName: 'record-floors',
   status: 'completed',
   conclusion: 'success',
-  headSha: HEAD,
-  headBranch: 'm1/542-golden-slices',
+  displayTitle: `record-floors ${BRANCH} at ${HEAD}`,
 };
 
 describe('fetchRefusal', () => {
-  it('accepts a finished, successful record of this branch’s HEAD', () => {
-    expect(fetchRefusal(RUN, HEAD, 'm1/542-golden-slices')).toBeUndefined();
+  it('accepts a finished, successful record of this branch’s unpushed HEAD', () => {
+    expect(fetchRefusal(RUN, HEAD, BRANCH, UNPUSHED)).toBeUndefined();
   });
 
   it('refuses another workflow’s run', () => {
@@ -33,7 +37,8 @@ describe('fetchRefusal', () => {
       fetchRefusal(
         { ...RUN, workflowName: 'build-and-test' },
         HEAD,
-        'm1/542-golden-slices',
+        BRANCH,
+        UNPUSHED,
       ),
     ).toBe('run is build-and-test’s, not record-floors’');
   });
@@ -43,30 +48,62 @@ describe('fetchRefusal', () => {
       fetchRefusal(
         { ...RUN, status: 'in_progress', conclusion: '' },
         HEAD,
-        'm1/542-golden-slices',
+        BRANCH,
+        UNPUSHED,
       ),
     ).toBe('run is in_progress, not finished');
   });
 
   it('refuses a run that did not succeed', () => {
     expect(
-      fetchRefusal(
-        { ...RUN, conclusion: 'failure' },
-        HEAD,
-        'm1/542-golden-slices',
-      ),
+      fetchRefusal({ ...RUN, conclusion: 'failure' }, HEAD, BRANCH, UNPUSHED),
     ).toBe('run ended failure: it recorded nothing');
   });
 
   it('refuses a record of another branch', () => {
-    expect(fetchRefusal(RUN, HEAD, 'm1/547-ci-floors')).toBe(
-      'run recorded m1/542-golden-slices, not m1/547-ci-floors',
+    expect(fetchRefusal(RUN, HEAD, 'm1/547-ci-floors', UNPUSHED)).toBe(
+      `run measured “record-floors ${BRANCH} at ${HEAD}”, not “record-floors m1/547-ci-floors at ${HEAD}”: push this commit to refs/floors/m1/547-ci-floors and dispatch record-floors on develop for it`,
     );
   });
 
   it('refuses a record of another commit', () => {
-    expect(fetchRefusal(RUN, OTHER, 'm1/542-golden-slices')).toBe(
-      `run recorded ${HEAD}, but HEAD is ${OTHER}: label the pull request again after the last push`,
+    expect(fetchRefusal(RUN, OTHER, BRANCH, UNPUSHED)).toBe(
+      `run measured “record-floors ${BRANCH} at ${HEAD}”, not “record-floors ${BRANCH} at ${OTHER}”: push this commit to refs/floors/${BRANCH} and dispatch record-floors on develop for it`,
+    );
+  });
+
+  it('refuses a HEAD already on the remote: the figures fold into a commit not yet pushed', () => {
+    expect(fetchRefusal(RUN, HEAD, BRANCH, true)).toBe(
+      `HEAD ${HEAD} is already on origin: figures fold into a commit not yet pushed, so measure the commit before its first push (#718)`,
+    );
+  });
+
+  it('names the minimums workflow’s own scratch ref in its refusals', () => {
+    expect(
+      fetchRefusal(
+        { ...RUN, workflowName: 'record-minimums' },
+        OTHER,
+        BRANCH,
+        UNPUSHED,
+        'record-minimums',
+      ),
+    ).toBe(
+      `run measured “record-floors ${BRANCH} at ${HEAD}”, not “record-minimums ${BRANCH} at ${OTHER}”: push this commit to refs/minimums/${BRANCH} and dispatch record-minimums on develop for it`,
+    );
+  });
+});
+
+describe('the scratch ref', () => {
+  it('is refs/floors/<branch> for floors and refs/minimums/<branch> for minimums', () => {
+    expect(scratchRef('record-floors', BRANCH)).toBe(`refs/floors/${BRANCH}`);
+    expect(scratchRef('record-minimums', BRANCH)).toBe(
+      `refs/minimums/${BRANCH}`,
+    );
+  });
+
+  it('is deleted, once the branch is pushed, by a normal push', () => {
+    expect(deleteScratchRef('record-floors', BRANCH)).toBe(
+      `git push origin --delete refs/floors/${BRANCH}`,
     );
   });
 });

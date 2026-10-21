@@ -40,6 +40,7 @@ export interface WorkflowJob {
 }
 
 export interface Workflow {
+  readonly 'run-name'?: string;
   readonly on?: unknown;
   readonly env?: Readonly<Record<string, unknown>>;
   readonly permissions?: unknown;
