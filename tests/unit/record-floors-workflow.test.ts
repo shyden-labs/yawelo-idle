@@ -156,7 +156,7 @@ describe('the record-floors workflow (#547, #718)', () => {
     );
   });
 
-  it('measures coverage without the switch, before the floors, on the tree the install left, then records it with the switch (#728)', () => {
+  it('measures coverage without the switch, after the floors are recorded, then records it with the switch (#728, #748)', () => {
     const measure = step('Measure coverage');
     const record = step('Record coverage');
     expect([runOf(measure), measure.env]).toEqual([
@@ -167,15 +167,15 @@ describe('the record-floors workflow (#547, #718)', () => {
       'node scripts/coverage.ts record',
       { [RECORD_JOB_ENV]: 'record-floors' },
     ]);
-    // Measured on the tree the install left, as a pull request's coverage
-    // job measures it: the floors recorder runs every suite first otherwise,
-    // and PR #745's check found one file's total moved by it (#728).
+    // Measured after the floors (#748): the measure runs the guards suite,
+    // which checks the committed floors, so measured first it fails on every
+    // branch whose floors moved (record-floors 39711319254).
     const order = (job().steps ?? []).map((s) => s.name);
     const at = (name: string): number => order.indexOf(name);
     expect([
-      at('Install (a warning fails it)') < at('Measure coverage'),
+      at('Install (a warning fails it)') < at('Record the floors'),
       at('Measure coverage') < at('Record coverage'),
-      at('Upload the coverage record') < at('Record the floors'),
+      at('Upload the recorded floors') < at('Measure coverage'),
     ]).toEqual([true, true, true]);
   });
 
