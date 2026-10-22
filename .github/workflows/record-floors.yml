@@ -85,20 +85,12 @@ jobs:
           cache: 'npm'
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
-      - name: Record the floors
-        env:
-          FLOORS_RECORD_JOB: record-floors
-        run: npm run floors:record
-      - name: Upload the recorded floors
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: floors-${{ inputs.sha }}
-          path: tests/floors/
-          if-no-files-found: error
       # The coverage record rides the same run (#728, Shyden 2026-10-22: "Must
-      # be recorded"). Measure runs without the record switch, so the code it
-      # measures takes the paths a pull request's coverage job takes; only the
-      # record step sets it, and the recorder refuses anywhere else.
+      # be recorded"), measured first, on the tree the install left, as a pull
+      # request's coverage job measures it: after the floors recorder had run
+      # every suite, PR #745's check found one file's total moved. Measure
+      # runs without the record switch; only the record step sets it, and the
+      # recorder refuses anywhere else.
       - name: Measure coverage
         run: npm run test:coverage
       - name: Record coverage
@@ -111,4 +103,14 @@ jobs:
         with:
           name: coverage-${{ inputs.sha }}
           path: tests/coverage/record.json
+          if-no-files-found: error
+      - name: Record the floors
+        env:
+          FLOORS_RECORD_JOB: record-floors
+        run: npm run floors:record
+      - name: Upload the recorded floors
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: floors-${{ inputs.sha }}
+          path: tests/floors/
           if-no-files-found: error
