@@ -317,7 +317,7 @@ export default mutationFile({
       replacement:
         '      - name: Measure coverage\n        env:\n          FLOORS_RECORD_JOB: record-floors\n        run: npm run test:coverage\n',
       red: {
-        [`${RECORD} › the record-floors workflow (#547, #718) > measures coverage without the switch, before the floors, on the tree the install left, then records it with the switch (#728)`]:
+        [`${RECORD} › the record-floors workflow (#547, #718) > measures coverage without the switch, after the floors are recorded, then records it with the switch (#728, #748)`]:
           'to deeply equal',
       },
     },
