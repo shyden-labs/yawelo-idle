@@ -156,7 +156,7 @@ describe('the record-floors workflow (#547, #718)', () => {
     );
   });
 
-  it('measures coverage without the switch, after the floors, then records it with the switch (#728)', () => {
+  it('measures coverage without the switch, before the floors, on the tree the install left, then records it with the switch (#728)', () => {
     const measure = step('Measure coverage');
     const record = step('Record coverage');
     expect([runOf(measure), measure.env]).toEqual([
@@ -167,12 +167,16 @@ describe('the record-floors workflow (#547, #718)', () => {
       'node scripts/coverage.ts record',
       { [RECORD_JOB_ENV]: 'record-floors' },
     ]);
+    // Measured on the tree the install left, as a pull request's coverage
+    // job measures it: the floors recorder runs every suite first otherwise,
+    // and PR #745's check found one file's total moved by it (#728).
     const order = (job().steps ?? []).map((s) => s.name);
+    const at = (name: string): number => order.indexOf(name);
     expect([
-      order.indexOf('Upload the recorded floors') <
-        order.indexOf('Measure coverage'),
-      order.indexOf('Measure coverage') < order.indexOf('Record coverage'),
-    ]).toEqual([true, true]);
+      at('Install (a warning fails it)') < at('Measure coverage'),
+      at('Measure coverage') < at('Record coverage'),
+      at('Upload the coverage record') < at('Record the floors'),
+    ]).toEqual([true, true, true]);
   });
 
   it('uploads the coverage record as its own artifact named by the commit, after recording it (#728)', () => {
@@ -192,8 +196,16 @@ describe('the record-floors workflow (#547, #718)', () => {
   it('is the only workflow that sets the recorder’s switch: a run that checks figures never records them', () => {
     const files = workflowFiles();
     const sites = files.flatMap(switchSites);
-    // The reader finds the switch where the record workflow sets it (liveness).
-    expect(sites).toContain(`${FILE}: record-floors.steps[4].env`);
+    // The reader finds the switch where the record workflow sets it, on
+    // both record steps, found by name (liveness).
+    const index = (name: string): number =>
+      (job().steps ?? []).findIndex((s) => s.name === name);
+    expect(sites).toEqual(
+      expect.arrayContaining([
+        `${FILE}: record-floors.steps[${String(index('Record the floors'))}].env`,
+        `${FILE}: record-floors.steps[${String(index('Record coverage'))}].env`,
+      ]),
+    );
     expect(
       searched(
         sites.filter((site) => !site.startsWith(`${FILE}: `)),
