@@ -32,8 +32,8 @@ export default mutationFile({
     {
       name: 'record-without-a-report-of-head',
       file: 'scripts/coverage.ts',
-      anchor: '  if (stale !== undefined) die(stale);\n',
-      replacement: '',
+      anchor: '  if (stale !== undefined) die(stale);\n  writeRecord(',
+      replacement: '  writeRecord(',
       red: {
         [`${C} refuses to record when no report was measured`]:
           'to deeply equal',
@@ -81,6 +81,16 @@ export default mutationFile({
     },
     {
       // The check and the proof as the job runs them (PR 2).
+      name: 'check-without-a-report-of-head',
+      file: 'scripts/coverage.ts',
+      anchor:
+        '  if (stale !== undefined) die(stale);\n  const measured = filesOf(',
+      replacement: '  const measured = filesOf(',
+      red: {
+        [`${K} refuses a report measured on another commit`]: 'to deeply equal',
+      },
+    },
+    {
       name: 'base-read-at-head',
       file: 'scripts/coverage.ts',
       anchor:

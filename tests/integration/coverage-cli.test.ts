@@ -194,6 +194,18 @@ describe('the coverage check as the job runs it (#728)', () => {
     ]);
   });
 
+  it('refuses a report measured on another commit', () => {
+    const { dir, commit } = history();
+    const head = commit({ [RECORD]: recordOf(2) });
+    const other = 'b'.repeat(40);
+    measured(dir, other, 2);
+    const run = cli(dir, ['check']);
+    expect([run.status, run.stderr.trim()]).toEqual([
+      1,
+      `coverage: the coverage report measured ${other}, not ${head}: run npm run test:coverage again`,
+    ]);
+  });
+
   it('refuses a table that differs from the record, naming the file', () => {
     const { dir, commit } = history();
     const head = commit({ [RECORD]: recordOf(2) });
