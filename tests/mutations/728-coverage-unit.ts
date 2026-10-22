@@ -313,11 +313,11 @@ export default mutationFile({
       name: 'measure-runs-with-the-record-switch',
       file: '.github/workflows/record-floors.yml',
       anchor:
-        '      - name: Measure coverage\n        run: npm run test:coverage\n',
+        '      - name: Measure coverage\n        timeout-minutes: 12\n        run: npm run test:coverage\n',
       replacement:
-        '      - name: Measure coverage\n        env:\n          FLOORS_RECORD_JOB: record-floors\n        run: npm run test:coverage\n',
+        '      - name: Measure coverage\n        timeout-minutes: 12\n        env:\n          FLOORS_RECORD_JOB: record-floors\n        run: npm run test:coverage\n',
       red: {
-        [`${RECORD} › the record-floors workflow (#547, #718) > measures coverage without the switch, after the floors are recorded, then records it with the switch (#728, #748)`]:
+        [`${RECORD} › the record-floors workflow (#547, #718) > measures coverage without the switch on a fresh install of the commit, the recorded floors laid over it, then records it with the switch (#728, #748)`]:
           'to deeply equal',
       },
     },
