@@ -25,7 +25,8 @@ export default mutationFile({
         [`${SCRIPT} asks gh for every page of the board it was given, then of the repository’s issues, each slurped into one array`]:
           'to deeply equal',
         [`${SCRIPT} refuses a board listing short of the issues the repository names on it and prints no line (#751)`]:
-          'not to be 0',
+          // Vitest prints a zero as +0, as in 'to be +0' elsewhere.
+          'not to be +0',
       },
     },
   ],
