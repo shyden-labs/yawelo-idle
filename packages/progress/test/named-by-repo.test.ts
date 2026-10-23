@@ -174,6 +174,23 @@ describe('assertNamedByRepo (#751)', () => {
     }).not.toThrow();
   });
 
+  // A draft has no repository, so only a pull request of this repository
+  // shows that the comparison reads the card's type.
+  it('compares only issues: a pull request card from this repository passes', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(board(), {
+          __typename: 'PullRequest',
+          number: 30,
+          repository: { nameWithOwner: FIXTURE_REPO },
+        }),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+      );
+    }).not.toThrow();
+  });
+
   it('refuses when the repository names no issue on the board at all', () => {
     const pages = repo();
     for (const page of pages)
