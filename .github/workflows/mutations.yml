@@ -7,9 +7,11 @@
 # clean first, then each mutation is planted, judged against its prediction
 # and put back. The first job also judges (#619): every non-unit test the
 # pull request adds or changes must be a target of a mutation file it adds
-# or changes, or the check fails naming each. The last job, `mutations`, is
-# develop's required check: it always runs and passes only when the judge
-# passed and the files ran clean, or there were none to run.
+# or changes, or the check fails naming each. Each listed file runs in its
+# own job (#754), in parallel, so a pull request waits for its slowest file
+# rather than their sum. The last job, `mutations`, is develop's required
+# check: it always runs and passes only when the judge passed and every
+# listed file's own job ran it clean, or there were none to run.
 name: mutations
 
 on:
@@ -54,17 +56,30 @@ jobs:
   run:
     needs: changed
     if: ${{ needs.changed.outputs.count != '0' }}
+    # One job per file, none cancelling another: the check names each file
+    # that did not run clean, not only the first.
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.changed.outputs.files) }}
     runs-on: ubuntu-24.04
     # Measured on PR #651 (run 39057208788): 6 min 43 s for 15 rows over
     # three suites (unit rows about 24 s each, harness 2.5 s, web smoke 13 s
-    # to 16 s, builds included). 30 leaves room for a pull request carrying
-    # more files; the runner's 600 s ceiling bounds each suite run inside.
+    # to 16 s, builds included). Per file since #754: PR #753's 30-row file
+    # took 17 min 35 s (about 35 s a row); its four files together outran 30.
+    # The runner's 600 s ceiling bounds each suite run inside.
     timeout-minutes: 30
     # The image and user ci.yml tests in (tests/unit/mutations-ci.test.ts).
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
       options: --user 1001
     steps:
+      # First, so a failing checkout or install still uploads under it.
+      - name: Name the artifact after the file
+        id: artifact
+        env:
+          FILE: ${{ matrix.file }}
+        run: echo "name=mutations-$(basename "$FILE" .ts)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -72,14 +87,23 @@ jobs:
           cache: 'npm'
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
-      - name: Run each mutation file through the runner
+      - name: Run the mutation file through the runner
+        id: mutate
         env:
-          FILES: ${{ needs.changed.outputs.files }}
-        run: npm run mutate -- $FILES
+          FILE: ${{ matrix.file }}
+        run: npm run mutate -- "$FILE"
+      # The required check reads this, by the file named inside: a job that
+      # is cancelled or times out writes none, and its file fails by name.
+      - name: Record how the file's run ended
+        if: ${{ !cancelled() }}
+        env:
+          FILE: ${{ matrix.file }}
+          OUTCOME: ${{ steps.mutate.outcome }}
+        run: mkdir -p .mutations && printf '{"file":"%s","outcome":"%s"}\n' "$FILE" "$OUTCOME" > .mutations/run-outcome.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: mutations
+          name: ${{ steps.artifact.outputs.name }}
           path: .mutations/
           # A dot-folder: skipped unless asked (PR #651's first green run
           # uploaded nothing and only warned).
@@ -87,7 +111,8 @@ jobs:
           if-no-files-found: error
 
   # The required check (#619 AC5). `!cancelled()` so a failed or skipped
-  # job above cannot skip it into a pass: it reads both results itself.
+  # job above cannot skip it into a pass: it reads both results itself, and
+  # every file job's own result (#754).
   mutations:
     needs: [changed, run]
     if: ${{ !cancelled() }}
@@ -98,9 +123,17 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.nvmrc'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ needs.changed.outputs.count != '0' }}
+        with:
+          pattern: mutations-*
+          path: results/
       - name: Pass only when the judge passed and every listed file ran clean
+        # A failed download still reaches the verdict, which names each file.
+        if: ${{ !cancelled() }}
         env:
           CHANGED: ${{ needs.changed.result }}
           COUNT: ${{ needs.changed.outputs.count }}
+          FILES: ${{ needs.changed.outputs.files }}
           RUN: ${{ needs.run.result }}
         run: node scripts/mutations-verdict.ts
