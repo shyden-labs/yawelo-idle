@@ -26,14 +26,18 @@
  * (operator 2026-10-15). Anything it cannot read fails it by name, and each
  * read carries a known positive: the board holds items, the branches hold
  * `develop`, the open pull requests hold this one, the closed pull requests
- * hold the merged one develop's head came from. It reads the board for
+ * hold the merged one develop's head came from. The board's listing is also
+ * checked against the issues the repository names on it, read from a second
+ * surface with the board's token, since the listing's own count shrinks with
+ * it (#751). It reads the board for
  * every author, Dependabot included (#661: a check is green only when it
  * ran); Dependabot's runs get no environment secrets, so theirs read the key
  * from the repository's Dependabot secret.
  */
 import { execFileSync } from 'node:child_process';
+import { assertNamedByRepo } from '../packages/progress/src/index.ts';
 import { NEXT_QUERY, type NextItem, parseNextItems } from './board-next.ts';
-import type { Gh } from './board-progress.ts';
+import { type Gh, repoIssuePages } from './board-progress.ts';
 import { entries, isRecord, read } from './gh-reads.ts';
 
 /** The pull-request author whose runs read Dependabot secrets, not environment ones. */
@@ -175,25 +179,31 @@ export function boardOrphans(
         : "no board token: BOARD_TOKEN is empty, so the board cannot be read (the board-read environment's ROADMAP_APP_KEY, #580)",
     );
 
-  const items = read('the board', () =>
-    parseNextItems(
-      JSON.parse(
-        gh.board([
-          'api',
-          'graphql',
-          '--paginate',
-          '--slurp',
-          '-f',
-          `query=${NEXT_QUERY}`,
-          '-f',
-          `id=${id}`,
-        ]),
-      ) as unknown[],
-      title,
-    ),
-  );
+  const board = read('the board', () => {
+    const pages = JSON.parse(
+      gh.board([
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        `query=${NEXT_QUERY}`,
+        '-f',
+        `id=${id}`,
+      ]),
+    ) as unknown[];
+    return { pages, items: parseNextItems(pages, title) };
+  });
+  const { items } = board;
   if (items.length === 0)
     throw new Error('the board read holds no items, so nothing was judged');
+  // The issues' boards need the board's token; the run's own cannot read them.
+  const issuePages = read('the repository’s issues', () =>
+    repoIssuePages(gh.board, repo),
+  );
+  read('the board', () => {
+    assertNamedByRepo(board.pages, issuePages, id, repo);
+  });
   const { names: branches, developSha } = read('the branches', () =>
     parseBranches(
       gh.repo([
