@@ -7,7 +7,9 @@ import { parse } from 'yaml';
  * develop, it lists the mutation files the pull request adds or changes and
  * runs them through the runner, in the image CI tests in, keeping every log.
  * The first job also judges the changed non-unit tests (#619 AC2), and the
- * last, `mutations`, is develop's required check (#619 AC5).
+ * last, `mutations`, is develop's required check (#619 AC5). Each listed file
+ * runs in its own job (#754): four files in one job outran its 30 minutes on
+ * PR #753, and the check reads every file's own result.
  */
 
 interface Step {
@@ -27,6 +29,7 @@ interface Job {
   readonly 'runs-on'?: string;
   readonly 'timeout-minutes'?: number;
   readonly container?: { readonly image?: string; readonly options?: string };
+  readonly strategy?: Readonly<Record<string, unknown>>;
   readonly outputs?: Readonly<Record<string, string>>;
   readonly steps: readonly Step[];
 }
@@ -112,11 +115,51 @@ describe('mutations.yml', () => {
     expect(run.if).toBe("${{ needs.changed.outputs.count != '0' }}");
   });
 
-  it('passes the files through the environment, never into the script text', () => {
-    const step = stepRunning(job('run'), 'npm run mutate -- $FILES');
-    expect(step?.env).toEqual({
-      FILES: '${{ needs.changed.outputs.files }}',
+  it('runs each listed file in its own job, none cancelling another', () => {
+    expect(job('run').strategy).toEqual({
+      'fail-fast': false,
+      matrix: { file: '${{ fromJSON(needs.changed.outputs.files) }}' },
     });
+  });
+
+  it('passes the file through the environment, never into the script text', () => {
+    const step = stepRunning(job('run'), 'npm run mutate -- "$FILE"');
+    expect(step?.env).toEqual({ FILE: '${{ matrix.file }}' });
+    expect(step?.id).toBe('mutate');
+  });
+
+  it('names the artifact after the file first, before any step can fail', () => {
+    expect(job('run').steps[0]).toEqual({
+      name: 'Name the artifact after the file',
+      id: 'artifact',
+      env: { FILE: '${{ matrix.file }}' },
+      run: 'echo "name=mutations-$(basename "$FILE" .ts)" >> "$GITHUB_OUTPUT"',
+    });
+  });
+
+  it('records how the file’s run ended, whatever it ended, between the run and the upload', () => {
+    const { steps } = job('run');
+    const record = steps.findIndex(
+      (s) =>
+        s.run?.trim() ===
+        `mkdir -p .mutations && printf '{"file":"%s","outcome":"%s"}\\n' "$FILE" "$OUTCOME" > .mutations/run-outcome.json`,
+    );
+    const mutate = steps.findIndex(
+      (s) => s.run?.trim() === 'npm run mutate -- "$FILE"',
+    );
+    const upload = steps.findIndex((s) =>
+      s.uses?.startsWith('actions/upload-artifact@'),
+    );
+    expect(steps[record]?.if).toBe('${{ !cancelled() }}');
+    expect(steps[record]?.env).toEqual({
+      FILE: '${{ matrix.file }}',
+      OUTCOME: '${{ steps.mutate.outcome }}',
+    });
+    expect([mutate >= 0, mutate < record, record < upload]).toEqual([
+      true,
+      true,
+      true,
+    ]);
   });
 
   it('runs in the image and as the user CI tests in', () => {
@@ -133,7 +176,7 @@ describe('mutations.yml', () => {
     // asked (default false at the pinned SHA): PR #651's first green run
     // uploaded nothing and only warned.
     expect(upload?.with).toEqual({
-      name: 'mutations',
+      name: '${{ steps.artifact.outputs.name }}',
       path: '.mutations/',
       'include-hidden-files': true,
       'if-no-files-found': 'error',
@@ -148,9 +191,29 @@ describe('mutations.yml', () => {
     expect(step?.env).toEqual({
       CHANGED: '${{ needs.changed.result }}',
       COUNT: '${{ needs.changed.outputs.count }}',
+      FILES: '${{ needs.changed.outputs.files }}',
       RUN: '${{ needs.run.result }}',
     });
-    expect(step?.if).toBeUndefined();
+    // A failed download still reaches the verdict, which names each file.
+    expect(step?.if).toBe('${{ !cancelled() }}');
+  });
+
+  it('downloads every file job’s artifact before the verdict reads them', () => {
+    const { steps } = job('mutations');
+    const download = steps.findIndex((s) =>
+      s.uses?.startsWith('actions/download-artifact@'),
+    );
+    const judge = steps.findIndex(
+      (s) => s.run?.trim() === 'node scripts/mutations-verdict.ts',
+    );
+    expect(steps[download]?.if).toBe(
+      "${{ needs.changed.outputs.count != '0' }}",
+    );
+    expect(steps[download]?.with).toEqual({
+      pattern: 'mutations-*',
+      path: 'results/',
+    });
+    expect([download >= 0, download < judge]).toEqual([true, true]);
   });
 
   it('bounds each job', () => {
