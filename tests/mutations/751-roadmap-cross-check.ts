@@ -16,12 +16,15 @@ const READING = `${ROADMAP} › reading the board >`;
 const FAILED = `${ROADMAP} › a failed read >`;
 const GITHUB = 'apps/site/test/roadmap/github.test.ts';
 const ISSUES = `${GITHUB} › readRepoIssuePages (#751) >`;
+const ROUTES = 'apps/site/test/roadmap/routes.test.ts';
+const HOOKS = `${ROUTES} › /hooks/github >`;
+const CRON = `${ROUTES} › the cron >`;
 const WORKER_GITHUB = 'apps/site/worker/github.ts';
 /** What readRepoIssuePages refuses with once it follows no cursor. */
 const NEVER_ENDS = 'has more than 20 pages of issues';
 
 export default mutationFile({
-  targets: [ROADMAP, GITHUB],
+  targets: [ROADMAP, GITHUB, ROUTES],
   mutations: [
     {
       // The short listing is then published, and replaces the good snapshot.
@@ -116,6 +119,21 @@ export default mutationFile({
         [`${ISSUES} sends its User-Agent on every page`]: 'to deeply equal',
         [`${ISSUES} refuses an answer without the repository’s issues`]:
           'instead of rejecting',
+      },
+    },
+    {
+      // routes.test's counter as it was before #751: each read's first
+      // issues page is then counted as a board read too, so one read is 2.
+      name: 'routes-counts-issue-reads-as-board-reads',
+      file: ROUTES,
+      anchor: ".filter((s) => s.query === 'board' && s.cursor === null)",
+      replacement: '.filter((s) => s.cursor === null)',
+      red: {
+        [`${HOOKS} accepts a signed issue event from the board’s repository and reads the board`]:
+          'expected 2 to be 1',
+        [`${HOOKS} accepts a signed item event on the board and reads it`]:
+          'expected 2 to be 1',
+        [`${CRON} reads the whole board on its schedule`]: 'expected 2 to be 1',
       },
     },
   ],
