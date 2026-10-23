@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   changedHelpers,
+  githubOutput,
   inTestFolder,
   mutationFilesIn,
   nonUnitLoaders,
@@ -728,5 +729,19 @@ describe('summary', () => {
     expect(summary({ tests: 2, helpers: 1, files: 2, judged: 4 })).toBe(
       '2 non-unit tests, 1 helper and 2 mutation files changed of 4 paths judged',
     );
+  });
+});
+
+describe('githubOutput', () => {
+  it('writes the count and the files as a JSON list the run job’s matrix reads (#754)', () => {
+    expect(
+      githubOutput(['tests/mutations/1-a.ts', 'tests/mutations/2-b.ts']),
+    ).toBe(
+      'count=2\nfiles=["tests/mutations/1-a.ts","tests/mutations/2-b.ts"]\n',
+    );
+  });
+
+  it('writes an empty list when there is no file, so the check still reports', () => {
+    expect(githubOutput([])).toBe('count=0\nfiles=[]\n');
   });
 });

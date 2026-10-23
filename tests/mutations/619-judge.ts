@@ -90,9 +90,11 @@ export default mutationFile({
       file: 'scripts/mutations-verdict.ts',
       anchor: "  return run === 'success'\n",
       replacement: "  return run === 'success' || run === 'skipped'\n",
+      // Since #754 a run skipped with files to run fails first on the files'
+      // missing results, so only a file that reports clean reaches this line.
       red: {
-        [`${VERDICT} › verdict > fails when the run was skipped with files to run`]:
-          '✓ the judge passed and 3 mutation files ran clean',
+        [`${VERDICT} › verdict > fails when the run ended skipped`]:
+          '✓ the judge passed and 1 mutation file ran clean',
       },
     },
     {
