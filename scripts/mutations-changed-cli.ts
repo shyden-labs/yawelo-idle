@@ -6,8 +6,8 @@
  * changed non-unit test that none of them predicts red, and each changed
  * test-folder helper a non-unit test loads, or data file it names, that
  * none of them plants in and predicts red for one of those tests. It always prints how many paths it
- * judged, and writes `count` and `files` (space-separated) to
- * `GITHUB_OUTPUT` for the job that runs the files.
+ * judged, and writes `count` and `files` (a JSON list) to `GITHUB_OUTPUT`
+ * for the jobs that run the files, one each (#754).
  *
  * The entry lives apart from `mutations-changed.ts` because it imports each
  * mutation file by a path known only at run time, and the whole-repo guards
@@ -21,6 +21,7 @@ import { pathToFileURL } from 'node:url';
 import { asMutationFile, type MutationFile } from './mutation-file.ts';
 import {
   changedHelpers,
+  githubOutput,
   mutationFilesIn,
   needsListings,
   nonUnitLoaders,
@@ -177,10 +178,7 @@ async function main(): Promise<void> {
       );
       process.exitCode = 1;
     }
-  appendFileSync(
-    output,
-    `count=${String(files.length)}\nfiles=${files.join(' ')}\n`,
-  );
+  appendFileSync(output, githubOutput(files));
 }
 
 if (import.meta.main)

@@ -128,6 +128,16 @@ export function needsListings(changed: readonly Changed[]): boolean {
 const counted = (n: number, one: string, many: string): string =>
   `${String(n)} ${n === 1 ? one : many}`;
 
+/**
+ * The judge's lines for `GITHUB_OUTPUT`: the count the run jobs' condition
+ * reads and the files as the JSON list their matrix reads, never
+ * word-split (#754). An empty list still writes both, so the required check
+ * reports.
+ */
+export function githubOutput(files: readonly string[]): string {
+  return `count=${String(files.length)}\nfiles=${JSON.stringify(files)}\n`;
+}
+
 /** How many non-unit tests, helpers and mutation files changed of how many paths judged: never a silent pass. */
 export function summary(counts: {
   readonly tests: number;
