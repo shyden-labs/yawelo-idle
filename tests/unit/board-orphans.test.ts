@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
 import { boardOrphans, type OrphanReads } from '../../scripts/board-orphans';
 import type { Gh } from '../../scripts/board-progress';
 
@@ -99,8 +100,54 @@ interface Fixture {
   closed?: Readonly<Record<string, ReadonlyArray<'merged' | 'unmerged'>>>;
   /** Every closed pull request of the repository, branches deleted or not (#702). */
   allClosed?: unknown[];
+  /**
+   * The issues the repository's own issues name on the board (#751); by
+   * default, every issue of this repository the board's listing holds.
+   */
+  named?: number[];
   /** A read named here throws as `gh` does when it exits non-zero. */
-  failing?: 'board' | 'branches' | 'pulls' | 'closed' | 'allClosed';
+  failing?: 'board' | 'issues' | 'branches' | 'pulls' | 'closed' | 'allClosed';
+}
+
+/** The numbers of this repository's issues among raw board items. */
+function issuesOf(items: unknown[]): number[] {
+  return (
+    items as {
+      content?: {
+        __typename?: string;
+        number?: number;
+        repository?: { nameWithOwner?: string };
+      };
+    }[]
+  ).flatMap(({ content }) =>
+    content?.__typename === 'Issue' &&
+    content.repository?.nameWithOwner === REPO &&
+    content.number !== undefined
+      ? [content.number]
+      : [],
+  );
+}
+
+/** The repository's issues as REPO_ISSUES_QUERY returns them, each naming the board. */
+function issuesNaming(numbers: number[]): unknown[] {
+  return [
+    {
+      data: {
+        repository: {
+          issues: {
+            totalCount: numbers.length,
+            nodes: numbers.map((number) => ({
+              number,
+              projectItems: {
+                totalCount: 1,
+                nodes: [{ project: { id: 'PVT_fixture' } }],
+              },
+            })),
+          },
+        },
+      },
+    },
+  ];
 }
 
 const BRANCHES_CALL = [
@@ -121,6 +168,19 @@ const ALL_CLOSED_CALL = [
   '--slurp',
   `repos/${REPO}/pulls?state=closed&per_page=100`,
 ];
+/** The repository's issues, read with the board's token: only it can read their boards (#751). */
+const ISSUES_CALL = [
+  'api',
+  'graphql',
+  '--paginate',
+  '--slurp',
+  '-f',
+  `query=${REPO_ISSUES_QUERY}`,
+  '-f',
+  'owner=shyden-labs',
+  '-f',
+  'name=yawelo-idle',
+];
 const closedCall = (branch: string) => [
   'api',
   '--paginate',
@@ -139,6 +199,10 @@ function reads(f: Fixture): OrphanReads {
   const board: Gh = (args) => {
     if (args[0] !== 'api' || args[1] !== 'graphql')
       throw new Error(`unexpected board call: ${args.join(' ')}`);
+    if (same(args, ISSUES_CALL)) {
+      if (f.failing === 'issues') throw new Error('HTTP 502: Bad Gateway');
+      return JSON.stringify(issuesNaming(f.named ?? issuesOf(f.items)));
+    }
     if (f.failing === 'board') throw new Error('HTTP 401: Bad credentials');
     return JSON.stringify([
       {
@@ -522,6 +586,41 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     );
   });
 
+  // GitHub's incident of 2026-10-22: the board's listing and its own count
+  // shrank together, so #703's count check agreed with a short read.
+  it('refuses a listing short of the repository’s issues, its own count agreeing, judging no orphan (#751)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(1, 'In Progress')], named: [1, 2] }),
+      ),
+    ).toThrow(
+      'could not read the board: the board lists 1 of shyden-labs/yawelo-idle’s issues and the repository’s own issues (Repository.issues) name 2 on it; missing from the board’s listing: #2: nothing read',
+    );
+  });
+
+  it('reads the repository’s issues with the board’s token, which can read their boards (#751)', () => {
+    const r = reads({ items: [rawIssue(1, 'Todo')] });
+    const calls: string[][] = [];
+    const board: Gh = (args) => {
+      calls.push([...args]);
+      return r.board(args);
+    };
+    boardOrphans(ARGS, ENV, { board, repo: r.repo });
+    expect(calls.filter((call) => same(call, ISSUES_CALL))).toHaveLength(1);
+  });
+
+  it('refuses when the repository’s issues cannot be read, by name (#751)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(1, 'Todo')], failing: 'issues' }),
+      ),
+    ).toThrow('could not read the repository’s issues: HTTP 502: Bad Gateway');
+  });
+
   it('refuses a branch list without develop, its known positive', () => {
     expect(() =>
       boardOrphans(
@@ -666,8 +765,14 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     const elsewhere = rawIssue(12, 'In Progress', {
       repository: { nameWithOwner: 'shyden-labs/repo-template' },
     });
+    // Beside one of this repository's, as on the real board, so the
+    // cross-check against this repository's issues has one to find (#751).
     expect(() =>
-      boardOrphans(ARGS, ENV, reads({ items: [elsewhere] })),
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(1, 'Todo'), elsewhere] }),
+      ),
     ).toThrow(
       'shyden-labs/repo-template#12 is In Progress, and this check reads only shyden-labs/yawelo-idle',
     );

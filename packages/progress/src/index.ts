@@ -475,6 +475,143 @@ function assertWhole(boards: RawPage['data']['node'][]): void {
     );
 }
 
+const BOARDS_PER_ISSUE = 10;
+/**
+ * The repository's issues, 100 to a page, each with the boards it is on
+ * (#751): the surface a board's listing is checked against, since the
+ * listing's own count shrinks with it. Archived cards are left out, as the
+ * board's listing leaves them out.
+ */
+export const REPO_ISSUES_QUERY = `query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
+      nodes { number
+        projectItems(first: ${String(BOARDS_PER_ISSUE)}, includeArchived: false) { totalCount nodes { project { id } } } } } } }`;
+
+interface RepoIssue {
+  number: number;
+  projectItems: {
+    totalCount: number;
+    nodes: { project: { id: string } | null }[];
+  };
+}
+interface RepoIssues {
+  totalCount?: unknown;
+  nodes: RepoIssue[];
+}
+
+/** A page's issues, refused by name when the page holds none. */
+function issuesOf(page: unknown): RepoIssues {
+  const issues = (
+    page as {
+      data?: { repository?: { issues?: { nodes?: unknown } } | null };
+    } | null
+  )?.data?.repository?.issues;
+  if (issues === undefined || !Array.isArray(issues.nodes)) {
+    throw new Error(
+      'a page came back without the repository’s issues: is the repository right?',
+    );
+  }
+  return issues as RepoIssues;
+}
+
+/**
+ * The issues the repository names on the board, from pages proved to hold
+ * every issue, as assertWhole proves a board's pages (#703).
+ */
+function namedOnBoard(repoPages: unknown[], boardId: string): Set<number> {
+  if (repoPages.length === 0)
+    throw new Error(
+      'no page of the repository’s issues came back: nothing read',
+    );
+  const pages = repoPages.map(issuesOf);
+  const counts = pages.map((page) => page.totalCount);
+  if (!counts.every((count) => Number.isInteger(count)))
+    throw new Error(
+      'a page of the repository’s issues came back without their count (issues.totalCount): nothing read',
+    );
+  const seen = [...new Set(counts)];
+  if (seen.length > 1)
+    throw new Error(
+      `the repository’s issues changed while they were read (its pages report ${seen.join(', then ')}): nothing read`,
+    );
+  const issues = pages.flatMap((page) => page.nodes);
+  if (issues.length !== Number(counts[0]))
+    throw new Error(
+      `the repository has ${String(counts[0])} issues and ${String(issues.length)} were read: nothing read`,
+    );
+  const named = new Set<number>();
+  for (const issue of issues) {
+    const items = issue.projectItems;
+    if (items.totalCount > items.nodes.length)
+      throw new Error(
+        `#${String(issue.number)} is on ${String(items.totalCount)} boards and ${String(items.nodes.length)} were read: raise projectItems(first:) in REPO_ISSUES_QUERY: nothing read`,
+      );
+    if (items.nodes.some((item) => item.project?.id === boardId))
+      named.add(issue.number);
+  }
+  return named;
+}
+
+const NAMED_IN_A_REFUSAL = 10;
+
+/** Issue numbers for a refusal: the first ten, and how many more. */
+function listed(numbers: number[]): string {
+  const shown = numbers
+    .slice(0, NAMED_IN_A_REFUSAL)
+    .map((number) => `#${String(number)}`)
+    .join(', ');
+  const more = numbers.length - NAMED_IN_A_REFUSAL;
+  return more > 0 ? `${shown} and ${String(more)} more` : shown;
+}
+
+/**
+ * Refuse a board whose listing is not every issue the repository names on
+ * it (#751). The board's pages and the repository's are read from two
+ * GitHub surfaces (ProjectV2.items and Repository.issues), and compared as
+ * sets of issue numbers, so a listing short of the board is refused even
+ * when its own count agrees with it. Only `repo`'s issues are compared:
+ * drafts, pull requests and other repositories' issues are parseItems'.
+ */
+export function assertNamedByRepo(
+  boardPages: unknown[],
+  repoPages: unknown[],
+  boardId: string,
+  repo: string,
+): void {
+  const named = namedOnBoard(repoPages, boardId);
+  if (named.size === 0)
+    throw new Error(
+      `the repository’s own issues (Repository.issues) name no issue on board ${boardId}: nothing read`,
+    );
+  const carded = new Set(
+    boardPages
+      .map(boardOf)
+      .flatMap((board) => board.items.nodes)
+      .flatMap(({ content }) =>
+        content?.__typename === 'Issue' &&
+        content.repository?.nameWithOwner === repo &&
+        content.number !== undefined
+          ? [content.number]
+          : [],
+      ),
+  );
+  const byNumber = (a: number, b: number): number => a - b;
+  const missing = [...named].filter((n) => !carded.has(n)).sort(byNumber);
+  const extra = [...carded].filter((n) => !named.has(n)).sort(byNumber);
+  if (missing.length === 0 && extra.length === 0) return;
+  const parts = [
+    `the board lists ${String(carded.size)} of ${repo}’s issues and the repository’s own issues (Repository.issues) name ${String(named.size)} on it`,
+  ];
+  if (missing.length > 0)
+    parts.push(`missing from the board’s listing: ${listed(missing)}`);
+  if (extra.length > 0)
+    parts.push(
+      `on the board but named by no issue: ${listed(extra)} (a card added or removed between the two reads shows this way too)`,
+    );
+  throw new Error(`${parts.join('; ')}: nothing read`);
+}
+
 /** Refuse to read a board other than the one asked for. */
 export function assertTitle(actual: string, expected: string): void {
   if (actual !== expected) {

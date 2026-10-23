@@ -74,9 +74,8 @@ async function deliver(event: string, payload: unknown, signature?: string) {
 }
 
 const boardReads = async () =>
-  (await seenByFake()).filter(
-    (s) => s.url.endsWith('/graphql') && s.cursor === null,
-  ).length;
+  (await seenByFake()).filter((s) => s.query === 'board' && s.cursor === null)
+    .length;
 
 beforeEach(async () => {
   await resetFake();
