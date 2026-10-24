@@ -16,7 +16,9 @@
  *   made loud by `/api/roadmap/health` and dev verify until a webhook is seen
  *   delivering a change again; it is an independent reading of the source of
  *   truth, not a retry.
- * - A failed read keeps the last snapshot and says since when reads fail.
+ * - A failed read keeps the last snapshot and says since when reads fail. A
+ *   board listing short of the issues the repository names on it is a failed
+ *   read (#751), since the listing's own count shrinks with it.
  *   Nothing reads again by itself: the next event or check is the next read.
  *
  * Each new version goes to every open page over hibernating WebSockets.
@@ -24,6 +26,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
   assertBoard,
+  assertNamedByRepo,
   formatLines,
   progress,
   roadmapItems,
@@ -31,7 +34,11 @@ import {
   type Dropped,
   type Progress,
 } from '@yawelo-idle/progress';
-import { installationToken, readBoardPages } from './github';
+import {
+  installationToken,
+  readBoardPages,
+  readRepoIssuePages,
+} from './github';
 import {
   account,
   numberOf,
@@ -336,6 +343,14 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       );
       const pages = await readBoardPages(token, env.ROADMAP_BOARD_ID);
       assertBoard(pages, env.ROADMAP_BOARD_TITLE);
+      // The listing's own count shrinks with it, so a short read is caught
+      // against the repository's issues, from a second surface (#751).
+      assertNamedByRepo(
+        pages,
+        await readRepoIssuePages(token, owner, name),
+        env.ROADMAP_BOARD_ID,
+        env.ROADMAP_REPO,
+      );
       const { items, dropped } = roadmapItems(pages, env.ROADMAP_REPO);
       const sorted = [...items].sort((a, b) => a.number - b.number);
       const hash = await sha256(JSON.stringify(sorted));

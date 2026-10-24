@@ -1,11 +1,14 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  assertNamedByRepo,
   parseItems,
   roadmapItems,
 } from '../../../../packages/progress/src/index';
 import {
   boardPages,
+  FIXTURE_BOARD_ID,
   FIXTURE_REPO,
+  repoPages,
 } from '../../../../packages/progress/test/board-fixture';
 import {
   FAKE_APP_ID,
@@ -22,6 +25,7 @@ import {
   importAppKey,
   installationToken,
   readBoardPages,
+  readRepoIssuePages,
   USER_AGENT,
   type App,
 } from '../../worker/github';
@@ -326,6 +330,94 @@ describe('readBoardPages', () => {
     await configureFake({ endlessPages: true });
     await expect(readBoardPages(FAKE_TOKEN, FAKE_BOARD_ID)).rejects.toThrow(
       'the board PVT_fixture has more than 20 pages',
+    );
+    expect(await seenByFake()).toHaveLength(20);
+  });
+});
+
+describe('readRepoIssuePages (#751)', () => {
+  it('reads every page of the repository’s issues, following each endCursor', async () => {
+    await configureFake({ repoPages: repoPages() });
+    const pages = await readRepoIssuePages(
+      FAKE_TOKEN,
+      FAKE_ORG,
+      FAKE_REPO_NAME,
+    );
+    expect(pages).toHaveLength(2);
+    expect(
+      (await seenByFake()).map((s) => [s.query, s.cursor] as const),
+    ).toEqual([
+      ['issues', null],
+      ['issues', '1'],
+    ]);
+  });
+
+  it('gives pages the shared cross-check reads as naming the fixture board’s issues', async () => {
+    await configureFake({ repoPages: repoPages() });
+    const pages = await readRepoIssuePages(
+      FAKE_TOKEN,
+      FAKE_ORG,
+      FAKE_REPO_NAME,
+    );
+    const today = new Date().toISOString().slice(0, 10);
+    expect(() => {
+      assertNamedByRepo(
+        boardPages(today),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+      );
+    }).not.toThrow();
+  });
+
+  it('sends its User-Agent on every page', async () => {
+    await configureFake({ repoPages: repoPages() });
+    await readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME);
+    expect((await seenByFake()).map((s) => s.userAgent)).toEqual([
+      USER_AGENT,
+      USER_AGENT,
+    ]);
+  });
+
+  it('refuses an answer carrying GraphQL errors, naming the first', async () => {
+    await configureFake({
+      graphqlErrors: [{ message: 'Something went wrong' }],
+    });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow(
+      'GitHub’s GraphQL answered with errors: Something went wrong',
+    );
+  });
+
+  it('names the status of a failed GraphQL request', async () => {
+    await configureFake({ graphqlStatus: 502 });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow('GitHub refused POST /graphql: HTTP 502');
+  });
+
+  it('refuses a repository GitHub does not know, by GitHub’s own error', async () => {
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, 'other'),
+    ).rejects.toThrow(
+      "GitHub’s GraphQL answered with errors: Could not resolve to a Repository with the name 'shyden-labs/other'.",
+    );
+  });
+
+  it('refuses an answer without the repository’s issues', async () => {
+    await configureFake({ repoPages: [{ data: { repository: null } }] });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow('GitHub found no issues for shyden-labs/fixture');
+  });
+
+  it('stops at 20 pages rather than follow a repository that never ends', async () => {
+    await configureFake({ endlessPages: true });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow(
+      'the repository shyden-labs/fixture has more than 20 pages of issues',
     );
     expect(await seenByFake()).toHaveLength(20);
   });

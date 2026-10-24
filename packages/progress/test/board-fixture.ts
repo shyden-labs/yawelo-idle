@@ -79,6 +79,56 @@ function page(today: string, stories: Story[], totalCount: number): unknown {
   };
 }
 
+/** The fixture board's node id, which the repository's issues name (#751). */
+export const FIXTURE_BOARD_ID = 'PVT_fixture';
+
+/** One page of the repository's issues as REPO_ISSUES_QUERY returns it (#751). */
+function repoPage(issues: [number, string[]][], totalCount: number): unknown {
+  return {
+    data: {
+      repository: {
+        issues: {
+          totalCount,
+          nodes: issues.map(([number, boards]) => ({
+            number,
+            projectItems: {
+              totalCount: boards.length,
+              nodes: boards.map((id) => ({ project: { id } })),
+            },
+          })),
+        },
+      },
+    },
+  };
+}
+
+/**
+ * The fixture repository's issues, each with the boards it is on (#751):
+ * #1 to #9 name the fixture board, as its cards say; #10 is on another board
+ * and #11 on none, so a cross-check must read the board's id, not just count.
+ */
+export function repoPages(): unknown[] {
+  const pages: [number, string[]][][] = [
+    [
+      [1, [FIXTURE_BOARD_ID]],
+      [2, [FIXTURE_BOARD_ID]],
+      [3, [FIXTURE_BOARD_ID, 'PVT_other']],
+      [4, [FIXTURE_BOARD_ID]],
+      [5, [FIXTURE_BOARD_ID]],
+      [6, [FIXTURE_BOARD_ID]],
+    ],
+    [
+      [7, [FIXTURE_BOARD_ID]],
+      [8, [FIXTURE_BOARD_ID]],
+      [9, [FIXTURE_BOARD_ID]],
+      [10, ['PVT_other']],
+      [11, []],
+    ],
+  ];
+  const totalCount = pages.flat().length;
+  return pages.map((issues) => repoPage(issues, totalCount));
+}
+
 export function boardPages(today: string): unknown[] {
   const pages: Story[][] = [
     [

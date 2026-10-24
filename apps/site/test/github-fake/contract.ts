@@ -58,6 +58,12 @@ export interface FakeConfig {
    * GitHub would: every item on every page served.
    */
   totalCount: number | null;
+  /**
+   * Raw pages of the repository's issues served in order for
+   * REPO_ISSUES_QUERY (#751); `null` serves what GitHub would: one page
+   * naming every issue of the repository the board's pages hold.
+   */
+  repoPages: unknown[] | null;
 }
 
 /** One request as the fake received it. */
@@ -65,6 +71,8 @@ export interface Seen {
   method: string;
   url: string;
   userAgent: string | null;
+  /** For GraphQL: which query it asked, the board's or the repository's issues' (#751). */
+  query?: 'board' | 'issues';
   /** For GraphQL: the cursor asked for (`null` for the first page). */
   cursor?: string | null;
   /** For an App call: the JWT's claims once verified. */

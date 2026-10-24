@@ -5,6 +5,7 @@ import {
   FIXTURE_REPO,
   FIXTURE_TITLE,
   fixtureCardId,
+  repoPages,
 } from '../../../../packages/progress/test/board-fixture';
 import { roadmapWorld, type RoadmapWorld } from './harness';
 
@@ -186,6 +187,13 @@ function boardWithStoryNineClosed(pages = fixturePages()): FixturePages {
   return pages;
 }
 
+/**
+ * The refusal for a board listing without story #9 while the repository's
+ * issues still name it on the board (#751).
+ */
+const SHORT_OF_STORY_NINE =
+  'the board lists 8 of shyden-labs/fixture’s issues and the repository’s own issues (Repository.issues) name 9 on it; missing from the board’s listing: #9: nothing read';
+
 /** The fixture board without story #9's card, as an archived card leaves it. */
 function boardWithoutStoryNine(): unknown[] {
   const pages = fixturePages();
@@ -242,9 +250,8 @@ const storyNineArchived = (): Witness => ({
 
 /** GraphQL first-page reads the fake has served: one per board read. */
 const boardReads = async () =>
-  (await seenByFake()).filter(
-    (s) => s.url.endsWith('/graphql') && s.cursor === null,
-  ).length;
+  (await seenByFake()).filter((s) => s.query === 'board' && s.cursor === null)
+    .length;
 
 beforeEach(async () => {
   await resetFake();
@@ -404,6 +411,18 @@ describe('reading the board', () => {
       'the board has 10 items and 9 were read: nothing read',
     );
   });
+
+  // GitHub's incident of 2026-10-22: the listing and its own count shrank
+  // together. The repository's issues still name story #9 on the board.
+  it('refuses a listing short of the repository’s issues, its own count agreeing, keeping nothing from it (#751)', async () => {
+    await configureFake({
+      pages: boardWithoutStoryNine(),
+      repoPages: repoPages(),
+    });
+    const health = await inRoadmap((r) => r.health());
+    expect(health.version).toBe(0);
+    expect(health.readError).toBe(SHORT_OF_STORY_NINE);
+  });
 });
 
 describe('a failed read', () => {
@@ -418,6 +437,23 @@ describe('a failed read', () => {
     expect(snapshot?.version).toBe(1);
     expect(health.readFailingSince).toBe(new Date(T0 + 60_000).toISOString());
     expect(health.readError).toBe('GitHub refused POST /graphql: HTTP 502');
+  });
+
+  it('keeps the last good snapshot and reports the short listing on health (#751)', async () => {
+    const { health, snapshot } = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({
+        pages: boardWithoutStoryNine(),
+        repoPages: repoPages(),
+      });
+      clock.at += 60_000;
+      await r.changed(null);
+      return { health: await r.health(), snapshot: await r.snapshot() };
+    });
+    expect(snapshot?.version).toBe(1);
+    expect(snapshot?.items.map((item) => item.number)).toContain(9);
+    expect(health.readFailingSince).toBe(new Date(T0 + 60_000).toISOString());
+    expect(health.readError).toBe(SHORT_OF_STORY_NINE);
   });
 
   it('keeps the first failure’s time while reads go on failing', async () => {
