@@ -172,10 +172,9 @@ function fakeEffects(
   const made: string[] = [];
   let temps = 0;
   const effects: Effects = {
-    git: (args, cwd) => {
-      log.push(`git ${args.join(' ')} @${cwd}`);
-      return '';
-    },
+    addWorktree: (dir, commit, cwd) =>
+      log.push(`worktree add ${dir} ${commit} @${cwd}`),
+    removeWorktree: (dir, cwd) => log.push(`worktree remove ${dir} @${cwd}`),
     npm: (script, cwd, ifPresent) => {
       log.push(`npm ${script}${ifPresent ? ' if-present' : ''} @${cwd}`);
       if (script === options.throwing)
@@ -271,15 +270,15 @@ describe('checkCommits checks each commit in its own temporary worktree (#752 AC
     expect(fake.log).toEqual([
       'say pre-push: checking aaaaaaa (1 of 2) in a temporary worktree',
       'mkdtemp /tmp/check-1',
-      `git worktree add --quiet --detach /tmp/check-1 ${A} @/repo`,
+      `worktree add /tmp/check-1 ${A} @/repo`,
       ...stepsFor('/tmp/check-1'),
-      'git worktree remove --force /tmp/check-1 @/repo',
+      'worktree remove /tmp/check-1 @/repo',
       'rm /tmp/check-1',
       'say pre-push: checking bbbbbbb (2 of 2) in a temporary worktree',
       'mkdtemp /tmp/check-2',
-      `git worktree add --quiet --detach /tmp/check-2 ${B} @/repo`,
+      `worktree add /tmp/check-2 ${B} @/repo`,
       ...stepsFor('/tmp/check-2'),
-      'git worktree remove --force /tmp/check-2 @/repo',
+      'worktree remove /tmp/check-2 @/repo',
       'rm /tmp/check-2',
     ]);
   });
@@ -296,11 +295,11 @@ describe('checkCommits checks each commit in its own temporary worktree (#752 AC
     expect(fake.log).toEqual([
       'say pre-push: checking aaaaaaa (1 of 2) in a temporary worktree',
       'mkdtemp /tmp/check-1',
-      `git worktree add --quiet --detach /tmp/check-1 ${A} @/repo`,
+      `worktree add /tmp/check-1 ${A} @/repo`,
       'npm postinstall if-present @/tmp/check-1',
       'npm format:check @/tmp/check-1',
       'npm lint @/tmp/check-1',
-      'git worktree remove --force /tmp/check-1 @/repo',
+      'worktree remove /tmp/check-1 @/repo',
       'rm /tmp/check-1',
     ]);
   });
@@ -322,7 +321,7 @@ describe('checkCommits checks each commit in its own temporary worktree (#752 AC
       'typecheck could not start',
     );
     expect(fake.log.slice(-2)).toEqual([
-      'git worktree remove --force /tmp/check-1 @/repo',
+      'worktree remove /tmp/check-1 @/repo',
       'rm /tmp/check-1',
     ]);
   });
@@ -331,8 +330,8 @@ describe('checkCommits checks each commit in its own temporary worktree (#752 AC
     const fake = fakeEffects(ROOT_ONLY);
     const effects: Effects = {
       ...fake.effects,
-      git: (args, cwd) => {
-        fake.log.push(`git ${args.join(' ')} @${cwd}`);
+      addWorktree: (dir, commit, cwd) => {
+        fake.log.push(`worktree add ${dir} ${commit} @${cwd}`);
         throw new Error('worktree add failed');
       },
     };
@@ -340,7 +339,7 @@ describe('checkCommits checks each commit in its own temporary worktree (#752 AC
       'worktree add failed',
     );
     expect(fake.log.slice(-2)).toEqual([
-      `git worktree add --quiet --detach /tmp/check-1 ${A} @/repo`,
+      `worktree add /tmp/check-1 ${A} @/repo`,
       'rm /tmp/check-1',
     ]);
   });

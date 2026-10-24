@@ -71,8 +71,7 @@ export default mutationFile({
       // pushes main first, which checks a commit.
       name: 'worktree-kept',
       file: SCRIPT,
-      anchor:
-        "      if (added) effects.git(['worktree', 'remove', '--force', dir], root);\n",
+      anchor: '      if (added) effects.removeWorktree(dir, root);\n',
       replacement: '',
       red: {
         [`${PUSH} passes a clean first push of a new branch, and the remote has it`]:

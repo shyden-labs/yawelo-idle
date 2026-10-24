@@ -57,8 +57,14 @@ export interface Refusal {
 
 /** What the checks do outside this module, stood in by the unit suite. */
 export interface Effects {
-  /** Runs git in `cwd` and returns what it printed; throws when git fails. */
-  readonly git: (args: readonly string[], cwd: string) => string;
+  /**
+   * Adds a detached worktree of `commit` at `dir`; throws when git fails.
+   * One effect per git use, each spelling its own subcommand, so the
+   * git-walks guard reads every call (#385).
+   */
+  readonly addWorktree: (dir: string, commit: string, cwd: string) => void;
+  /** Removes the worktree at `dir`; throws when git fails. */
+  readonly removeWorktree: (dir: string, cwd: string) => void;
   /** Runs an npm script in `cwd`, its output shown, and returns its exit status. */
   readonly npm: (script: string, cwd: string, ifPresent: boolean) => number;
   readonly makeTempDir: () => string;
@@ -187,16 +193,13 @@ export function checkCommits(
     const dir = effects.makeTempDir();
     let added = false;
     try {
-      effects.git(
-        ['worktree', 'add', '--quiet', '--detach', dir, commit],
-        root,
-      );
+      effects.addWorktree(dir, commit, root);
       added = true;
       mirrorNodeModules(root, dir, effects);
       const failed = failedStep(dir, effects);
       if (failed !== undefined) return { check: failed, commit: short };
     } finally {
-      if (added) effects.git(['worktree', 'remove', '--force', dir], root);
+      if (added) effects.removeWorktree(dir, root);
       effects.removeDir(dir);
     }
   }
@@ -211,12 +214,19 @@ export function refusalMessage(refusal: Refusal): string {
 /** The real effects: git and npm as processes, the real filesystem. */
 function realEffects(childEnv: NodeJS.ProcessEnv): Effects {
   return {
-    git: (args, cwd) =>
-      execFileSync('git', args, {
+    addWorktree: (dir, commit, cwd) => {
+      execFileSync(
+        'git',
+        ['worktree', 'add', '--quiet', '--detach', dir, commit],
+        { cwd, stdio: ['ignore', 'pipe', 'inherit'] },
+      );
+    },
+    removeWorktree: (dir, cwd) => {
+      execFileSync('git', ['worktree', 'remove', '--force', dir], {
         cwd,
-        encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'inherit'],
-      }),
+      });
+    },
     npm: (script, cwd, ifPresent) => {
       const run = spawnSync(
         'npm',
@@ -262,8 +272,11 @@ if (import.meta.main) {
     const commits = commitsToCheck(
       readUpdates(readFileSync(0, 'utf8')),
       (args) =>
-        effects
-          .git(['rev-list', ...args], root)
+        execFileSync('git', ['rev-list', ...args], {
+          cwd: root,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'inherit'],
+        })
           .split('\n')
           .filter((line) => line !== ''),
     );

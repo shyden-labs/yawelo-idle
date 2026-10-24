@@ -187,8 +187,7 @@ export default mutationFile({
       // Every checked worktree is left registered.
       name: 'worktree-kept',
       file: SCRIPT,
-      anchor:
-        "      if (added) effects.git(['worktree', 'remove', '--force', dir], root);\n",
+      anchor: '      if (added) effects.removeWorktree(dir, root);\n',
       replacement: '',
       red: {
         [`${CHECK} passes a clean pair, each checked in turn and its worktree removed`]:
@@ -200,11 +199,11 @@ export default mutationFile({
       },
     },
     {
-      // A worktree never made is removed anyway, and that failure skips the rm.
+      // A worktree never made is removed anyway.
       name: 'unmade-worktree-removed',
       file: SCRIPT,
-      anchor: '      if (added) effects.git(',
-      replacement: '      if (true) effects.git(',
+      anchor: '      if (added) effects.removeWorktree(',
+      replacement: '      if (true) effects.removeWorktree(',
       red: {
         [`${CHECK} removes the temporary directory, and asks git to remove no worktree, when the worktree cannot be made`]:
           EQUAL,

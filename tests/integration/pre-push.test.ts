@@ -30,7 +30,13 @@ import { GATES } from '../../scripts/pre-push';
 
 const HOOK = '.githooks/pre-push';
 const SCRIPT = 'scripts/pre-push.ts';
-const IDENTITY = ['-c', 'user.name=t', '-c', 'user.email=t@example.com'];
+/** The scratch commits' author: CI has no git identity of its own. */
+const IDENTITY = {
+  GIT_AUTHOR_NAME: 't',
+  GIT_AUTHOR_EMAIL: 't@example.com',
+  GIT_COMMITTER_NAME: 't',
+  GIT_COMMITTER_EMAIL: 't@example.com',
+};
 
 const PACKAGE = {
   name: 'scratch',
@@ -52,19 +58,23 @@ let work = '';
 let remote = '';
 let temp = '';
 
-function git(args: readonly string[]) {
-  const run = spawnSync('git', [...IDENTITY, ...args], {
+/**
+ * Runs git in the scratch checkout. Each call site spells its subcommand,
+ * so the git-walks guard reads it (#385).
+ */
+function git(...args: string[]) {
+  const run = spawnSync('git', args, {
     cwd: work,
     encoding: 'utf8',
-    env: { ...process.env, TMPDIR: temp },
+    env: { ...process.env, ...IDENTITY, TMPDIR: temp },
   });
-  return { status: run.status, out: `${run.stdout}${run.stderr}` };
+  return { args, status: run.status, out: `${run.stdout}${run.stderr}` };
 }
 
-function must(args: readonly string[]): string {
-  const run = git(args);
+/** A git run's output, refusing a run that failed. */
+function must(run: ReturnType<typeof git>): string {
   if (run.status !== 0)
-    throw new Error(`git ${args.join(' ')} failed: ${run.out}`);
+    throw new Error(`git ${run.args.join(' ')} failed: ${run.out}`);
   return run.out.trim();
 }
 
@@ -74,9 +84,9 @@ function write(path: string, text: string): void {
 }
 
 function commit(message: string): string {
-  must(['add', '-A']);
-  must(['commit', '-q', '-m', message]);
-  return must(['rev-parse', 'HEAD']);
+  must(git('add', '-A'));
+  must(git('commit', '-q', '-m', message));
+  return must(git('rev-parse', 'HEAD'));
 }
 
 const remoteHead = (branch: string) =>
@@ -93,9 +103,9 @@ beforeEach(() => {
   mkdirSync(temp);
   mkdirSync(work);
   expect(spawnSync('git', ['init', '-q', '--bare', remote]).status).toBe(0);
-  must(['init', '-q', '-b', 'main']);
-  must(['config', 'core.hooksPath', '.githooks']);
-  must(['remote', 'add', 'origin', remote]);
+  must(git('init', '-q', '-b', 'main'));
+  must(git('config', 'core.hooksPath', '.githooks'));
+  must(git('remote', 'add', 'origin', remote));
   write('package.json', `${JSON.stringify(PACKAGE, null, 2)}\n`);
   write('lint.mjs', LINT);
   write('typecheck.cjs', TYPECHECK);
@@ -133,14 +143,14 @@ function expectNothingLeft(): void {
     true,
   );
   expect(
-    must(['worktree', 'list', '--porcelain']).match(/^worktree /gm),
+    must(git('worktree', 'list', '--porcelain')).match(/^worktree /gm),
   ).toHaveLength(1);
 }
 
 describe('the pre-push hook checks each pushed commit, not the working tree (#752 AC4)', () => {
   it('passes a clean first push of a new branch, and the remote has it', () => {
-    const head = must(['rev-parse', 'HEAD']);
-    const push = git(['push', '-q', 'origin', 'main']);
+    const head = must(git('rev-parse', 'HEAD'));
+    const push = git('push', '-q', 'origin', 'main');
     expect(push.out).toContain('pre-push: checking');
     expect(push.status).toBe(0);
     expect(remoteHead('main')).toBe(head);
@@ -148,12 +158,12 @@ describe('the pre-push hook checks each pushed commit, not the working tree (#75
   });
 
   it('refuses a committed error under an uncommitted fix, naming lint and the commit', () => {
-    must(['push', '-q', 'origin', 'main']);
+    must(git('push', '-q', 'origin', 'main'));
     const base = remoteHead('main');
     write('src.txt', 'LINT-ERROR\n');
     const broken = commit('broken');
     write('src.txt', 'fixed but not committed\n');
-    const push = git(['push', '-q', 'origin', 'main']);
+    const push = git('push', '-q', 'origin', 'main');
     expect(push.out).toContain(
       `✗ pre-push: lint failed on commit ${broken.slice(0, 7)}, so nothing was pushed.`,
     );
@@ -163,13 +173,13 @@ describe('the pre-push hook checks each pushed commit, not the working tree (#75
   });
 
   it('refuses an error in the first of two commits, the second fixing it, naming typecheck and the first', () => {
-    must(['push', '-q', 'origin', 'main']);
+    must(git('push', '-q', 'origin', 'main'));
     const base = remoteHead('main');
     write('packages/pkg/index.js', "module.exports = 'broken';\n");
     const broken = commit('break the package');
     write('packages/pkg/index.js', "module.exports = 'ok';\n");
     commit('fix the package');
-    const push = git(['push', '-q', 'origin', 'main']);
+    const push = git('push', '-q', 'origin', 'main');
     expect(push.out).toContain(
       `✗ pre-push: typecheck failed on commit ${broken.slice(0, 7)}, so nothing was pushed.`,
     );
@@ -179,12 +189,12 @@ describe('the pre-push hook checks each pushed commit, not the working tree (#75
   });
 
   it('passes a clean pair, checking both, and the remote has the second', () => {
-    must(['push', '-q', 'origin', 'main']);
+    must(git('push', '-q', 'origin', 'main'));
     write('src.txt', 'one\n');
     commit('one');
     write('src.txt', 'two\n');
     const second = commit('two');
-    const push = git(['push', '-q', 'origin', 'main']);
+    const push = git('push', '-q', 'origin', 'main');
     expect(push.out).toContain('(1 of 2)');
     expect(push.out).toContain('(2 of 2)');
     expect(push.status).toBe(0);
@@ -193,9 +203,9 @@ describe('the pre-push hook checks each pushed commit, not the working tree (#75
   });
 
   it('passes a deletion-only push, checking nothing', () => {
-    must(['push', '-q', 'origin', 'main']);
-    must(['push', '-q', 'origin', 'main:gone']);
-    const push = git(['push', '-q', 'origin', '--delete', 'gone']);
+    must(git('push', '-q', 'origin', 'main'));
+    must(git('push', '-q', 'origin', 'main:gone'));
+    const push = git('push', '-q', 'origin', '--delete', 'gone');
     expect(push.out).toContain('pre-push: no new commits to check');
     expect(push.status).toBe(0);
     expect(remoteHead('gone')).toBe('');
