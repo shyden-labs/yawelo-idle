@@ -6,8 +6,8 @@
  * changed non-unit test that none of them predicts red, and each changed
  * test-folder helper a non-unit test loads, or data file it names, that
  * none of them plants in and predicts red for one of those tests. It always prints how many paths it
- * judged, and writes `count` and `files` (space-separated) to
- * `GITHUB_OUTPUT` for the job that runs the files.
+ * judged, and writes `count` and `files` (a JSON list) to `GITHUB_OUTPUT`
+ * for the jobs that run the files, one each (#754).
  *
  * The entry lives apart from `mutations-changed.ts` because it imports each
  * mutation file by a path known only at run time, and the whole-repo guards
@@ -16,15 +16,17 @@
  */
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
-import { posix, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { asMutationFile, type MutationFile } from './mutation-file.ts';
 import {
   changedHelpers,
+  githubOutput,
   mutationFilesIn,
   needsListings,
   nonUnitLoaders,
   nonUnitTests,
+  RECORDED_DIRS,
   readNameStatus,
   redByPlantedFile,
   summary,
@@ -33,9 +35,7 @@ import {
   unprovedHelpers,
   unprovedTests,
 } from './mutations-changed.ts';
-import { MINIMUMS_DIR } from './minimums-method.ts';
-import { RECORD_FILE } from './coverage.ts';
-import { FLOORS_DIR, SUITES, suiteFiles } from './record-floors.ts';
+import { SUITES, suiteFiles } from './record-floors.ts';
 import { committableFiles } from '../tests/unit/tracked-files.ts';
 
 /** Every suite's files, repository-relative, by suite name. */
@@ -125,12 +125,7 @@ async function main(): Promise<void> {
   );
   const listed = new Set([...listedBySuite.values()].flat());
   const { helpers, data, recorded, unreadable } = needsListings(changed)
-    ? changedHelpers(changed, listed, workspaces(), [
-        FLOORS_DIR,
-        MINIMUMS_DIR,
-        // The coverage record: counts CI writes, as the floors are (#728).
-        posix.dirname(RECORD_FILE),
-      ])
+    ? changedHelpers(changed, listed, workspaces(), RECORDED_DIRS)
     : { helpers: [], data: [], recorded: [], unreadable: [] };
   // Every suite's tests: a file only unit tests use needs no mutation, but a
   // data file no test names at all fails (unnamedData).
@@ -183,10 +178,7 @@ async function main(): Promise<void> {
       );
       process.exitCode = 1;
     }
-  appendFileSync(
-    output,
-    `count=${String(files.length)}\nfiles=${files.join(' ')}\n`,
-  );
+  appendFileSync(output, githubOutput(files));
 }
 
 if (import.meta.main)

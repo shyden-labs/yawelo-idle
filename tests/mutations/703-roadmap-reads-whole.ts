@@ -49,8 +49,11 @@ export default mutationFile({
       // read from the fixture itself, see the fixture's count.
       name: 'fixture-counts-one-high',
       file: 'packages/progress/test/board-fixture.ts',
-      anchor: '  const totalCount = pages.flat().length;\n',
-      replacement: '  const totalCount = pages.flat().length + 1;\n',
+      // Anchored on the board's return too: #751's repoPages has the same count.
+      anchor:
+        '  const totalCount = pages.flat().length;\n  return pages.map((stories) =>',
+      replacement:
+        '  const totalCount = pages.flat().length + 1;\n  return pages.map((stories) =>',
       red: {
         [`${READING} gives the same two lines as the close-out script, from one fixture`]:
           'the board has 10 items and 9 were read',

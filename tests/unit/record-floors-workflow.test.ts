@@ -4,8 +4,8 @@ import { floorBreach } from '../floors';
 import { searched } from '../searched';
 import {
   envSites,
-  onlyJob,
-  stepNamed,
+  jobIn,
+  stepIn,
   workflow,
   workflowFiles,
   type WorkflowJob,
@@ -28,12 +28,20 @@ import { runOf } from './workflow-steps';
 
 const FILE = 'record-floors.yml';
 const ID = 'record-floors';
+const COVERAGE = 'record-coverage';
 const REFUSE = "Refuse anything but the tip of a ticket branch's scratch ref";
+const LAY = 'Lay the recorded floors over the tree';
 
-const job = (): WorkflowJob => onlyJob(FILE, ID);
-const step = (name: string): WorkflowStep => stepNamed(FILE, ID, name);
+const job = (): WorkflowJob => jobIn(FILE, ID);
+const step = (name: string): WorkflowStep => stepIn(FILE, ID, name);
 const names = (): (string | undefined)[] =>
   (job().steps ?? []).map((s) => s.name ?? s.uses);
+const coverageJob = (): WorkflowJob => jobIn(FILE, COVERAGE);
+const coverageStep = (name: string): WorkflowStep =>
+  stepIn(FILE, COVERAGE, name);
+const coverageNames = (): (string | undefined)[] =>
+  (coverageJob().steps ?? []).map((s) => s.name ?? s.uses);
+const ciCoverage = (): WorkflowJob => jobIn('ci.yml', 'coverage');
 const switchSites = (file: string): string[] => envSites(file, RECORD_JOB_ENV);
 
 describe('the record-floors workflow (#547, #718)', () => {
@@ -66,6 +74,23 @@ describe('the record-floors workflow (#547, #718)', () => {
     expect(job().if).toBeUndefined();
   });
 
+  it('holds the floors job, then a coverage job that waits for it, unconditionally (#748)', () => {
+    expect([
+      Object.keys(workflow(FILE).jobs ?? {}),
+      coverageJob().needs,
+      coverageJob().if,
+    ]).toEqual([[ID, COVERAGE], ID, undefined]);
+  });
+
+  it('refuses, naming what the file holds, a job or a step it does not hold (#748)', () => {
+    expect(() => jobIn(FILE, 'missing')).toThrow(
+      `${FILE} holds jobs ${ID}, ${COVERAGE}, not missing`,
+    );
+    expect(() => stepIn(FILE, COVERAGE, 'missing')).toThrow(
+      `${FILE} holds 0 steps named "missing" in ${COVERAGE}`,
+    );
+  });
+
   it('reads the repository and writes nothing', () => {
     expect(workflow(FILE).permissions).toEqual({ contents: 'read' });
   });
@@ -89,11 +114,14 @@ describe('the record-floors workflow (#547, #718)', () => {
     expect(runOf(refuse)).toContain('exit 1');
   });
 
-  it('checks out exactly the SHA it was given', () => {
-    const checkout = (job().steps ?? []).find((s) =>
-      s.uses?.startsWith('actions/checkout@'),
+  it('checks out exactly the SHA it was given, in each job', () => {
+    const checkouts = [job(), coverageJob()].flatMap((j) =>
+      (j.steps ?? []).filter((s) => s.uses?.startsWith('actions/checkout@')),
     );
-    expect(checkout?.with?.['ref']).toBe('${{ inputs.sha }}');
+    expect(checkouts.map((s) => s.with)).toEqual([
+      { ref: '${{ inputs.sha }}', 'fetch-depth': 2 },
+      { ref: '${{ inputs.sha }}', 'fetch-depth': 2 },
+    ]);
   });
 
   it('refuses, before the checkout, a SHA that is not the scratch ref’s tip', () => {
@@ -110,10 +138,15 @@ describe('the record-floors workflow (#547, #718)', () => {
     ).toBeGreaterThan(names().indexOf(REFUSE));
   });
 
-  it('pushes nothing: no step runs git push or holds a token', () => {
-    const steps = job().steps ?? [];
-    // The reader sees each step's command where the recorder runs (liveness).
-    expect(steps.map(runOf)).toContain('npm run floors:record');
+  it('pushes nothing: no step of either job runs git push or holds a token', () => {
+    const steps = [...(job().steps ?? []), ...(coverageJob().steps ?? [])];
+    // The reader sees each step's command where each recorder runs (liveness).
+    expect(steps.map(runOf)).toEqual(
+      expect.arrayContaining([
+        'npm run floors:record',
+        'node scripts/coverage.ts record',
+      ]),
+    );
     expect(
       searched(
         steps.filter(
@@ -133,6 +166,24 @@ describe('the record-floors workflow (#547, #718)', () => {
     const ci = workflow('ci.yml').jobs?.['build-and-test']?.container?.image;
     expect(ci).toMatch(/^mcr\.microsoft\.com\/playwright:.+@sha256:/);
     expect(job().container?.image).toBe(ci);
+  });
+
+  it("measures coverage in the pull request's coverage job's image, user and limits (#748)", () => {
+    const measure = coverageStep('Measure coverage');
+    const ciMeasure = (ciCoverage().steps ?? []).find(
+      (s) => runOf(s) === 'npm run test:coverage',
+    );
+    expect(ciCoverage().container?.image).toMatch(/@sha256:/);
+    expect([
+      coverageJob().container,
+      coverageJob()['timeout-minutes'],
+      measure['timeout-minutes'],
+    ]).toEqual([
+      ciCoverage().container,
+      ciCoverage()['timeout-minutes'],
+      ciMeasure?.['timeout-minutes'],
+    ]);
+    expect(typeof measure['timeout-minutes']).toBe('number');
   });
 
   it('records every suite with the switch set to the workflow’s name', () => {
@@ -156,9 +207,15 @@ describe('the record-floors workflow (#547, #718)', () => {
     );
   });
 
-  it('measures coverage without the switch, before the floors, on the tree the install left, then records it with the switch (#728)', () => {
-    const measure = step('Measure coverage');
-    const record = step('Record coverage');
+  it('measures coverage without the switch on a fresh install of the commit, the recorded floors laid over it, then records it with the switch (#728, #748)', () => {
+    const lay = coverageStep(LAY);
+    expect(lay.uses).toMatch(/^actions\/download-artifact@[0-9a-f]{40}$/);
+    expect(lay.with).toEqual({
+      name: 'floors-${{ inputs.sha }}',
+      path: 'tests/floors/',
+    });
+    const measure = coverageStep('Measure coverage');
+    const record = coverageStep('Record coverage');
     expect([runOf(measure), measure.env]).toEqual([
       'npm run test:coverage',
       undefined,
@@ -167,30 +224,37 @@ describe('the record-floors workflow (#547, #718)', () => {
       'node scripts/coverage.ts record',
       { [RECORD_JOB_ENV]: 'record-floors' },
     ]);
-    // Measured on the tree the install left, as a pull request's coverage
-    // job measures it: the floors recorder runs every suite first otherwise,
-    // and PR #745's check found one file's total moved by it (#728).
-    const order = (job().steps ?? []).map((s) => s.name);
-    const at = (name: string): number => order.indexOf(name);
+    // The tree the pull request will hold: its install, and the floors the
+    // first job recorded. Measured in that job instead, it ran on the old
+    // floors (the guards fail on every branch whose floors moved) or after
+    // the floors recorder ran every suite (one file's total moved, #745).
+    const at = (name: string): number => coverageNames().indexOf(name);
     expect([
-      at('Install (a warning fails it)') < at('Measure coverage'),
+      at('Install (a warning fails it)') < at(LAY),
+      at(LAY) < at('Measure coverage'),
       at('Measure coverage') < at('Record coverage'),
-      at('Upload the coverage record') < at('Record the floors'),
     ]).toEqual([true, true, true]);
+    // The floors job measures nothing; the coverage job measures once.
+    expect(
+      [job(), coverageJob()].map(
+        (j) =>
+          (j.steps ?? []).filter((s) => runOf(s) === 'npm run test:coverage')
+            .length,
+      ),
+    ).toEqual([0, 1]);
   });
 
   it('uploads the coverage record as its own artifact named by the commit, after recording it (#728)', () => {
-    const upload = step('Upload the coverage record');
+    const upload = coverageStep('Upload the coverage record');
     expect(upload.uses).toMatch(/^actions\/upload-artifact@[0-9a-f]{40}$/);
     expect(upload.with).toEqual({
       name: 'coverage-${{ inputs.sha }}',
       path: 'tests/coverage/record.json',
       'if-no-files-found': 'error',
     });
-    const order = (job().steps ?? []).map((s) => s.name);
-    expect(order.indexOf('Upload the coverage record')).toBeGreaterThan(
-      order.indexOf('Record coverage'),
-    );
+    expect(
+      coverageNames().indexOf('Upload the coverage record'),
+    ).toBeGreaterThan(coverageNames().indexOf('Record coverage'));
   });
 
   it('is the only workflow that sets the recorder’s switch: a run that checks figures never records them', () => {
@@ -198,12 +262,12 @@ describe('the record-floors workflow (#547, #718)', () => {
     const sites = files.flatMap(switchSites);
     // The reader finds the switch where the record workflow sets it, on
     // both record steps, found by name (liveness).
-    const index = (name: string): number =>
-      (job().steps ?? []).findIndex((s) => s.name === name);
+    const index = (j: WorkflowJob, name: string): number =>
+      (j.steps ?? []).findIndex((s) => s.name === name);
     expect(sites).toEqual(
       expect.arrayContaining([
-        `${FILE}: record-floors.steps[${String(index('Record the floors'))}].env`,
-        `${FILE}: record-floors.steps[${String(index('Record coverage'))}].env`,
+        `${FILE}: ${ID}.steps[${String(index(job(), 'Record the floors'))}].env`,
+        `${FILE}: ${COVERAGE}.steps[${String(index(coverageJob(), 'Record coverage'))}].env`,
       ]),
     );
     expect(

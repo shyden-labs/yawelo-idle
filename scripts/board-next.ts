@@ -13,8 +13,16 @@
  * takes at least the level of what waits on it (operator 2026-10-13, #578).
  */
 import { execFileSync } from 'node:child_process';
-import { assertBoard } from '../packages/progress/src/index.ts';
-import type { Gh } from './board-progress.ts';
+import {
+  assertBoard,
+  assertNamedByRepo,
+} from '../packages/progress/src/index.ts';
+import {
+  type Gh,
+  ownerAndName,
+  REPO,
+  repoIssuePages,
+} from './board-progress.ts';
 import { PRIORITY_LEVELS } from './board-setup.ts';
 
 /** An open issue that blocks another, as GitHub's "Blocked by" link names it. */
@@ -235,18 +243,22 @@ export function parseNextItems(pages: unknown[], title: string): NextItem[] {
 }
 
 const USAGE =
-  'usage: node scripts/board-next.ts <board-node-id> "<board title>"';
+  'usage: node scripts/board-next.ts <board-node-id> "<board title>" [owner/repo]';
 
 /**
  * The line naming the next ticket on the board `args` names
- * (`<node-id> <title>`), and a note for each blocker the board does not hold.
+ * (`<node-id> <title> [owner/repo]`, the repository defaulting to this one),
+ * and a note for each blocker the board does not hold. The board's issues are
+ * checked against the issues the repository names on it before any ticket
+ * is named, so a short listing never picks one (#751).
  */
 export function boardNext(
   args: readonly string[],
   gh: Gh,
 ): { line: string; notes: string[] } {
-  const [id, title] = args;
+  const [id, title, repo = REPO] = args;
   if (id === undefined || title === undefined) throw new Error(USAGE);
+  ownerAndName(repo);
   const out = gh([
     'api',
     'graphql',
@@ -257,7 +269,9 @@ export function boardNext(
     '-f',
     `id=${id}`,
   ]);
-  const items = parseNextItems(JSON.parse(out) as unknown[], title);
+  const pages = JSON.parse(out) as unknown[];
+  const items = parseNextItems(pages, title);
+  assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo);
   const notes = offBoardBlockers(items);
   const next = nextTicket(items);
   if (next === null) return { line: 'Next: nothing is open.', notes };

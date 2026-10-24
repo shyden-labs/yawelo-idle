@@ -8,11 +8,14 @@ import {
   formatLines,
   parseItems,
   progress,
+  REPO_ISSUES_QUERY,
 } from '../../packages/progress/src/index';
 import {
   boardPages,
+  FIXTURE_BOARD_ID,
   FIXTURE_REPO,
   FIXTURE_TITLE,
+  repoPages,
 } from '../../packages/progress/test/board-fixture';
 
 /**
@@ -21,8 +24,9 @@ import {
  * operator's close-out and the roadmap Worker cannot disagree.
  *
  * Each test runs the real script under Node, the way a session runs it, with
- * a stand-in `gh` first on PATH that records its arguments and prints a
- * fixture. The stand-in is the one thing not real: CI holds no token that can
+ * a stand-in `gh` first on PATH that records each call's arguments and
+ * prints a fixture: the repository's issues for the call naming an owner
+ * (#751), the board's pages for any other. The stand-in is the one thing not real: CI holds no token that can
  * read an organisation's board. The live run against the real board is in
  * #340's PR (AC4).
  *
@@ -32,34 +36,46 @@ import {
  */
 const ROOT = new URL('../..', import.meta.url).pathname;
 const SCRIPT = join(ROOT, 'scripts/board-progress.ts');
-const NODE_ID = 'PVT_fixture';
+const NODE_ID = FIXTURE_BOARD_ID;
 
 const FAKE_GH = `#!/usr/bin/env node
 const fs = require('node:fs');
-fs.writeFileSync(process.env.FAKE_GH_ARGS, JSON.stringify(process.argv.slice(2)));
+const args = process.argv.slice(2);
+const log = process.env.FAKE_GH_ARGS;
+const calls = fs.existsSync(log) ? JSON.parse(fs.readFileSync(log, 'utf8')) : [];
+fs.writeFileSync(log, JSON.stringify([...calls, args]));
 if (process.env.FAKE_GH_FAIL === '1') {
   process.stderr.write('gh: HTTP 502\\n');
   process.exit(1);
 }
-process.stdout.write(fs.readFileSync(process.env.FAKE_GH_PAGES, 'utf8'));
+const issues = args.some((arg) => arg.startsWith('owner='));
+process.stdout.write(
+  fs.readFileSync(issues ? process.env.FAKE_GH_ISSUES : process.env.FAKE_GH_PAGES, 'utf8'),
+);
 `;
 
 interface Run {
   status: number | null;
   stdout: string;
   stderr: string;
-  ghArgs: () => unknown;
+  /** Each call's arguments, in order. */
+  ghCalls: () => unknown;
 }
 
 function runWrapper(
   args: string[],
-  { pages = [] as unknown[], fail = false } = {},
+  {
+    pages = [] as unknown[],
+    issues = repoPages(),
+    fail = false,
+  }: { pages?: unknown[]; issues?: unknown[]; fail?: boolean } = {},
 ): Run {
   const dir = mkdtempSync(join(tmpdir(), 'board-progress-'));
   const gh = join(dir, 'gh');
   writeFileSync(gh, FAKE_GH);
   chmodSync(gh, 0o755);
   writeFileSync(join(dir, 'pages.json'), JSON.stringify(pages));
+  writeFileSync(join(dir, 'issues.json'), JSON.stringify(issues));
   const run = spawnSync(process.execPath, [SCRIPT, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
@@ -68,6 +84,7 @@ function runWrapper(
       PATH: `${dir}:${process.env['PATH'] ?? ''}`,
       FAKE_GH_ARGS: join(dir, 'args.json'),
       FAKE_GH_PAGES: join(dir, 'pages.json'),
+      FAKE_GH_ISSUES: join(dir, 'issues.json'),
       FAKE_GH_FAIL: fail ? '1' : '0',
     },
   });
@@ -75,7 +92,7 @@ function runWrapper(
     status: run.status,
     stdout: run.stdout,
     stderr: run.stderr,
-    ghArgs: (): unknown =>
+    ghCalls: (): unknown =>
       JSON.parse(readFileSync(join(dir, 'args.json'), 'utf8')) as unknown,
   };
 }
@@ -97,21 +114,49 @@ describe('scripts/board-progress.ts (#340)', () => {
     expect([direct(before), direct(after)]).toContain(run.stdout);
   });
 
-  it('asks gh for every page of the board it was given, slurped into one array', () => {
+  it('asks gh for every page of the board it was given, then of the repository’s issues, each slurped into one array', () => {
     const run = runWrapper([NODE_ID, FIXTURE_TITLE, FIXTURE_REPO], {
       pages: boardPages(utcDay()),
     });
     expect(run.status).toBe(0);
-    expect(run.ghArgs()).toEqual([
-      'api',
-      'graphql',
-      '--paginate',
-      '--slurp',
-      '-f',
-      `query=${BOARD_QUERY}`,
-      '-f',
-      `id=${NODE_ID}`,
+    expect(run.ghCalls()).toEqual([
+      [
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        `query=${BOARD_QUERY}`,
+        '-f',
+        `id=${NODE_ID}`,
+      ],
+      [
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        `query=${REPO_ISSUES_QUERY}`,
+        '-f',
+        'owner=shyden-labs',
+        '-f',
+        'name=fixture',
+      ],
     ]);
+  });
+
+  it('refuses a board listing short of the issues the repository names on it and prints no line (#751)', () => {
+    const pages = boardPages(utcDay()) as {
+      data: { node: { items: { totalCount: number; nodes: unknown[] } } };
+    }[];
+    pages.at(-1)?.data.node.items.nodes.pop();
+    for (const page of pages) page.data.node.items.totalCount = 8;
+    const run = runWrapper([NODE_ID, FIXTURE_TITLE, FIXTURE_REPO], { pages });
+    expect(run.status).not.toBe(0);
+    expect(run.stdout).toBe('');
+    expect(run.stderr).toContain(
+      'the board lists 8 of shyden-labs/fixture’s issues and the repository’s own issues (Repository.issues) name 9 on it; missing from the board’s listing: #9: nothing read',
+    );
   });
 
   it('refuses a board with another title and prints no line', () => {
@@ -143,7 +188,7 @@ describe('scripts/board-progress.ts (#340)', () => {
     expect(run.stderr).toContain(
       'usage: node scripts/board-progress.ts <board-node-id> "<board title>" [owner/repo]',
     );
-    expect(run.ghArgs).toThrow('ENOENT');
+    expect(run.ghCalls).toThrow('ENOENT');
   });
 
   it('fails, printing no line, when gh fails', () => {

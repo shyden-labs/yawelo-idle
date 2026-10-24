@@ -7,6 +7,7 @@ import {
   type NextItem,
   parseNextItems,
 } from '../../scripts/board-next';
+import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
 import type { Gh } from '../../scripts/board-progress';
 import { againstControl } from '../searched';
 
@@ -342,19 +343,64 @@ describe('parseNextItems refuses a read that is not the whole board (#703)', () 
 });
 
 describe('boardNext (#576)', () => {
-  /** A `gh` that records each call and prints the given pages. */
-  function ghPrinting(pages: unknown[]): { gh: Gh; calls: string[][] } {
+  /**
+   * The repository's issues as REPO_ISSUES_QUERY returns them, naming on the
+   * board `numbers` (#751).
+   */
+  function issuesNaming(numbers: number[]): unknown[] {
+    return [
+      {
+        data: {
+          repository: {
+            issues: {
+              totalCount: numbers.length,
+              nodes: numbers.map((number) => ({
+                number,
+                projectItems: {
+                  totalCount: 1,
+                  nodes: [{ project: { id: 'PVT_fixture' } }],
+                },
+              })),
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  /** The numbers of the issues on board pages built by `page`. */
+  function cardedOn(pages: unknown[]): number[] {
+    return (
+      pages as {
+        data: { node: { items: { nodes: { content: { number: number } }[] } } };
+      }[]
+    ).flatMap((board) =>
+      board.data.node.items.nodes.map((node) => node.content.number),
+    );
+  }
+
+  /**
+   * A `gh` that records each call and prints the board's pages, or for
+   * REPO_ISSUES_QUERY the repository's issues, by default naming exactly the
+   * board's issues (#751).
+   */
+  function ghPrinting(
+    pages: unknown[],
+    issues: unknown[] = issuesNaming(cardedOn(pages)),
+  ): { gh: Gh; calls: string[][] } {
     const calls: string[][] = [];
     return {
       calls,
       gh: (args) => {
         calls.push([...args]);
-        return JSON.stringify(pages);
+        return JSON.stringify(
+          args.includes(`query=${REPO_ISSUES_QUERY}`) ? issues : pages,
+        );
       },
     };
   }
 
-  it('asks gh once for every page of the board, slurped into one array', () => {
+  it('asks gh for every page of the board, then of the repository’s issues, each slurped into one array', () => {
     const { gh, calls } = ghPrinting([page([rawIssue(1)])]);
     boardNext(['PVT_fixture', TITLE], gh);
     expect(calls).toEqual([
@@ -367,6 +413,18 @@ describe('boardNext (#576)', () => {
         `query=${NEXT_QUERY}`,
         '-f',
         'id=PVT_fixture',
+      ],
+      [
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        `query=${REPO_ISSUES_QUERY}`,
+        '-f',
+        'owner=shyden-labs',
+        '-f',
+        'name=yawelo-idle',
       ],
     ]);
   });
@@ -436,9 +494,50 @@ describe('boardNext (#576)', () => {
   });
 
   it('says when nothing is open', () => {
-    const { gh } = ghPrinting([page([])]);
+    const { gh } = ghPrinting([page([rawIssue(1, { state: 'CLOSED' })])]);
     expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
       'Next: nothing is open.',
+    );
+  });
+
+  // GitHub's incident of 2026-10-22: board-next printed "Next: nothing is
+  // open." from a board read of 0 items whose own count said 0.
+  it('refuses an empty board read, never saying nothing is open (#751)', () => {
+    const { gh } = ghPrinting([page([])], issuesNaming([1]));
+    expect(() => boardNext(['PVT_fixture', TITLE], gh)).toThrow(
+      'the board lists 0 of shyden-labs/yawelo-idle’s issues and the repository’s own issues (Repository.issues) name 1 on it; missing from the board’s listing: #1: nothing read',
+    );
+  });
+
+  it('refuses a listing short of the repository’s issues, its own count agreeing, naming no ticket (#751)', () => {
+    const p2 = { ...(rawIssue(2) as object), priority: { name: 'P2' } };
+    const { gh } = ghPrinting([page([p2])], issuesNaming([1, 2]));
+    expect(() => boardNext(['PVT_fixture', TITLE], gh)).toThrow(
+      'missing from the board’s listing: #1: nothing read',
+    );
+  });
+
+  it('reads the repository it is given (#751)', () => {
+    const { gh, calls } = ghPrinting([page([])], issuesNaming([]));
+    try {
+      boardNext(['PVT_fixture', TITLE, 'shyden-labs/elsewhere'], gh);
+    } catch {
+      // An empty board is refused; this test reads the call made first.
+    }
+    expect(calls[1]?.slice(-4)).toEqual([
+      '-f',
+      'owner=shyden-labs',
+      '-f',
+      'name=elsewhere',
+    ]);
+  });
+
+  it('refuses a repository not written owner/name, before calling gh (#751)', () => {
+    const gh: Gh = () => {
+      throw new Error('gh was called');
+    };
+    expect(() => boardNext(['PVT_fixture', TITLE, 'yawelo-idle'], gh)).toThrow(
+      'the repository is "yawelo-idle", not owner/name',
     );
   });
 
@@ -454,11 +553,11 @@ describe('boardNext (#576)', () => {
   it('refuses before calling gh when the title is missing', () => {
     const { gh } = ghPrinting([]);
     expect(() => boardNext(['PVT_fixture'], gh)).toThrow(
-      'usage: node scripts/board-next.ts <board-node-id> "<board title>"',
+      'usage: node scripts/board-next.ts <board-node-id> "<board title>" [owner/repo]',
     );
   });
 
-  it('calls gh for nothing when the title is missing, and once when it is given', () => {
+  it('calls gh for nothing when the title is missing, and reads when it is given', () => {
     /** The gh calls made for the node id followed by `rest`, the refusal swallowed. */
     const callsWith = (rest: string[]) => {
       const { gh, calls } = ghPrinting([page([])]);

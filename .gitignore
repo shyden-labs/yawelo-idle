@@ -11,8 +11,10 @@ apps/dev-hosts/.build/
 apps/dev-hosts/public/
 # Astro's generated types (`astro sync`, run by build and check)
 .astro/
-# The coverage reports at the root, never the record in tests/coverage/ (#728).
-/coverage/
+coverage/
+# The coverage record is committed, like the floors (#728, #748): only the
+# coverage tools' output folders above stay out.
+!/tests/coverage/
 reports/mutation/
 
 # Test output

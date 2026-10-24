@@ -1,7 +1,8 @@
 /**
  * The roadmap's read-only GitHub App, `yawelo-idle-roadmap` (#341, website
  * spec §5.2 item 3): a JWT signed with the App's key, an installation token
- * for the one repository, and every page of the board. The installation must
+ * for the one repository, every page of the board, and every page of the
+ * repository's issues it is checked against (#751). The installation must
  * hold exactly the three reads and Administration: read, which Shyden granted
  * on 2026-10-20 for the owner-review check (#687, spec §5.2 item 3). The token
  * asks for the three reads by name, and must hold exactly those, because a
@@ -14,7 +15,7 @@
  * the agent's tokens: an installation on selected repositories only, and the
  * issued rights compared with a pinned set.
  */
-import { BOARD_QUERY } from '@yawelo-idle/progress';
+import { BOARD_QUERY, REPO_ISSUES_QUERY } from '@yawelo-idle/progress';
 
 const API = 'https://api.github.com';
 /** GitHub refuses any request without a User-Agent. */
@@ -236,5 +237,51 @@ export async function readBoardPages(
   }
   throw new Error(
     `the board ${boardId} has more than ${String(MAX_PAGES)} pages`,
+  );
+}
+
+interface IssuesPage {
+  data?: {
+    repository?: {
+      issues?: {
+        pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+      };
+    } | null;
+  };
+  errors?: { message: string }[];
+}
+
+/**
+ * Every page of `owner/name`'s issues as GitHub returns it for
+ * REPO_ISSUES_QUERY, each with the boards it is on (#751): the second
+ * surface packages/progress checks the board's listing against. Refused by
+ * name as the board's pages are, and past MAX_PAGES.
+ */
+export async function readRepoIssuePages(
+  token: string,
+  owner: string,
+  name: string,
+): Promise<unknown[]> {
+  const pages: unknown[] = [];
+  let endCursor: string | null = null;
+  for (let read = 0; read < MAX_PAGES; read += 1) {
+    const page = (await call('POST', '/graphql', token, {
+      query: REPO_ISSUES_QUERY,
+      variables: { owner, name, endCursor },
+    })) as IssuesPage;
+    const first = page.errors?.[0];
+    if (first !== undefined)
+      throw new Error(
+        `GitHub’s GraphQL answered with errors: ${first.message}`,
+      );
+    const pageInfo = page.data?.repository?.issues?.pageInfo;
+    if (pageInfo === undefined)
+      throw new Error(`GitHub found no issues for ${owner}/${name}`);
+    pages.push(page);
+    if (!pageInfo.hasNextPage) return pages;
+    endCursor = pageInfo.endCursor;
+  }
+  throw new Error(
+    `the repository ${owner}/${name} has more than ${String(MAX_PAGES)} pages of issues`,
   );
 }

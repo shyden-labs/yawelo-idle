@@ -25,8 +25,8 @@
     ".github/workflows/ci.yml": {
       "measure": "lines",
       "statements": {
-        "untested": 128,
-        "total": 128
+        "untested": 116,
+        "total": 116
       },
       "branches": {
         "untested": 0,
@@ -69,8 +69,8 @@
     ".github/workflows/mutations.yml": {
       "measure": "lines",
       "statements": {
-        "untested": 77,
-        "total": 77
+        "untested": 100,
+        "total": 100
       },
       "branches": {
         "untested": 0,
@@ -91,8 +91,8 @@
     ".github/workflows/record-floors.yml": {
       "measure": "lines",
       "statements": {
-        "untested": 81,
-        "total": 81
+        "untested": 105,
+        "total": 105
       },
       "branches": {
         "untested": 0,
@@ -575,12 +575,12 @@
     "apps/site/test/github-fake/fake-github.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 98,
-        "total": 98
+        "untested": 116,
+        "total": 116
       },
       "branches": {
-        "untested": 86,
-        "total": 86
+        "untested": 114,
+        "total": 114
       }
     },
     "apps/site/test/holding.test.ts": {
@@ -630,8 +630,8 @@
     "apps/site/test/roadmap/github.test.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 124,
-        "total": 124
+        "untested": 157,
+        "total": 157
       },
       "branches": {
         "untested": 3,
@@ -663,8 +663,8 @@
     "apps/site/test/roadmap/roadmap.test.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 488,
-        "total": 488
+        "untested": 507,
+        "total": 507
       },
       "branches": {
         "untested": 36,
@@ -729,12 +729,12 @@
     "apps/site/worker/github.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 70,
-        "total": 70
+        "untested": 86,
+        "total": 86
       },
       "branches": {
-        "untested": 30,
-        "total": 30
+        "untested": 36,
+        "total": 36
       }
     },
     "apps/site/worker/index.ts": {
@@ -751,8 +751,8 @@
     "apps/site/worker/roadmap.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 120,
-        "total": 120
+        "untested": 121,
+        "total": 121
       },
       "branches": {
         "untested": 44,
@@ -2357,23 +2357,34 @@
     "packages/progress/src/index.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 0,
-        "total": 149
+        "untested": 1,
+        "total": 204
       },
       "branches": {
-        "untested": 4,
-        "total": 93
+        "untested": 5,
+        "total": 126
       }
     },
     "packages/progress/test/board-fixture.ts": {
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 16
+        "total": 24
       },
       "branches": {
         "untested": 0,
         "total": 14
+      }
+    },
+    "packages/progress/test/named-by-repo.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 106
+      },
+      "branches": {
+        "untested": 3,
+        "total": 7
       }
     },
     "packages/progress/test/progress.test.ts": {
@@ -2468,18 +2479,18 @@
       "measure": "v8",
       "statements": {
         "untested": 6,
-        "total": 80
+        "total": 83
       },
       "branches": {
         "untested": 3,
-        "total": 48
+        "total": 49
       }
     },
     "scripts/board-orphans.ts": {
       "measure": "v8",
       "statements": {
         "untested": 12,
-        "total": 118
+        "total": 124
       },
       "branches": {
         "untested": 13,
@@ -2490,11 +2501,11 @@
       "measure": "v8",
       "statements": {
         "untested": 3,
-        "total": 11
+        "total": 22
       },
       "branches": {
         "untested": 1,
-        "total": 7
+        "total": 12
       }
     },
     "scripts/board-setup.ts": {
@@ -2556,22 +2567,22 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 69
+        "total": 49
       },
       "branches": {
         "untested": 0,
-        "total": 30
+        "total": 18
       }
     },
     "scripts/coverage.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 77,
-        "total": 127
+        "untested": 49,
+        "total": 89
       },
       "branches": {
-        "untested": 43,
-        "total": 79
+        "untested": 23,
+        "total": 49
       }
     },
     "scripts/d1-binding.ts": {
@@ -2632,12 +2643,12 @@
     "scripts/fetch-floors.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 53,
-        "total": 90
+        "untested": 58,
+        "total": 132
       },
       "branches": {
-        "untested": 29,
-        "total": 47
+        "untested": 31,
+        "total": 76
       }
     },
     "scripts/fetch-minimums.ts": {
@@ -2798,7 +2809,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 93
+        "total": 95
       },
       "branches": {
         "untested": 0,
@@ -2808,12 +2819,12 @@
     "scripts/mutations-verdict.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 3,
-        "total": 15
+        "untested": 5,
+        "total": 53
       },
       "branches": {
-        "untested": 9,
-        "total": 22
+        "untested": 13,
+        "total": 51
       }
     },
     "scripts/owner-review.ts": {
@@ -2879,7 +2890,7 @@
       },
       "branches": {
         "untested": 42,
-        "total": 212
+        "total": 213
       }
     },
     "scripts/sample-minimums.ts": {
@@ -3260,11 +3271,11 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 50
+        "total": 60
       },
       "branches": {
         "untested": 1,
-        "total": 7
+        "total": 8
       }
     },
     "tests/integration/ci-fast-path.test.ts": {
@@ -3293,7 +3304,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 123
+        "total": 53
       },
       "branches": {
         "untested": 0,
@@ -4007,19 +4018,8 @@
     "tests/mutations/728-coverage-integration.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 5,
-        "total": 5
-      },
-      "branches": {
-        "untested": 0,
-        "total": 0
-      }
-    },
-    "tests/mutations/728-coverage-ratchet.ts": {
-      "measure": "v8",
-      "statements": {
-        "untested": 6,
-        "total": 6
+        "untested": 3,
+        "total": 3
       },
       "branches": {
         "untested": 0,
@@ -4031,6 +4031,72 @@
       "statements": {
         "untested": 21,
         "total": 21
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/mutations/747-fetch-writes.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 14,
+        "total": 14
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/mutations/748-coverage-job.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 12,
+        "total": 12
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/mutations/751-board-cross-check.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 13,
+        "total": 13
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/mutations/751-board-progress-integration.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 2,
+        "total": 2
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/mutations/751-roadmap-cross-check.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 10,
+        "total": 10
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/mutations/754-mutations-matrix.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 7,
+        "total": 7
       },
       "branches": {
         "untested": 0,
@@ -4095,12 +4161,12 @@
     "tests/unit/board-next.test.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 0,
-        "total": 140
+        "untested": 1,
+        "total": 164
       },
       "branches": {
         "untested": 0,
-        "total": 4
+        "total": 7
       }
     },
     "tests/unit/board-orphans-workflow.test.ts": {
@@ -4118,22 +4184,22 @@
       "measure": "v8",
       "statements": {
         "untested": 4,
-        "total": 231
+        "total": 255
       },
       "branches": {
         "untested": 4,
-        "total": 52
+        "total": 63
       }
     },
     "tests/unit/board-progress.test.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 1,
-        "total": 37
+        "untested": 2,
+        "total": 55
       },
       "branches": {
         "untested": 0,
-        "total": 0
+        "total": 3
       }
     },
     "tests/unit/board-setup.test.ts": {
@@ -4279,33 +4345,22 @@
         "total": 76
       }
     },
-    "tests/unit/coverage-check.test.ts": {
-      "measure": "v8",
-      "statements": {
-        "untested": 0,
-        "total": 33
-      },
-      "branches": {
-        "untested": 0,
-        "total": 2
-      }
-    },
     "tests/unit/coverage-ci.test.ts": {
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 51
+        "total": 32
       },
       "branches": {
-        "untested": 11,
-        "total": 30
+        "untested": 6,
+        "total": 18
       }
     },
     "tests/unit/coverage-cli.test.ts": {
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 61
+        "total": 50
       },
       "branches": {
         "untested": 0,
@@ -4470,11 +4525,11 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 67
+        "total": 163
       },
       "branches": {
         "untested": 1,
-        "total": 6
+        "total": 11
       }
     },
     "tests/unit/fetch-minimums.test.ts": {
@@ -4745,11 +4800,11 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 17
+        "total": 16
       },
       "branches": {
         "untested": 0,
-        "total": 9
+        "total": 7
       }
     },
     "tests/unit/literal-floors.burn-down.ts": {
@@ -4921,7 +4976,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 125
+        "total": 130
       },
       "branches": {
         "untested": 0,
@@ -4932,18 +4987,29 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 66
+        "total": 91
       },
       "branches": {
         "untested": 1,
         "total": 2
       }
     },
+    "tests/unit/mutations-recorded-dirs.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 5
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
     "tests/unit/mutations-verdict.test.ts": {
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 15
+        "total": 47
       },
       "branches": {
         "untested": 0,
@@ -5141,11 +5207,11 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 84
+        "total": 117
       },
       "branches": {
-        "untested": 6,
-        "total": 16
+        "untested": 10,
+        "total": 26
       }
     },
     "tests/unit/record-floors.test.ts": {
@@ -5570,11 +5636,11 @@
       "measure": "v8",
       "statements": {
         "untested": 6,
-        "total": 31
+        "total": 41
       },
       "branches": {
-        "untested": 10,
-        "total": 30
+        "untested": 12,
+        "total": 38
       }
     },
     "tests/unit/workflow-runners.test.ts": {
@@ -5844,12 +5910,12 @@
   },
   "totals": {
     "statements": {
-      "untested": 4559,
-      "total": 27533
+      "untested": 4713,
+      "total": 28066
     },
     "branches": {
-      "untested": 1646,
-      "total": 8608
+      "untested": 1671,
+      "total": 8730
     }
   }
 }

@@ -39,8 +39,11 @@ export default mutationFile({
       // An uncounted page then reaches the change check, naming its count.
       name: 'count-unchecked',
       file: 'packages/progress/src/index.ts',
-      anchor: '  if (!counts.every((count) => Number.isInteger(count)))\n',
-      replacement: '  if (false)\n',
+      // Anchored on its message too: #751's repository check has the same if.
+      anchor:
+        "  if (!counts.every((count) => Number.isInteger(count)))\n    throw new Error(\n      'a page came back without the board’s",
+      replacement:
+        "  if (false)\n    throw new Error(\n      'a page came back without the board’s",
       red: {
         [`${WHOLE} refuses a page that gives no count`]:
           'report , then 9 items',
@@ -52,8 +55,11 @@ export default mutationFile({
       // The first page's count matches what was read, so nothing is refused.
       name: 'changed-board-unnamed',
       file: 'packages/progress/src/index.ts',
-      anchor: '  if (seen.length > 1)\n',
-      replacement: '  if (false)\n',
+      // Anchored on its message too: #751's repository check has the same if.
+      anchor:
+        '  if (seen.length > 1)\n    throw new Error(\n      `the board changed',
+      replacement:
+        '  if (false)\n    throw new Error(\n      `the board changed',
       red: {
         [`${WHOLE} names a board that changed while it was read, giving each count`]:
           NOTHING_THROWN,
@@ -80,8 +86,10 @@ export default mutationFile({
           NOTHING_THROWN,
         [`${ORPHANS_CLOSED} fails, naming the board, when the read is short of the board (#703)`]:
           NOTHING_THROWN,
+        // Since #751 the repository's issues still name all 9, so the
+        // cross-check refuses the 5 read, under another message.
         [`${PROGRESS_RUN} refuses a read missing a page, giving no line (#703)`]:
-          NOTHING_THROWN,
+          'the board lists 5 of',
       },
     },
     {
@@ -119,8 +127,9 @@ export default mutationFile({
     {
       name: 'board-query-uncounted',
       file: 'packages/progress/src/index.ts',
-      anchor: '{ totalCount pageInfo {',
-      replacement: '{ pageInfo {',
+      // The board's items, not #751's issues, which ask for their count too.
+      anchor: 'items(first: 100, after: $endCursor) { totalCount pageInfo {',
+      replacement: 'items(first: 100, after: $endCursor) { pageInfo {',
       red: {
         [`${QUERY} asks GitHub how many items the board holds`]: 'to match',
       },
