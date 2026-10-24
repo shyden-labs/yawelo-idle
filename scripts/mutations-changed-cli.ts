@@ -26,6 +26,7 @@ import {
   needsListings,
   nonUnitLoaders,
   nonUnitTests,
+  RECORDED_DIRS,
   readNameStatus,
   redByPlantedFile,
   summary,
@@ -34,8 +35,7 @@ import {
   unprovedHelpers,
   unprovedTests,
 } from './mutations-changed.ts';
-import { MINIMUMS_DIR } from './minimums-method.ts';
-import { FLOORS_DIR, SUITES, suiteFiles } from './record-floors.ts';
+import { SUITES, suiteFiles } from './record-floors.ts';
 import { committableFiles } from '../tests/unit/tracked-files.ts';
 
 /** Every suite's files, repository-relative, by suite name. */
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
   );
   const listed = new Set([...listedBySuite.values()].flat());
   const { helpers, data, recorded, unreadable } = needsListings(changed)
-    ? changedHelpers(changed, listed, workspaces(), [FLOORS_DIR, MINIMUMS_DIR])
+    ? changedHelpers(changed, listed, workspaces(), RECORDED_DIRS)
     : { helpers: [], data: [], recorded: [], unreadable: [] };
   // Every suite's tests: a file only unit tests use needs no mutation, but a
   // data file no test names at all fails (unnamedData).

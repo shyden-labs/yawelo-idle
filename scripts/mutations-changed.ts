@@ -6,9 +6,26 @@
  * lists the suites and loads the mutation files; this module judges, so the
  * unit suite can load it.
  */
+import { posix } from 'node:path';
 import { onAllowlist } from './ci-scope.ts';
+import { RECORD_FILE } from './coverage.ts';
+import { MINIMUMS_DIR } from './minimums-method.ts';
 import { UNIT_SUITE } from './mutate.ts';
 import { FILE_SEPARATOR, type MutationFile } from './mutation-file.ts';
+import { FLOORS_DIR } from './record-floors.ts';
+
+/**
+ * The folders of counts CI writes, which the judge lists apart and asks no
+ * mutation of (Shyden, 2026-10-18): the floors, the minimums, and the
+ * coverage record (Shyden, 2026-10-22: "count it like floors", #728).
+ * Here rather than in the CLI, so the unit suite can pin it without loading
+ * the CLI's dynamic import of mutation files.
+ */
+export const RECORDED_DIRS: readonly string[] = [
+  FLOORS_DIR,
+  MINIMUMS_DIR,
+  posix.dirname(RECORD_FILE),
+];
 
 /** One path a diff names, with git's status letter (a rename: its new path). */
 export interface Changed {

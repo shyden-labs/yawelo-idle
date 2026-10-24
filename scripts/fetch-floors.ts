@@ -16,15 +16,18 @@
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, posix } from 'node:path';
 import {
   describeMoves,
+  floorsFileOf,
   FLOORS_DIR,
   readFloorsDir,
   writeFloors,
@@ -36,6 +39,7 @@ import {
   RECORD_FILE,
   renamesFrom,
 } from './coverage.ts';
+import { isIgnored } from '../tests/unit/tracked-files.ts';
 
 /**
  * What `gh run view --json` says of a run, as far as a fetch reads it. A
@@ -133,6 +137,98 @@ export function fetchedFloors(
   }
   return { next: { ...fetched }, refusals };
 }
+
+/** The coverage record a fetch writes, beside the floors. */
+export interface FetchedRecord {
+  readonly file: string;
+  readonly text: string;
+}
+
+/** A file's text, or undefined where there is none. */
+const textOf = (file: string): string | undefined =>
+  existsSync(file) ? readFileSync(file, 'utf8') : undefined;
+
+/**
+ * Write the run's floors and its coverage record as one change (#747):
+ * every file a fetch may touch is read first, the folders are made (the
+ * first record's among them), and when any step fails each file is put back
+ * as it was and each file and folder the fetch made is removed, so a failed
+ * fetch changes nothing. Returns the files written: floors by name, the
+ * record by path.
+ */
+export function writeFetched(
+  floorsDir: string,
+  next: Readonly<Record<string, number>>,
+  record: FetchedRecord | undefined,
+  write: (file: string, text: string) => void = writeFileSync,
+): string[] {
+  const before = new Map<string, string | undefined>();
+  if (existsSync(floorsDir))
+    for (const name of readdirSync(floorsDir))
+      before.set(join(floorsDir, name), textOf(join(floorsDir, name)));
+  if (record !== undefined) before.set(record.file, textOf(record.file));
+  const made: string[] = [];
+  try {
+    for (const dir of [
+      floorsDir,
+      ...(record === undefined ? [] : [dirname(record.file)]),
+    ]) {
+      const first = mkdirSync(dir, { recursive: true });
+      if (first !== undefined) made.push(first);
+    }
+    const written = writeFloors(floorsDir, next, write);
+    if (record !== undefined) {
+      write(record.file, record.text);
+      written.push(record.file);
+    }
+    return written;
+  } catch (error) {
+    for (const name of existsSync(floorsDir) ? readdirSync(floorsDir) : [])
+      if (!before.has(join(floorsDir, name))) rmSync(join(floorsDir, name));
+    for (const [file, text] of before)
+      if (text === undefined) {
+        if (existsSync(file)) rmSync(file);
+      } else if (textOf(file) !== text) writeFileSync(file, text);
+    for (const dir of made.reverse())
+      rmSync(dir, { recursive: true, force: true });
+    throw new Error(
+      `nothing written, every file is as it was: ${(error as Error).message}`,
+      { cause: error },
+    );
+  }
+}
+
+/** Every file a fetch may write: each floors file once, then the record. */
+export function fetchTargets(
+  floorsDir: string,
+  next: Readonly<Record<string, number>>,
+  recordFile: string | undefined,
+): string[] {
+  const floors = new Set(
+    Object.keys(next).map((id) =>
+      join(floorsDir, posix.basename(floorsFileOf(id))),
+    ),
+  );
+  return [
+    ...[...floors].sort(),
+    ...(recordFile === undefined ? [] : [recordFile]),
+  ];
+}
+
+/**
+ * Why the fetch must not write, or nothing: a target git ignores would be
+ * written and reported, then left out by the amend (#748). `ignored` is
+ * tracked-files' `isIgnored`, which answers as `git check-ignore` does.
+ */
+export const ignoredRefusal = (
+  targets: readonly string[],
+  ignored: (path: string) => boolean,
+): string | undefined => {
+  const left = targets.filter(ignored);
+  return left.length === 0
+    ? undefined
+    : `nothing written, git would leave out of the commit what the fetch writes (a .gitignore pattern matches it): ${left.join(', ')}. Un-ignore it in .gitignore, then fetch again`;
+};
 
 const die = (message: string): never => {
   console.error(`floors:fetch: ${message}`);
@@ -245,10 +341,26 @@ function main(): void {
     if (refusals.length > 0)
       die(`nothing written:\n  ${refusals.join('\n  ')}`);
     const coverage = fetchedCoverage(runId, head, dir);
-    const written = writeFloors(FLOORS_DIR, next);
-    if (coverage !== undefined) {
-      writeFileSync(RECORD_FILE, coverage);
-      written.push(RECORD_FILE);
+    const ignoredWhy = ignoredRefusal(
+      fetchTargets(
+        FLOORS_DIR,
+        next,
+        coverage === undefined ? undefined : RECORD_FILE,
+      ),
+      (path) => isIgnored(path),
+    );
+    if (ignoredWhy !== undefined) die(ignoredWhy);
+    let written: string[] = [];
+    try {
+      written = writeFetched(
+        FLOORS_DIR,
+        next,
+        coverage === undefined
+          ? undefined
+          : { file: RECORD_FILE, text: coverage },
+      );
+    } catch (error) {
+      die((error as Error).message);
     }
     const moves = describeMoves(local, next);
     console.log(

@@ -18,6 +18,7 @@ export interface WorkflowStep {
   readonly id?: string;
   readonly if?: string;
   readonly uses?: string;
+  readonly 'timeout-minutes'?: number;
   // YAML may type it otherwise: read it through runOf.
   readonly run?: unknown;
   readonly env?: Readonly<Record<string, unknown>>;
@@ -26,10 +27,11 @@ export interface WorkflowStep {
 
 export interface WorkflowJob {
   readonly if?: string;
+  readonly needs?: unknown;
   readonly 'runs-on'?: string;
   readonly 'timeout-minutes'?: number;
   readonly environment?: unknown;
-  readonly container?: { readonly image?: string };
+  readonly container?: { readonly image?: string; readonly options?: string };
   readonly env?: Readonly<Record<string, unknown>>;
   readonly permissions?: unknown;
   readonly strategy?: {
@@ -78,6 +80,31 @@ export function stepNamed(
   if (found.length !== 1)
     throw new Error(
       `${file} holds ${String(found.length)} steps named "${name}"`,
+    );
+  return found[0] as WorkflowStep;
+}
+
+/**
+ * The job `id` of a workflow that holds several (#748); refused, naming the
+ * jobs it holds, when `id` is not one. A one-job workflow is read with
+ * `onlyJob`, which also proves it holds nothing else.
+ */
+export function jobIn(file: string, id: string): WorkflowJob {
+  const jobs = workflow(file).jobs ?? {};
+  const job = jobs[id];
+  if (job === undefined)
+    throw new Error(
+      `${file} holds jobs ${Object.keys(jobs).join(', ')}, not ${id}`,
+    );
+  return job;
+}
+
+/** The step of `file`'s job `id` named `name`, which must be there once. */
+export function stepIn(file: string, id: string, name: string): WorkflowStep {
+  const found = (jobIn(file, id).steps ?? []).filter((s) => s.name === name);
+  if (found.length !== 1)
+    throw new Error(
+      `${file} holds ${String(found.length)} steps named "${name}" in ${id}`,
     );
   return found[0] as WorkflowStep;
 }
