@@ -17,7 +17,7 @@
  * ROOT index.html, which the game, built into dist/play, does not have;
  * measured in the asset router, #332.)
  */
-import { CONTENT_SECURITY_POLICY } from './policy';
+import { CONTENT_SECURITY_POLICY } from './policy.ts';
 
 const BASE = '/play/';
 

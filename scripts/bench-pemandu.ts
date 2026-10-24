@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { GOLDEN, replayGolden } from '../packages/core/fixtures/golden-log';
+import { GOLDEN, replayGolden } from '../packages/core/fixtures/golden-log.ts';
 import {
   lateGameReturn,
   regionOneReturn,
   returnsAt,
-} from '../packages/core/fixtures/pemandu-returns';
-import { syntheticCourse } from '../packages/core/fixtures/synthetic-course';
-import type { Course } from '../packages/core/src/course';
-import { advance } from '../packages/core/src/sim';
-import type { GameState } from '../packages/core/src/state';
+} from '../packages/core/fixtures/pemandu-returns.ts';
+import { syntheticCourse } from '../packages/core/fixtures/synthetic-course.ts';
+import type { Course } from '../packages/core/src/course.ts';
+import { advance } from '../packages/core/src/sim.ts';
+import type { GameState } from '../packages/core/src/state.ts';
 
 /**
  * Pemandu's purchase cost (#297 AC1): `npm run bench:pemandu`. Prints the

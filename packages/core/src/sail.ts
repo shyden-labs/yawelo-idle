@@ -15,14 +15,14 @@
  * playable. The sail from the course's last destination sets the finale
  * flag; from then on every sail names a visited destination to replay.
  */
-import { BALANCE } from './balance';
-import type { Course } from './course';
-import { Num } from './num';
-import { understandingNow } from './production';
-import { currentDestination, route } from './route';
-import type { Rejection, Result } from './sim';
-import { pickedWord, type GameState } from './state';
-import { startingUnderstanding } from './upgrades';
+import { BALANCE } from './balance.ts';
+import type { Course } from './course.ts';
+import { Num } from './num.ts';
+import { understandingNow } from './production.ts';
+import { currentDestination, route } from './route.ts';
+import type { Rejection, Result } from './sim.ts';
+import { pickedWord, type GameState } from './state.ts';
+import { startingUnderstanding } from './upgrades.ts';
 
 const ZERO = Num.toTuple(Num.from(0));
 

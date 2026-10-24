@@ -7,8 +7,8 @@ import {
   devMedia,
   devMediaFiles,
   rewritten,
-} from '../../scripts/holding-dev';
-import { headerRules } from '../../scripts/headers-file';
+} from '../../scripts/holding-dev.ts';
+import { headerRules } from '../../scripts/headers-file.ts';
 
 /**
  * The holding page's dev copy (#621 AC8, Shyden 2026-10-16: "A dev copy"):

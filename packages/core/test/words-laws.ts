@@ -1,12 +1,12 @@
 import { expect } from 'vitest';
 import Decimal from 'decimal.js';
-import { BALANCE } from '../src/balance';
-import { DAY_MS, HOUR_MS, wallMs, type WallMs } from '../src/clock';
-import type { Course, Encounter, LexiconItem } from '../src/course';
-import { encounterOutput } from '../src/encounters';
-import { reviewQueue, type WordMemory } from '../src/memory';
-import { Num } from '../src/num';
-import { rateAt, understandingNow } from '../src/production';
+import { BALANCE } from '../src/balance.ts';
+import { DAY_MS, HOUR_MS, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, Encounter, LexiconItem } from '../src/course.ts';
+import { encounterOutput } from '../src/encounters.ts';
+import { reviewQueue, type WordMemory } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import { rateAt, understandingNow } from '../src/production.ts';
 import {
   advance,
   answerPractice,
@@ -16,9 +16,9 @@ import {
   listen,
   pickUpWord,
   type Result,
-} from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { exactMean, exactR } from './fsrs-reference';
+} from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { exactMean, exactR } from './fsrs-reference.ts';
 
 /**
  * The words course and games (#28), and what the word actions must satisfy:

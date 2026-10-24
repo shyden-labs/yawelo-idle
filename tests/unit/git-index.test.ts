@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { againstControl } from '../searched';
-import { indexPaths } from './git-index';
+import { againstControl } from '../searched.ts';
+import { indexPaths } from './git-index.ts';
 
 /**
  * git's index read in-process (#491): the guards' file list comes from

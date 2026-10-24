@@ -1,13 +1,13 @@
 import { expect } from 'vitest';
-import { syntheticCourse } from '../fixtures/synthetic-course';
-import { wallMs, type WallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import type { GameEvent } from '../src/events';
-import { collectJourney, startJourney } from '../src/journeys';
-import { apply } from '../src/log';
-import { newWordMemory } from '../src/memory';
-import { Num } from '../src/num';
-import { setSail } from '../src/sail';
+import { syntheticCourse } from '../fixtures/synthetic-course.ts';
+import { wallMs, type WallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import type { GameEvent } from '../src/events.ts';
+import { collectJourney, startJourney } from '../src/journeys.ts';
+import { apply } from '../src/log.ts';
+import { newWordMemory } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import { setSail } from '../src/sail.ts';
 import {
   advance,
   answerPractice,
@@ -19,8 +19,8 @@ import {
   pickUpWord,
   setAutomation,
   type Result,
-} from '../src/sim';
-import { initialState, type GameState } from '../src/state';
+} from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * The event log's scenario and states (#34), and what `apply` must satisfy

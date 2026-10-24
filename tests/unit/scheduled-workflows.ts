@@ -16,7 +16,7 @@
  * an unknown shape) is refused by name, never skipped.
  */
 import { parse } from 'yaml';
-import { isRecord } from './workflow-secrets';
+import { isRecord } from './workflow-secrets.ts';
 
 /**
  * The only environments a scheduled job may name, matched exactly. `dev`

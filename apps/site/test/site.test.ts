@@ -5,15 +5,15 @@ import {
   challengeResponse,
   NO_INDEX,
 } from '@yawelo-idle/lockdown';
-import { COPY } from '../src/copy';
+import { COPY } from '../src/copy.ts';
 import {
   otherLocale,
   pagePath,
   SITE,
   type Locale,
   type Page,
-} from '../src/i18n';
-import { EXEMPT_PATHS, HOLDING_HOST, ROADMAP_PATHS } from '../worker/routes';
+} from '../src/i18n.ts';
+import { EXEMPT_PATHS, HOLDING_HOST, ROADMAP_PATHS } from '../worker/routes.ts';
 
 /**
  * The dev site Worker, served by wrangler's test harness from the real

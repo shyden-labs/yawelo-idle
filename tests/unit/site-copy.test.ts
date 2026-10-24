@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { COPY_EN } from '../../apps/site/src/copy-en';
-import { CopyLine, line, type Source } from '../../apps/site/src/copy-line';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { COPY_EN } from '../../apps/site/src/copy-en.ts';
+import { CopyLine, line, type Source } from '../../apps/site/src/copy-line.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 import {
   NUMBER_WORDS,
   TIME_PHRASES,
@@ -19,9 +19,9 @@ import {
   readSpecDocs,
   resolves,
   sourceText,
-} from './site-copy';
-import { digits, words } from '../../apps/site/src/figures';
-import { t } from '../../apps/site/src/copy-line';
+} from './site-copy.ts';
+import { digits, words } from '../../apps/site/src/figures.ts';
+import { t } from '../../apps/site/src/copy-line.ts';
 
 /**
  * The website spec's copy rule (§3), as #334 AC2 asks: every line of the

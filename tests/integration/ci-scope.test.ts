@@ -10,8 +10,8 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { readDiff, scopeFor } from '../../scripts/ci-scope';
-import { againstControl } from '../searched';
+import { readDiff, scopeFor } from '../../scripts/ci-scope.ts';
+import { againstControl } from '../searched.ts';
 
 /**
  * The docs-only fast path's git half (#360), moved out of the unit suite by

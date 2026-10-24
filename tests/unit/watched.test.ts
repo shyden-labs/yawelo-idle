@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { watched } from '../watched';
+import { watched } from '../watched.ts';
 
 /** Three sails a check could read, each its own object. */
 const sails = () => [

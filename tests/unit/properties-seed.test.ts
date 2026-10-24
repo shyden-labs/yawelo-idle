@@ -4,7 +4,7 @@ import {
   currentSeed,
   rememberSeed,
   SEED_ENV,
-} from '../properties-seed';
+} from '../properties-seed.ts';
 
 /**
  * The properties suite's seed (#84, spec §5.11): fresh unless a person

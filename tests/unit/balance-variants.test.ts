@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 import {
   applyVariant,
   LEVERS,

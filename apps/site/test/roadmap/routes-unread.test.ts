@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, expect, it } from 'vitest';
-import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
+import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness.ts';
 
 /**
  * `/api/roadmap.json` before any read has succeeded (#341). A file of its

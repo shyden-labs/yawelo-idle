@@ -1,5 +1,5 @@
 import { matchesGlob } from 'node:path';
-import { helperModules } from './helper-modules';
+import { helperModules } from './helper-modules.ts';
 
 /**
  * The files the unit suite loads (#551): the unit config's include globs over

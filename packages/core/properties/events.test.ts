@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import type { GameEvent } from '../src/events';
+import type { GameEvent } from '../src/events.ts';
 import {
   checkJsonRoundTrip,
   checkNeverThrows,
   TYPES,
-} from '../test/events-laws';
+} from '../test/events-laws.ts';
 
 /**
  * The event validator on random events and inputs (#34 AC1), at their full

@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock.ts';
 import type {
   Course,
   CultureCard,
   Destination,
   Encounter,
   Region,
-} from '../src/course';
-import { collectJourney, startJourney } from '../src/journeys';
-import { newWordMemory, reviewQueue, type WordMemory } from '../src/memory';
-import { Num, type NumTuple } from '../src/num';
-import { understandingNow } from '../src/production';
+} from '../src/course.ts';
+import { collectJourney, startJourney } from '../src/journeys.ts';
+import { newWordMemory, reviewQueue, type WordMemory } from '../src/memory.ts';
+import { Num, type NumTuple } from '../src/num.ts';
+import { understandingNow } from '../src/production.ts';
 import {
   goalMet,
   runUnderstanding,
@@ -20,10 +20,10 @@ import {
   setSail,
   stampGain,
   wordsHeld,
-} from '../src/sail';
-import { integrate, type Rejection, type Result } from '../src/sim';
-import { view } from '../src/view';
-import { initialState, type GameState } from '../src/state';
+} from '../src/sail.ts';
+import { integrate, type Rejection, type Result } from '../src/sim.ts';
+import { view } from '../src/view.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * Set Sail (#31 AC1 to AC5): the goal, the stamps it pays, the preview, what

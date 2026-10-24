@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import enId from './fixtures/en-id.min.json' with { type: 'json' };
 import idEn from './fixtures/id-en.min.json' with { type: 'json' };
-import { loadCourse, type LoadError } from '../src/index';
+import { loadCourse, type LoadError } from '../src/index.ts';
 
 /**
  * Loading a course pack (#101). Every refusal names the item and the field

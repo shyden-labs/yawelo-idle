@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { DAY_MS } from '../src/clock';
-import { checkHistory } from '../test/review-laws';
-import { minimumBreach } from '../../../tests/minimums';
+import { DAY_MS } from '../src/clock.ts';
+import { checkHistory } from '../test/review-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
 
 /**
  * Ranks over random review histories (#28 AC5), at the full count (#543).

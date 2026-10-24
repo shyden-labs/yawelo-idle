@@ -63,6 +63,7 @@ const ORDER = [
   'Properties (every property at its full count)',
   'Pacing bots (under 2 minutes)',
   'Upload the pacing report',
+  'Upload the test reports',
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)',
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)',
   'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)',
@@ -81,6 +82,16 @@ const DOCS_ONLY = [
   'Unit tests',
   'Guards (whole-repo checks)',
 ];
+
+/**
+ * The steps a docs-only change runs only after a unit step that ran, and
+ * each whole condition: the suite steps' test reports, which the
+ * coverage-same-tests job compares on docs-only too (#762 AC3, #353).
+ */
+const AFTER_UNIT: Record<string, string> = {
+  'Upload the test reports':
+    "${{ !cancelled() && (steps.unit.outcome == 'success' || steps.unit.outcome == 'failure') }}",
+};
 
 /** Every other step, and its whole condition. */
 const SKIPPED: Record<string, string> = {
@@ -112,13 +123,26 @@ describe('build-and-test’s steps (#360 AC2)', () => {
     ).toEqual(DOCS_ONLY);
   });
 
+  it('on docs-only, uploads the test reports after a unit step that ran, each condition whole (#762 AC3)', () => {
+    const conditioned = steps().filter(
+      (s) => s.if !== undefined && !s.if.includes(SKIP),
+    );
+    expect(Object.fromEntries(conditioned.map((s) => [idOf(s), s.if]))).toEqual(
+      AFTER_UNIT,
+    );
+  });
+
   it('every other step carries the skip, each condition whole (AC5)', () => {
-    const conditioned = steps().filter((s) => s.if !== undefined);
+    const conditioned = steps().filter(
+      (s) => s.if !== undefined && !(idOf(s) in AFTER_UNIT),
+    );
     expect(Object.fromEntries(conditioned.map((s) => [idOf(s), s.if]))).toEqual(
       SKIPPED,
     );
-    // Both lists together are every step, so none escapes both.
-    expect(conditioned.length + DOCS_ONLY.length).toBe(ORDER.length);
+    // The three lists together are every step, so none escapes them all.
+    expect(
+      conditioned.length + DOCS_ONLY.length + Object.keys(AFTER_UNIT).length,
+    ).toBe(ORDER.length);
   });
 
   it('reads the scope nowhere but in a skip, so nothing can fire on a full verdict (AC5)', () => {

@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { COPY } from '../../apps/site/src/copy';
+import { COPY } from '../../apps/site/src/copy.ts';
 import {
   PROD_WRANGLER_CONFIGS,
   readDeployConfig,
   type DeployConfig,
-} from './wrangler-configs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { headerRules, type HeaderRules } from '../../scripts/headers-file';
+} from './wrangler-configs.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { headerRules, type HeaderRules } from '../../scripts/headers-file.ts';
 
 /**
  * The production holding page (#621): an assets-only Worker in the

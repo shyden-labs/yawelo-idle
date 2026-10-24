@@ -6,8 +6,8 @@ import {
   type Workflow,
   type WorkflowJob,
   type WorkflowStep,
-} from './workflow-file';
-import { runOf } from './workflow-steps';
+} from './workflow-file.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The orphan check's workflow (#580 AC1, AC4): every pull request runs

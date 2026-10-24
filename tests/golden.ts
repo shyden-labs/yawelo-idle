@@ -12,8 +12,8 @@ import {
   type GoldenHeader,
   type GoldenSlice,
   type PlayerStart,
-} from '../packages/core/fixtures/golden-log';
-import type { GameEvent } from '../packages/core/src/events';
+} from '../packages/core/fixtures/golden-log.ts';
+import type { GameEvent } from '../packages/core/src/events.ts';
 
 /**
  * The golden log, read for the tests that replay it a slice at a time

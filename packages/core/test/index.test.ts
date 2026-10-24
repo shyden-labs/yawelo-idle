@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as core from '../src/index';
+import * as core from '../src/index.ts';
 
 /**
  * The words and memory API (#28), the upgrades API (#29), the route (#31),

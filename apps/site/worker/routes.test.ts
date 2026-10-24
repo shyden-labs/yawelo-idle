@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOLDING_HOST, showsHolding } from './routes';
+import { HOLDING_HOST, showsHolding } from './routes.ts';
 
 /**
  * Which pages a host shows (#673): the dev front door shows the holding page

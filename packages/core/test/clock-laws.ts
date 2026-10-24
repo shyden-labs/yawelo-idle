@@ -6,7 +6,7 @@ import {
   HOUR_MS,
   simMs,
   type SimMs,
-} from '../src/clock';
+} from '../src/clock.ts';
 
 /**
  * What the bucket and grid helpers must satisfy at one input (M1 design §2.2

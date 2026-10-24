@@ -2,8 +2,8 @@ import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FLOORS_DIR, RECORD_ENV, floorBreach, readFloors } from '../floors';
-import type { Observation } from '../../scripts/record-floors';
+import { FLOORS_DIR, RECORD_ENV, floorBreach, readFloors } from '../floors.ts';
+import type { Observation } from '../../scripts/record-floors.ts';
 
 /**
  * `floorBreach` judges a count against its recorded figure for EQUALITY, so

@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { COPY } from '../src/copy';
-import type { Locale } from '../src/i18n';
-import { floorBreach } from '../../../tests/floors';
-import { inlineTags, startTags } from '../../../tests/inline-tags';
-import { searched } from '../../../tests/searched';
+import { COPY } from '../src/copy.ts';
+import type { Locale } from '../src/i18n.ts';
+import { floorBreach } from '../../../tests/floors.ts';
+import { inlineTags, startTags } from '../../../tests/inline-tags.ts';
+import { searched } from '../../../tests/searched.ts';
 
 /**
  * The built holding page (#621 AC1, AC2), read from dist-holding/ after

@@ -4,7 +4,7 @@ import {
   PROD_WRANGLER_CONFIGS,
   WRANGLER_CONFIGS,
   wranglerConfigsOnDisk,
-} from '../unit/wrangler-configs';
+} from '../unit/wrangler-configs.ts';
 
 /**
  * The five dev deploy configs dev-config.test.ts reads by name, and the production

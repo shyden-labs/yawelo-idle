@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { scanCollection } from '../unit/collection-calls';
-import { committableFiles } from '../unit/tracked-files';
-import { callsInTree } from '../unit/calls-in-tree';
-import { helperModules } from '../unit/helper-modules';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { scanCollection } from '../unit/collection-calls.ts';
+import { committableFiles, readerOf } from '../unit/tracked-files.ts';
+import { callsInTree } from '../unit/calls-in-tree.ts';
+import { helperModules } from '../unit/helper-modules.ts';
 
 /**
  * The collection-calls guard over every committable test file (#97, #356),
@@ -29,9 +29,7 @@ const RAW_DESCRIBE_CALL = /(^|[^\w.$])((it|test)\.)?describe(\.\w+)*\s*\(/m;
 const readScan = () => {
   const tracked = new Set(committableFiles());
   const tests = [...tracked].filter((path) => TEST_FILE.test(path));
-  const reach = helperModules(tests, (path) =>
-    tracked.has(path) ? readFileSync(path, 'utf8') : undefined,
-  );
+  const reach = helperModules(tests, readerOf(tracked));
   const files = [...tests, ...reach.helpers];
   const read = files.map((file) => {
     const source = readFileSync(file, 'utf8');

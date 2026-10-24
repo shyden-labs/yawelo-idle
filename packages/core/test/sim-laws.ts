@@ -1,11 +1,11 @@
 import { expect } from 'vitest';
-import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Encounter } from '../src/course';
-import { Num, type NumTuple } from '../src/num';
-import { encounterRate, understandingNow } from '../src/production';
-import { advance, buyEncounter, integrate, listen } from '../src/sim';
-import { createStreams } from '../src/rng';
-import { initialState, type GameState } from '../src/state';
+import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, Encounter } from '../src/course.ts';
+import { Num, type NumTuple } from '../src/num.ts';
+import { encounterRate, understandingNow } from '../src/production.ts';
+import { advance, buyEncounter, integrate, listen } from '../src/sim.ts';
+import { createStreams } from '../src/rng.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * The time model's course and states (#27), and what integrate and the

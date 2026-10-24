@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
-} from '../../core/fixtures/synthetic-course';
-import { persona } from '../src/personas';
-import { runPersona, type PersonaRun } from '../src/run';
+} from '../../core/fixtures/synthetic-course.ts';
+import { persona } from '../src/personas.ts';
+import { runPersona, type PersonaRun } from '../src/run.ts';
 
 /**
  * The Capped buyer's first day, played on the real core (#35 AC4 (h), AC6):

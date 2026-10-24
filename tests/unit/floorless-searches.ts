@@ -1,14 +1,14 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
-import { listFindings } from './burn-down';
-import { chainRoot } from './one-test-per-case';
-import { EXEMPT, isPropertiesFile } from './measured-minimums';
+import { lineOf } from './line-of.ts';
+import { listFindings } from './burn-down.ts';
+import { chainRoot } from './one-test-per-case.ts';
+import { EXEMPT, isPropertiesFile } from './measured-minimums.ts';
 import {
   expectationOf,
   isFunction,
   placeOf,
   testBodiesIn,
-} from './test-scopes';
+} from './test-scopes.ts';
 
 /**
  * Every absence search, where it sits, and whether a floor is checked on its

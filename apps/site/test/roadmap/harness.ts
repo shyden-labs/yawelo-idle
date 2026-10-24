@@ -3,15 +3,15 @@ import { createTestHarness } from 'wrangler';
 import {
   FIXTURE_REPO,
   FIXTURE_TITLE,
-} from '../../../../packages/progress/test/board-fixture';
+} from '../../../../packages/progress/test/board-fixture.ts';
 import {
   FAKE_APP_ID,
   FAKE_BOARD_ID,
   type FakeConfig,
   type Seen,
-} from '../github-fake/contract';
-import { fakeGitHub } from '../github-fake/fake-github';
-import { serveFake } from './github-server';
+} from '../github-fake/contract.ts';
+import { fakeGitHub } from '../github-fake/fake-github.ts';
+import { serveFake } from './github-server.ts';
 
 /**
  * One roadmap test file's world (#341), in wrangler's own harness (#506):

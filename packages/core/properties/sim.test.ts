@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { HOUR_MS } from '../src/clock';
-import type { GameState } from '../src/state';
+import { HOUR_MS } from '../src/clock.ts';
+import type { GameState } from '../src/state.ts';
 import {
   addReached,
   checkLinear,
@@ -18,8 +18,8 @@ import {
   type SequenceReached,
   type Split,
   type Step,
-} from '../test/sim-laws';
-import { minimumBreach } from '../../../tests/minimums';
+} from '../test/sim-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
 
 /**
  * The time model on random times, states and sequences (#27 AC5, AC6, AC8;

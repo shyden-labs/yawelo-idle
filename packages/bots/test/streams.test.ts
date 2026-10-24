@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { persona } from '../src/personas';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { persona } from '../src/personas.ts';
 import {
   dayOpens,
   DAY_MS,
@@ -9,8 +9,8 @@ import {
   MIN_OPEN_GAP_MS,
   WAKE_MS,
   WAKING_MS,
-} from '../src/schedule';
-import { LATENCY_MEDIAN_MS, Streams } from '../src/streams';
+} from '../src/schedule.ts';
+import { LATENCY_MEDIAN_MS, Streams } from '../src/streams.ts';
 
 /**
  * A persona's randomness (#35 AC2) and its open times (M1 design §6). The

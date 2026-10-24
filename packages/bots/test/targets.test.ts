@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { againstControl, searched } from '../../../tests/searched';
-import { watched } from '../../../tests/watched';
-import type { PersonaRun, Sail } from '../src/run';
+import { floorBreach } from '../../../tests/floors.ts';
+import { againstControl, searched } from '../../../tests/searched.ts';
+import { watched } from '../../../tests/watched.ts';
+import type { PersonaRun, Sail } from '../src/run.ts';
 import {
   CI_BOUNDS,
   clickingNeverWins,
@@ -18,7 +18,7 @@ import {
   sailTiming,
   sanity,
   TUNING_TARGETS,
-} from '../src/targets';
+} from '../src/targets.ts';
 
 /**
  * The pacing checks (#35 AC4, AC9), each against runs written out here: one

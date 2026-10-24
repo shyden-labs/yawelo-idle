@@ -14,7 +14,7 @@
  * arguments per call, the injected error written as `THE_CAUSE` only when it
  * is that very object.
  */
-import worker from '../src/index';
+import worker from '../src/index.ts';
 
 const INJECTED_CAUSE = 'D1_ERROR: no such database';
 const THE_CAUSE = '<the injected D1 error>';

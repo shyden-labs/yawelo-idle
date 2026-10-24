@@ -10,8 +10,8 @@ import {
   type LexiconItem,
   type RegionData,
   type Tier,
-} from '../src/course';
-import { createStreams, nextInt, type RngStreams } from '../src/rng';
+} from '../src/course.ts';
+import { createStreams, nextInt, type RngStreams } from '../src/rng.ts';
 
 /**
  * A generated course sized like v1 (parent §5.6, M1 design §6): the content

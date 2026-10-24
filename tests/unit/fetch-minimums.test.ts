@@ -7,9 +7,9 @@ import {
   reportTable,
   sampled,
   type RecordedRun,
-} from '../../scripts/fetch-minimums';
-import type { Measured } from '../../scripts/minimums-method';
-import type { MinimumObservation } from '../minimums';
+} from '../../scripts/fetch-minimums.ts';
+import type { Measured } from '../../scripts/minimums-method.ts';
+import type { MinimumObservation } from '../minimums.ts';
 
 /**
  * `npm run minimums:fetch <run>` (#84, spec §5.7): every shard's runs read

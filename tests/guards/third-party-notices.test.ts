@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   renderNotices,
   type Lockfile,
-} from '../../scripts/third-party-notices';
+} from '../../scripts/third-party-notices.ts';
 
 /**
  * THIRD-PARTY-NOTICES.md is exactly what the generator renders (#26 AC11).

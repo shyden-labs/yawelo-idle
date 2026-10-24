@@ -21,6 +21,7 @@ import {
   type Count,
   type Table,
 } from './coverage-table.ts';
+import { coverageReport, reporterArgs } from './coverage-same-tests.ts';
 import { RECORD_JOB_ENV, recordRefusal } from './record-floors.ts';
 
 export const RECORD_FILE = 'tests/coverage/record.json';
@@ -41,6 +42,19 @@ export const childEnv = (
         entry[0] !== RECORD_JOB_ENV && entry[1] !== undefined,
     ),
   );
+
+/**
+ * What runs a suite under coverage: its coverage config, with the JSON test
+ * report the coverage-same-tests job compares with the suite's own step
+ * (#762 AC3).
+ */
+export const suiteArgs = (name: string): string[] => [
+  'vitest',
+  'run',
+  '-c',
+  coverageConfigFile(name),
+  ...reporterArgs(coverageReport(name)),
+];
 
 /** Why a report cannot be judged at `head`, or nothing. */
 export function metaRefusal(
@@ -144,11 +158,10 @@ function measure(): void {
   const head = output('git', ['rev-parse', 'HEAD']);
   for (const { name } of COVERAGE_SUITES) {
     console.log(`coverage: the ${name} suite`);
-    const run = spawnSync(
-      'npx',
-      ['vitest', 'run', '-c', coverageConfigFile(name)],
-      { stdio: 'inherit', env: childEnv(process.env) },
-    );
+    const run = spawnSync('npx', suiteArgs(name), {
+      stdio: 'inherit',
+      env: childEnv(process.env),
+    });
     if (run.error !== undefined)
       die(`the ${name} suite did not start: ${run.error.message}`);
     if (run.status !== 0)

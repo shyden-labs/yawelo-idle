@@ -1,4 +1,4 @@
-import { committableFiles } from './tracked-files';
+import { committableFiles } from './tracked-files.ts';
 
 /**
  * A helper that reads the whole checkout for the test that calls it: the

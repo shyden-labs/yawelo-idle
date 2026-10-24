@@ -24,6 +24,9 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-24.04
+    # The comparison job reads which suites this job ran (#762 AC3).
+    outputs:
+      scope: ${{ steps.classify.outputs.scope }}
     # GitHub's default is 360 minutes (#44). Each test suite but the unit
     # suite holds its own step to one measured limit (#476), so the job allows
     # 20 for those and the rest.
@@ -84,20 +87,23 @@ jobs:
       - name: Typecheck (tsc, svelte-check)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run typecheck
+      # Each suite step below writes its JSON test report, which the
+      # coverage-same-tests job compares with the coverage run (#762 AC3).
       - name: Unit tests
-        run: npm run test:unit
+        id: unit
+        run: npm run test:unit -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/unit.json
       # Tests that read or parse the whole repository (#475), docs-only
       # changes included: some read every file. One measured limit.
       - name: Guards (whole-repo checks)
         timeout-minutes: 1
-        run: npm run test:guards
+        run: npm run test:guards -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/guards.json
       # Tests where a process is the thing tested: shell scripts, the git
       # hook, git on fixture repositories, scripts loading under Node (#490).
       # A unit test starts no process. One measured limit.
       - name: Integration tests
         timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npm run test:integration
+        run: npm run test:integration -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/integration.json
       # Every fast-check property at its count from before any cut to fit the
       # unit limit, drawing fresh cases on every run (#543). A red property is
       # a real defect, never a re-run. One measured limit (slowest 12 s of
@@ -105,7 +111,7 @@ jobs:
       - name: Properties (every property at its full count)
         timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npm run test:properties
+        run: npm run test:properties -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/properties.json
       # The personas play the real core and the spec's pacing targets are
       # checked (#35). AC7 asked for under 5 minutes; its one measured limit
       # is 2 (#476: slowest 40 s of 15 runs, 2026-10-09).
@@ -113,7 +119,7 @@ jobs:
         id: pacing
         timeout-minutes: 2
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npm run test:pacing
+        run: npm run test:pacing -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/pacing.json
       # Only after a pacing run that passed or failed: a step before it that
       # failed skips the suite, and an upload then would fail on a report
       # nothing wrote, a second red step that misleads (#353).
@@ -123,6 +129,17 @@ jobs:
         with:
           name: pacing-report
           path: pacing-report.json
+          if-no-files-found: error
+      # After every suite step that writes a report, and only after a unit
+      # step that ran: the unit step runs on every change, so a report was
+      # written, and an upload after a skipped one would be a second red step
+      # that misleads (#353).
+      - name: Upload the test reports
+        if: ${{ !cancelled() && (steps.unit.outcome == 'success' || steps.unit.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports
+          path: test-reports/
           if-no-files-found: error
       # Each suite below: one measured limit, at least 3 times its slowest
       # run (#476), and none inside it.
@@ -177,3 +194,42 @@ jobs:
           name: coverage
           path: coverage/
           if-no-files-found: error
+
+  # The coverage run ran the tests each suite's own step ran, file by file and
+  # test by test (#762 AC3): a test the coverage run failed to collect would
+  # otherwise shrink the measured denominator unseen. A job of its own, so
+  # the coverage measure keeps running beside build-and-test; in the image
+  # both ran in, so the reports' absolute file names read against one
+  # checkout path. After either upstream job fails it still runs and fails
+  # on what is missing, naming it.
+  coverage-same-tests:
+    needs: [build-and-test, coverage]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install (a warning fails it)
+        run: scripts/fail-on-warnings.sh npm ci
+      - name: Download the suite steps' test reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: test-reports
+          path: test-reports
+      - name: Download the coverage report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage
+          path: coverage
+      - name: Coverage ran the tests each suite step ran (#762)
+        timeout-minutes: 1
+        env:
+          SCOPE: ${{ needs.build-and-test.outputs.scope }}
+        run: node scripts/coverage-same-tests.ts "$SCOPE"

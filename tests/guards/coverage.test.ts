@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { extname } from 'node:path';
 import { kindOf } from '../../scripts/coverage-kinds.ts';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { skipCommentsIn } from '../unit/coverage-skip';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { skipCommentsIn } from '../unit/coverage-skip.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The coverage record's two whole-tree rules (#728).

@@ -1,17 +1,17 @@
 import { expect } from 'vitest';
-import { nextGridTick, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Destination, Encounter, Region } from '../src/course';
-import { bestPayback } from '../src/automation';
-import { newWordMemory, review, type WordMemory } from '../src/memory';
-import { Num, type NumTuple } from '../src/num';
+import { nextGridTick, simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, Destination, Encounter, Region } from '../src/course.ts';
+import { bestPayback } from '../src/automation.ts';
+import { newWordMemory, review, type WordMemory } from '../src/memory.ts';
+import { Num, type NumTuple } from '../src/num.ts';
 import {
   buyEncounter,
   integrate,
   setAutomation,
   type Rejection,
   type Result,
-} from '../src/sim';
-import { initialState, type GameState } from '../src/state';
+} from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * Pemandu's course and games (#33), and what its purchases must satisfy:

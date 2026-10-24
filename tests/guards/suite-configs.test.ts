@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { NON_UNIT_VITEST_CONFIGS } from '../unit/suite-configs';
+import { NON_UNIT_VITEST_CONFIGS } from '../unit/suite-configs.ts';
 
 /**
  * The list of non-unit Vitest configs is every one there is (#476 AC2). It

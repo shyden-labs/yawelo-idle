@@ -25,8 +25,8 @@
     ".github/workflows/ci.yml": {
       "measure": "lines",
       "statements": {
-        "untested": 116,
-        "total": 116
+        "untested": 157,
+        "total": 157
       },
       "branches": {
         "untested": 0,
@@ -597,8 +597,8 @@
     "apps/site/test/roadmap-worker/test-worker.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 32,
-        "total": 32
+        "untested": 33,
+        "total": 33
       },
       "branches": {
         "untested": 10,
@@ -663,8 +663,8 @@
     "apps/site/test/roadmap/roadmap.test.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 507,
-        "total": 507
+        "untested": 508,
+        "total": 508
       },
       "branches": {
         "untested": 36,
@@ -685,8 +685,8 @@
     "apps/site/test/roadmap/routes.test.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 95,
-        "total": 95
+        "untested": 97,
+        "total": 97
       },
       "branches": {
         "untested": 9,
@@ -960,8 +960,8 @@
     "apps/web/worker/index.ts": {
       "measure": "v8",
       "statements": {
-        "untested": 15,
-        "total": 15
+        "untested": 12,
+        "total": 12
       },
       "branches": {
         "untested": 8,
@@ -1368,7 +1368,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 9
+        "total": 10
       },
       "branches": {
         "untested": 0,
@@ -1588,7 +1588,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 54
+        "total": 55
       },
       "branches": {
         "untested": 0,
@@ -1643,7 +1643,7 @@
       "measure": "v8",
       "statements": {
         "untested": 3,
-        "total": 61
+        "total": 62
       },
       "branches": {
         "untested": 3,
@@ -1665,7 +1665,7 @@
       "measure": "v8",
       "statements": {
         "untested": 2,
-        "total": 56
+        "total": 57
       },
       "branches": {
         "untested": 4,
@@ -1720,7 +1720,7 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 60
+        "total": 61
       },
       "branches": {
         "untested": 3,
@@ -1764,7 +1764,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 52
+        "total": 55
       },
       "branches": {
         "untested": 1,
@@ -1786,7 +1786,7 @@
       "measure": "v8",
       "statements": {
         "untested": 2,
-        "total": 34
+        "total": 35
       },
       "branches": {
         "untested": 2,
@@ -1918,7 +1918,7 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 103
+        "total": 104
       },
       "branches": {
         "untested": 5,
@@ -2563,6 +2563,17 @@
         "total": 0
       }
     },
+    "scripts/coverage-same-tests.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 20,
+        "total": 136
+      },
+      "branches": {
+        "untested": 13,
+        "total": 89
+      }
+    },
     "scripts/coverage-table.ts": {
       "measure": "v8",
       "statements": {
@@ -2578,7 +2589,7 @@
       "measure": "v8",
       "statements": {
         "untested": 49,
-        "total": 89
+        "total": 91
       },
       "branches": {
         "untested": 23,
@@ -3018,11 +3029,11 @@
       "measure": "v8",
       "statements": {
         "untested": 4,
-        "total": 65
+        "total": 64
       },
       "branches": {
         "untested": 0,
-        "total": 4
+        "total": 2
       }
     },
     "tests/guards/core-determinism-config.test.ts": {
@@ -3073,11 +3084,11 @@
       "measure": "v8",
       "statements": {
         "untested": 2,
-        "total": 42
+        "total": 41
       },
       "branches": {
         "untested": 3,
-        "total": 10
+        "total": 8
       }
     },
     "tests/guards/floorless-searches.test.ts": {
@@ -3139,11 +3150,11 @@
       "measure": "v8",
       "statements": {
         "untested": 6,
-        "total": 66
+        "total": 65
       },
       "branches": {
         "untested": 4,
-        "total": 14
+        "total": 12
       }
     },
     "tests/guards/mutation-files.test.ts": {
@@ -3183,11 +3194,11 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 42
+        "total": 41
       },
       "branches": {
         "untested": 4,
-        "total": 16
+        "total": 14
       }
     },
     "tests/guards/record-floors.test.ts": {
@@ -3199,6 +3210,17 @@
       "branches": {
         "untested": 0,
         "total": 4
+      }
+    },
+    "tests/guards/relative-imports.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 35
+      },
+      "branches": {
+        "untested": 0,
+        "total": 2
       }
     },
     "tests/guards/suite-configs.test.ts": {
@@ -3309,6 +3331,17 @@
       "branches": {
         "untested": 0,
         "total": 5
+      }
+    },
+    "tests/integration/coverage-same-tests.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 50
+      },
+      "branches": {
+        "untested": 0,
+        "total": 2
       }
     },
     "tests/integration/fail-on-warnings.test.ts": {
@@ -4103,6 +4136,17 @@
         "total": 0
       }
     },
+    "tests/mutations/762-native-coverage.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 22,
+        "total": 22
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
     "tests/properties-seed.ts": {
       "measure": "v8",
       "statements": {
@@ -4250,11 +4294,11 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 67
+        "total": 73
       },
       "branches": {
         "untested": 5,
-        "total": 11
+        "total": 15
       }
     },
     "tests/unit/ci-scope.test.ts": {
@@ -4294,7 +4338,7 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 312
+        "total": 313
       },
       "branches": {
         "untested": 4,
@@ -4349,18 +4393,18 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 32
+        "total": 100
       },
       "branches": {
         "untested": 6,
-        "total": 18
+        "total": 28
       }
     },
     "tests/unit/coverage-cli.test.ts": {
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 50
+        "total": 53
       },
       "branches": {
         "untested": 0,
@@ -4371,7 +4415,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 46
+        "total": 54
       },
       "branches": {
         "untested": 0,
@@ -4387,6 +4431,17 @@
       "branches": {
         "untested": 0,
         "total": 0
+      }
+    },
+    "tests/unit/coverage-same-tests.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 69
+      },
+      "branches": {
+        "untested": 0,
+        "total": 8
       }
     },
     "tests/unit/coverage-skip.test.ts": {
@@ -4701,7 +4756,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 79
+        "total": 85
       },
       "branches": {
         "untested": 1,
@@ -4712,11 +4767,11 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 134
+        "total": 206
       },
       "branches": {
         "untested": 6,
-        "total": 101
+        "total": 179
       }
     },
     "tests/unit/holding-contrast.test.ts": {
@@ -5042,7 +5097,7 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 110
+        "total": 111
       },
       "branches": {
         "untested": 1,
@@ -5207,7 +5262,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 117
+        "total": 119
       },
       "branches": {
         "untested": 10,
@@ -5229,11 +5284,33 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 74
+        "total": 75
       },
       "branches": {
         "untested": 4,
         "total": 12
+      }
+    },
+    "tests/unit/relative-imports.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 74
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/unit/relative-imports.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 13
+      },
+      "branches": {
+        "untested": 0,
+        "total": 2
       }
     },
     "tests/unit/sample-minimums.test.ts": {
@@ -5306,18 +5383,18 @@
       "measure": "v8",
       "statements": {
         "untested": 2,
-        "total": 114
+        "total": 94
       },
       "branches": {
         "untested": 11,
-        "total": 66
+        "total": 60
       }
     },
     "tests/unit/setup-refuse.ts": {
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 14
+        "total": 6
       },
       "branches": {
         "untested": 1,
@@ -5328,18 +5405,18 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 55
+        "total": 59
       },
       "branches": {
         "untested": 3,
-        "total": 42
+        "total": 45
       }
     },
     "tests/unit/setup-whole-tree.test.ts": {
       "measure": "v8",
       "statements": {
         "untested": 3,
-        "total": 175
+        "total": 181
       },
       "branches": {
         "untested": 22,
@@ -5449,7 +5526,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 58
+        "total": 59
       },
       "branches": {
         "untested": 4,
@@ -5504,7 +5581,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 77
+        "total": 88
       },
       "branches": {
         "untested": 1,
@@ -5515,11 +5592,11 @@
       "measure": "v8",
       "statements": {
         "untested": 9,
-        "total": 299
+        "total": 305
       },
       "branches": {
         "untested": 24,
-        "total": 224
+        "total": 226
       }
     },
     "tests/unit/unit-setup-wiring.test.ts": {
@@ -5615,6 +5692,17 @@
       "statements": {
         "untested": 0,
         "total": 2
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
+    "tests/unit/whole-tree-watch.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 12
       },
       "branches": {
         "untested": 0,
@@ -5910,12 +5998,12 @@
   },
   "totals": {
     "statements": {
-      "untested": 4713,
-      "total": 28066
+      "untested": 4797,
+      "total": 28695
     },
     "branches": {
-      "untested": 1671,
-      "total": 8730
+      "untested": 1684,
+      "total": 8916
     }
   }
 }

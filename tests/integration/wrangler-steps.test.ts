@@ -10,7 +10,7 @@ import {
   describeMeant,
   describeRead,
   wranglerCalls,
-} from '../unit/wrangler-steps';
+} from '../unit/wrangler-steps.ts';
 
 /**
  * Every wrangler call in the workflows reads the config it means (#627).

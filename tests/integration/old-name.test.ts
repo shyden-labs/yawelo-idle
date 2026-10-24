@@ -12,10 +12,10 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { grepCounts, OLD, walkTree } from '../unit/old-name';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { grepCounts, OLD, walkTree } from '../unit/old-name.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * walkTree (#432) on fixture repositories, moved out of the unit suite by

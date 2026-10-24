@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { scanTests, type LoopedCase, type TestScan } from './one-test-per-case';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import {
+  scanTests,
+  type LoopedCase,
+  type TestScan,
+} from './one-test-per-case.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * One test per case (operator, 2026-10-02; Refs #58).

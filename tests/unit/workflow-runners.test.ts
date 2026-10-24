@@ -1,10 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { withoutYamlComments } from './source-text';
-import { scanRunners } from './workflow-runners';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { withoutYamlComments } from './source-text.ts';
+import { scanRunners } from './workflow-runners.ts';
 
 /**
  * Every job names a fixed runner image (#400): GitHub moves `ubuntu-latest`

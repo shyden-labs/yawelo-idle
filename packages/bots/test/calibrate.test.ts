@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
 import {
   calibrateGoals,
   threeFiguresDown,
   UNREACHABLE,
   type CalibrateOptions,
   type Measure,
-} from '../src/calibrate';
+} from '../src/calibrate.ts';
 
 /**
  * The goal-table bisection (#35 AC10), against a model game whose sails are

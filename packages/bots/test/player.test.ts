@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { floorBreach } from '../../../tests/floors';
-import { againstControl, searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { againstControl, searched } from '../../../tests/searched.ts';
 import {
   bestPayback,
   Num,
@@ -13,10 +13,10 @@ import {
   type GameEvent,
   type GameState,
 } from '@yawelo-idle/core';
-import { Player } from '../src/player';
-import { persona } from '../src/personas';
-import { QUICK_RETURN_MS } from '../src/schedule';
-import { Streams } from '../src/streams';
+import { Player } from '../src/player.ts';
+import { persona } from '../src/personas.ts';
+import { QUICK_RETURN_MS } from '../src/schedule.ts';
+import { Streams } from '../src/streams.ts';
 import {
   buys,
   course,
@@ -27,7 +27,7 @@ import {
   play,
   shopAfter,
   withWords,
-} from './open';
+} from './open.ts';
 
 /**
  * The policy (#35 AC3, M1 design §6): what a persona does at an open,
@@ -100,9 +100,9 @@ describe('the player reads nothing but view (AC3)', () => {
   it('the run starts the game and reads the state only to measure, through view for when each goal was reached', () => {
     expect(valueImports('packages/bots/src/run.ts')).toEqual({
       '@yawelo-idle/core': ['Num', 'initialState', 'view', 'wallMs'],
-      './player': ['Player'],
-      './schedule': ['DAY_MS', 'QUICK_RETURN_MS', 'WAKE_MS', 'dayOpens'],
-      './streams': ['Streams'],
+      './player.ts': ['Player'],
+      './schedule.ts': ['DAY_MS', 'QUICK_RETURN_MS', 'WAKE_MS', 'dayOpens'],
+      './streams.ts': ['Streams'],
     });
   });
 });

@@ -1,4 +1,4 @@
-import { closing, topLevelArguments } from './absence-text';
+import { closing, topLevelArguments } from './absence-text.ts';
 
 /**
  * The cross-check on `literal-floors.ts`, read from text (#378).

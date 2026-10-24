@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { commentsOf } from './source-text';
+import { commentsOf } from './source-text.ts';
 
 /**
  * A comment telling a coverage tool to skip lines: the tool's name (v8, c8

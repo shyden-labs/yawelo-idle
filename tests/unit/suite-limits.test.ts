@@ -1,25 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'yaml';
-import coverageGuards from '../../vitest.coverage.guards.config';
-import coverageIntegration from '../../vitest.coverage.integration.config';
-import coveragePacing from '../../vitest.coverage.pacing.config';
-import coverageProperties from '../../vitest.coverage.properties.config';
-import coverageUnit from '../../vitest.coverage.unit.config';
-import guards from '../../vitest.guards.config';
-import integration from '../../vitest.integration.config';
-import logs from '../../vitest.logs.config';
-import pacing from '../../vitest.pacing.config';
-import properties from '../../vitest.properties.config';
-import unit from '../../vitest.config';
-import devHosts from '../../apps/dev-hosts/vitest.harness.config';
-import site from '../../apps/site/vitest.harness.config';
-import syncWorker from '../../apps/sync-worker/vitest.harness.config';
-import web from '../../apps/web/vitest.harness.config';
-import engines from '../../playwright.engines.config';
-import { webSmokeConfig } from '../../playwright.web.config';
-import { NON_UNIT_VITEST_CONFIGS, PLAYWRIGHT_CONFIGS } from './suite-configs';
-import { runOf } from './workflow-steps';
+import coverageGuards from '../../vitest.coverage.guards.config.ts';
+import coverageIntegration from '../../vitest.coverage.integration.config.ts';
+import coveragePacing from '../../vitest.coverage.pacing.config.ts';
+import coverageProperties from '../../vitest.coverage.properties.config.ts';
+import coverageUnit from '../../vitest.coverage.unit.config.ts';
+import guards from '../../vitest.guards.config.ts';
+import integration from '../../vitest.integration.config.ts';
+import logs from '../../vitest.logs.config.ts';
+import pacing from '../../vitest.pacing.config.ts';
+import properties from '../../vitest.properties.config.ts';
+import unit from '../../vitest.config.ts';
+import devHosts from '../../apps/dev-hosts/vitest.harness.config.ts';
+import site from '../../apps/site/vitest.harness.config.ts';
+import syncWorker from '../../apps/sync-worker/vitest.harness.config.ts';
+import web from '../../apps/web/vitest.harness.config.ts';
+import engines from '../../playwright.engines.config.ts';
+import { webSmokeConfig } from '../../playwright.web.config.ts';
+import {
+  NON_UNIT_VITEST_CONFIGS,
+  PLAYWRIGHT_CONFIGS,
+} from './suite-configs.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * Every suite but the unit suite keeps one limit, at its CI step, and none of
@@ -51,17 +54,23 @@ const deployDev = workflow('deploy-dev.yml');
 // The logs suite's own workflow, run before a release (#84, spec §5.12).
 const logsWorkflow = workflow('logs.yml');
 
+// The unit step, writing its JSON report (#762 AC3).
+const UNIT_STEP =
+  'npm run test:unit -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/unit.json';
+
 const SUITES = [
   {
     suite: 'guards',
-    run: 'npm run test:guards',
+    // Its JSON report is compared with the coverage run (#762 AC3).
+    run: 'npm run test:guards -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/guards.json',
     job: 'build-and-test',
     minutes: 1,
     slowest: 8,
   },
   {
     suite: 'integration',
-    run: 'npm run test:integration',
+    // Its JSON report is compared with the coverage run (#762 AC3).
+    run: 'npm run test:integration -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/integration.json',
     job: 'build-and-test',
     minutes: 1,
     slowest: 11,
@@ -71,7 +80,8 @@ const SUITES = [
   // log to the logs suite: 17 and 12 s (runs 38859103281, 38859103312).
   {
     suite: 'properties',
-    run: 'npm run test:properties',
+    // Its JSON report is compared with the coverage run (#762 AC3).
+    run: 'npm run test:properties -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/properties.json',
     job: 'build-and-test',
     minutes: 1,
     slowest: 17,
@@ -89,7 +99,8 @@ const SUITES = [
   },
   {
     suite: 'pacing',
-    run: 'npm run test:pacing',
+    // Its JSON report is compared with the coverage run (#762 AC3).
+    run: 'npm run test:pacing -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=test-reports/pacing.json',
     job: 'build-and-test',
     minutes: 2,
     slowest: 40,
@@ -149,7 +160,7 @@ describe('the unit suite’s limit is its runner’s: 1 s, judged with coverage 
 
   it('runs in its own CI step, with no coverage to slow it', () => {
     const steps = ci.jobs['build-and-test']?.steps ?? [];
-    const at = steps.filter((s) => runOf(s) === 'npm run test:unit');
+    const at = steps.filter((s) => runOf(s) === UNIT_STEP);
     expect(at, 'test:unit step').toHaveLength(1);
     const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
       scripts: Record<string, string>;
@@ -187,7 +198,7 @@ describe('each non-unit suite’s one limit is its CI step’s (#476 AC1)', () =
       .map((s) => runOf(s))
       .filter((r) => r.startsWith('npm run test:'));
     expect(suiteRuns.sort()).toEqual(
-      ['npm run test:unit', ...SUITES.map((s) => s.run)].sort(),
+      [UNIT_STEP, ...SUITES.map((s) => s.run)].sort(),
     );
   });
 });

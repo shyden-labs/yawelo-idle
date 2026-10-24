@@ -2,12 +2,12 @@ import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { watched } from '../../../tests/watched';
-import { PERSONAS } from '../src/personas';
-import { pacingReport } from '../src/report';
-import type { PersonaRun, Sail } from '../src/run';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { watched } from '../../../tests/watched.ts';
+import { PERSONAS } from '../src/personas.ts';
+import { pacingReport } from '../src/report.ts';
+import type { PersonaRun, Sail } from '../src/run.ts';
 import {
   CI_BOUNDS,
   clickingNeverWins,
@@ -21,7 +21,7 @@ import {
   longWaits,
   sailTiming,
   sanity,
-} from '../src/targets';
+} from '../src/targets.ts';
 
 /**
  * The pacing targets (#35 AC4, M1 design §6), proved by playing the real

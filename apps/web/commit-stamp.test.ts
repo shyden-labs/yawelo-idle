@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stampCommit } from './commit-stamp';
+import { stampCommit } from './commit-stamp.ts';
 
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const page =

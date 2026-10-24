@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pacingReport } from '../src/report';
-import type { PersonaRun } from '../src/run';
+import { pacingReport } from '../src/report.ts';
+import type { PersonaRun } from '../src/run.ts';
 
 /** The pacing report's shape (#35 AC6), from runs written out here. */
 

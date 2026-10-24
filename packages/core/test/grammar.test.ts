@@ -1,31 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { againstControl } from '../../../tests/searched';
-import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
+import { againstControl } from '../../../tests/searched.ts';
+import { HOUR_MS, wallMs, type WallMs } from '../src/clock.ts';
 import type {
   Course,
   Destination,
   GrammarNode,
   LexiconItem,
   Region,
-} from '../src/course';
+} from '../src/course.ts';
 import {
   grammarNodeCost,
   ownedGrammarNodes,
   rootFactors,
-} from '../src/grammar';
-import { newWordMemory } from '../src/memory';
-import { Num, type NumTuple } from '../src/num';
-import { rateBreakdown, understandingNow } from '../src/production';
+} from '../src/grammar.ts';
+import { newWordMemory } from '../src/memory.ts';
+import { Num, type NumTuple } from '../src/num.ts';
+import { rateBreakdown, understandingNow } from '../src/production.ts';
 import {
   buyGrammarNode,
   integrate,
   pickUpWord,
   type Rejection,
   type Result,
-} from '../src/sim';
-import { view } from '../src/view';
-import { initialState, type GameState } from '../src/state';
-import { lexiconItem, pickUpPool } from '../src/words';
+} from '../src/sim.ts';
+import { view } from '../src/view.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { lexiconItem, pickUpPool } from '../src/words.ts';
 
 /**
  * Grammar nodes (#32 AC1 to AC4): buying one, the words it multiplies, the

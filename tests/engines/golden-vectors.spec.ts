@@ -4,7 +4,7 @@ import {
   digest,
   FUNCTIONS,
   type GoldenFunction,
-} from '../../packages/core/test/golden-vectors';
+} from '../../packages/core/test/golden-vectors.ts';
 
 /**
  * Cross-engine determinism of det-math, the mean retrievability and the FSRS

@@ -27,10 +27,10 @@ import {
   readMinimumsDir,
   type Measured,
   type MinimumObservation,
-} from '../scripts/minimums-method';
-import { guardOf } from '../scripts/record-floors';
-import { callSite } from './floors';
-import { currentSeed, SEED_ENV } from './properties-seed';
+} from '../scripts/minimums-method.ts';
+import { guardOf } from '../scripts/record-floors.ts';
+import { callSite } from './floors.ts';
+import { currentSeed, SEED_ENV } from './properties-seed.ts';
 
 export { MINIMUMS_RECORD_ENV, type MinimumObservation };
 

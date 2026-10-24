@@ -3,13 +3,13 @@ import {
   lateGameReturn,
   regionOneReturn,
   returnsAt,
-} from '../fixtures/pemandu-returns';
-import { syntheticCourse } from '../fixtures/synthetic-course';
-import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { rateBreakdown } from '../src/production';
-import { advance } from '../src/sim';
-import type { GameState } from '../src/state';
+} from '../fixtures/pemandu-returns.ts';
+import { syntheticCourse } from '../fixtures/synthetic-course.ts';
+import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { rateBreakdown } from '../src/production.ts';
+import { advance } from '../src/sim.ts';
+import type { GameState } from '../src/state.ts';
 
 /**
  * Pemandu's returns, on short stand-ins (#544). The 72 h return under

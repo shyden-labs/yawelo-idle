@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { MEANT_FOR } from '../github-fake/contract';
+import { MEANT_FOR } from '../github-fake/contract.ts';
 
 /**
  * Serves a fake GitHub handler (test/github-fake/fake-github.ts) on a loopback

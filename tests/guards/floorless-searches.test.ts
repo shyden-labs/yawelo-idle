@@ -4,7 +4,7 @@ import {
   absencesWritten,
   testsWritten,
   zerosWritten,
-} from '../unit/absence-text';
+} from '../unit/absence-text.ts';
 import { readFileSync } from 'node:fs';
 import {
   burnDownFindings,
@@ -15,14 +15,14 @@ import {
   type Form,
   type SearchReading,
   type ZeroReading,
-} from '../unit/floorless-searches';
-import { UNPROVED } from '../unit/floorless-searches.burn-down';
-import { TWINS } from '../unit/floorless-searches.twins';
-import { scopeKey, walkDisagreements } from '../unit/burn-down';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { committableFiles } from '../unit/tracked-files';
-import { codeWithoutLiterals } from '../unit/source-text';
+} from '../unit/floorless-searches.ts';
+import { UNPROVED } from '../unit/floorless-searches.burn-down.ts';
+import { TWINS } from '../unit/floorless-searches.twins.ts';
+import { scopeKey, walkDisagreements } from '../unit/burn-down.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
 
 /**
  * The floorless-searches meta-guard over the whole repository (#361), in the

@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fc from 'fast-check';
-import { checkBucket, checkGridSplit } from '../test/clock-laws';
+import { checkBucket, checkGridSplit } from '../test/clock-laws.ts';
 
 /**
  * The clock helpers against BigInt arithmetic on random times (#26 AC5), at

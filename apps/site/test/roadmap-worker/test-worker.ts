@@ -15,9 +15,9 @@
  *   runs: `crypto.subtle.timingSafeEqual` is workerd's, not Node's.
  */
 import { env, WorkerEntrypoint } from 'cloudflare:workers';
-import site, { Roadmap as SiteRoadmap } from '../../worker/index';
-import { verifySignature } from '../../worker/webhook';
-import { MEANT_FOR } from '../github-fake/contract';
+import site, { Roadmap as SiteRoadmap } from '../../worker/index.ts';
+import { verifySignature } from '../../worker/webhook.ts';
+import { MEANT_FOR } from '../github-fake/contract.ts';
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {

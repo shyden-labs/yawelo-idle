@@ -4,7 +4,7 @@
  * CI uploads it, so a balance change is reviewed as numbers.
  */
 
-import type { PersonaRun } from './run';
+import type { PersonaRun } from './run.ts';
 
 export interface PersonaReport {
   readonly persona: string;

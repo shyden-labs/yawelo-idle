@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { gitWalks, type GitWalks } from '../unit/git-walks';
-import { codeWithoutLiterals } from '../unit/source-text';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { gitWalks, type GitWalks } from '../unit/git-walks.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The git-walks guard over every TypeScript file git has under tests/ and scripts/ (#385).

@@ -3,15 +3,15 @@ import {
   BALANCE,
   type InsightUpgradeId,
   type StampUpgradeId,
-} from '../src/balance';
-import { simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Encounter } from '../src/course';
-import { purchaseCost } from '../src/encounters';
-import { Num } from '../src/num';
-import { understandingNow, type EncounterRate } from '../src/production';
-import { advance, buyEncounter, buyUpgrade, type Result } from '../src/sim';
-import { view } from '../src/view';
-import { initialState, type GameState } from '../src/state';
+} from '../src/balance.ts';
+import { simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, Encounter } from '../src/course.ts';
+import { purchaseCost } from '../src/encounters.ts';
+import { Num } from '../src/num.ts';
+import { understandingNow, type EncounterRate } from '../src/production.ts';
+import { advance, buyEncounter, buyUpgrade, type Result } from '../src/sim.ts';
+import { view } from '../src/view.ts';
+import { initialState, type GameState } from '../src/state.ts';
 import {
   encounterCostFactor,
   findUpgrade,
@@ -24,7 +24,7 @@ import {
   upgradeCatalogue,
   upgradeLevel,
   type Upgrade,
-} from '../src/upgrades';
+} from '../src/upgrades.ts';
 
 /**
  * Insight and Passport Stamp upgrades (#29 AC1, AC2, AC3, AC5): the two

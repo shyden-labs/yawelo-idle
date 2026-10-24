@@ -3,8 +3,8 @@ import {
   OUTCOME_FILE,
   outcomePaths,
   verdict,
-} from '../../scripts/mutations-verdict';
-import { againstControl } from '../searched';
+} from '../../scripts/mutations-verdict.ts';
+import { againstControl } from '../searched.ts';
 
 /**
  * The `mutations` job's verdict (#619 AC5, #754 AC2): develop's required

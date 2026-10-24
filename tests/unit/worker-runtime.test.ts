@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The Worker tests run on the same runtime that deploys.

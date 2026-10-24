@@ -6,7 +6,7 @@ import {
   DOMAIN,
   UNARY,
   type Unary,
-} from '../test/det-math-laws';
+} from '../test/det-math-laws.ts';
 
 /**
  * det-math within 2 ulp of a 60-digit reference on random inputs (#26 AC2),

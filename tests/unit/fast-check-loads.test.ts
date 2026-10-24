@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fastCheckLoads } from './fast-check-loads';
+import { fastCheckLoads } from './fast-check-loads.ts';
 
 /**
  * Every way a file loads fast-check at run time (#551). The unit suite keeps

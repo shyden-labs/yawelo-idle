@@ -5,8 +5,8 @@ import {
   sampleArgs,
   sampleRefusal,
   sampleRun,
-} from '../../scripts/sample-minimums';
-import { MINIMUMS_RECORD_ENV } from '../minimums';
+} from '../../scripts/sample-minimums.ts';
+import { MINIMUMS_RECORD_ENV } from '../minimums.ts';
 
 /**
  * `npm run minimums:sample -- --runs <n> --out <dir>` (#84, spec §5.5): the

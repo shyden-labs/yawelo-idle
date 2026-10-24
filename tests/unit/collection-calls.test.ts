@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 import {
   scanCollection,
   type CollectionScan,
   type RefusedCall,
-} from './collection-calls';
-import { callsInTree } from './calls-in-tree';
+} from './collection-calls.ts';
+import { callsInTree } from './calls-in-tree.ts';
 
 /**
  * No workspace code at collection (Refs #97).
@@ -305,6 +305,20 @@ const t = wallMs(1);`,
       'wallMs (../src/sim)',
     ],
     [
+      'a clock brand imported from a module whose name only ends in clock (#762)',
+      `import { wallMs } from '../src/wallclock.ts';
+const t = wallMs(1);`,
+      'wallMs',
+      'wallMs (../src/wallclock.ts)',
+    ],
+    [
+      'a clock brand imported from a clock file of another kind (#762)',
+      `import { wallMs } from '../src/clock.tsx';
+const t = wallMs(1);`,
+      'wallMs',
+      'wallMs (../src/clock.tsx)',
+    ],
+    [
       'a function from the clock module that is not a brand',
       `import { reanchor } from '../src/clock';
 const s = reanchor(1);`,
@@ -444,6 +458,12 @@ const t = wallMs(1);`,
       'a clock brand imported under another name',
       `import { simMs as at } from '../src/clock';
 const t = at(1);`,
+      1,
+    ],
+    [
+      'a clock brand imported from the clock module by its file name (#762)',
+      `import { wallMs } from '../src/clock.ts';
+const t = wallMs(1);`,
       1,
     ],
     [

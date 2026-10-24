@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 import { Decimal } from 'decimal.js';
-import { Num, type NumTuple } from '../src/num';
+import { Num, type NumTuple } from '../src/num.ts';
 
 /**
  * What Num must satisfy at one input (#26 AC4). The unit suite checks chosen

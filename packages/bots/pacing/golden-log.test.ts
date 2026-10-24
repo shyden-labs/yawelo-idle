@@ -5,17 +5,17 @@ import {
   playGolden,
   playGoldenSlice,
   writeGolden,
-} from '../../core/fixtures/golden-log';
+} from '../../core/fixtures/golden-log.ts';
 import {
   judgeShopAlong,
   shopCounts,
   type ShopKind,
   type ShopTally,
-} from '../../core/fixtures/shop-agreement';
-import { stateHash } from '../../core/src/hash';
-import { apply, replay } from '../../core/src/log';
-import type { GameState } from '../../core/src/state';
-import { floorBreach } from '../../../tests/floors';
+} from '../../core/fixtures/shop-agreement.ts';
+import { stateHash } from '../../core/src/hash.ts';
+import { apply, replay } from '../../core/src/log.ts';
+import type { GameState } from '../../core/src/state.ts';
+import { floorBreach } from '../../../tests/floors.ts';
 import {
   allEvents,
   eventsOf,
@@ -27,8 +27,8 @@ import {
   total,
   totals,
   type SliceRow,
-} from '../../../tests/golden';
-import { searched } from '../../../tests/searched';
+} from '../../../tests/golden.ts';
+import { searched } from '../../../tests/searched.ts';
 
 /**
  * The golden log's runs that do not fit the unit suite (#542): each heavy

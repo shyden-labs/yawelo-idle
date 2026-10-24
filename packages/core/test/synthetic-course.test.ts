@@ -4,13 +4,13 @@ import {
   type CourseData,
   type LexiconItem,
   type RegionData,
-} from '../src/course';
+} from '../src/course.ts';
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
   syntheticCourseData,
-} from '../fixtures/synthetic-course';
-import { floorBreach } from '../../../tests/floors';
+} from '../fixtures/synthetic-course.ts';
+import { floorBreach } from '../../../tests/floors.ts';
 
 /**
  * The synthetic course (#26 AC8, AC9): sized like v1 and reproducible from a

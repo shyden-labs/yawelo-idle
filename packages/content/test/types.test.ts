@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest';
 import type { Cefr, LexiconItem } from '@yawelo-idle/core';
-import type { LexiconEntry } from '../src/index';
+import type { LexiconEntry } from '../src/index.ts';
 
 /**
  * The schema and core cannot drift (#101 AC5). Core holds the one list of

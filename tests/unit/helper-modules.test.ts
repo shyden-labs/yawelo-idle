@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { scanCollection } from './collection-calls';
+import { scanCollection } from './collection-calls.ts';
 import {
   dataReaders,
   helperLoaders,
   helperModules,
   type HelperLoaders,
   type HelperReach,
-} from './helper-modules';
+} from './helper-modules.ts';
 
 /**
  * The helper modules a test file loads (#554): every module it reaches by a
@@ -411,8 +411,50 @@ describe('the follower refuses by name what it cannot follow', () => {
 
   it('a dynamic import of a path it cannot read', () => {
     expect(
-      reach({ 't/a.test.ts': "const p = './h'; await import(p);" }).unresolved,
+      reach({ 't/a.test.ts': "let p = './h'; await import(p);" }).unresolved,
     ).toEqual(['t/a.test.ts: import(p) is not a literal path']);
+  });
+
+  it('names what it cannot follow in the order the file writes it (#762)', () => {
+    expect(
+      reach({
+        't/a.test.ts':
+          "const h = require('./h');\nawait import(where);\nconst g = require('./g');",
+      }).unresolved,
+    ).toEqual([
+      "t/a.test.ts: require('./h') loads a module the follower does not read",
+      't/a.test.ts: import(where) is not a literal path',
+      "t/a.test.ts: require('./g') loads a module the follower does not read",
+    ]);
+  });
+
+  it('a dynamic import of a file URL made at run time (#762)', () => {
+    expect(
+      reach({
+        't/a.test.ts':
+          "import { pathToFileURL } from 'node:url';\nawait import(pathToFileURL('./h.ts').href);",
+        't/h.ts': 'export const x = 1;',
+      }),
+    ).toEqual({
+      helpers: [],
+      imports: [],
+      unresolved: [
+        "t/a.test.ts: import(pathToFileURL('./h.ts').href) is not a literal path",
+      ],
+    });
+  });
+
+  it('follows a dynamic import of a const bound to a literal path (#762)', () => {
+    expect(
+      reach({
+        't/a.test.ts': "const p = './h.ts'; await import(p);",
+        't/h.ts': 'export const x = 1;',
+      }),
+    ).toEqual({
+      helpers: ['t/h.ts'],
+      imports: ['t/a.test.ts: ./h.ts'],
+      unresolved: [],
+    });
   });
 
   it('a require of a relative path', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { DAY_MS } from '../src/clock';
+import { DAY_MS } from '../src/clock.ts';
 import {
   addReached,
   checkAbsence,
@@ -10,8 +10,8 @@ import {
   SEQUENCE_REACHED,
   type SequenceReached,
   type Step,
-} from '../test/words-laws';
-import { minimumBreach } from '../../../tests/minimums';
+} from '../test/words-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
 
 /**
  * The word actions on random times, words and sequences (#28 AC5, AC8), at

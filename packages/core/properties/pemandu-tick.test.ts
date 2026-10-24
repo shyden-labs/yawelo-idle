@@ -6,9 +6,9 @@ import {
   checkNextPurchase,
   INTERVALS,
   type Case,
-} from '../test/pemandu-tick-laws';
-import { minimumBreach } from '../../../tests/minimums';
-import { DAY_MS } from '../src/clock';
+} from '../test/pemandu-tick-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
+import { DAY_MS } from '../src/clock.ts';
 
 /**
  * Pemandu's next purchase tick on random grids and games (#33 AC3), at the

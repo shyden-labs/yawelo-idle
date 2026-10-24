@@ -1,6 +1,6 @@
 import { afterEach, beforeEach } from 'vitest';
 import './setup-refusals.ts';
-import { cpuProblem } from './setup-rules';
+import { cpuProblem } from './setup-rules.ts';
 
 /**
  * The unit step's setup (#477): every refusal in setup-refusals.ts, and a

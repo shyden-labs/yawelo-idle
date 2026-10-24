@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { committableFiles } from '../unit/tracked-files';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { committableFiles } from '../unit/tracked-files.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The supply-chain checks whose population is every committable file: composite actions, workspaces and node_modules (#82, #332).

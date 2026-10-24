@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { runOf } from '../unit/workflow-steps';
+import { runOf } from '../unit/workflow-steps.ts';
 
 /**
  * build-and-test's default-branch step (#460 AC2), its shell run as Actions

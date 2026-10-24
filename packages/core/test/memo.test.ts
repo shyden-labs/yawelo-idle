@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Encounter } from '../src/course';
-import { Num } from '../src/num';
-import { understandingNow } from '../src/production';
-import { advance } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
+import { HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, Encounter } from '../src/course.ts';
+import { Num } from '../src/num.ts';
+import { understandingNow } from '../src/production.ts';
+import { advance } from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * A state's Understanding and its advance to a wall time are worked out once

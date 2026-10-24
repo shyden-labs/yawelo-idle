@@ -2,17 +2,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { isIgnored } from './tracked-files';
+import { isIgnored } from './tracked-files.ts';
 import {
   readDeployConfig,
   WRANGLER_CONFIGS,
   type DeployConfig,
-} from './wrangler-configs';
-import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { DEV_HOSTS } from '../../apps/dev-hosts/hosts';
-import { HOLDING_HOST } from '../../apps/site/worker/routes';
+} from './wrangler-configs.ts';
+import { runOf } from './workflow-steps.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { DEV_HOSTS } from '../../apps/dev-hosts/hosts.ts';
+import { HOLDING_HOST } from '../../apps/site/worker/routes.ts';
 
 /**
  * The dev deploy configs (three Workers and the Pages hostname adapter,

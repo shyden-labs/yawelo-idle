@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 import {
   readGolden,
   type GoldenReplay,
-} from '../../packages/core/fixtures/golden-log';
+} from '../../packages/core/fixtures/golden-log.ts';
 
 /**
  * The golden event log replays to the same state hash in every browser

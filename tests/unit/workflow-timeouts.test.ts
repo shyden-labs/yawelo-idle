@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { MAX_TIMEOUT_MINUTES, scanTimeouts } from './workflow-timeouts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { MAX_TIMEOUT_MINUTES, scanTimeouts } from './workflow-timeouts.ts';
 
 /**
  * Every job stops within minutes when a step hangs (#44). GitHub's default is

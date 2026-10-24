@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The webhook verifier compares digests in constant time (#341, website spec

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
 import {
   BLOCKING_ROBOTS_TXT,
   NO_INDEX,
@@ -11,7 +11,7 @@ import {
   isProdHost,
   markApiRequest,
   type Serve,
-} from '../src/index';
+} from '../src/index.ts';
 
 const PASSWORD = 'correct horse';
 

@@ -5,11 +5,11 @@ import {
   FLOORS_MODULE,
   TYPESCRIPT_FILES,
   readFloorCaller,
-} from '../../scripts/record-floors';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { codeWithoutLiterals } from '../unit/source-text';
-import { committableFiles } from '../unit/tracked-files';
+} from '../../scripts/record-floors.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The floor recorder's reading of every TypeScript file git has (#448).

@@ -1,10 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { grepLines } from '../unit/grep';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { grepLines } from '../unit/grep.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * grepLines (#491) against git grep itself, on every file git has: the unit

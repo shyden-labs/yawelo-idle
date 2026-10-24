@@ -1,14 +1,14 @@
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
-} from '../packages/core/fixtures/synthetic-course';
+} from '../packages/core/fixtures/synthetic-course.ts';
 import {
   CALIBRATE_DEFAULTS,
   calibrateGoals,
   persona,
   runPersona,
   type Measure,
-} from '../packages/bots/src/index';
+} from '../packages/bots/src/index.ts';
 
 /**
  * The calibration itself, bundled by `scripts/pacing-calibrate.ts` with

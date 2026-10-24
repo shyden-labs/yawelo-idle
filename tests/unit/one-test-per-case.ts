@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
+import { lineOf } from './line-of.ts';
 
 /** A loop inside one test that asserts, or changes page state, on each pass. */
 export interface LoopedCase {

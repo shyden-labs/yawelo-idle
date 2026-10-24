@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { BALANCE, type Rank } from '../src/balance';
-import { DAY_MS, HOUR_MS, bucketStart, simMs, wallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { encounterOutput } from '../src/encounters';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { BALANCE, type Rank } from '../src/balance.ts';
+import { DAY_MS, HOUR_MS, bucketStart, simMs, wallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { encounterOutput } from '../src/encounters.ts';
 import {
   insightFor,
   newWordMemory,
@@ -13,14 +13,14 @@ import {
   reviewQueue,
   wordRetrievability,
   type WordMemory,
-} from '../src/memory';
-import { Num } from '../src/num';
+} from '../src/memory.ts';
+import { Num } from '../src/num.ts';
 import {
   producedBetween,
   rateAt,
   understandingNow,
   wordMultiplier,
-} from '../src/production';
+} from '../src/production.ts';
 import {
   advance,
   answerPractice,
@@ -28,10 +28,10 @@ import {
   buyEncounter,
   integrate,
   pickUpWord,
-} from '../src/sim';
-import { view } from '../src/view';
-import { pickedWord } from '../src/state';
-import { pickUpCost, wordBonus } from '../src/words';
+} from '../src/sim.ts';
+import { view } from '../src/view.ts';
+import { pickedWord } from '../src/state.ts';
+import { pickUpCost, wordBonus } from '../src/words.ts';
 import {
   tea,
   bus,
@@ -54,7 +54,7 @@ import {
   checkPractice,
   checkSequence,
   type Step,
-} from './words-laws';
+} from './words-laws.ts';
 
 /**
  * Words, ranks and FSRS review in the game (#28 AC1, AC2, AC4 to AC9).

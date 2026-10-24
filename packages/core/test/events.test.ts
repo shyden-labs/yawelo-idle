@@ -4,7 +4,7 @@ import {
   parseEvent,
   PROMPT_TYPES,
   type EventError,
-} from '../src/events';
+} from '../src/events.ts';
 import {
   checkJsonRoundTrip,
   checkNeverThrows,
@@ -16,7 +16,7 @@ import {
   INTEGER_CASES,
   TYPES,
   type Kind,
-} from './events-laws';
+} from './events-laws.ts';
 
 /**
  * The event union and its validator (#34 AC1, design §4). Every field case

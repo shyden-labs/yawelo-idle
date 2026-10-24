@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { RECORD_JOB_ENV } from '../../scripts/record-floors';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { RECORD_JOB_ENV } from '../../scripts/record-floors.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 import {
   envSites,
   jobIn,
@@ -10,8 +10,8 @@ import {
   workflowFiles,
   type WorkflowJob,
   type WorkflowStep,
-} from './workflow-file';
-import { runOf } from './workflow-steps';
+} from './workflow-file.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The record-floors workflow (#547; global rule 2026-10-09: "Floors are

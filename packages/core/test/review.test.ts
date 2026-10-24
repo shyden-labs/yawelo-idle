@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { againstControl, searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { againstControl, searched } from '../../../tests/searched.ts';
 import { fsrs, generatorParameters, Rating, State } from 'ts-fsrs';
-import type { Rank } from '../src/balance';
-import { DAY_MS, wallMs } from '../src/clock';
+import type { Rank } from '../src/balance.ts';
+import { DAY_MS, wallMs } from '../src/clock.ts';
 import {
   insightFor,
   isDue,
@@ -16,8 +16,8 @@ import {
   wordRetrievability,
   type MemoryCard,
   type WordMemory,
-} from '../src/memory';
-import { checkHistory, T0, type ReviewStep } from './review-laws';
+} from '../src/memory.ts';
+import { checkHistory, T0, type ReviewStep } from './review-laws.ts';
 
 /**
  * Ranks, FSRS reviews, the review queue and Insight (#28 AC5, AC6, AC7).

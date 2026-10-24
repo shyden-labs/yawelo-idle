@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { grepLines } from './grep';
-import { LINE_HOME, lineOf, lineReadersIn } from './line-of';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { grepLines } from './grep.ts';
+import { LINE_HOME, lineOf, lineReadersIn } from './line-of.ts';
 
 /**
  * Guards name the line an editor, `git grep -n` and GitHub show (#417).

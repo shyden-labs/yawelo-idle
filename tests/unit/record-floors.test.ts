@@ -25,10 +25,10 @@ import {
   vitestListed,
   writeFloors,
   type Suite,
-} from '../../scripts/record-floors';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { runOf } from './workflow-steps';
+} from '../../scripts/record-floors.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The floor recorder (#361): raises recorded figures, never lowers one,

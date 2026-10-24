@@ -14,16 +14,16 @@
  * refuses every delivery.
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
-import { Roadmap, type RoadmapEnv } from './roadmap';
+import { Roadmap, type RoadmapEnv } from './roadmap.ts';
 import {
   HOOK_PATH,
   isGamePath,
   isRoadmapPath,
   ROADMAP_PATHS,
   showsHolding,
-} from './routes';
-import { classifyEvent, verifySignature } from './webhook';
-import { eventWitness } from './witness';
+} from './routes.ts';
+import { classifyEvent, verifySignature } from './webhook.ts';
+import { eventWitness } from './witness.ts';
 
 export { Roadmap };
 

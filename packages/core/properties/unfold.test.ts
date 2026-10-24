@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { DAY_MS } from '../src/clock';
-import { UNFOLD_FLAGS, type UnfoldFlag } from '../src/unfold';
-import { checkWalk, type Step } from '../test/unfold-laws';
-import { minimumBreach } from '../../../tests/minimums';
+import { DAY_MS } from '../src/clock.ts';
+import { UNFOLD_FLAGS, type UnfoldFlag } from '../src/unfold.ts';
+import { checkWalk, type Step } from '../test/unfold-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
 
 /**
  * No flag ever turns off, over random walks (#31 AC6), at the full

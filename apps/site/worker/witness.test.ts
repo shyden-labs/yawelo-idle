@@ -9,7 +9,7 @@ import {
   type Owed,
   type Stamps,
   type Witness,
-} from './witness';
+} from './witness.ts';
 
 /**
  * What a webhook says changed, and whether a board read has caught up with it

@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fc from 'fast-check';
-import type { NumTuple } from '../src/num';
+import type { NumTuple } from '../src/num.ts';
 import {
   checkCmp,
   checkDiv,
@@ -9,7 +9,7 @@ import {
   checkPow,
   checkRoundTrip,
   OPS,
-} from '../test/num-laws';
+} from '../test/num-laws.ts';
 
 /**
  * Num's properties on random tuples (#26 AC4), at their full counts (#543).

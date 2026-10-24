@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   configSettings,
   excludesFileOf,
   ignoredBy,
   list,
   pathspecMatches,
+  readerOf,
   refuseGitEnvironment,
   type ConfigFile,
   type Settings,
   type Tree,
   type TreeEntry,
-} from './tracked-files';
+} from './tracked-files.ts';
 
 /**
  * The guards' file list, worked out in-process (#491): git's index for the
@@ -674,5 +678,21 @@ describe('refuseGitEnvironment', () => {
         GIT_CONFIG_COUNT: '0',
       });
     }).not.toThrow();
+  });
+});
+
+describe('readerOf (#762)', () => {
+  it('reads a path the set holds, and no other, even one on disk', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'reader-of-'));
+    try {
+      const held = join(dir, 'held.ts');
+      const other = join(dir, 'other.ts');
+      writeFileSync(held, 'held');
+      writeFileSync(other, 'other');
+      const read = readerOf(new Set([held]));
+      expect([read(held), read(other)]).toEqual(['held', undefined]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

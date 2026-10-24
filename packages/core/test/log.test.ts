@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { HOUR_MS, wallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import type { GameEvent } from '../src/events';
-import { apply, replay } from '../src/log';
-import { Num } from '../src/num';
-import { sailPreview } from '../src/sail';
-import { advance, listen } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { offlineCapMs } from '../src/upgrades';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { HOUR_MS, wallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import type { GameEvent } from '../src/events.ts';
+import { apply, replay } from '../src/log.ts';
+import { Num } from '../src/num.ts';
+import { sailPreview } from '../src/sail.ts';
+import { advance, listen } from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { offlineCapMs } from '../src/upgrades.ts';
 import {
   START,
   MINUTE_MS,
@@ -23,7 +23,7 @@ import {
   TYPES,
   checkApply,
   checkCommute,
-} from './log-laws';
+} from './log-laws.ts';
 
 /**
  * `apply` and `replay` (#34 AC2, AC3, AC6; design §4, §7): the event log is

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
 import {
   buys,
   fresh,
@@ -9,7 +9,7 @@ import {
   play,
   shopAfter,
   withWords,
-} from '../test/open';
+} from '../test/open.ts';
 
 /**
  * The player's buying, at a fortune of 1e7 Understanding: about 220

@@ -1,6 +1,11 @@
 import { expect } from 'vitest';
-import { wallMs, type WallMs } from '../src/clock';
-import { newWordMemory, RANKS, rankForStability, review } from '../src/memory';
+import { wallMs, type WallMs } from '../src/clock.ts';
+import {
+  newWordMemory,
+  RANKS,
+  rankForStability,
+  review,
+} from '../src/memory.ts';
 
 /**
  * What a review history must satisfy at every step (#28 AC5). The unit suite

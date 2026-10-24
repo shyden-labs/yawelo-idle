@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'jsonc-parser';
-import { floorBreach } from '../floors';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * Every tsconfig the typecheck reads sets `erasableSyntaxOnly` (#653), so

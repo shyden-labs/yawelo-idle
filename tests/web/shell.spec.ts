@@ -1,7 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The built game shell in each engine (#123 AC3, AC5). Every collector here

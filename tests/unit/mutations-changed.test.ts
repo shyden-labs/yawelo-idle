@@ -14,9 +14,9 @@ import {
   unnamedData,
   unprovedHelpers,
   unprovedTests,
-} from '../../scripts/mutations-changed';
-import type { MutationFile } from '../../scripts/mutation-file';
-import { againstControl } from '../searched';
+} from '../../scripts/mutations-changed.ts';
+import type { MutationFile } from '../../scripts/mutation-file.ts';
+import { againstControl } from '../searched.ts';
 
 /**
  * Which mutation files a pull request adds or changes (#649, spec §7), read

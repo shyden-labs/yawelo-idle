@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Decimal } from 'decimal.js';
-import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math';
+import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math.ts';
 import {
   checkPow,
   checkUnary,
@@ -9,7 +9,7 @@ import {
   ulps,
   UNARY,
   type Unary,
-} from './det-math-laws';
+} from './det-math-laws.ts';
 
 /**
  * det-math against a high-precision reference (M1 design §2.1, #26 AC2): every

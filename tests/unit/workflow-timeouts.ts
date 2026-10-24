@@ -1,5 +1,5 @@
 import { parse } from 'yaml';
-import { isRecord, type Finding } from './workflow-secrets';
+import { isRecord, type Finding } from './workflow-secrets.ts';
 
 /**
  * Every job stops within minutes when a step hangs (#44).

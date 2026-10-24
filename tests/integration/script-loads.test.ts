@@ -2,8 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * Every script with an `import.meta.main` entry loads under Node's own
@@ -32,6 +32,7 @@ const SCRIPTS = [
   'scripts/board-progress.ts',
   'scripts/board-setup.ts',
   'scripts/ci-scope.ts',
+  'scripts/coverage-same-tests.ts',
   'scripts/coverage.ts',
   'scripts/d1-binding.ts',
   'scripts/dev-secrets.ts',
