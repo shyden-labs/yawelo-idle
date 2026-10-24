@@ -129,11 +129,13 @@ export const readFloorsDir = (dir: string): Record<string, number> => {
 /**
  * Write each guard's file whose text would change, in `floorsText`'s form,
  * and nothing else; returns the files written, by name. A ticket that moves
- * one guard's floors then changes one file.
+ * one guard's floors then changes one file. `write` is the fetch's writer,
+ * which a test fails part way (#747).
  */
 export const writeFloors = (
   dir: string,
   next: Readonly<Record<string, number>>,
+  write: (file: string, text: string) => void = writeFileSync,
 ): string[] => {
   const byGuard = new Map<string, Record<string, number>>();
   for (const [id, figure] of Object.entries(next)) {
@@ -148,7 +150,7 @@ export const writeFloors = (
     const file = join(dir, name);
     const text = floorsText(floors);
     if (existsSync(file) && readFileSync(file, 'utf8') === text) continue;
-    writeFileSync(file, text);
+    write(file, text);
     written.push(name);
   }
   return written;

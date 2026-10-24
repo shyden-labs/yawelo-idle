@@ -65,11 +65,12 @@ export default mutationFile({
     {
       name: 'token-held',
       file: '.github/workflows/record-floors.yml',
-      anchor: '        run: scripts/fail-on-warnings.sh npm ci\n',
+      anchor:
+        '        run: scripts/fail-on-warnings.sh npm ci\n      - name: Record the floors\n',
       replacement:
-        '        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: scripts/fail-on-warnings.sh npm ci\n',
+        '        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: scripts/fail-on-warnings.sh npm ci\n      - name: Record the floors\n',
       red: {
-        [`${F} pushes nothing: no step runs git push or holds a token`]:
+        [`${F} pushes nothing: no step of either job runs git push or holds a token`]:
           'to deeply equal',
       },
     },
@@ -82,8 +83,8 @@ export default mutationFile({
       red: {
         // The liveness check, first in that test, no longer finds the
         // recorder's command as written.
-        [`${F} pushes nothing: no step runs git push or holds a token`]:
-          'to include',
+        [`${F} pushes nothing: no step of either job runs git push or holds a token`]:
+          'to deeply equal',
         [`${F} records every suite with the switch set to the workflow’s name`]:
           'to be',
         [`${RECORDER} › the recorder over this repository > runs from no CI workflow step but the record-floors workflow’s (#547)`]:
@@ -104,10 +105,13 @@ export default mutationFile({
     {
       name: 'checkout-develop',
       file: '.github/workflows/record-floors.yml',
-      anchor: '          ref: ${{ inputs.sha }}\n',
-      replacement: '          ref: ${{ github.sha }}\n',
+      anchor:
+        '          ref: ${{ inputs.sha }}\n          # The commit and its parent',
+      replacement:
+        '          ref: ${{ github.sha }}\n          # The commit and its parent',
       red: {
-        [`${F} checks out exactly the SHA it was given`]: 'to be',
+        [`${F} checks out exactly the SHA it was given, in each job`]:
+          'to deeply equal',
       },
     },
     {
@@ -123,8 +127,10 @@ export default mutationFile({
     {
       name: 'artifact-named-by-develop',
       file: '.github/workflows/record-floors.yml',
-      anchor: '          name: floors-${{ inputs.sha }}\n',
-      replacement: '          name: floors-${{ github.sha }}\n',
+      anchor:
+        '          name: floors-${{ inputs.sha }}\n          path: tests/floors/\n          if-no-files-found: error\n',
+      replacement:
+        '          name: floors-${{ github.sha }}\n          path: tests/floors/\n          if-no-files-found: error\n',
       red: {
         [`${F} uploads the floors directory named by the commit, after recording`]:
           'to deeply equal',
@@ -180,7 +186,7 @@ export default mutationFile({
       replacement:
         '          path: tests/floors/\n          if-no-files-found: error\n      - name: Planted\n        run: echo planted\n',
       red: {
-        [`${F} pushes nothing: no step runs git push or holds a token`]:
+        [`${F} pushes nothing: no step of either job runs git push or holds a token`]:
           'to be undefined',
         [`${RECORDER} › the recorder over this repository > runs from no CI workflow step but the record-floors workflow’s (#547)`]:
           'to be undefined',
