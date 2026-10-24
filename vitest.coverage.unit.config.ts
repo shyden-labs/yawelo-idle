@@ -15,6 +15,9 @@ export default {
     setupFiles: ['tests/unit/setup-refusals.ts'],
     testTimeout: 0,
     hookTimeout: 0,
+    // Node's own loader, as the scripts the tests start run (#762): test
+    // and child-process coverage then land on one map.
+    experimental: { viteModuleRunner: false },
     coverage: { ...COVERAGE, reportsDirectory: 'coverage/unit' },
   },
 } satisfies ViteUserConfig;

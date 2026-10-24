@@ -8,8 +8,8 @@ import {
   bindDeployConfig,
   databaseId,
   withDatabaseId,
-} from '../../scripts/d1-binding';
-import type { Wrangler } from '../../scripts/ensure-d1';
+} from '../../scripts/d1-binding.ts';
+import type { Wrangler } from '../../scripts/ensure-d1.ts';
 
 /**
  * The sync Worker's deploy binds its D1 database by id, resolved by name at

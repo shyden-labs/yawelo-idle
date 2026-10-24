@@ -1,6 +1,6 @@
 import { posix } from 'node:path';
 import ts from 'typescript';
-import { lineOf } from './line-of';
+import { lineOf } from './line-of.ts';
 
 /**
  * The value-import graph of packages/core/src, which must stay acyclic (#92).

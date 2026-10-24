@@ -9,14 +9,14 @@ import {
   parseItems,
   progress,
   REPO_ISSUES_QUERY,
-} from '../../packages/progress/src/index';
+} from '../../packages/progress/src/index.ts';
 import {
   boardPages,
   FIXTURE_BOARD_ID,
   FIXTURE_REPO,
   FIXTURE_TITLE,
   repoPages,
-} from '../../packages/progress/test/board-fixture';
+} from '../../packages/progress/test/board-fixture.ts';
 
 /**
  * scripts/board-progress.ts is a thin wrapper (#340): it reads the board

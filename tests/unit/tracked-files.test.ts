@@ -10,7 +10,7 @@ import {
   type Settings,
   type Tree,
   type TreeEntry,
-} from './tracked-files';
+} from './tracked-files.ts';
 
 /**
  * The guards' file list, worked out in-process (#491): git's index for the

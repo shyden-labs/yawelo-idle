@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { scanCollection } from '../unit/collection-calls';
-import { committableFiles } from '../unit/tracked-files';
-import { callsInTree } from '../unit/calls-in-tree';
-import { helperModules } from '../unit/helper-modules';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { scanCollection } from '../unit/collection-calls.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
+import { callsInTree } from '../unit/calls-in-tree.ts';
+import { helperModules } from '../unit/helper-modules.ts';
 
 /**
  * The collection-calls guard over every committable test file (#97, #356),

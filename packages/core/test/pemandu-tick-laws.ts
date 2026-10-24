@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { firstHolding, nextPurchaseTick } from '../src/automation';
+import { firstHolding, nextPurchaseTick } from '../src/automation.ts';
 import {
   HOUR_MS,
   nextGridTick,
@@ -7,14 +7,14 @@ import {
   wallMs,
   type SimMs,
   type WallMs,
-} from '../src/clock';
-import type { Course, CultureCard, Region } from '../src/course';
-import { newWordMemory, review, type WordMemory } from '../src/memory';
-import { Num } from '../src/num';
-import { rateAt, segments, understandingNow } from '../src/production';
-import { createStreams } from '../src/rng';
-import type { GameState } from '../src/state';
-import { encounterPrice } from '../src/upgrades';
+} from '../src/clock.ts';
+import type { Course, CultureCard, Region } from '../src/course.ts';
+import { newWordMemory, review, type WordMemory } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import { rateAt, segments, understandingNow } from '../src/production.ts';
+import { createStreams } from '../src/rng.ts';
+import type { GameState } from '../src/state.ts';
+import { encounterPrice } from '../src/upgrades.ts';
 
 /**
  * Pemandu's next purchase tick (#33 AC3): the shop courses, the games the

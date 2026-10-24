@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { changedHelpers, RECORDED_DIRS } from '../../scripts/mutations-changed';
+import {
+  changedHelpers,
+  RECORDED_DIRS,
+} from '../../scripts/mutations-changed.ts';
 
 /**
  * The folders the mutations judge lists apart as counts CI writes (Shyden,

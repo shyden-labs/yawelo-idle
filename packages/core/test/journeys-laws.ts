@@ -1,10 +1,10 @@
 import { expect } from 'vitest';
-import { DAY_MS, wallMs, type WallMs } from '../src/clock';
-import type { Course, CultureCard, Encounter } from '../src/course';
-import { journeyStatus, startJourney } from '../src/journeys';
-import { understandingNow } from '../src/production';
-import { integrate, type Result } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
+import { DAY_MS, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, CultureCard, Encounter } from '../src/course.ts';
+import { journeyStatus, startJourney } from '../src/journeys.ts';
+import { understandingNow } from '../src/production.ts';
+import { integrate, type Result } from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * The Journeys course and games (#30), and what a split of time with

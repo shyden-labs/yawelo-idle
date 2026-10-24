@@ -7,7 +7,7 @@
  * body field by field and returns the first defect as a typed `EventError`,
  * never a throw, so M5 can report exactly what a client sent.
  */
-import type { WallMs } from './clock';
+import type { WallMs } from './clock.ts';
 
 /** Parent §3.4's prompt types: multiple choice, typed answer, sentence tiles. */
 export const PROMPT_TYPES = ['choice', 'typed', 'tiles'] as const;

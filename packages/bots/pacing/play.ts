@@ -2,8 +2,8 @@ import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
 } from '@yawelo-idle/core/fixtures/synthetic-course';
-import { persona } from '../src/personas';
-import { runPersona } from '../src/run';
+import { persona } from '../src/personas.ts';
+import { runPersona } from '../src/run.ts';
 
 /**
  * One persona's run in its own process, so the pacing suite plays every

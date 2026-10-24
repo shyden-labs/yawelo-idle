@@ -1,13 +1,13 @@
-import { DAY_MS, HOUR_MS, wallMs } from '../src/clock';
-import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math';
+import { DAY_MS, HOUR_MS, wallMs } from '../src/clock.ts';
+import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math.ts';
 import {
   meanRetrievability,
   newWordMemory,
   RANKS,
   review,
   type WordMemory,
-} from '../src/memory';
-import { nextU32, seedRng, type RngState } from '../src/rng';
+} from '../src/memory.ts';
+import { nextU32, seedRng, type RngState } from '../src/rng.ts';
 
 /**
  * Golden vectors (#26 AC10, #28): 100,000 per function, generated from a

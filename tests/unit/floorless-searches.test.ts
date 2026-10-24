@@ -5,7 +5,7 @@ import {
   callOpening,
   testsWritten,
   zerosWritten,
-} from './absence-text';
+} from './absence-text.ts';
 import {
   burnDownFindings,
   scalarZerosIn,
@@ -14,12 +14,12 @@ import {
   type FiledSite,
   type Form,
   type SearchReading,
-} from './floorless-searches';
-import { UNPROVED } from './floorless-searches.burn-down';
-import { scopeKey, walkDisagreements } from './burn-down';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { codeWithoutLiterals } from './source-text';
+} from './floorless-searches.ts';
+import { UNPROVED } from './floorless-searches.burn-down.ts';
+import { scopeKey, walkDisagreements } from './burn-down.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { codeWithoutLiterals } from './source-text.ts';
 
 /**
  * The reader behind the floorless-searches meta-guard (#361), and the text

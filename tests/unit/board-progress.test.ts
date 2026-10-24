@@ -5,15 +5,15 @@ import {
   parseItems,
   progress,
   REPO_ISSUES_QUERY,
-} from '../../packages/progress/src/index';
+} from '../../packages/progress/src/index.ts';
 import {
   boardPages,
   FIXTURE_BOARD_ID,
   FIXTURE_REPO,
   FIXTURE_TITLE,
   repoPages,
-} from '../../packages/progress/test/board-fixture';
-import { boardProgress, type Gh } from '../../scripts/board-progress';
+} from '../../packages/progress/test/board-fixture.ts';
+import { boardProgress, type Gh } from '../../scripts/board-progress.ts';
 
 /**
  * scripts/board-progress.ts (#340), its work in-process with `gh` stood in:

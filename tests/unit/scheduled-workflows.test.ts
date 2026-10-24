@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
-import { floorBreach } from '../floors';
-import { againstTwin, searched } from '../searched';
-import { withoutYamlComments } from './source-text';
-import { SCHEDULED_ENVIRONMENTS, scanSchedule } from './scheduled-workflows';
+import { floorBreach } from '../floors.ts';
+import { againstTwin, searched } from '../searched.ts';
+import { withoutYamlComments } from './source-text.ts';
+import { SCHEDULED_ENVIRONMENTS, scanSchedule } from './scheduled-workflows.ts';
 
 /**
  * A scheduled workflow never reaches production (#460 AC3). The rule and

@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
+import { lineOf } from './line-of.ts';
 
 /**
  * Finds every git file walk in a TypeScript source and judges whether it sees

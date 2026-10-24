@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fc from 'fast-check';
-import { checkMeanBetween } from '../test/memory-laws';
+import { checkMeanBetween } from '../test/memory-laws.ts';
 
 /**
  * The mean retrievability on random windows (#28 AC3), at the full count

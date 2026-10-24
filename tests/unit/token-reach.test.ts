@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reachVerdict } from '../../scripts/token-reach';
+import { reachVerdict } from '../../scripts/token-reach.ts';
 
 /**
  * The dev deploy proves its Cloudflare token reaches the dev account and

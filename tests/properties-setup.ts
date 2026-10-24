@@ -1,5 +1,5 @@
 import fc from 'fast-check';
-import { chooseSeed, rememberSeed, SEED_ENV } from './properties-seed';
+import { chooseSeed, rememberSeed, SEED_ENV } from './properties-seed.ts';
 
 /**
  * Runs before each properties file (vitest.properties.config.ts): a fresh

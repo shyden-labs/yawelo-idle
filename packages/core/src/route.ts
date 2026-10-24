@@ -9,8 +9,8 @@
  * it. Any other number the course does not have means the state was played
  * on a different course, which is refused by name rather than guessed.
  */
-import type { Course, Destination, Region } from './course';
-import type { GameState } from './state';
+import type { Course, Destination, Region } from './course.ts';
+import type { GameState } from './state.ts';
 
 /** A destination and the region it lies in. */
 export interface Stop {

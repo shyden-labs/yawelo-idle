@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { syntheticCourse } from '../packages/core/fixtures/synthetic-course';
+import { syntheticCourse } from '../packages/core/fixtures/synthetic-course.ts';
 import {
   GOLDEN,
   GOLDEN_HEAVY_SLICES,
@@ -9,7 +9,7 @@ import {
   writeGolden,
   writeGoldenSlices,
   writeGoldenStarts,
-} from '../packages/core/fixtures/golden-log';
+} from '../packages/core/fixtures/golden-log.ts';
 
 /**
  * Writes the golden event log (#34, M1 design §7) to

@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { assess } from '../../scripts/minimums-method';
-import { floorBreach } from '../floors';
-import { readMinimums } from '../minimums';
-import { SEED_ENV } from '../properties-seed';
-import { searched } from '../searched';
-import { helperModules } from '../unit/helper-modules';
+import { assess } from '../../scripts/minimums-method.ts';
+import { floorBreach } from '../floors.ts';
+import { readMinimums } from '../minimums.ts';
+import { SEED_ENV } from '../properties-seed.ts';
+import { searched } from '../searched.ts';
+import { helperModules } from '../unit/helper-modules.ts';
 import {
   CHECK_HOME,
   checkReadingOf,
@@ -14,9 +14,9 @@ import {
   isPropertiesFile,
   SEED_HOME,
   seedReadingOf,
-} from '../unit/measured-minimums';
-import { codeWithoutLiterals } from '../unit/source-text';
-import { committableFiles } from '../unit/tracked-files';
+} from '../unit/measured-minimums.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The measured-minimums guard over the whole repository (#84, spec §5.8), in

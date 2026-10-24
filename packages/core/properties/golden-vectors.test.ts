@@ -4,7 +4,7 @@ import {
   FUNCTIONS,
   VECTORS_PER_FUNCTION,
   type GoldenFunction,
-} from '../test/golden-vectors';
+} from '../test/golden-vectors.ts';
 
 /**
  * The golden vectors' Node digests over all 100,000 vectors of each function

@@ -7,7 +7,7 @@ import {
   nextU32,
   seedRng,
   type RngState,
-} from '../src/rng';
+} from '../src/rng.ts';
 
 /**
  * What the seeded PRNG must satisfy at one input (M1 design §3, #26 AC6). The

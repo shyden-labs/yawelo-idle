@@ -9,8 +9,8 @@
  * Section 10 names no platform, only the browser (operator, 17:02 UTC, W9
  * amended). A change to any line is approved again before it ships.
  */
-import { line, t } from './copy-line';
-import { digits, duration, rankList, rankName, words } from './figures';
+import { line, t } from './copy-line.ts';
+import { digits, duration, rankList, rankName, words } from './figures.ts';
 
 export const COPY_EN = {
   devStrip: line(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { grepLines } from './grep';
+import { grepLines } from './grep.ts';
 
 /**
  * Lines holding a fixed string, found in-process as `git grep -n -F` finds

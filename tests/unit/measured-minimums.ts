@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
+import { lineOf } from './line-of.ts';
 
 /**
  * What the measured-minimums guard reads (#84, spec §5.8), from the parse

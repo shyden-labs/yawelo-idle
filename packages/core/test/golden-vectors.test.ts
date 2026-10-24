@@ -4,7 +4,7 @@ import {
   FUNCTIONS,
   VECTORS_PER_FUNCTION,
   type GoldenFunction,
-} from './golden-vectors';
+} from './golden-vectors.ts';
 
 /**
  * The golden vectors' Node digests over a prefix of each function (#26 AC10,

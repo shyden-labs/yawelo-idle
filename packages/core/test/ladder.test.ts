@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { BALANCE } from '../src/balance';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { BALANCE } from '../src/balance.ts';
 import {
   resolveCourse,
   type CourseData,
   type EncounterData,
   type RegionData,
-} from '../src/course';
+} from '../src/course.ts';
 
 /**
  * The Encounter ladder (#35 AC8): content places each Encounter on a tier,

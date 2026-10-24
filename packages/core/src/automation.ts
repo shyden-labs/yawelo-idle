@@ -9,10 +9,10 @@
  * Each tick buys one unit of the affordable Encounter that pays back
  * soonest: the lowest cost / Δrate, ties by id in code-unit order.
  */
-import { BALANCE } from './balance';
-import { nextGridTick, simMs, type SimMs } from './clock';
-import type { Course, Encounter } from './course';
-import { Num } from './num';
+import { BALANCE } from './balance.ts';
+import { nextGridTick, simMs, type SimMs } from './clock.ts';
+import type { Course, Encounter } from './course.ts';
+import { Num } from './num.ts';
 import {
   ownedCounts,
   rateGainAt,
@@ -20,14 +20,14 @@ import {
   segments,
   understandingAfter,
   understandingNow,
-} from './production';
-import { regionsReached, route } from './route';
-import type { GameState } from './state';
+} from './production.ts';
+import { regionsReached, route } from './route.ts';
+import type { GameState } from './state.ts';
 import {
   encounterCostFactor,
   encounterPriceAt,
   upgradeLevel,
-} from './upgrades';
+} from './upgrades.ts';
 
 /**
  * The route number of the destination Pemandu opens at, or `undefined` when

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Mutation, MutationFile } from '../../scripts/mutation-file';
+import type { Mutation, MutationFile } from '../../scripts/mutation-file.ts';
 import {
   runFile,
   runFiles,
@@ -8,9 +8,9 @@ import {
   type MutableSuite,
   type RunOutcome,
   type RunRequest,
-} from '../../scripts/mutate';
-import type { Written } from '../../scripts/mutate-reporter';
-import type { Observation } from '../../scripts/record-floors';
+} from '../../scripts/mutate.ts';
+import type { Written } from '../../scripts/mutate-reporter.ts';
+import type { Observation } from '../../scripts/record-floors.ts';
 
 /**
  * `runFile` (#527, spec §4): one mutation file from load to verdict, driven

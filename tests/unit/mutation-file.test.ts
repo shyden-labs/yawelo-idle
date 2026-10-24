@@ -5,10 +5,10 @@ import {
   mutationFileProblems,
   type Mutation,
   type MutationFile,
-} from '../../scripts/mutation-file';
-import { floorBreach } from '../floors';
-import { againstControl, searched } from '../searched';
-import { watched } from '../watched';
+} from '../../scripts/mutation-file.ts';
+import { floorBreach } from '../floors.ts';
+import { againstControl, searched } from '../searched.ts';
+import { watched } from '../watched.ts';
 
 /**
  * The tracked mutation file (#527, spec §3): one set of mutations proving the

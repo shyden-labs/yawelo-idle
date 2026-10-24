@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runOf } from './workflow-steps';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The guards that read a workflow step's `run:` (#360). YAML gives a value

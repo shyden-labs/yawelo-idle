@@ -6,8 +6,11 @@ import { readFileSync } from 'node:fs';
 // Node's module cache. The load is this file's, under #541's load limit.
 import 'typescript';
 import { describe, expect, it } from 'vitest';
-import { findFloorCallers, readFloorCaller } from '../../scripts/record-floors';
-import { againstTwin } from '../searched';
+import {
+  findFloorCallers,
+  readFloorCaller,
+} from '../../scripts/record-floors.ts';
+import { againstTwin } from '../searched.ts';
 
 /**
  * The floor recorder's reading of each file that calls `floorBreach` (#448),

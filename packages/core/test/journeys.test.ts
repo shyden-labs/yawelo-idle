@@ -1,22 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { JOURNEY_DURATION_IDS } from '../src/balance';
-import { heldCards } from '../src/cards';
-import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock';
-import type { Course, LexiconItem } from '../src/course';
-import { collectJourney, journeyStatus, startJourney } from '../src/journeys';
-import { Num } from '../src/num';
-import { rateAt, rateBreakdown, understandingNow } from '../src/production';
-import { createStreams, nextInt, type RngState } from '../src/rng';
-import { currentDestination } from '../src/route';
+import { JOURNEY_DURATION_IDS } from '../src/balance.ts';
+import { heldCards } from '../src/cards.ts';
+import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock.ts';
+import type { Course, LexiconItem } from '../src/course.ts';
+import {
+  collectJourney,
+  journeyStatus,
+  startJourney,
+} from '../src/journeys.ts';
+import { Num } from '../src/num.ts';
+import { rateAt, rateBreakdown, understandingNow } from '../src/production.ts';
+import { createStreams, nextInt, type RngState } from '../src/rng.ts';
+import { currentDestination } from '../src/route.ts';
 import {
   advance,
   integrate,
   pickUpWord,
   type Rejection,
   type Result,
-} from '../src/sim';
-import type { GameState } from '../src/state';
-import { pickUpPool } from '../src/words';
+} from '../src/sim.ts';
+import type { GameState } from '../src/state.ts';
+import { pickUpPool } from '../src/words.ts';
 import {
   checkJourneySplit,
   course,
@@ -30,7 +34,7 @@ import {
   START,
   tea,
   courseWith,
-} from './journeys-laws';
+} from './journeys-laws.ts';
 
 /**
  * Journeys (#30 AC1 to AC3, AC5 to AC7): slots, durations, the return, the

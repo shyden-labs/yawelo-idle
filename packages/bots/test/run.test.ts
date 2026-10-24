@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
 import {
   initialState,
   Num,
@@ -15,8 +15,8 @@ import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
 } from '@yawelo-idle/core/fixtures/synthetic-course';
-import type { QuickReturn, Watcher } from '../src/player';
-import { persona } from '../src/personas';
+import type { QuickReturn, Watcher } from '../src/player.ts';
+import { persona } from '../src/personas.ts';
 import {
   insaneValues,
   judgedValues,
@@ -24,9 +24,9 @@ import {
   runPersona,
   SailLog,
   type RunPlayer,
-} from '../src/run';
-import { DAY_MS, dayOpens, QUICK_RETURN_MS, WAKE_MS } from '../src/schedule';
-import { Streams } from '../src/streams';
+} from '../src/run.ts';
+import { DAY_MS, dayOpens, QUICK_RETURN_MS, WAKE_MS } from '../src/schedule.ts';
+import { Streams } from '../src/streams.ts';
 
 /** A run, measured (#35 AC4 (h), AC6). */
 

@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import Decimal from 'decimal.js';
 import { generatorParameters } from 'ts-fsrs';
-import { DAY_MS } from '../src/clock';
+import { DAY_MS } from '../src/clock.ts';
 import {
   DECAY,
   FACTOR,
   meanRetrievability,
   retrievability,
-} from '../src/memory';
-import { exactMean } from './fsrs-reference';
-import { checkMeanBetween } from './memory-laws';
-import { MEAN_R_REFERENCE } from './mean-r-reference';
+} from '../src/memory.ts';
+import { exactMean } from './fsrs-reference.ts';
+import { checkMeanBetween } from './memory-laws.ts';
+import { MEAN_R_REFERENCE } from './mean-r-reference.ts';
 
 /**
  * Memory maths (#28 AC3): FSRS-6 retrievability and its exact mean over a

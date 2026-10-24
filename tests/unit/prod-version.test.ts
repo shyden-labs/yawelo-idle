@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { versionFor } from '../../scripts/prod-version';
+import { versionFor } from '../../scripts/prod-version.ts';
 
 /**
  * Finding the production Worker version a rollback returns to (#621 AC6):

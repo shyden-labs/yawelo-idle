@@ -3,7 +3,7 @@ import {
   databaseNames,
   ensureDatabase,
   type Wrangler,
-} from '../../scripts/ensure-d1';
+} from '../../scripts/ensure-d1.ts';
 
 /**
  * The dev D1 database is created by the deploy pipeline, never by hand

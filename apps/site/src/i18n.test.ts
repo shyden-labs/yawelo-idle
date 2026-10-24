@@ -8,7 +8,7 @@ import {
   SITE,
   type Locale,
   type Page,
-} from './i18n';
+} from './i18n.ts';
 
 describe('the site’s languages and pages (#332 AC1)', () => {
   it('has English and Indonesian, and the three pages with addresses', () => {

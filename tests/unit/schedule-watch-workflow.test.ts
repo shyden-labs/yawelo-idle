@@ -6,8 +6,8 @@ import {
   type Workflow,
   type WorkflowJob,
   type WorkflowStep,
-} from './workflow-file';
-import { runOf } from './workflow-steps';
+} from './workflow-file.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The schedule watch's workflow (#710 AC3): a missed day of a scheduled

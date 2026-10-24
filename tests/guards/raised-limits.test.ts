@@ -1,16 +1,16 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import unit from '../../vitest.config';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { raisedLimitFiles, raisedLimitsIn } from '../unit/raised-limits';
-import { codeWithoutLiterals } from '../unit/source-text';
+import unit from '../../vitest.config.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { raisedLimitFiles, raisedLimitsIn } from '../unit/raised-limits.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
 import {
   NON_UNIT_VITEST_CONFIGS,
   PLAYWRIGHT_CONFIGS,
-} from '../unit/suite-configs';
-import { committableFiles } from '../unit/tracked-files';
+} from '../unit/suite-configs.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * No unit test file or unit config raises a limit (#477 AC3, AC4): every unit

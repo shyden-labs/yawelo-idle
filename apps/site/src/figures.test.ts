@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, RANKS } from '@yawelo-idle/core';
-import { CopyLine, line, t } from './copy-line';
+import { CopyLine, line, t } from './copy-line.ts';
 import {
   digits,
   duration,
@@ -8,7 +8,7 @@ import {
   rankName,
   valueAt,
   words,
-} from './figures';
+} from './figures.ts';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

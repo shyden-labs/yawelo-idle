@@ -1,5 +1,5 @@
 import { BALANCE, RANKS } from '@yawelo-idle/core';
-import type { Figure } from './copy-line';
+import type { Figure } from './copy-line.ts';
 
 /**
  * The site's figures, read from the game's own tables (#443), so the copy

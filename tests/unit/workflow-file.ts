@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
-import { runOf } from './workflow-steps';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * Reading a workflow file as parsed YAML for the workflow tests, in one home

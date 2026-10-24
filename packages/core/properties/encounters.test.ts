@@ -1,6 +1,9 @@
 import { describe, it } from 'vitest';
 import fc from 'fast-check';
-import { checkBulkIsSingles, checkClosedForm } from '../test/encounters-laws';
+import {
+  checkBulkIsSingles,
+  checkClosedForm,
+} from '../test/encounters-laws.ts';
 
 /**
  * Encounter costs on random purchases (#27 AC2), at their full counts

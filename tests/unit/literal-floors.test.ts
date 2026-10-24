@@ -1,7 +1,10 @@
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { scopeKey } from './burn-down';
-import { comparisonsWritten, literalArgumentsWritten } from './comparison-text';
+import { scopeKey } from './burn-down.ts';
+import {
+  comparisonsWritten,
+  literalArgumentsWritten,
+} from './comparison-text.ts';
 import {
   RECORDED_FROM,
   literalFloorFindings,
@@ -9,11 +12,11 @@ import {
   type FiledMinimum,
   type Minimum,
   type MinimumReading,
-} from './literal-floors';
-import { LITERAL_MINIMUMS } from './literal-floors.burn-down';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { codeWithoutLiterals } from './source-text';
+} from './literal-floors.ts';
+import { LITERAL_MINIMUMS } from './literal-floors.burn-down.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { codeWithoutLiterals } from './source-text.ts';
 
 /**
  * The reader behind the literal-floors meta-guard (#378), and the text

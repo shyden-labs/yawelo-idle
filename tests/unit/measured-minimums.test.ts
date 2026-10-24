@@ -7,7 +7,7 @@ import {
   isPropertiesFile,
   SEED_HOME,
   seedReadingOf,
-} from './measured-minimums';
+} from './measured-minimums.ts';
 
 /**
  * The measured-minimums guard's reader (#84, spec §5.8) on planted source:

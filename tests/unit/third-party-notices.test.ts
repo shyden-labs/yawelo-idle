@@ -5,7 +5,7 @@ import {
   pickFile,
   SHIPPED_WORKSPACES,
   type Lockfile,
-} from '../../scripts/third-party-notices';
+} from '../../scripts/third-party-notices.ts';
 
 /**
  * Third-party notices for everything a shipped build bundles (#26 AC11).

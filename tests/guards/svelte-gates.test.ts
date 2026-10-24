@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ESLint, type Linter } from 'eslint';
 import { parse } from 'jsonc-parser';
-import { floorBreach } from '../floors';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The Svelte gates (#123 AC2): a deliberate unused variable in a `.svelte`

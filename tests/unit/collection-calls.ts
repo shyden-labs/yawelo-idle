@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
+import { lineOf } from './line-of.ts';
 
 /**
  * Calls a test file evaluates while Vitest COLLECTS it (Refs #97).
@@ -213,10 +213,13 @@ const isFunctionValue = (
 const isWorkspace = (specifier: string): boolean =>
   specifier.startsWith('.') || specifier.startsWith('@yawelo-idle/');
 
+/** A relative specifier naming the clock module, with or without its file's extension (#762). */
+const CLOCK_MODULE = /\/clock(\.ts)?$/;
+
 const isClockBrand = (binding: Binding | undefined): boolean =>
   binding?.kind === 'import' &&
   CLOCK_BRANDS.has(binding.imported) &&
-  (binding.specifier.endsWith('/clock') || binding.specifier === CORE_PACKAGE);
+  (CLOCK_MODULE.test(binding.specifier) || binding.specifier === CORE_PACKAGE);
 
 /** The import a binding is, when it carries workspace code; else undefined. */
 const workspaceImport = (

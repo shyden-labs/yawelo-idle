@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import logs from '../../vitest.logs.config';
-import { runOf } from './workflow-steps';
+import logs from '../../vitest.logs.config.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The logs suite stays wired (#84, spec §5.12). Shyden, 2026-10-16:

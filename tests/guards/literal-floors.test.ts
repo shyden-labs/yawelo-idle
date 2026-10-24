@@ -1,22 +1,22 @@
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { walkDisagreements } from '../unit/burn-down';
+import { walkDisagreements } from '../unit/burn-down.ts';
 import {
   comparisonsWritten,
   literalArgumentsWritten,
-} from '../unit/comparison-text';
+} from '../unit/comparison-text.ts';
 import {
   literalFloorFindings,
   literalMinimumsIn,
   type FiledMinimum,
   type MinimumReading,
-} from '../unit/literal-floors';
-import { LITERAL_MINIMUMS } from '../unit/literal-floors.burn-down';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { codeWithoutLiterals } from '../unit/source-text';
-import { committableFiles } from '../unit/tracked-files';
+} from '../unit/literal-floors.ts';
+import { LITERAL_MINIMUMS } from '../unit/literal-floors.burn-down.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 const parse = (source: string, file: string) =>
   ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);

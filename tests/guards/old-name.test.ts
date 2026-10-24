@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { walkDisagreements } from '../unit/burn-down';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { walkDisagreements } from '../unit/burn-down.ts';
 import {
   ALLOWANCE_KEYS,
   grepCounts,
@@ -10,8 +10,8 @@ import {
   linesNaming,
   readText,
   walkTree,
-} from '../unit/old-name';
-import { committableFiles } from '../unit/tracked-files';
+} from '../unit/old-name.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The old-name walk over every file git has (#356), and the allowances it proves still cover an occurrence.

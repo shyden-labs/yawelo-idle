@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { classifyEvent } from '../../worker/webhook';
-import { roadmapWorld, type RoadmapWorld } from './harness';
+import { classifyEvent } from '../../worker/webhook.ts';
+import { roadmapWorld, type RoadmapWorld } from './harness.ts';
 
 /**
  * The webhook's door (#341, spec §5.2 item 2): a delivery is believed only

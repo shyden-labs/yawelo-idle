@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, expect, it } from 'vitest';
-import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
+import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness.ts';
 
 /**
  * A deploy whose `ROADMAP_APP_KEY` secret never arrived (#341): the App id is

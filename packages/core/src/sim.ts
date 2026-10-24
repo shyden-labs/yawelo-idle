@@ -15,17 +15,21 @@ import {
   bestPayback,
   nextPurchaseTick,
   type PurchaseTick,
-} from './automation';
-import { BALANCE } from './balance';
-import { heldCards } from './cards';
-import { simMs, wallMs, type WallMs } from './clock';
-import type { Course, Encounter } from './course';
-import { findGrammarNode, grammarNodeCost, ownedGrammarNodes } from './grammar';
-import { insightFor, isDue, newWordMemory, review } from './memory';
-import { Num, type NumTuple } from './num';
-import { understandingNow } from './production';
-import { currentDestination, regionsReached } from './route';
-import { ownedCount, pickedWord, type GameState } from './state';
+} from './automation.ts';
+import { BALANCE } from './balance.ts';
+import { heldCards } from './cards.ts';
+import { simMs, wallMs, type WallMs } from './clock.ts';
+import type { Course, Encounter } from './course.ts';
+import {
+  findGrammarNode,
+  grammarNodeCost,
+  ownedGrammarNodes,
+} from './grammar.ts';
+import { insightFor, isDue, newWordMemory, review } from './memory.ts';
+import { Num, type NumTuple } from './num.ts';
+import { understandingNow } from './production.ts';
+import { currentDestination, regionsReached } from './route.ts';
+import { ownedCount, pickedWord, type GameState } from './state.ts';
 import {
   encounterPrice,
   findUpgrade,
@@ -33,8 +37,8 @@ import {
   pemanduIntervalsMs,
   upgradeLevel,
   type UpgradeCurrency,
-} from './upgrades';
-import { pickUpCost, pickUpPool } from './words';
+} from './upgrades.ts';
+import { pickUpCost, pickUpPool } from './words.ts';
 
 export type Rejection =
   | { readonly kind: 'staleSeq'; readonly seq: number; readonly last: number }

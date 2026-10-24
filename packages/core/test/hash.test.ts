@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { syntheticCourse } from '../fixtures/synthetic-course';
-import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import type { GameEvent } from '../src/events';
-import { canonical, stateHash } from '../src/hash';
-import { replay } from '../src/log';
-import { newWordMemory } from '../src/memory';
-import { Num } from '../src/num';
-import { initialState, type GameState } from '../src/state';
-import { checkHashOfStateAlone } from './hash-laws';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { syntheticCourse } from '../fixtures/synthetic-course.ts';
+import { HOUR_MS, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import type { GameEvent } from '../src/events.ts';
+import { canonical, stateHash } from '../src/hash.ts';
+import { replay } from '../src/log.ts';
+import { newWordMemory } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { checkHashOfStateAlone } from './hash-laws.ts';
 
 /**
  * `stateHash` (#34 AC4, design §4): SHA-256 of a canonical serialisation

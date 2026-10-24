@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import root from '../../vitest.config';
-import guards from '../../vitest.guards.config';
-import { runOf } from './workflow-steps';
+import root from '../../vitest.config.ts';
+import guards from '../../vitest.guards.config.ts';
+import { runOf } from './workflow-steps.ts';
+import { suiteStep } from '../../scripts/coverage-same-tests.ts';
 
 /**
  * The guards suite stays wired (#475). Whole-repo guards, which read or parse
@@ -31,8 +32,8 @@ const runs = (command: string): number[] =>
 
 describe('the guards suite in CI (#475)', () => {
   it('runs as its own step, once, straight after the unit tests, on every change', () => {
-    const unit = runs('npm run test:unit');
-    const suite = runs('npm run test:guards');
+    const unit = runs(suiteStep('unit'));
+    const suite = runs(suiteStep('guards'));
     expect(unit, 'test:unit step').toHaveLength(1);
     expect(suite, 'test:guards step').toHaveLength(1);
     expect(suite[0]).toBe((unit[0] ?? -2) + 1);

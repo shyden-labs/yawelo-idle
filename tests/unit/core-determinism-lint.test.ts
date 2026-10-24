@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ESLint, type Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
-import { coreDeterminismBlock } from '../../eslint.core-determinism';
-import { againstTwin } from '../searched';
+import { coreDeterminismBlock } from '../../eslint.core-determinism.ts';
+import { againstTwin } from '../searched.ts';
 
 /**
  * The determinism ban on packages/core/src (M1 design §2.1 and §3, #26 AC3).

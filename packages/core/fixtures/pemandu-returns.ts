@@ -1,11 +1,11 @@
-import { DAY_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { newWordMemory, review, type WordMemory } from '../src/memory';
-import { Num } from '../src/num';
-import { route } from '../src/route';
-import { setAutomation } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { BOT_EPOCH_WALL_MS } from './synthetic-course';
+import { DAY_MS, simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { newWordMemory, review, type WordMemory } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import { route } from '../src/route.ts';
+import { setAutomation } from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { BOT_EPOCH_WALL_MS } from './synthetic-course.ts';
 
 /**
  * Two players about to return to Pemandu at 1 s on the synthetic course, for

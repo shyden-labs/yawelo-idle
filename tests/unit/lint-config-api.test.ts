@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { codeWithoutLiterals } from './source-text';
+import { codeWithoutLiterals } from './source-text.ts';
 
 /**
  * `eslint.config.js` uses no deprecated API (#624). `includeIgnoreFile` from

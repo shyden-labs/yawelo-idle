@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { assertNamedByRepo, REPO_ISSUES_QUERY } from '../src/index';
+import { assertNamedByRepo, REPO_ISSUES_QUERY } from '../src/index.ts';
 import {
   boardPages,
   FIXTURE_BOARD_ID,
   FIXTURE_REPO,
   repoPages,
-} from './board-fixture';
+} from './board-fixture.ts';
 
 /**
  * A partial board from GitHub must never pass as the whole board (#751).

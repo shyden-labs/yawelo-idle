@@ -5,10 +5,10 @@ import {
   runRefusal,
   suiteFiles,
   type Suite,
-} from '../../scripts/record-floors';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { committableFiles } from '../unit/tracked-files';
+} from '../../scripts/record-floors.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The floor recorder's suites, each listing its own files (#361), moved out

@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
-import { FAKE_BOARD_ID } from '../github-fake/contract';
+import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture.ts';
+import { FAKE_BOARD_ID } from '../github-fake/contract.ts';
 import {
   PASSWORD,
   roadmapWorld,
   WEBHOOK_SECRET,
   type RoadmapWorld,
-} from './harness';
+} from './harness.ts';
 
 /**
  * The site Worker's roadmap routes (#341): the webhook's door at

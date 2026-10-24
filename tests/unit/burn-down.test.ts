@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { minus } from './burn-down';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { minus } from './burn-down.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 describe('minus', () => {
   it('takes one occurrence per match, so two identical sites need two entries', () => {

@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import ignore, { type Ignore } from 'ignore';
 import { indexPaths } from './git-index.ts';
+import { asIgnoreLookup, wholeTreeRead } from './whole-tree-watch.ts';
 
 /**
  * The guards' one file walk (#385), worked out in-process (#491): git's index
@@ -607,6 +608,7 @@ export const committableFiles = (
   pathspecs: readonly string[] = [],
   cwd = '.',
 ): string[] => {
+  wholeTreeRead('committableFiles', cwd);
   const { tracked, tree, settings } = repository(cwd);
   const all = list(tracked, tree, settings).committable;
   return pathspecs.length === 0
@@ -622,12 +624,14 @@ export const committableFiles = (
  * --exclude-standard --directory` lists it. Tracked paths are never in it.
  */
 export const ignoredPaths = (root: string): Set<string> => {
+  wholeTreeRead('ignoredPaths', root);
   const { tracked, tree, settings } = repository(root);
   return new Set(list(tracked, tree, settings).ignored);
 };
 
 /** Whether git ignores `path` under `root`, as `git check-ignore` answers. */
-export const isIgnored = (path: string, root = '.'): boolean => {
-  const { tracked, tree, settings } = repository(root);
-  return ignoredBy(tracked, tree, settings)(path);
-};
+export const isIgnored = (path: string, root = '.'): boolean =>
+  asIgnoreLookup(() => {
+    const { tracked, tree, settings } = repository(root);
+    return ignoredBy(tracked, tree, settings)(path);
+  });

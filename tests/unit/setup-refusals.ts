@@ -3,14 +3,16 @@ import { createRequire, syncBuiltinESMExports } from 'node:module';
 import type net from 'node:net';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { beforeEach, vi } from 'vitest';
-import { asking, inIgnoreLookup } from './setup-refuse';
+import { beforeEach } from 'vitest';
+import { asking, refuseWholeTree } from './setup-refuse.ts';
+import { inIgnoreLookup, watchWholeTree } from './whole-tree-watch.ts';
 import {
   connectProblem,
   FLOORS_DIR,
   gitDirsOf,
   gitProblem,
   insideCheckout,
+  isModuleLoad,
   processProblem,
   READ_LIMIT,
   readProblem,
@@ -19,7 +21,7 @@ import {
   targetOf,
   WALK_LIMIT,
   walkProblem,
-} from './setup-rules';
+} from './setup-rules.ts';
 
 /**
  * The unit suite's refusals (#477): every unit test file runs with them, in
@@ -87,34 +89,7 @@ netModule.Socket.prototype.connect = function checked(
 // The named whole-tree readers (#530), wrapped wherever a test reaches them:
 // by a named or namespace import, or through a helper module. A fixture
 // outside the checkout passes through.
-vi.mock('./tracked-files', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./tracked-files')>();
-  const { asIgnoreLookup, refuseWholeTree } = await import('./setup-refuse');
-  return {
-    ...actual,
-    committableFiles: (pathspecs: readonly string[] = [], cwd = '.') => {
-      refuseWholeTree('committableFiles', cwd);
-      return actual.committableFiles(pathspecs, cwd);
-    },
-    ignoredPaths: (root: string) => {
-      refuseWholeTree('ignoredPaths', root);
-      return actual.ignoredPaths(root);
-    },
-    isIgnored: (path: string, root = '.') =>
-      asIgnoreLookup(() => actual.isIgnored(path, root)),
-  };
-});
-vi.mock('./old-name', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./old-name')>();
-  const { refuseWholeTree } = await import('./setup-refuse');
-  return {
-    ...actual,
-    walkTree: (root = '.') => {
-      refuseWholeTree('walkTree', root);
-      return actual.walkTree(root);
-    },
-  };
-});
+watchWholeTree(refuseWholeTree);
 
 // A walk of the checkout by any other route (#530): the directories each
 // test lists, refused at the third; a recursive listing or a glob at once.
@@ -209,15 +184,11 @@ const byRead: Check = (args) => {
     return gitProblem(asking(), relative(CHECKOUT, full));
   if (!insideCheckout(full, CHECKOUT) || insideCheckout(full, FLOORS))
     return null;
-  // Node's own module loader reads every file a require loads through this
-  // fs (wrangler pulls in undici's 20 and more at collection): a dependency
-  // being loaded, not files a test reads. Only under node_modules: the tree's
-  // own modules reach a unit test through Vitest, so a require of the tree's
-  // files counts like any other read.
-  if (
-    /(^|\/)node_modules\//.test(relative(CHECKOUT, full)) &&
-    (new Error().stack ?? '').includes('node:internal/modules/')
-  )
+  // Node's own module loader reads every module it loads through this fs
+  // (wrangler pulls in undici's 20 and more at collection, and the coverage
+  // runs load the tree's own code natively, #762): a module being loaded, not
+  // a file a test reads. A data file the loader reads still counts.
+  if (isModuleLoad(relative(CHECKOUT, full), new Error().stack ?? ''))
     return null;
   readFiles.add(full);
   return readFiles.size >= READ_LIMIT

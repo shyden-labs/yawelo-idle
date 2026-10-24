@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import root from '../../vitest.config';
-import integration from '../../vitest.integration.config';
-import { runOf } from './workflow-steps';
+import root from '../../vitest.config.ts';
+import integration from '../../vitest.integration.config.ts';
+import { runOf } from './workflow-steps.ts';
+import { suiteStep } from '../../scripts/coverage-same-tests.ts';
 
 /**
  * The integration suite stays wired (#490). A unit test starts no process
@@ -31,8 +32,8 @@ const runs = (command: string): number[] =>
 
 describe('the integration suite in CI (#490)', () => {
   it('runs as its own step, once, straight after the guards', () => {
-    const guards = runs('npm run test:guards');
-    const suite = runs('npm run test:integration');
+    const guards = runs(suiteStep('guards'));
+    const suite = runs(suiteStep('integration'));
     expect(guards, 'test:guards step').toHaveLength(1);
     expect(suite, 'test:integration step').toHaveLength(1);
     expect(suite[0]).toBe((guards[0] ?? -2) + 1);
@@ -40,7 +41,7 @@ describe('the integration suite in CI (#490)', () => {
   });
 
   it('skips a docs-only change, which no integration test reads', () => {
-    const [at] = runs('npm run test:integration');
+    const [at] = runs(suiteStep('integration'));
     expect(steps[at ?? -1]?.if).toBe(
       "${{ steps.classify.outputs.scope != 'docs-only' }}",
     );

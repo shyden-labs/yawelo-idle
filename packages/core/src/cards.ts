@@ -9,10 +9,10 @@
  * its cards arrived. Sums run in course order, so they add alike on every
  * engine.
  */
-import { BALANCE } from './balance';
-import type { Course, CultureCard, Encounter } from './course';
-import type { GameState } from './state';
-import { sharesTag } from './words';
+import { BALANCE } from './balance.ts';
+import type { Course, CultureCard, Encounter } from './course.ts';
+import type { GameState } from './state.ts';
+import { sharesTag } from './words.ts';
 
 const cardIndexes = new WeakMap<Course, ReadonlyMap<string, CultureCard>>();
 

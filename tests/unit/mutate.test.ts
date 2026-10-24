@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { Mutation } from '../../scripts/mutation-file';
-import { floorBreach } from '../floors';
-import { againstControl, searched } from '../searched';
-import { watched } from '../watched';
+import type { Mutation } from '../../scripts/mutation-file.ts';
+import { floorBreach } from '../floors.ts';
+import { againstControl, searched } from '../searched.ts';
+import { watched } from '../watched.ts';
 import {
   corpusPredictions,
   judge,
@@ -12,7 +12,7 @@ import {
   suiteOf,
   type CorpusPrediction,
   type Report,
-} from '../../scripts/mutate';
+} from '../../scripts/mutate.ts';
 
 /**
  * The mutation runner's pure parts (#527, spec §4–§6): what its reporter's

@@ -1,8 +1,14 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { DEV_MEDIA, MEDIA_ORIGIN, PROD_MEDIA, PROMO, mediaUrl } from './media';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import {
+  DEV_MEDIA,
+  MEDIA_ORIGIN,
+  PROD_MEDIA,
+  PROMO,
+  mediaUrl,
+} from './media.ts';
 
 /**
  * The promo media's one home (#713): the files are tracked in apps/site/media/

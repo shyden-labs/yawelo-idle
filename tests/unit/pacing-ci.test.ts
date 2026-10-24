@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import pacing from '../../vitest.pacing.config';
-import { runOf } from './workflow-steps';
+import pacing from '../../vitest.pacing.config.ts';
+import { runOf } from './workflow-steps.ts';
+import { suiteStep } from '../../scripts/coverage-same-tests.ts';
 
 /**
  * The pacing suite stays wired (#35 AC4, AC6; its time limit, AC7, is held in
@@ -31,15 +32,15 @@ const runs = (command: string): number[] =>
 
 describe('the pacing suite in CI (#35)', () => {
   it('runs as its own step, once, after the unit tests (AC4)', () => {
-    const unit = runs('npm run test:unit');
-    const suite = runs('npm run test:pacing');
+    const unit = runs(suiteStep('unit'));
+    const suite = runs(suiteStep('pacing'));
     expect(unit, 'test:unit step').toHaveLength(1);
     expect(suite, 'test:pacing step').toHaveLength(1);
     expect(suite[0]).toBeGreaterThan(unit[0] ?? Infinity);
   });
 
   it('uploads pacing-report.json after it, even when the suite fails, and fails when the file is missing (AC6)', () => {
-    const [suite] = runs('npm run test:pacing');
+    const [suite] = runs(suiteStep('pacing'));
     const uploads = steps.flatMap((s, i) =>
       (s.uses ?? '').startsWith('actions/upload-artifact@') &&
       s.with?.['path'] === 'pacing-report.json'
@@ -62,7 +63,7 @@ describe('the pacing suite in CI (#35)', () => {
   });
 
   it('uploads only when the pacing step ran, passed or failed, and skips when it never started (#353 AC1)', () => {
-    const [suite] = runs('npm run test:pacing');
+    const [suite] = runs(suiteStep('pacing'));
     expect(steps[suite ?? -1]?.id).toBe('pacing');
     const upload = steps.find((s) => s.name === 'Upload the pacing report');
     expect(upload?.if).toBe(

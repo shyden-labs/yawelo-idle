@@ -1,5 +1,5 @@
 import { parse } from 'yaml';
-import { isRecord } from './workflow-secrets';
+import { isRecord } from './workflow-secrets.ts';
 
 /**
  * Every job names a fixed runner image (#400).

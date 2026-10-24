@@ -6,6 +6,7 @@ import {
   metaRefusal,
   percent,
   renamesFrom,
+  suiteArgs,
 } from '../../scripts/coverage.ts';
 
 describe("a suite's coverage run never carries the record switch (#728)", () => {
@@ -17,6 +18,21 @@ describe("a suite's coverage run never carries the record switch (#728)", () => 
 
   it('drops a variable the environment holds unset', () => {
     expect(childEnv({ CI: 'true', GONE: undefined })).toEqual({ CI: 'true' });
+  });
+});
+
+describe("each suite's coverage run writes its test report (#762 AC3)", () => {
+  it('runs the suite under its coverage config with the JSON report under coverage/tests', () => {
+    expect(suiteArgs('pacing')).toEqual([
+      'vitest',
+      'run',
+      '-c',
+      'vitest.coverage.pacing.config.ts',
+      '--reporter=default',
+      '--reporter=github-actions',
+      '--reporter=json',
+      '--outputFile.json=coverage/tests/pacing.json',
+    ]);
   });
 });
 

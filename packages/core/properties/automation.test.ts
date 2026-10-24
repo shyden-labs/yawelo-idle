@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { checkTickByTick } from '../test/automation-laws';
-import { minimumBreach } from '../../../tests/minimums';
+import { checkTickByTick } from '../test/automation-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
 
 /**
  * Pemandu's purchases over random games (#33 AC2), at the count before

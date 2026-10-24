@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Num, type NumTuple } from '../src/num';
+import { Num, type NumTuple } from '../src/num.ts';
 import {
   canonical,
   checkCmp,
@@ -12,7 +12,7 @@ import {
   OPS,
   relativeError,
   sameTuple,
-} from './num-laws';
+} from './num-laws.ts';
 
 /**
  * Num: break_infinity values held to a canonical, serialisable form (#26 AC4).

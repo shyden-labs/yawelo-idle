@@ -106,8 +106,10 @@ describe('the pacing suite under coverage leaves out its time budgets (#728)', (
 
 describe('another suite under coverage keeps its own settings (#728)', () => {
   it('the guards suite keeps its files, setup and limits', () => {
-    const { coverage, ...rest } = coverageGuards.test;
+    // Native loading is the one other difference, held for every suite below (#762).
+    const { coverage, experimental, ...rest } = coverageGuards.test;
     expect(coverage.enabled).toBe(true);
+    expect(experimental).toEqual({ viteModuleRunner: false });
     expect(rest).toEqual(guards.test);
   });
 });
@@ -144,6 +146,17 @@ describe('every suite writes one report the measure step joins (#728)', () => {
         clean: true,
       });
     });
+});
+
+describe('every suite under coverage loads its files as Node does (#762)', () => {
+  for (const [name, config] of CONFIGS)
+    it(`${name}: Node's own loader, not Vite's module runner`, () => {
+      expect(config.test.experimental).toEqual({ viteModuleRunner: false });
+    });
+
+  it("while the plain unit step keeps Vite's module runner", () => {
+    expect(unit.test?.experimental).toBeUndefined();
+  });
 });
 
 describe('the provider excludes only what is not ours (#728)', () => {

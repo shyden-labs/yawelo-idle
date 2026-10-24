@@ -10,8 +10,8 @@
  * Translation and approved by the operator on 2026-10-16
  * (docs/translations/2026-10-16-holding-page-id.md).
  */
-import { COPY_EN } from './copy-en';
-import type { Locale, Page } from './i18n';
+import { COPY_EN } from './copy-en.ts';
+import type { Locale, Page } from './i18n.ts';
 
 export interface Copy {
   /** The language's own name, shown on the switcher that leads to it. */

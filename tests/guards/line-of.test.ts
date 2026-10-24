@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { LINE_HOME, lineReadersIn } from '../unit/line-of';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { LINE_HOME, lineReadersIn } from '../unit/line-of.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The line-of guard over every TypeScript file git has (#417 AC1).

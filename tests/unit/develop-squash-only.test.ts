@@ -3,7 +3,7 @@ import {
   developSquashOnly,
   type Get,
   type Reply,
-} from '../../scripts/develop-squash-only';
+} from '../../scripts/develop-squash-only.ts';
 
 /**
  * scripts/develop-squash-only.ts (#679): a pull request into `develop` can be

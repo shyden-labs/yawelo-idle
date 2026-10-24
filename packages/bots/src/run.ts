@@ -16,10 +16,10 @@ import {
   type View,
   view,
 } from '@yawelo-idle/core';
-import { Player, type QuickReturn, type Watcher } from './player';
-import type { Persona } from './personas';
-import { dayOpens, DAY_MS, QUICK_RETURN_MS, WAKE_MS } from './schedule';
-import { Streams } from './streams';
+import { Player, type QuickReturn, type Watcher } from './player.ts';
+import type { Persona } from './personas.ts';
+import { dayOpens, DAY_MS, QUICK_RETURN_MS, WAKE_MS } from './schedule.ts';
+import { Streams } from './streams.ts';
 
 export interface Sail {
   /** The route number sailed to. */

@@ -6,7 +6,7 @@
  * reports, so a re-tune can see its headroom before CI does.
  */
 
-import type { PersonaRun, Sail } from './run';
+import type { PersonaRun, Sail } from './run.ts';
 
 const MINUTES_PER_DAY = 1_440;
 

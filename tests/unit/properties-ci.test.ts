@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import root from '../../vitest.config';
-import properties from '../../vitest.properties.config';
-import { runOf } from './workflow-steps';
+import root from '../../vitest.config.ts';
+import properties from '../../vitest.properties.config.ts';
+import { runOf } from './workflow-steps.ts';
+import { suiteStep } from '../../scripts/coverage-same-tests.ts';
 
 /**
  * The properties suite stays wired (#543). Every fast-check property runs
@@ -31,8 +32,8 @@ const runs = (command: string): number[] =>
 
 describe('the properties suite in CI (#543)', () => {
   it('runs as its own step, once, after the unit tests, skipped only on a docs-only change', () => {
-    const unit = runs('npm run test:unit');
-    const suite = runs('npm run test:properties');
+    const unit = runs(suiteStep('unit'));
+    const suite = runs(suiteStep('properties'));
     expect(unit, 'test:unit step').toHaveLength(1);
     expect(suite, 'test:properties step').toHaveLength(1);
     expect(suite[0]).toBeGreaterThan(unit[0] ?? Infinity);

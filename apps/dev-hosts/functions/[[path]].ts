@@ -8,7 +8,7 @@
  * project's own pages.dev address and every preview deployment's, which are
  * public, so the Workers are reached only through the dev hostnames.
  */
-import { DEV_HOSTS } from '../hosts';
+import { DEV_HOSTS } from '../hosts.ts';
 
 export const onRequest: PagesFunction<Env> = ({ request, env }) => {
   const binding = DEV_HOSTS.get(new URL(request.url).hostname);

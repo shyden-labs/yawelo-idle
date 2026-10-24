@@ -10,8 +10,8 @@ import {
   progress,
   roadmapItems,
   type BoardItem,
-} from '../src/index';
-import { boardPages, FIXTURE_REPO, FIXTURE_TITLE } from './board-fixture';
+} from '../src/index.ts';
+import { boardPages, FIXTURE_REPO, FIXTURE_TITLE } from './board-fixture.ts';
 
 /**
  * Progress from the board, never from feel: every session close-out states

@@ -1,17 +1,17 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import type { Gh } from '../../scripts/board-progress';
+import type { Gh } from '../../scripts/board-progress.ts';
 import {
   LIMIT_HOURS,
   WATCHED,
   issueTitle,
   scheduleWatch,
   workflowJudgement,
-} from '../../scripts/schedule-watch';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { isRecord } from './workflow-secrets';
+} from '../../scripts/schedule-watch.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { isRecord } from './workflow-secrets.ts';
 
 /**
  * The schedule watch (#710): every scheduled workflow ran on its schedule

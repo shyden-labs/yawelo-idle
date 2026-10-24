@@ -38,10 +38,10 @@ import {
   webJudgement,
   webProblems,
   type Probe,
-} from '../../scripts/verify-dev';
-import { CONTENT_SECURITY_POLICY } from '../../apps/web/worker/policy';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+} from '../../scripts/verify-dev.ts';
+import { CONTENT_SECURITY_POLICY } from '../../apps/web/worker/policy.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 // The first fetch in a process sets up Node's HTTP client: 20-38 ms of CPU,
 // measured for #553, which fell on whichever verifyDev test ran first. It

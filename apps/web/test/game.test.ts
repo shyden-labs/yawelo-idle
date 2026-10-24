@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { inlineTags, startTags } from '../../../tests/inline-tags';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { inlineTags, startTags } from '../../../tests/inline-tags.ts';
 
 /**
  * The dev game Worker, served by wrangler's test harness from the real

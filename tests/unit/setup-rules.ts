@@ -170,3 +170,19 @@ export const connectProblem = (
     target.path ?? `${target.host ?? 'localhost'}:${String(target.port)}`;
   return `${test}: a socket to ${where} leaves the test process, and a unit test reaches no service (global rule, 2026-10-08)`;
 };
+
+/** A frame of Node's own module loader, ESM or CommonJS. */
+const LOADER_FRAME = 'node:internal/modules/';
+/** A file Node's loader runs as code. */
+const CODE_FILE = /\.[cm]?[jt]s$/;
+
+/**
+ * Whether a read of `path` (relative to the checkout), made with `stack`
+ * above it, is Node's own loader loading a module rather than a file read
+ * (#762): any dependency under node_modules, and the tree's own code files,
+ * which the coverage runs load natively (no Vite). A data or text file the
+ * loader reads, and anything a test reads itself, is a read.
+ */
+export const isModuleLoad = (path: string, stack: string): boolean =>
+  stack.includes(LOADER_FRAME) &&
+  (/(^|\/)node_modules\//.test(path) || CODE_FILE.test(path));

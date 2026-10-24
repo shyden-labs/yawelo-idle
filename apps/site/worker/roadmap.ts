@@ -38,7 +38,7 @@ import {
   installationToken,
   readBoardPages,
   readRepoIssuePages,
-} from './github';
+} from './github.ts';
 import {
   account,
   numberOf,
@@ -46,7 +46,7 @@ import {
   type Owed,
   type Stamps,
   type Witness,
-} from './witness';
+} from './witness.ts';
 
 /**
  * A late webhook is believed for this long after the read that saw its

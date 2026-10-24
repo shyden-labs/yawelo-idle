@@ -22,10 +22,10 @@ import {
   scratchRef,
   writeFetched,
   type RecordRun,
-} from '../../scripts/fetch-floors';
-import { RECORD_FILE } from '../../scripts/coverage';
-import { floorsText } from '../../scripts/record-floors';
-import { isIgnored } from './tracked-files';
+} from '../../scripts/fetch-floors.ts';
+import { RECORD_FILE } from '../../scripts/coverage.ts';
+import { floorsText } from '../../scripts/record-floors.ts';
+import { isIgnored } from './tracked-files.ts';
 
 /**
  * `npm run floors:fetch <run>` (#547, #718): the floors the record-floors

@@ -1,5 +1,5 @@
 import Decimal from 'break_infinity.js';
-import { log10 as detLog10, pow as detPow } from './det-math';
+import { log10 as detLog10, pow as detPow } from './det-math.ts';
 
 /**
  * Num: break_infinity.js values for numbers past 1e308 (M1 design §2.1, §4).

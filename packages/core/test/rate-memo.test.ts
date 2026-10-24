@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { lateGameReturn } from '../fixtures/pemandu-returns';
-import { syntheticCourse } from '../fixtures/synthetic-course';
-import { bestPayback, nextPurchaseTick } from '../src/automation';
-import { heldCards, nextFestivalEdge } from '../src/cards';
-import { HOUR_MS, simMs, wallMs, type SimMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { milestonesReached } from '../src/encounters';
-import { Num } from '../src/num';
-import { rateAt, rateGain } from '../src/production';
-import { regionsReached, route } from '../src/route';
-import type { GameState } from '../src/state';
-import { encounterPrice } from '../src/upgrades';
+import { lateGameReturn } from '../fixtures/pemandu-returns.ts';
+import { syntheticCourse } from '../fixtures/synthetic-course.ts';
+import { bestPayback, nextPurchaseTick } from '../src/automation.ts';
+import { heldCards, nextFestivalEdge } from '../src/cards.ts';
+import { HOUR_MS, simMs, wallMs, type SimMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { milestonesReached } from '../src/encounters.ts';
+import { Num } from '../src/num.ts';
+import { rateAt, rateGain } from '../src/production.ts';
+import { regionsReached, route } from '../src/route.ts';
+import type { GameState } from '../src/state.ts';
+import { encounterPrice } from '../src/upgrades.ts';
 
 /**
  * What makes a Pemandu catch-up fast never serves a stale answer (#297 AC5):

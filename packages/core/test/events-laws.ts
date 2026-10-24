@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { parseEvent } from '../src/events';
+import { parseEvent } from '../src/events.ts';
 
 /**
  * What the event validator must satisfy at one input (#34 AC1, design §4).

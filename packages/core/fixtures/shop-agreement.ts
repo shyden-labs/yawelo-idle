@@ -1,10 +1,10 @@
-import { BALANCE, JOURNEY_DURATION_IDS } from '../src/balance';
-import type { Course } from '../src/course';
-import type { GameEvent } from '../src/events';
-import { apply } from '../src/log';
-import { advance } from '../src/sim';
-import type { GameState } from '../src/state';
-import { view, type Shop } from '../src/view';
+import { BALANCE, JOURNEY_DURATION_IDS } from '../src/balance.ts';
+import type { Course } from '../src/course.ts';
+import type { GameEvent } from '../src/events.ts';
+import { apply } from '../src/log.ts';
+import { advance } from '../src/sim.ts';
+import type { GameState } from '../src/state.ts';
+import { view, type Shop } from '../src/view.ts';
 
 /**
  * The shop judged against `apply` (#35 AC3), one stretch of the golden log
