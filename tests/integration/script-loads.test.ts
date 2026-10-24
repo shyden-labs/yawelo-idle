@@ -45,6 +45,7 @@ const SCRIPTS = [
   'scripts/mutations-changed-cli.ts',
   'scripts/mutations-verdict.ts',
   'scripts/owner-review.ts',
+  'scripts/pre-push.ts',
   'scripts/prod-version.ts',
   'scripts/record-floors.ts',
   'scripts/sample-minimums.ts',
