@@ -3,13 +3,13 @@ import {
   assertNamedByRepo,
   parseItems,
   roadmapItems,
-} from '../../../../packages/progress/src/index';
+} from '../../../../packages/progress/src/index.ts';
 import {
   boardPages,
   FIXTURE_BOARD_ID,
   FIXTURE_REPO,
   repoPages,
-} from '../../../../packages/progress/test/board-fixture';
+} from '../../../../packages/progress/test/board-fixture.ts';
 import {
   FAKE_APP_ID,
   FAKE_BOARD_ID,
@@ -19,7 +19,7 @@ import {
   FAKE_TOKEN,
   INSTALLED,
   READ_ONLY,
-} from '../github-fake/contract';
+} from '../github-fake/contract.ts';
 import {
   appJwt,
   importAppKey,
@@ -28,8 +28,8 @@ import {
   readRepoIssuePages,
   USER_AGENT,
   type App,
-} from '../../worker/github';
-import { roadmapWorld, type RoadmapWorld } from './harness';
+} from '../../worker/github.ts';
+import { roadmapWorld, type RoadmapWorld } from './harness.ts';
 
 /**
  * The roadmap's read-only GitHub App (#341, spec §5.2 item 3): a JWT signed

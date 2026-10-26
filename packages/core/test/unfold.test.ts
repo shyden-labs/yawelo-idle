@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DAY_MS, wallMs } from '../src/clock';
-import { collectJourney } from '../src/journeys';
-import { Num } from '../src/num';
-import { answerReview, buyUpgrade, pickUpWord } from '../src/sim';
-import { view } from '../src/view';
-import { initialState, type GameState } from '../src/state';
-import { UNFOLD_FLAGS, unfold, type UnfoldFlag } from '../src/unfold';
+import { DAY_MS, wallMs } from '../src/clock.ts';
+import { collectJourney } from '../src/journeys.ts';
+import { Num } from '../src/num.ts';
+import { answerReview, buyUpgrade, pickUpWord } from '../src/sim.ts';
+import { view } from '../src/view.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { UNFOLD_FLAGS, unfold, type UnfoldFlag } from '../src/unfold.ts';
 import {
   checkWalk,
   course,
@@ -21,7 +21,7 @@ import {
   tutorialAfter,
   type Step,
   type Walked,
-} from './unfold-laws';
+} from './unfold-laws.ts';
 
 /**
  * Unfolding (#31 AC6, DN7): parent §4.1's reveal flags, derived from state

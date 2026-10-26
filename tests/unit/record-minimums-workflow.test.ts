@@ -1,18 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { artifactPrefix, SHARDS } from '../../scripts/fetch-minimums';
-import { MIN_RUNS, MINIMUMS_RECORD_ENV } from '../../scripts/minimums-method';
-import { SAMPLE_JOB_ENV } from '../../scripts/sample-minimums';
-import { floorBreach } from '../floors';
-import { SEED_ENV } from '../properties-seed';
-import { searched } from '../searched';
+import { artifactPrefix, SHARDS } from '../../scripts/fetch-minimums.ts';
+import {
+  MIN_RUNS,
+  MINIMUMS_RECORD_ENV,
+} from '../../scripts/minimums-method.ts';
+import { SAMPLE_JOB_ENV } from '../../scripts/sample-minimums.ts';
+import { floorBreach } from '../floors.ts';
+import { SEED_ENV } from '../properties-seed.ts';
+import { searched } from '../searched.ts';
 import {
   envSites,
   onlyJob,
   stepNamed,
   workflow,
   workflowFiles,
-} from './workflow-file';
-import { runOf } from './workflow-steps';
+} from './workflow-file.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The record-minimums workflow (#84, spec §5.6). It samples a commit the

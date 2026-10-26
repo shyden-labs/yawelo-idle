@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { floorBreach } from '../floors';
-import { againstControl, searched } from '../searched';
-import { withoutYamlComments } from './source-text';
-import { scanWorkflow } from './workflow-secrets';
+import { floorBreach } from '../floors.ts';
+import { againstControl, searched } from '../searched.ts';
+import { withoutYamlComments } from './source-text.ts';
+import { scanWorkflow } from './workflow-secrets.ts';
 
 /**
  * Deploy secrets live only in environments (spec §12.9). The fixtures pin the

@@ -13,11 +13,12 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { walkTree } from './old-name';
+import { walkTree } from './old-name.ts';
 import {
   gitDirsOf,
   gitProblem,
   insideCheckout,
+  isModuleLoad,
   READ_LIMIT,
   readProblem,
   recursiveProblem,
@@ -25,10 +26,10 @@ import {
   treeProblem,
   walkProblem,
   WALK_LIMIT,
-} from './setup-rules';
-import * as tracked from './tracked-files';
-import { committableFiles, ignoredPaths, isIgnored } from './tracked-files';
-import { everyFileHere } from './whole-tree-helper';
+} from './setup-rules.ts';
+import * as tracked from './tracked-files.ts';
+import { committableFiles, ignoredPaths, isIgnored } from './tracked-files.ts';
+import { everyFileHere } from './whole-tree-helper.ts';
 
 /**
  * A unit test reads no whole tree (#530): a whole-tree check belongs in the
@@ -283,6 +284,57 @@ describe('twenty of the checkout’s files are a whole-tree read (#530)', () => 
     expect(names.map((path) => readFileSync(path, 'utf8')).join('')).toBe(
       'x'.repeat(25),
     );
+  });
+});
+
+/**
+ * A read through Node's own module loader, as measured 2026-10-24 (#762) in a
+ * native run: the frames above the patched `readFileSync` for a tree module.
+ */
+const ESM_LOAD = `    at readFileSync (node:internal/modules/helpers:76:43)
+    at Object.loaderMethodWrapper [as readFileSync] (node:internal/modules/helpers:123:12)
+    at getSourceSync (node:internal/modules/esm/load:38:28)
+    at defaultLoadSync (node:internal/modules/esm/load:154:34)`;
+const CJS_LOAD = `    at Object.readFileSync (node:fs:441:20)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1690:39)`;
+const A_TEST = `    at Object.readFileSync (node:fs:441:20)
+    at tests/unit/a.test.ts:3:5`;
+
+describe('a module the loader loads is not a read of the checkout (#762)', () => {
+  it.each([
+    [
+      'a tree module the ESM loader loads',
+      'packages/core/src/sim.ts',
+      ESM_LOAD,
+      true,
+    ],
+    ['a tree module the CommonJS loader loads', 'scripts/x.ts', CJS_LOAD, true],
+    ['a tree .mjs module', 'scripts/x.mjs', ESM_LOAD, true],
+    ['a tree .cts module', 'scripts/x.cts', ESM_LOAD, true],
+    ['a tree .js module', 'apps/web/x.js', ESM_LOAD, true],
+    [
+      'a dependency the loader loads, of any kind',
+      'node_modules/undici/package.json',
+      CJS_LOAD,
+      true,
+    ],
+    ['a tree data file the loader reads', 'package.json', CJS_LOAD, false],
+    ['a tree text file the loader reads', 'tests/fixture.txt', ESM_LOAD, false],
+    [
+      'a tree module a test reads as text',
+      'packages/core/src/sim.ts',
+      A_TEST,
+      false,
+    ],
+    [
+      'a dependency a test reads as text',
+      'node_modules/undici/index.js',
+      A_TEST,
+      false,
+    ],
+    ['a file whose name only ends in ts', 'tests/hints', ESM_LOAD, false],
+  ])('%s', (_case, path, stack, load) => {
+    expect(isModuleLoad(path, stack)).toBe(load);
   });
 });
 

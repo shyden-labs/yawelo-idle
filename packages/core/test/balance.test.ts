@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, JOURNEY_DURATION_IDS, type Balance } from '../src/balance';
+import { BALANCE, JOURNEY_DURATION_IDS, type Balance } from '../src/balance.ts';
 
 /**
  * balance.ts: one frozen table of every tunable number (#26 AC7).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { skipCommentsIn } from './coverage-skip';
+import { skipCommentsIn } from './coverage-skip.ts';
 
 /**
  * A comment telling coverage to skip lines (#728): the ruling counts those

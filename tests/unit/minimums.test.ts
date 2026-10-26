@@ -8,8 +8,8 @@ import {
   minimumsBreach,
   readMinimums,
   type MinimumObservation,
-} from '../minimums';
-import type { Measured } from '../../scripts/minimums-method';
+} from '../minimums.ts';
+import type { Measured } from '../../scripts/minimums-method.ts';
 
 /**
  * `minimumBreach` judges a reach count against its measured minimum: at or

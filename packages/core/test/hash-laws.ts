@@ -1,7 +1,7 @@
 import { expect } from 'vitest';
-import { wallMs } from '../src/clock';
-import { stateHash } from '../src/hash';
-import { initialState } from '../src/state';
+import { wallMs } from '../src/clock.ts';
+import { stateHash } from '../src/hash.ts';
+import { initialState } from '../src/state.ts';
 
 /**
  * What the state hash must satisfy at one input (#34). The unit suite checks

@@ -1,10 +1,10 @@
 import { expect } from 'vitest';
-import { simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, Destination } from '../src/course';
-import { collectJourney, startJourney } from '../src/journeys';
-import { isDue } from '../src/memory';
-import { Num } from '../src/num';
-import { setSail } from '../src/sail';
+import { simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, Destination } from '../src/course.ts';
+import { collectJourney, startJourney } from '../src/journeys.ts';
+import { isDue } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import { setSail } from '../src/sail.ts';
 import {
   answerReview,
   buyEncounter,
@@ -12,9 +12,9 @@ import {
   listen,
   pickUpWord,
   type Result,
-} from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { unfold, type UnfoldFlag } from '../src/unfold';
+} from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { unfold, type UnfoldFlag } from '../src/unfold.ts';
 
 /**
  * The unfolding course and games (#31 AC6), and what a walk must satisfy: no

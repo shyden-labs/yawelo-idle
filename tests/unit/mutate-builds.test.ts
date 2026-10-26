@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { mutableSuites, mutateScript } from '../../scripts/mutate';
-import { SUITES } from '../../scripts/record-floors';
+import { mutableSuites, mutateScript } from '../../scripts/mutate.ts';
+import { SUITES } from '../../scripts/record-floors.ts';
 
 /**
  * The mutation runner builds and runs each suite exactly as the suite's own

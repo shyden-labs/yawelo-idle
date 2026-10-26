@@ -21,13 +21,13 @@ import {
   type GoldenRun,
   type GoldenSlice,
   type PlayerStart,
-} from '../../packages/core/fixtures/golden-log';
-import { wallMs } from '../../packages/core/src/clock';
-import type { GameEvent } from '../../packages/core/src/events';
-import { stateHash } from '../../packages/core/src/hash';
-import { apply, replay } from '../../packages/core/src/log';
-import type { WordMemory } from '../../packages/core/src/memory';
-import { initialState, type GameState } from '../../packages/core/src/state';
+} from '../../packages/core/fixtures/golden-log.ts';
+import { wallMs } from '../../packages/core/src/clock.ts';
+import type { GameEvent } from '../../packages/core/src/events.ts';
+import { stateHash } from '../../packages/core/src/hash.ts';
+import { apply, replay } from '../../packages/core/src/log.ts';
+import type { WordMemory } from '../../packages/core/src/memory.ts';
+import { initialState, type GameState } from '../../packages/core/src/state.ts';
 import {
   allEvents,
   eventLines,
@@ -46,7 +46,7 @@ import {
   totals,
   UNIT_ROWS,
   type SliceRow,
-} from '../golden';
+} from '../golden.ts';
 
 /**
  * The golden event log (#34 AC5, AC6; M1 design §7), checked one slice per

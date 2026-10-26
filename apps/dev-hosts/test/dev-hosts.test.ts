@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
-import { DEV_HOSTS, type DevBinding } from '../hosts';
+import { DEV_HOSTS, type DevBinding } from '../hosts.ts';
 
 /**
  * The dev hostname adapter (#429 AC1), compiled by `npm test` into .build and

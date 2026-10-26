@@ -1,7 +1,7 @@
 import { ESLint, type Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { describe, expect, it } from 'vitest';
-import { coreDeterminism } from '../../eslint.core-determinism';
+import { coreDeterminism } from '../../eslint.core-determinism.ts';
 
 /**
  * The full eslint.config.js applies the determinism bans to core's source

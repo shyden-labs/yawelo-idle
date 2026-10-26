@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import unit from '../../vitest.config';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { fastCheckLoads } from '../unit/fast-check-loads';
-import { committableFiles } from '../unit/tracked-files';
-import { unitSuiteFiles } from '../unit/unit-suite-files';
+import unit from '../../vitest.config.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { fastCheckLoads } from '../unit/fast-check-loads.ts';
+import { committableFiles, readerOf } from '../unit/tracked-files.ts';
+import { unitSuiteFiles } from '../unit/unit-suite-files.ts';
 
 /**
  * No file the unit suite loads loads fast-check (#551). Every property runs
@@ -39,7 +39,7 @@ const walk = (): NonNullable<typeof walked> => {
   const known = new Set(tracked);
   const suite = unitSuiteFiles({
     tracked,
-    read: (path) => (known.has(path) ? readFileSync(path, 'utf8') : undefined),
+    read: readerOf(known),
     include: unit.test?.include ?? [],
     exclude: unit.test?.exclude ?? [],
     setupFiles: [unit.test?.setupFiles ?? []].flat(),

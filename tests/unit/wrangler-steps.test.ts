@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
-import { PROD_WRANGLER_CONFIGS, WRANGLER_CONFIGS } from './wrangler-configs';
+import { PROD_WRANGLER_CONFIGS, WRANGLER_CONFIGS } from './wrangler-configs.ts';
 import {
   WRANGLER_STEPS,
   assetsReported,
@@ -10,7 +10,7 @@ import {
   startingPoint,
   wranglerCalls,
   wranglerCallsIn,
-} from './wrangler-steps';
+} from './wrangler-steps.ts';
 
 /**
  * The wrangler calls in the workflows, where npm starts each, and the parse's

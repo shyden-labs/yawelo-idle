@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { assess } from '../../scripts/minimums-method';
-import { floorBreach } from '../floors';
-import { readMinimums } from '../minimums';
-import { SEED_ENV } from '../properties-seed';
-import { searched } from '../searched';
-import { helperModules } from '../unit/helper-modules';
+import { assess } from '../../scripts/minimums-method.ts';
+import { floorBreach } from '../floors.ts';
+import { readMinimums } from '../minimums.ts';
+import { SEED_ENV } from '../properties-seed.ts';
+import { searched } from '../searched.ts';
+import { helperModules } from '../unit/helper-modules.ts';
 import {
   CHECK_HOME,
   checkReadingOf,
@@ -14,9 +14,9 @@ import {
   isPropertiesFile,
   SEED_HOME,
   seedReadingOf,
-} from '../unit/measured-minimums';
-import { codeWithoutLiterals } from '../unit/source-text';
-import { committableFiles } from '../unit/tracked-files';
+} from '../unit/measured-minimums.ts';
+import { codeWithoutLiterals } from '../unit/source-text.ts';
+import { committableFiles, readerOf } from '../unit/tracked-files.ts';
 
 /**
  * The measured-minimums guard over the whole repository (#84, spec §5.8), in
@@ -99,9 +99,7 @@ describe('the properties suite sets no fast-check seed but in its one home (#84)
   it('reads every runner in the properties, the helpers they load and the suite’s setup, and finds no seed set there', () => {
     const tracked = new Set(committableFiles());
     const properties = [...tracked].filter(isPropertiesFile);
-    const reach = helperModules(properties, (path) =>
-      tracked.has(path) ? readFileSync(path, 'utf8') : undefined,
-    );
+    const reach = helperModules(properties, readerOf(tracked));
     const files = [
       ...properties,
       ...reach.helpers,

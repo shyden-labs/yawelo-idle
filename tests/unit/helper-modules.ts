@@ -1,5 +1,6 @@
 import ts from 'typescript';
 import { posix } from 'node:path';
+import { lineOf } from './line-of.ts';
 
 /**
  * The helper modules test files load (#554): every module they reach by a
@@ -52,22 +53,180 @@ function loadsNothing(clause: ts.ImportClause | undefined): boolean {
 
 const isRelative = (specifier: string): boolean => specifier.startsWith('.');
 
+/** A relative module specifier as one file writes it (#762). */
+export interface RelativeSpecifier {
+  readonly specifier: string;
+  /** 1-based line of the specifier. */
+  readonly line: number;
+  /** Offsets of the specifier's text in the file, its quotes left out. */
+  readonly start: number;
+  readonly end: number;
+  /**
+   * How the file names it: an import, a re-export, `import()`, an import in a
+   * type position, a `require` loader, or a `vi` call.
+   */
+  readonly form:
+    'import' | 'export' | 'import()' | 'import-type' | 'require' | 'vi';
+  /** An import or re-export that binds types alone. */
+  readonly typeOnly: boolean;
+}
+
+/** The `vi` calls whose first argument names a module. */
+const VI_PATH_CALLS = new Set([
+  'mock',
+  'doMock',
+  'unmock',
+  'doUnmock',
+  'importActual',
+  'importMock',
+]);
+
+/** Something a file writes that a reader cannot follow, at its offset. */
+interface Unread {
+  readonly at: number;
+  readonly line: number;
+  readonly what: string;
+}
+
+/** One file read once: what both views below are made from. */
+interface FileRead {
+  readonly specifiers: RelativeSpecifier[];
+  readonly unread: Unread[];
+  /** Each `require` loader call given a relative path, as its text. */
+  readonly required: (Unread & { readonly specifier: string })[];
+  /**
+   * Each `import()` of a file URL made at run time: no relative specifier to
+   * judge, but a module the follower cannot name.
+   */
+  readonly absolute: Unread[];
+  readonly strings: string[][];
+}
+
+/** The packages whose `pathToFileURL` makes an absolute file URL. */
+const URL_MODULES = new Set(['node:url', 'url']);
+
 /**
- * What one file loads: relative specifiers, and what cannot be read; and
- * every string it writes, which may name a data file it reads (#659).
+ * Every name `sf` binds, to the nodes that bind it: declarations of every
+ * kind, parameters and destructured names, imports and catch variables. A
+ * name followed to its value must have exactly one.
  */
-function loadsOf(
-  file: string,
-  source: string,
-): { specifiers: string[]; unread: string[]; strings: string[][] } {
+function bindingsOf(sf: ts.SourceFile): Map<string, ts.Node[]> {
+  const bindings = new Map<string, ts.Node[]>();
+  const bind = (name: ts.BindingName | undefined, at: ts.Node): void => {
+    if (name === undefined) return;
+    if (ts.isIdentifier(name)) {
+      bindings.set(name.text, [...(bindings.get(name.text) ?? []), at]);
+      return;
+    }
+    // A binding pattern; an array pattern's hole binds nothing.
+    for (const element of name.elements)
+      if (ts.isBindingElement(element)) bind(element.name, element);
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) ||
+      ts.isParameter(node) ||
+      ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isClassExpression(node) ||
+      ts.isEnumDeclaration(node) ||
+      ts.isImportEqualsDeclaration(node) ||
+      ts.isImportClause(node) ||
+      ts.isNamespaceImport(node) ||
+      ts.isImportSpecifier(node)
+    )
+      bind(node.name, node);
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return bindings;
+}
+
+/**
+ * What a computed `import()` argument is, when the file pins it: the string
+ * literal a `const` binds (the name bound nowhere else), or an absolute file
+ * URL (`pathToFileURL(…).href`, imported from node:url and bound nowhere
+ * else). Anything else is undefined: the caller refuses it.
+ */
+function pinnedPath(
+  argument: ts.Expression,
+  bindings: () => Map<string, ts.Node[]>,
+): ts.StringLiteralLike | 'absolute' | undefined {
+  const only = (name: string): ts.Node | undefined => {
+    const all = bindings().get(name) ?? [];
+    return all.length === 1 ? all[0] : undefined;
+  };
+  if (ts.isIdentifier(argument)) {
+    const declaration = only(argument.text);
+    return declaration !== undefined &&
+      ts.isVariableDeclaration(declaration) &&
+      ts.isVariableDeclarationList(declaration.parent) &&
+      (declaration.parent.flags & ts.NodeFlags.Const) !== 0 &&
+      declaration.initializer !== undefined &&
+      ts.isStringLiteralLike(declaration.initializer)
+      ? declaration.initializer
+      : undefined;
+  }
+  if (
+    ts.isPropertyAccessExpression(argument) &&
+    argument.name.text === 'href' &&
+    ts.isCallExpression(argument.expression) &&
+    ts.isIdentifier(argument.expression.expression)
+  ) {
+    const declaration = only(argument.expression.expression.text);
+    if (declaration === undefined || !ts.isImportSpecifier(declaration))
+      return undefined;
+    const from = declaration.parent.parent.parent.moduleSpecifier;
+    return (declaration.propertyName ?? declaration.name).text ===
+      'pathToFileURL' &&
+      ts.isStringLiteral(from) &&
+      URL_MODULES.has(from.text)
+      ? 'absolute'
+      : undefined;
+  }
+  return undefined;
+}
+
+function readOf(file: string, source: string): FileRead {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-  const specifiers: string[] = [];
-  const unread: string[] = [];
+  const specifiers: RelativeSpecifier[] = [];
+  const unread: Unread[] = [];
+  const required: (Unread & { specifier: string })[] = [];
+  const absolute: Unread[] = [];
   const strings: string[][] = [];
+  const add = (
+    literal: ts.StringLiteralLike,
+    form: RelativeSpecifier['form'],
+    typeOnly: boolean,
+  ): void => {
+    if (!isRelative(literal.text)) return;
+    const start = literal.getStart(sf) + 1;
+    specifiers.push({
+      specifier: literal.text,
+      line: lineOf(sf, literal),
+      start,
+      end: literal.end - 1,
+      form,
+      typeOnly,
+    });
+  };
+  const refuse = (node: ts.Node, what: string): void => {
+    const at = node.getStart(sf);
+    unread.push({ at, line: lineOf(sf, node), what });
+  };
+  let bindings: Map<string, ts.Node[]> | undefined;
+  const bound = (): Map<string, ts.Node[]> => (bindings ??= bindingsOf(sf));
   /** Names bound to a loader: `require`, and what `createRequire(…)` returns. */
   const loaders = new Set(['require']);
   const visit = (node: ts.Node): void => {
     if (ts.isStringLiteralLike(node)) strings.push([node.text]);
+    if (
+      ts.isImportTypeNode(node) &&
+      ts.isLiteralTypeNode(node.argument) &&
+      ts.isStringLiteral(node.argument.literal)
+    )
+      add(node.argument.literal, 'import-type', true);
     if (ts.isTemplateExpression(node))
       strings.push([
         node.head.text,
@@ -84,41 +243,121 @@ function loadsOf(
       loaders.add(node.name.text);
     if (
       ts.isImportDeclaration(node) &&
-      ts.isStringLiteral(node.moduleSpecifier) &&
-      !loadsNothing(node.importClause)
+      ts.isStringLiteral(node.moduleSpecifier)
     )
-      specifiers.push(node.moduleSpecifier.text);
+      add(node.moduleSpecifier, 'import', loadsNothing(node.importClause));
     if (
       ts.isExportDeclaration(node) &&
-      !node.isTypeOnly &&
       node.moduleSpecifier &&
       ts.isStringLiteral(node.moduleSpecifier)
     )
-      specifiers.push(node.moduleSpecifier.text);
+      add(node.moduleSpecifier, 'export', node.isTypeOnly);
     if (ts.isCallExpression(node)) {
       const [first] = node.arguments;
+      const literal =
+        first && ts.isStringLiteralLike(first) ? first : undefined;
+      const text = (): string => node.getText(sf).replace(/\s+/g, ' ');
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-        if (first && ts.isStringLiteralLike(first)) specifiers.push(first.text);
-        else
-          unread.push(
-            `${node.getText(sf).replace(/\s+/g, ' ')} is not a literal path`,
-          );
+        const pinned =
+          literal ??
+          (first === undefined ? undefined : pinnedPath(first, bound));
+        if (pinned === 'absolute') {
+          const at = node.getStart(sf);
+          absolute.push({
+            at,
+            line: lineOf(sf, node),
+            what: `${text()} is not a literal path`,
+          });
+        } else if (pinned === undefined)
+          refuse(node, `${text()} is not a literal path`);
+        else add(pinned, 'import()', false);
       } else if (
         ts.isIdentifier(node.expression) &&
         loaders.has(node.expression.text) &&
-        first &&
-        ts.isStringLiteralLike(first) &&
-        isRelative(first.text) &&
-        !first.text.endsWith('.json')
-      )
-        unread.push(
-          `${node.getText(sf)} loads a module the follower does not read`,
-        );
+        literal &&
+        isRelative(literal.text)
+      ) {
+        add(literal, 'require', false);
+        const at = node.getStart(sf);
+        required.push({
+          at,
+          line: lineOf(sf, node),
+          what: node.getText(sf),
+          specifier: literal.text,
+        });
+      } else if (
+        ts.isPropertyAccessExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) &&
+        node.expression.expression.text === 'vi' &&
+        VI_PATH_CALLS.has(node.expression.name.text)
+      ) {
+        if (literal) add(literal, 'vi', false);
+        else if (!(
+          first &&
+          ts.isCallExpression(first) &&
+          first.expression.kind === ts.SyntaxKind.ImportKeyword
+        ))
+          refuse(node, `${text()} is not a literal path`);
+      }
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  return { specifiers: specifiers.filter(isRelative), unread, strings };
+  return { specifiers, unread, required, absolute, strings };
+}
+
+/**
+ * Every relative specifier `file` writes (#762), in each form that loads or
+ * mocks a module, type-only ones included; and each such form it cannot
+ * read (a computed path), by line. A package specifier is left out.
+ */
+export function relativeSpecifiers(
+  file: string,
+  source: string,
+): {
+  specifiers: RelativeSpecifier[];
+  unread: { line: number; what: string }[];
+} {
+  const { specifiers, unread } = readOf(file, source);
+  return {
+    specifiers,
+    unread: unread.map(({ line, what }) => ({ line, what })),
+  };
+}
+
+/** The forms that load a module when the file runs. */
+const LOADS: ReadonlySet<RelativeSpecifier['form']> = new Set([
+  'import',
+  'export',
+  'import()',
+]);
+
+/**
+ * What one file loads: relative specifiers, and what cannot be read; and
+ * every string it writes, which may name a data file it reads (#659).
+ */
+function loadsOf(
+  file: string,
+  source: string,
+): { specifiers: string[]; unread: string[]; strings: string[][] } {
+  const read = readOf(file, source);
+  const unread = [
+    ...read.unread,
+    ...read.absolute,
+    ...read.required
+      .filter(({ specifier }) => !specifier.endsWith('.json'))
+      .map((call) => ({
+        ...call,
+        what: `${call.what} loads a module the follower does not read`,
+      })),
+  ].sort((a, b) => a.at - b.at);
+  return {
+    specifiers: read.specifiers
+      .filter(({ form, typeOnly }) => LOADS.has(form) && !typeOnly)
+      .map(({ specifier }) => specifier),
+    unread: unread.map(({ what }) => what),
+    strings: read.strings,
+  };
 }
 
 /** One walk: what `helperModules` returns, and each file's helper loads. */

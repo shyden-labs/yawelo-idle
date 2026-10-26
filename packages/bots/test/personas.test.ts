@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CASUAL_SEED, PERSONAS, persona } from '../src/personas';
+import { CASUAL_SEED, PERSONAS, persona } from '../src/personas.ts';
 
 /** The personas (#35 AC1, M1 design §6), each fact written out. */
 

@@ -8,7 +8,7 @@ export {
   persona,
   type BuyStyle,
   type Persona,
-} from './personas';
+} from './personas.ts';
 export {
   BOOTSTRAP_TAP_MS,
   offersDecision,
@@ -16,14 +16,14 @@ export {
   STEP_MS,
   type Action,
   type Watcher,
-} from './player';
+} from './player.ts';
 export {
   insaneValues,
   runPersona,
   type PersonaRun,
   type RunOptions,
   type Sail,
-} from './run';
+} from './run.ts';
 export {
   CALIBRATE_DEFAULTS,
   calibrateGoals,
@@ -32,7 +32,7 @@ export {
   type CalibratedGoal,
   type CalibrateOptions,
   type Measure,
-} from './calibrate';
+} from './calibrate.ts';
 export {
   DAY_MS,
   dayOpens,
@@ -43,15 +43,19 @@ export {
   WAKE_MS,
   WAKING_MS,
   type Open,
-} from './schedule';
+} from './schedule.ts';
 export {
   LATENCY_MEDIAN_MS,
   LATENCY_SIGMA,
   STREAM_NAMES,
   Streams,
   type StreamName,
-} from './streams';
-export { pacingReport, type PacingReport, type PersonaReport } from './report';
+} from './streams.ts';
+export {
+  pacingReport,
+  type PacingReport,
+  type PersonaReport,
+} from './report.ts';
 export {
   CI_BOUNDS,
   clickingNeverWins,
@@ -66,4 +70,4 @@ export {
   sanity,
   TUNING_TARGETS,
   type Bounds,
-} from './targets';
+} from './targets.ts';

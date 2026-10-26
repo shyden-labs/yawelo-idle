@@ -10,13 +10,13 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 import {
   committableFiles,
   ignoredPaths,
   isIgnored,
-} from '../unit/tracked-files';
+} from '../unit/tracked-files.ts';
 
 /**
  * The guards' one file walk (#385) against real git (#491). The walk reads

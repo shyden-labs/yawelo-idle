@@ -6,7 +6,7 @@ import {
   type ErrorView,
   type ModuleView,
   type Written,
-} from '../../scripts/mutate-reporter';
+} from '../../scripts/mutate-reporter.ts';
 
 /**
  * The mutation runner's own vitest reporter (#527, spec §4a): what it writes

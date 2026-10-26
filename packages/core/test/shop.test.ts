@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
-} from '../fixtures/synthetic-course';
-import { wallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { startJourney } from '../src/journeys';
-import { Num } from '../src/num';
+} from '../fixtures/synthetic-course.ts';
+import { wallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { startJourney } from '../src/journeys.ts';
+import { Num } from '../src/num.ts';
 import {
   answerPractice,
   buyEncounter,
@@ -16,9 +16,9 @@ import {
   buyUpgrade,
   pickUpWord,
   type Result,
-} from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { view, type EncounterOffer, type UpgradeOffer } from '../src/view';
+} from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { view, type EncounterOffer, type UpgradeOffer } from '../src/view.ts';
 
 /**
  * `view.shop` (#35 AC3): every offer a UI shows, so the pacing bots read

@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { canonical, stateHash } from '../../packages/core/src/hash';
-import { wallMs } from '../../packages/core/src/clock';
-import { initialState, type GameState } from '../../packages/core/src/state';
+import { canonical, stateHash } from '../../packages/core/src/hash.ts';
+import { wallMs } from '../../packages/core/src/clock.ts';
+import { initialState, type GameState } from '../../packages/core/src/state.ts';
 
 /**
  * `stateHash` is SHA-256 of the canonical form (#34 AC4), checked against

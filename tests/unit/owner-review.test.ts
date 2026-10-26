@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { Gh } from '../../scripts/board-progress';
+import type { Gh } from '../../scripts/board-progress.ts';
 import {
   ISSUE_TITLE,
   OWNED,
   codeownersJudgement,
   ownerReview,
   protectionJudgement,
-} from '../../scripts/owner-review';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+} from '../../scripts/owner-review.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The daily check that develop still asks Shyden to review the twin list

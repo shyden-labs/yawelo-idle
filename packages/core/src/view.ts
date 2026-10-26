@@ -7,23 +7,23 @@
  * `journeys` because it asks both.
  */
 
-import { automationUnlocked } from './automation';
+import { automationUnlocked } from './automation.ts';
 import {
   BALANCE,
   JOURNEY_DURATION_IDS,
   type JourneyDurationId,
-} from './balance';
-import type { WallMs } from './clock';
-import type { Course } from './course';
-import { grammarNodeCost } from './grammar';
+} from './balance.ts';
+import type { WallMs } from './clock.ts';
+import type { Course } from './course.ts';
+import { grammarNodeCost } from './grammar.ts';
 import {
   journeyDurationMs,
   journeyStatus,
   startJourney,
   type JourneyStatus,
-} from './journeys';
-import { reviewQueue, type QueueItem } from './memory';
-import { Num } from './num';
+} from './journeys.ts';
+import { reviewQueue, type QueueItem } from './memory.ts';
+import { Num } from './num.ts';
 import {
   rateAt,
   rateBreakdown,
@@ -31,9 +31,9 @@ import {
   totalRate,
   understandingNow,
   type EncounterRate,
-} from './production';
-import { regionsReached } from './route';
-import { sailPreview, type SailPreview } from './sail';
+} from './production.ts';
+import { regionsReached } from './route.ts';
+import { sailPreview, type SailPreview } from './sail.ts';
 import {
   advance,
   answerPractice,
@@ -43,16 +43,16 @@ import {
   nextPickUp,
   pickUpWord,
   reanchor,
-} from './sim';
-import { ownedCount, type GameState } from './state';
-import { unfold, type Unfold } from './unfold';
+} from './sim.ts';
+import { ownedCount, type GameState } from './state.ts';
+import { unfold, type Unfold } from './unfold.ts';
 import {
   encounterPrice,
   pemanduIntervalsMs,
   upgradeCatalogue,
   upgradeLevel,
   type UpgradeCurrency,
-} from './upgrades';
+} from './upgrades.ts';
 
 /** One more of an Encounter of a region reached. */
 export interface EncounterOffer {

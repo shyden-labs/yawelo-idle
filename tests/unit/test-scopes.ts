@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { callbackOf, kindOf, titleOf } from './one-test-per-case';
+import { callbackOf, kindOf, titleOf } from './one-test-per-case.ts';
 
 /**
  * Where an assertion sits, for the meta-guards that list what they find by

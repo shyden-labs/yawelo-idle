@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
+import { lineOf } from './line-of.ts';
 
 /**
  * Every way a file loads fast-check at run time (#551): an import of any

@@ -12,9 +12,9 @@ import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
 } from '@yawelo-idle/core/fixtures/synthetic-course';
-import { Player, STEP_MS } from '../src/player';
-import { persona } from '../src/personas';
-import { Streams } from '../src/streams';
+import { Player, STEP_MS } from '../src/player.ts';
+import { persona } from '../src/personas.ts';
+import { Streams } from '../src/streams.ts';
 
 /**
  * One open played on a chosen state, for the player's tests: the unit

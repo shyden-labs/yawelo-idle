@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { firstHolding, nextPurchaseTick } from '../src/automation';
-import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { Num } from '../src/num';
-import { producedBetween } from '../src/production';
-import { createStreams } from '../src/rng';
-import type { GameState } from '../src/state';
-import { encounterPrice } from '../src/upgrades';
+import { firstHolding, nextPurchaseTick } from '../src/automation.ts';
+import { DAY_MS, HOUR_MS, simMs, wallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { Num } from '../src/num.ts';
+import { producedBetween } from '../src/production.ts';
+import { createStreams } from '../src/rng.ts';
+import type { GameState } from '../src/state.ts';
+import { encounterPrice } from '../src/upgrades.ts';
 import {
   START,
   caseOf,
@@ -15,7 +15,7 @@ import {
   checkNextPurchase,
   type CaseRecord,
   type Solved,
-} from './pemandu-tick-laws';
+} from './pemandu-tick-laws.ts';
 
 /**
  * Pemandu's next purchase tick (#33 AC3): solved from the segment's linear

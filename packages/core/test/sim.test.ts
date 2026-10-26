@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { HOUR_MS, simMs, wallMs } from '../src/clock';
-import { encounterOutput, purchaseCost } from '../src/encounters';
-import { Num } from '../src/num';
-import { encounterRate, understandingNow } from '../src/production';
-import { advance, buyEncounter, integrate, listen } from '../src/sim';
-import { view } from '../src/view';
-import { createStreams } from '../src/rng';
-import { initialState, ownedCount, type GameState } from '../src/state';
+import { HOUR_MS, simMs, wallMs } from '../src/clock.ts';
+import { encounterOutput, purchaseCost } from '../src/encounters.ts';
+import { Num } from '../src/num.ts';
+import { encounterRate, understandingNow } from '../src/production.ts';
+import { advance, buyEncounter, integrate, listen } from '../src/sim.ts';
+import { view } from '../src/view.ts';
+import { createStreams } from '../src/rng.ts';
+import { initialState, ownedCount, type GameState } from '../src/state.ts';
 import {
   DAY_MS,
   CAP_MS,
@@ -30,7 +30,7 @@ import {
   type Split,
   type StateRecord,
   type Step,
-} from './sim-laws';
+} from './sim-laws.ts';
 
 /**
  * The time model and the Encounter actions (#27 AC1, AC4 to AC9).

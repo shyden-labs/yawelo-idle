@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
+import { floorBreach } from '../../../tests/floors.ts';
 import {
   lateGameReturn,
   regionOneReturn,
   returnsAt,
-} from '../../core/fixtures/pemandu-returns';
-import { syntheticCourse } from '../../core/fixtures/synthetic-course';
-import { HOUR_MS, wallMs } from '../../core/src/clock';
-import { advance } from '../../core/src/sim';
-import type { GameState } from '../../core/src/state';
+} from '../../core/fixtures/pemandu-returns.ts';
+import { syntheticCourse } from '../../core/fixtures/synthetic-course.ts';
+import { HOUR_MS, wallMs } from '../../core/src/clock.ts';
+import { advance } from '../../core/src/sim.ts';
+import type { GameState } from '../../core/src/state.ts';
 
 /**
  * Pemandu's long returns, timed (#33 AC5, #297 AC3). They cost more than a

@@ -34,7 +34,7 @@ import {
   RECORD_ENV,
   floorsFileOf,
   readFloorsDir,
-} from '../scripts/record-floors';
+} from '../scripts/record-floors.ts';
 
 export { FLOORS_DIR, RECORD_ENV };
 

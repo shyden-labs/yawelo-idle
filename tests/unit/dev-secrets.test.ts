@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { writeSecretsFile } from '../../scripts/dev-secrets';
+import { writeSecretsFile } from '../../scripts/dev-secrets.ts';
 
 /**
  * The dev site Worker's secrets file (#357, #341): the deploy uploads each

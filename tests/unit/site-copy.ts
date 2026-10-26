@@ -4,8 +4,8 @@ import {
   CopyLine,
   type Figure,
   type Source,
-} from '../../apps/site/src/copy-line';
-import { isIgnored } from './tracked-files';
+} from '../../apps/site/src/copy-line.ts';
+import { isIgnored } from './tracked-files.ts';
 
 /**
  * Readers for `site-copy.test.ts` (#334): the walk over the site's copy and

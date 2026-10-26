@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
+import { floorBreach } from '../floors.ts';
 import {
   ALLOWANCES,
   type Allowance,
@@ -9,7 +9,7 @@ import {
   OLD,
   OLD_NAME,
   readText,
-} from './old-name';
+} from './old-name.ts';
 
 const FILE: Allowance = {
   kind: 'history file',

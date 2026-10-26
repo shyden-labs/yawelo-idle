@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Gh } from '../../scripts/board-progress';
+import type { Gh } from '../../scripts/board-progress.ts';
 import {
   boardSetup,
   CREATE_PRIORITY,
@@ -7,8 +7,8 @@ import {
   planPriorityField,
   PRIORITY_OPTIONS,
   READ,
-} from '../../scripts/board-setup';
-import { againstControl } from '../searched';
+} from '../../scripts/board-setup.ts';
+import { againstControl } from '../searched.ts';
 
 /**
  * scripts/board-setup.ts (#576): the board's `Estimate` and `Priority`

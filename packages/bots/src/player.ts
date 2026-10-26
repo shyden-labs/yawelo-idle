@@ -20,8 +20,8 @@ import {
   type JourneyOffer,
   type View,
 } from '@yawelo-idle/core';
-import type { Persona } from './personas';
-import type { Streams } from './streams';
+import type { Persona } from './personas.ts';
+import type { Streams } from './streams.ts';
 
 /** An event before the player stamps it with its sequence number and time. */
 export type Action = GameEvent extends infer E

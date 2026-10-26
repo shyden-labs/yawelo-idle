@@ -1,8 +1,8 @@
 import { expect } from 'vitest';
 import Decimal from 'decimal.js';
-import type { Encounter } from '../src/course';
-import { purchaseCost } from '../src/encounters';
-import type { Num } from '../src/num';
+import type { Encounter } from '../src/course.ts';
+import { purchaseCost } from '../src/encounters.ts';
+import type { Num } from '../src/num.ts';
 
 /**
  * What Encounter costs must satisfy at one purchase (#27 AC2), against a

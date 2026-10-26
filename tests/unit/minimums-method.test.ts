@@ -10,7 +10,7 @@ import {
   summarise,
   writeMinimums,
   type Measured,
-} from '../../scripts/minimums-method';
+} from '../../scripts/minimums-method.ts';
 
 /**
  * The measured-minimum method (#84 spec §4): a reach count sampled over at

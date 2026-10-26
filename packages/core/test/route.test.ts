@@ -1,29 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { DAY_MS, simMs, wallMs, type WallMs } from '../src/clock';
+import { DAY_MS, simMs, wallMs, type WallMs } from '../src/clock.ts';
 import type {
   Course,
   CultureCard,
   Destination,
   Encounter,
   Region,
-} from '../src/course';
-import { cardPool } from '../src/journeys';
-import { Num, type NumTuple } from '../src/num';
+} from '../src/course.ts';
+import { cardPool } from '../src/journeys.ts';
+import { Num, type NumTuple } from '../src/num.ts';
 import {
   currentDestination,
   currentRegion,
   regionsReached,
   route,
-} from '../src/route';
+} from '../src/route.ts';
 import {
   buyEncounter,
   integrate,
   listen,
   pickUpWord,
   type Result,
-} from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { pickUpCost, pickUpPool } from '../src/words';
+} from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { pickUpCost, pickUpPool } from '../src/words.ts';
 
 /**
  * The route (#31 AC4 and design §5): destinations numbered region by region,

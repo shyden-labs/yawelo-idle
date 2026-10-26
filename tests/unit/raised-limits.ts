@@ -1,6 +1,6 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
-import { unitSuiteFiles } from './unit-suite-files';
+import { lineOf } from './line-of.ts';
+import { unitSuiteFiles } from './unit-suite-files.ts';
 
 /**
  * Every way a unit test file or a unit config raises a limit (#477 AC3),

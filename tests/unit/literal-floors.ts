@@ -1,12 +1,12 @@
 import ts from 'typescript';
-import { lineOf } from './line-of';
-import { listFindings } from './burn-down';
+import { lineOf } from './line-of.ts';
+import { listFindings } from './burn-down.ts';
 import {
   expectationOf,
   isFunction,
   placeOf,
   testBodiesIn,
-} from './test-scopes';
+} from './test-scopes.ts';
 
 /**
  * Every hard-coded minimum in the tests, read from the parse tree (#378).

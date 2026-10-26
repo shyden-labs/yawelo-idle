@@ -2,8 +2,8 @@ import { createVerify } from 'node:crypto';
 import {
   BOARD_QUERY,
   REPO_ISSUES_QUERY,
-} from '../../../../packages/progress/src/index';
-import { boardPages } from '../../../../packages/progress/test/board-fixture';
+} from '../../../../packages/progress/src/index.ts';
+import { boardPages } from '../../../../packages/progress/test/board-fixture.ts';
 import {
   FAKE_APP_ID,
   FAKE_BOARD_ID,
@@ -15,7 +15,7 @@ import {
   type FakeConfig,
   type Permissions,
   type Seen,
-} from './contract';
+} from './contract.ts';
 
 /**
  * A stand-in for api.github.com in the site Worker's roadmap tests (#341):

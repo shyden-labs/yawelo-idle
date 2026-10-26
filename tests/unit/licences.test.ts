@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { DISSOLVED } from './dissolved-company';
+import { DISSOLVED } from './dissolved-company.ts';
 
 /**
  * The licence set promised by spec D17 is present and is the real text

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { checkHashOfStateAlone } from '../test/hash-laws';
+import { checkHashOfStateAlone } from '../test/hash-laws.ts';
 
 /**
  * The state hash on random seeds and wall times (#34), at the full count

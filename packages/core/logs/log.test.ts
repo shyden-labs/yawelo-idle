@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { HOUR_MS } from '../src/clock';
-import type { Course } from '../src/course';
-import type { GameEvent } from '../src/events';
+import { HOUR_MS } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import type { GameEvent } from '../src/events.ts';
 import {
   ACCEPTED_BY_CONSTRUCTION,
   checkApply,
@@ -10,8 +10,8 @@ import {
   course,
   MEASURED_TYPES,
   TYPES,
-} from '../test/log-laws';
-import { minimumBreach, minimumsBreach } from '../../../tests/minimums';
+} from '../test/log-laws.ts';
+import { minimumBreach, minimumsBreach } from '../../../tests/minimums.ts';
 
 /**
  * The event log on random events (#34 AC2; design §7), at the counts before

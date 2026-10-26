@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 import { Decimal } from 'decimal.js';
-import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math';
+import { exp, expm1, ln, log10, log1p, pow } from '../src/det-math.ts';
 
 /**
  * What det-math must satisfy at one input (M1 design §2.1, #26 AC2): its

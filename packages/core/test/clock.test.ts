@@ -9,8 +9,8 @@ import {
   wallMs,
   type SimMs,
   type WallMs,
-} from '../src/clock';
-import { checkBucket, checkGridSplit } from './clock-laws';
+} from '../src/clock.ts';
+import { checkBucket, checkGridSplit } from './clock-laws.ts';
 
 /**
  * The integer-millisecond clocks (M1 design §2.2 and §2.3, #26 AC5).

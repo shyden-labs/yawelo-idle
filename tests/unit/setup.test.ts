@@ -12,8 +12,8 @@ import { createRequire } from 'node:module';
 import net from 'node:net';
 import tls from 'node:tls';
 import { describe, expect, it } from 'vitest';
-import unit from '../../vitest.config';
-import { floorBreach } from '../floors';
+import unit from '../../vitest.config.ts';
+import { floorBreach } from '../floors.ts';
 import {
   connectProblem,
   CPU_LIMIT_MS,
@@ -22,7 +22,7 @@ import {
   REFUSED,
   REFUSED_PROCESS,
   targetOf,
-} from './setup-rules';
+} from './setup-rules.ts';
 
 /**
  * The unit setup (#477 AC2, AC7): every unit test runs in under 1 s of its

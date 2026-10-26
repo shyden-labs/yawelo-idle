@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
-import { boardOrphans, type OrphanReads } from '../../scripts/board-orphans';
-import type { Gh } from '../../scripts/board-progress';
+import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index.ts';
+import { boardOrphans, type OrphanReads } from '../../scripts/board-orphans.ts';
+import type { Gh } from '../../scripts/board-progress.ts';
 
 /**
  * scripts/board-orphans.ts (#580): a ticket is In Progress only while a

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { webSmokeConfig } from '../../playwright.web.config';
-import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { webSmokeConfig } from '../../playwright.web.config.ts';
+import { runOf } from './workflow-steps.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The web smoke suite stays wired (#123 AC3), locally and against dev (#123

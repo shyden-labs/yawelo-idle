@@ -6,8 +6,8 @@ import {
   checkIntRange,
   checkJsonRoundTrip,
   NAMES,
-} from '../test/rng-laws';
-import { minimumBreach } from '../../../tests/minimums';
+} from '../test/rng-laws.ts';
+import { minimumBreach } from '../../../tests/minimums.ts';
 
 /**
  * The PRNG's properties on random seeds and orders (#26 AC6), at their full

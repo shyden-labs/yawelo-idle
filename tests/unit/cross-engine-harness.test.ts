@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import config from '../../playwright.engines.config';
-import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import config from '../../playwright.engines.config.ts';
+import { runOf } from './workflow-steps.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The cross-engine check stays wired (#26 AC10). A Playwright project dropped

@@ -6,10 +6,10 @@ import {
   offBoardBlockers,
   type NextItem,
   parseNextItems,
-} from '../../scripts/board-next';
-import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
-import type { Gh } from '../../scripts/board-progress';
-import { againstControl } from '../searched';
+} from '../../scripts/board-next.ts';
+import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index.ts';
+import type { Gh } from '../../scripts/board-progress.ts';
+import { againstControl } from '../searched.ts';
 
 /**
  * scripts/board-next.ts (#576): the board's Priority, not the handover, names

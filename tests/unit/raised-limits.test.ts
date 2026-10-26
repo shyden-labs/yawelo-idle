@@ -4,7 +4,7 @@ import {
   raisedLimitFiles,
   raisedLimitsIn,
   UNIT_LIMIT_MS,
-} from './raised-limits';
+} from './raised-limits.ts';
 
 /**
  * The reader behind the raised-limit guard (#477 AC3): every way a unit test

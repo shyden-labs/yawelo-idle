@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gitWalks, WALK_HOME } from './git-walks';
+import { gitWalks, WALK_HOME } from './git-walks.ts';
 
 /**
  * Every git file walk in tests/ and scripts/ sees a file before it is

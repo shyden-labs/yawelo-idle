@@ -8,7 +8,7 @@ import {
   nextU32,
   seedRng,
   type RngState,
-} from '../src/rng';
+} from '../src/rng.ts';
 import {
   checkFloatRange,
   checkIndependent,
@@ -16,7 +16,7 @@ import {
   checkJsonRoundTrip,
   NAMES,
   take,
-} from './rng-laws';
+} from './rng-laws.ts';
 
 /**
  * The seeded PRNG (M1 design §3, #26 AC6): xoshiro128** on four 32-bit words,

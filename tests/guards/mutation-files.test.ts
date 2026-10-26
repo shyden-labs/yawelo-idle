@@ -1,10 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { Reading } from '../../scripts/load-mutation-files';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { committableFiles } from '../unit/tracked-files';
+import type { Reading } from '../../scripts/load-mutation-files.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * Every tracked mutation file loads, and names only files git has (#619

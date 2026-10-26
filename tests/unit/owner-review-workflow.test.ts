@@ -6,8 +6,8 @@ import {
   type Workflow,
   type WorkflowJob,
   type WorkflowStep,
-} from './workflow-file';
-import { runOf } from './workflow-steps';
+} from './workflow-file.ts';
+import { runOf } from './workflow-steps.ts';
 
 /**
  * The daily owner-review check's workflow (#687 AC5): once a day, on

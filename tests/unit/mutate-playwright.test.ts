@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { readPlaywrightReport, type Report } from '../../scripts/mutate';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { readPlaywrightReport, type Report } from '../../scripts/mutate.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The runner reads a Playwright run (#649, spec §5) into the same report it

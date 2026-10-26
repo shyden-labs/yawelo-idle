@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import Decimal from 'decimal.js';
-import type { Encounter } from '../src/course';
+import type { Encounter } from '../src/course.ts';
 import {
   encounterOutput,
   milestonesReached,
   purchaseCost,
-} from '../src/encounters';
-import { BALANCE } from '../src/balance';
-import { Num as NumOf, type NumTuple } from '../src/num';
+} from '../src/encounters.ts';
+import { BALANCE } from '../src/balance.ts';
+import { Num as NumOf, type NumTuple } from '../src/num.ts';
 import {
   checkBulkIsSingles,
   checkClosedForm,
@@ -17,7 +17,7 @@ import {
   exactCost,
   relativeError,
   tea,
-} from './encounters-laws';
+} from './encounters-laws.ts';
 
 /**
  * Encounter costs, bulk buy and milestones (#27 AC2, AC3).

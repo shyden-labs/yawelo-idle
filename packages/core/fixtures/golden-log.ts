@@ -1,28 +1,28 @@
-import { automationUnlocked, bestPayback } from '../src/automation';
-import { wallMs, type WallMs } from '../src/clock';
-import type { Course } from '../src/course';
-import { parseEvent, PROMPT_TYPES, type GameEvent } from '../src/events';
-import { stateHash } from '../src/hash';
-import { journeyDurationMs, journeyStatus } from '../src/journeys';
-import { apply, replay } from '../src/log';
-import { reviewQueue, type WordMemory } from '../src/memory';
-import { nextFloat, nextInt, seedRng, type RngState } from '../src/rng';
-import { sailPreview } from '../src/sail';
-import { advance } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
+import { automationUnlocked, bestPayback } from '../src/automation.ts';
+import { wallMs, type WallMs } from '../src/clock.ts';
+import type { Course } from '../src/course.ts';
+import { parseEvent, PROMPT_TYPES, type GameEvent } from '../src/events.ts';
+import { stateHash } from '../src/hash.ts';
+import { journeyDurationMs, journeyStatus } from '../src/journeys.ts';
+import { apply, replay } from '../src/log.ts';
+import { reviewQueue, type WordMemory } from '../src/memory.ts';
+import { nextFloat, nextInt, seedRng, type RngState } from '../src/rng.ts';
+import { sailPreview } from '../src/sail.ts';
+import { advance } from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
 import {
   journeySlots,
   pemanduIntervalsMs,
   upgradeCatalogue,
-} from '../src/upgrades';
+} from '../src/upgrades.ts';
 import {
   judgeShopAlong,
   SHOP_KINDS,
   shopCounts,
   type ShopCount,
   type ShopKind,
-} from './shop-agreement';
-import { BOT_EPOCH_WALL_MS, syntheticCourse } from './synthetic-course';
+} from './shop-agreement.ts';
+import { BOT_EPOCH_WALL_MS, syntheticCourse } from './synthetic-course.ts';
 
 /**
  * The golden event log (M1 design §7, #34 AC5): a seeded 5-week

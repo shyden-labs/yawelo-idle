@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { unitSuiteFiles } from './unit-suite-files';
+import { unitSuiteFiles } from './unit-suite-files.ts';
 
 /**
  * The files the unit suite loads (#551): the unit config's include globs over

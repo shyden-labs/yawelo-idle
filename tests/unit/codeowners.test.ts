@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { OWNED, codeownersRules as rules } from '../../scripts/owner-review';
+import { OWNED, codeownersRules as rules } from '../../scripts/owner-review.ts';
 
 /**
  * Whose review GitHub requests on what (#374). A bad twin (`againstTwin`)

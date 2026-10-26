@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { againstControl } from '../../../tests/searched';
-import { heldCards } from '../src/cards';
-import { DAY_MS, HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock';
-import type { Course, CultureCard, Encounter } from '../src/course';
-import { Num } from '../src/num';
-import { producedBetween, rateAt, type RateLine } from '../src/production';
-import { view } from '../src/view';
-import { initialState, type GameState } from '../src/state';
+import { againstControl } from '../../../tests/searched.ts';
+import { heldCards } from '../src/cards.ts';
+import { DAY_MS, HOUR_MS, simMs, wallMs, type WallMs } from '../src/clock.ts';
+import type { Course, CultureCard, Encounter } from '../src/course.ts';
+import { Num } from '../src/num.ts';
+import { producedBetween, rateAt, type RateLine } from '../src/production.ts';
+import { view } from '../src/view.ts';
+import { initialState, type GameState } from '../src/state.ts';
 
 /**
  * Culture card bonuses (#30 AC4, AC5): the `cards` and `sets` lines of the

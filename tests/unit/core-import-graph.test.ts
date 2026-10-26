@@ -4,9 +4,9 @@ import {
   importGraph,
   rawRelativeImports,
   scanModule,
-} from './core-import-graph';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+} from './core-import-graph.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * packages/core/src keeps an acyclic graph of value imports (#92).

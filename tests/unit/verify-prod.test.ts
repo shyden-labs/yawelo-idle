@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Probe } from '../../scripts/verify-dev';
-import { DEV_MEDIA, type MediaHost } from '../../apps/site/src/media';
+import type { Probe } from '../../scripts/verify-dev.ts';
+import { DEV_MEDIA, type MediaHost } from '../../apps/site/src/media.ts';
 import {
   mediaJudgement,
   mediaProblems,
@@ -17,9 +17,9 @@ import {
   robotsProblems,
   type MediaProbe,
   type MediaSource,
-} from '../../scripts/verify-prod';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+} from '../../scripts/verify-prod.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The production verify's judgements (#621 AC5), each fed a constructed

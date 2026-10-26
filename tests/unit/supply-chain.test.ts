@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
-import { withoutYamlComments, withoutYamlQuotes } from './source-text';
-import { isRecord } from './workflow-secrets';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { withoutYamlComments, withoutYamlQuotes } from './source-text.ts';
+import { isRecord } from './workflow-secrets.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The CI supply chain is pinned, and something keeps it current.

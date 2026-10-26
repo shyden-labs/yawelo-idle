@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { stampPages } from './commit-stamp';
+import { stampPages } from './commit-stamp.ts';
 
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const PAGE =

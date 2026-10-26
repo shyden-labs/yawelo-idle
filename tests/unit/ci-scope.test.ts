@@ -6,9 +6,9 @@ import {
   report,
   scopeFor,
   type Change,
-} from '../../scripts/ci-scope';
-import { floorBreach } from '../floors';
-import { againstControl, searched } from '../searched';
+} from '../../scripts/ci-scope.ts';
+import { floorBreach } from '../floors.ts';
+import { againstControl, searched } from '../searched.ts';
 
 /**
  * The docs-only fast path (#360). build-and-test classifies the change it

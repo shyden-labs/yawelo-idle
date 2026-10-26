@@ -8,8 +8,8 @@
  * apart, or overlapped, which no player would call two visits (#35).
  */
 
-import type { Persona } from './personas';
-import type { Streams } from './streams';
+import type { Persona } from './personas.ts';
+import type { Streams } from './streams.ts';
 
 export const MINUTE_MS = 60_000;
 export const HOUR_MS = 60 * MINUTE_MS;

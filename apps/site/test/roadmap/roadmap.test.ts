@@ -1,13 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { closeOutLines } from '../../../../packages/progress/src/index';
+import { closeOutLines } from '../../../../packages/progress/src/index.ts';
 import {
   boardPages,
   FIXTURE_REPO,
   FIXTURE_TITLE,
   fixtureCardId,
   repoPages,
-} from '../../../../packages/progress/test/board-fixture';
-import { roadmapWorld, type RoadmapWorld } from './harness';
+} from '../../../../packages/progress/test/board-fixture.ts';
+import { roadmapWorld, type RoadmapWorld } from './harness.ts';
 
 /**
  * The `Roadmap` Durable Object (#341, spec §5.2 items 3–6), driven over RPC

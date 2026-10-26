@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { againstControl, againstTwin, searched } from '../searched';
+import { floorBreach } from '../floors.ts';
+import { againstControl, againstTwin, searched } from '../searched.ts';
 
 /**
  * `searched` puts the population a finding list was drawn from inside the

@@ -6,9 +6,9 @@
  * c0 x growth^n x (growth^k - 1) / (growth - 1). Every power goes through
  * `Num.pow`, so the result has the same bits on every engine (design §2.1).
  */
-import { BALANCE } from './balance';
-import type { Encounter } from './course';
-import { Num } from './num';
+import { BALANCE } from './balance.ts';
+import type { Encounter } from './course.ts';
+import { Num } from './num.ts';
 
 const ONE = Num.from(1);
 const GROWTH = Num.from(BALANCE.encounters.costGrowth);

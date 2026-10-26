@@ -7,8 +7,8 @@ import {
   type ShopCount,
   type ShopKind,
   type ShopTally,
-} from '../../packages/core/fixtures/shop-agreement';
-import { floorBreach } from '../floors';
+} from '../../packages/core/fixtures/shop-agreement.ts';
+import { floorBreach } from '../floors.ts';
 import {
   eventsOf,
   golden,
@@ -18,8 +18,8 @@ import {
   SHOP_ROWS,
   startOf,
   type SliceRow,
-} from '../golden';
-import { searched } from '../searched';
+} from '../golden.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The shop can never disagree with `apply` (#35 AC3), judged along the golden

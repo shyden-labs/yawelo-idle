@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import fc from 'fast-check';
-import { HOUR_MS } from '../src/clock';
-import { checkJourneySplit, inFlight } from '../test/journeys-laws';
+import { HOUR_MS } from '../src/clock.ts';
+import { checkJourneySplit, inFlight } from '../test/journeys-laws.ts';
 
 /**
  * The return on random splits of time (#30 AC2), at the full count (#543).

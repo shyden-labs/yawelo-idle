@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { meanRetrievability, retrievability } from '../src/memory';
+import { meanRetrievability, retrievability } from '../src/memory.ts';
 
 /**
  * What FSRS-6's mean retrievability must satisfy at one window (#28 AC3).

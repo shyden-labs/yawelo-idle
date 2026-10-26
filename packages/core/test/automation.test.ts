@@ -1,19 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
-import { simMs, wallMs } from '../src/clock';
+import { floorBreach } from '../../../tests/floors.ts';
+import { searched } from '../../../tests/searched.ts';
+import { simMs, wallMs } from '../src/clock.ts';
 import {
   automationOpensAt,
   automationUnlocked,
   bestPayback,
-} from '../src/automation';
-import { newWordMemory, review } from '../src/memory';
-import { Num } from '../src/num';
-import { rateBreakdown, rateGain, understandingNow } from '../src/production';
-import { setSail } from '../src/sail';
-import { advance, integrate, setAutomation } from '../src/sim';
-import { initialState, type GameState } from '../src/state';
-import { encounterPrice } from '../src/upgrades';
+} from '../src/automation.ts';
+import { newWordMemory, review } from '../src/memory.ts';
+import { Num } from '../src/num.ts';
+import {
+  rateBreakdown,
+  rateGain,
+  understandingNow,
+} from '../src/production.ts';
+import { setSail } from '../src/sail.ts';
+import { advance, integrate, setAutomation } from '../src/sim.ts';
+import { initialState, type GameState } from '../src/state.ts';
+import { encounterPrice } from '../src/upgrades.ts';
 import {
   START,
   course,
@@ -33,7 +37,7 @@ import {
   twins,
   TEA,
   type PemanduGame,
-} from './automation-laws';
+} from './automation-laws.ts';
 
 /**
  * Pemandu automation (#33): the unlock and the setting (AC1), the choice

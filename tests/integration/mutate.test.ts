@@ -10,9 +10,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { MutationFile } from '../../scripts/mutation-file';
-import { mutableSuites, realIo, runFile } from '../../scripts/mutate';
-import { vitestListed, type Suite } from '../../scripts/record-floors';
+import type { MutationFile } from '../../scripts/mutation-file.ts';
+import { mutableSuites, realIo, runFile } from '../../scripts/mutate.ts';
+import { vitestListed, type Suite } from '../../scripts/record-floors.ts';
 
 /**
  * The mutation runner run for real (#527, spec §7 AC4b), over a fixture

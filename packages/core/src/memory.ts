@@ -22,9 +22,9 @@ import {
   type Card,
   type CardInput,
 } from 'ts-fsrs';
-import { BALANCE, type Rank } from './balance';
-import { DAY_MS, type WallMs } from './clock';
-import { exp, expm1, log1p, pow } from './det-math';
+import { BALANCE, type Rank } from './balance.ts';
+import { DAY_MS, type WallMs } from './clock.ts';
+import { exp, expm1, log1p, pow } from './det-math.ts';
 
 const PARAMETERS = generatorParameters({ enable_fuzz: false });
 

@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { grepLines } from './grep';
-import { ignoredPaths } from './tracked-files';
+import { grepLines } from './grep.ts';
+import { ignoredPaths } from './tracked-files.ts';
+import { wholeTreeRead } from './whole-tree-watch.ts';
 
 /**
  * The game's old name, and the places it may still be written (#356).
@@ -282,6 +283,7 @@ export function readText(path: string, bytes: Uint8Array): Reading {
  * reading of `committableFiles()`, which asks git for the list itself.
  */
 export function walkTree(root = '.'): string[] {
+  wholeTreeRead('walkTree', root);
   const files: string[] = [];
   const ignored = ignoredPaths(root);
   const pending = [''];

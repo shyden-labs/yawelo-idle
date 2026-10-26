@@ -4,10 +4,10 @@ import {
   cycles,
   importGraph,
   type ImportGraph,
-} from '../unit/core-import-graph';
-import { committableFiles } from '../unit/tracked-files';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+} from '../unit/core-import-graph.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
+import { floorBreach } from '../floors.ts';
+import { searched } from '../searched.ts';
 
 /**
  * The import-graph guard over every module git has under packages/core/src (#33).

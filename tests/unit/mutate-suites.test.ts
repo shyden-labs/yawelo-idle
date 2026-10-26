@@ -8,9 +8,9 @@ import {
   vitestArgs,
   type MutableSuite,
   type RunRequest,
-} from '../../scripts/mutate';
-import { RECORD_ENV, SUITES, type Suite } from '../../scripts/record-floors';
-import { REPORT_ENV, ROOT_ENV } from '../../scripts/mutate-reporter';
+} from '../../scripts/mutate.ts';
+import { RECORD_ENV, SUITES, type Suite } from '../../scripts/record-floors.ts';
+import { REPORT_ENV, ROOT_ENV } from '../../scripts/mutate-reporter.ts';
 
 /**
  * The suites the mutation runner can run (#527, spec §5), and how it runs

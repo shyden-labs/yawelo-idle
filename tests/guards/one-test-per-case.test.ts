@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { floorBreach } from '../floors';
-import { againstControl, searched } from '../searched';
-import { scanTests } from '../unit/one-test-per-case';
-import { minus } from '../unit/burn-down';
-import { committableFiles } from '../unit/tracked-files';
+import { floorBreach } from '../floors.ts';
+import { againstControl, searched } from '../searched.ts';
+import { scanTests } from '../unit/one-test-per-case.ts';
+import { minus } from '../unit/burn-down.ts';
+import { committableFiles } from '../unit/tracked-files.ts';
 
 /**
  * The one-test-per-case guard over every committable test file (#58), with its burn-down list.
