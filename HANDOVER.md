@@ -1,41 +1,48 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-26 (sixteenth session; committed before the Mac restart). **Running when written:** nothing local from this repo; no jobs are DEAD.
-**Next session:** `ListAgents`, then `board-next` (expect #762). The work is #762's change, which ALSO carries #733, #732, #737 and #738 (Shyden's rulings on #762). Start by PLANNING it (superpowers:writing-plans, reviewed to zero per the global rule), not by coding. Step 1 below (reading the five tickets) was done this session; the summary is in step 1.
+**Written:** 2026-10-27 (seventeenth session). **Running when written:** nothing local from this repo; no jobs are DEAD.
+**Next session:** `ListAgents`, then `board-next` (expect #762). Resume #762's plan at **review pass 2** (step 2 below), not at coding.
 
-## Node: use the new PATH
+## Node
 
-Homebrew's node is uninstalled (2026-10-26): a shell started before then finds no `node` at all, so node/npm/npx AND `git push` (the pre-push hook calls node) fail with "command not found". Since 2026-10-26 the Mac's Node is `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3 / CLDR 48, as CI; Shyden, shyden.co.uk #953). Prefix every Node/npm command with `export PATH=$HOME/.local/share/node/current/bin:$PATH;` until Claude is relaunched from a fresh terminal (then check `node -p process.versions.icu` reads 78.3).
+Since 2026-10-26 the Mac's Node is `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3). If `node -p process.versions.icu` does not print 78.3, prefix Node/npm/git-push commands with `export PATH=$HOME/.local/share/node/current/bin:$PATH;`.
 
 ## Resume steps
 
-Branch `tooling/762-native-coverage` at `b2ce07c` (= origin; amend no longer allowed, add commits). PR #767 is a DRAFT. #762 In Progress.
-1. Read (done 2026-10-26): #762 AC1–AC4 built; #733 (child-process coverage via the native loader, 5 pts, AC5: every mutation file at zero untested), #732 (workerd coverage over the inspector, 5), #737 (bash xtrace of every PR-workflow `run:` step joined to lcov, 5), #738 (rehearse the 8 non-PR workflows on the PR commit, 8; **its prod-rehearsal design must be approved by Shyden**), #766 (hindsight row + sibling, after #762). Links today: #732, #737, #738 blocked by #728; #728 by #733; #733 by #762; #766 by #762. Decide the order inside one change and fix the links (a blocker takes the top level of what waits).
-2. Plan (spec + plan in `.superpowers/sdd/762/`): each kind measured and joined on the one map, the records re-taken once, the 112 mutation findings answered (99 spelling-only files still need a decision: the check has no spelling-only rule; ask Shyden if the plan cannot prove them), #766's rows. Review the plan to zero.
-3. Each new commit: record floors via the scratch ref, fetch, fold in BEFORE pushing. Push under `source ~/.claude/scripts/test-lock.zsh heavy <label>` (#765). Run the unit suite by hand before each push.
-4. Session tools from the fifteenth session (`recdiff.mjs`, `spelling-only.py`, `predicted-exist.mjs`, `arms.mjs`) were in that session's scratchpad: gone; rewrite if needed.
+Branch `tooling/762-native-coverage` (worktree `yawelo-idle-761`): origin at `b2ce07c` (red: Guards, run 40252518322); local `9e577b1` = Task 0 (`/test-reports/` ignored), **not pushed, by design**: the plan pushes nothing until Task 6, then lands ONE commit on a fresh branch `tooling/762-one-map` with a new PR (b2ce07c can never pass alone, and a force-push is forbidden). PR #767 stays a draft until then.
+1. Read the plan: `yawelo-idle-761/.superpowers/sdd/762/plan.md` (git-ignored). Tasks: T0 done; T1 child processes (#733); T2 PR-workflow trace (#737); T3 workerd (#732), a spike and then a route question to Shyden; T4 act rehearsals (#738); T5 mutations (#766 + #770's 99 proofs + 13 others); T6 one record, no approval.
+2. Review pass 2: one scratch PR off this branch with (a) T1's `autoAttachSubprocess` + child fixture + checker, (b) a one-step workflow printing GitHub's generated script beside its `run:` text (T2 offset), (c) act running `rollback-prod.yml` with fake keys (T4 spike). Read every step by name, fix the plan, log the pass, and repeat until clean, then self-approve.
+3. T3's next spike: Miniflare 5 straight (`inspectorPort`, `workers[].config`), with no wrangler proxy holding the session. Probes `cov.mjs`, `direct.mjs` were in this session's scratchpad (gone); the findings are on #732. Then ask Shyden the route (in plain words, with costs).
+4. Floors and the record: recorded in CI only. Run the unit suite by hand before each push, and push under `source ~/.claude/scripts/test-lock.zsh heavy <label>`.
 
-## Done this session (sixteenth)
+## Done this session
 
-- Clean-up pass (reference-cleanup.md, B and D; logged; `cleanup-done.sh` run). With Shyden's four OKs: 9 worktrees, 32 local + 9 remote branches deleted, PR #648 closed (superseded handover). 6 memory links repaired. #661 moved In Progress → Todo (only a merged branch named it).
-- **Finding told to Shyden:** `ROADMAP_APP_KEY` is not set as a Dependabot secret, so `board-orphans` is red on every Dependabot PR (#763, #764; #661 AC1, his step; commented on #661).
-- Slip: three branches deleted after their backup tag failed; recovered the same turn (tags `backup/handover-overnight-2026-10-05-2026-10-26`, `backup/probe-718-trigger-2026-10-26`, `backup/site-621-media-ranges-2026-10-26`).
-- Mechanism (Shyden: "Hook, every project"): global `hooks/deleting-scripts-stop-at-failure.py` + `.test.py` (67 cases) + `.mutations.py` (21, all as predicted), registered and proven live. A scratch shell script that deletes needs `set -euo pipefail` and no bare `A && B` (set -e ignores a failure left of &&, measured in bash 3.2.57 and zsh 5.9). Written in `reference-guards-and-mechanical-edits.md`.
-- A separate Mac de-bloat session (Shyden approved "Finished worktrees", 02:00 UTC) also removed `-687 -692 -713 -718 -719 -751 -754`. Branches survive; `-751`'s git-ignored `sdd/751` notes are gone (only `probe751.sh` survives in the main checkout).
+- **Rulings (Shyden, 2026-10-27, on #762 and #738):** prod rehearsal = **"Practice runner"** (act runs the unchanged prod files with fake keys and a Cloudflare stand-in, measured in a spike first; anything it cannot run faithfully goes back to him). The 99 spelling-only non-unit tests = **"Prove each one"**: filed as **#770** (8 pts, P0, Todo, blocked by #762, read back).
+- **Finding told to Shyden:** `b2ce07c` is red. The unit step writes `test-reports/unit.json`, which was not ignored, so five committable walks read 742 against 741. Fixed locally in `9e577b1` (anchored, planted both ways).
+- Links fixed and read back: #732, #737, #738 are blocked by #762 (were #728); #738 is also blocked by #737; #728 is still blocked by #748 and #733.
+- #732 spike: `createTestHarness` hard-codes `inspector: false` (wrangler 4.148.0, `cli.js:370747`). Via wrangler's proxy, `Profiler.startPreciseCoverage` answered "Profiler is not enabled"; via workerd's own inspector, `Profiler.enable` got no answer within 60 s. Stopped at two routes.
+- Plan review pass 1: 7 findings, all fixed (log at the plan's end).
+- Shyden relayed via repo-template (2026-10-27): **the phones are not available**. Parked: any device run (#713 AC5).
+
+## Plan facts to keep
+
+- `autoAttachSubprocess` merges V8 script coverage by URL BEFORE conversion (`@vitest/coverage-v8/dist/provider.js:50-62`). Native loading makes both sides the same stripped text, so it should join exactly; T1 pins it with an uncalled function.
+- 16 integration/guards test files build `env: { PATH, … }` for spawns, which drops `NODE_V8_COVERAGE`. T1's `measuredEnv` and its guard cover this.
+- Suite step durations on develop (run 39040575704): unit 33 s, guards 14, integration 30, properties 17, pacing 44, worker 18, web 12.
 
 ## Waiting on Shyden
 
 - Set `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
-- Phones: shyden.co.uk held the iPhone for #811 (2026-10-25); confirm with Shyden before any device run (#713 AC5; its worktree is gone, recreate from `site/713-media-from-r2` if needed).
+- Phones unavailable (2026-10-27): every device run stays parked until he says otherwise.
 
-## Progress (board read 2026-10-26)
+## Progress (board read 2026-10-27)
 
-- **By tickets:** 32% complete (140 of 433 in-scope stories closed), 2.14/day over 7 days; board ETA 2027-03-12; release about 2027-03-23 to 2027-03-30 (low confidence).
-- **By effort:** 1,276 points remaining across 293 open stories, 6.71/day; board ETA 2027-05-05; release about 2027-05-16 to 2027-05-23 (low confidence).
-- Measured: the board and its 7-day pace (three days at zero). Assumed: about 30 unfiled prestige stories, 1.5 to 2.5 weeks of outside waits, the real-phone sign-off.
+- **By tickets:** 32% complete (140 of 436 in-scope stories closed), 1.29/day over 7 days; board ETA 2027-06-15; release about 2027-06-26 to 2027-07-03 (low confidence).
+- **By effort:** 1,295 points remaining across 296 open stories, 4.86/day; board ETA 2027-07-21; release about 2027-08-01 to 2027-08-08 (low confidence).
+- Measured: the board and its 7-day pace (four of seven days at zero, so it has slowed since 10-26). Assumed: about 30 unfiled prestige stories, 1.5 to 2.5 weeks of outside waits, and the real-phone sign-off (phones now unavailable, with no date).
 
 ## State
 
-- Main checkout on `handover/2026-10-17-d` at `ef0fb44` (its CLAUDE.md is OLD: read develop's); this file not committed. develop `04aefda`.
-- Worktrees: `-761` = #762's branch; `-728b` (#745), `-752` (unpushed, scratch ref `refs/floors/tooling/752-pre-push-per-commit` on origin), `-36` parked; `-728-probe` has uncommitted probe files (ask before removing).
-- Backups kept 30 days: `settings.json.bak-deleting-scripts-2026-10-26`, `reference-guards-and-mechanical-edits.md.bak-deleting-scripts-2026-10-26`, the three `*floors-line*-2026-10-25`, `CLAUDE.md.bak-hook-refusal-final-2026-10-24`, `reference-engineering-standards.md.bak-hook-refusal-final-2026-10-24`, memory `MEMORY.md.bak-compact-2026-10-24`, `settings.json.bak-amend-hook-2026-10-24`, `retest.py.bak-2026-10-22-recursion`; branches `backup/*`; tags `backup/*`, `evidence/*`. Never delete early.
+- Main checkout on `handover/2026-10-17-d` (its CLAUDE.md is OLD: read develop's). develop `04aefda` when last read.
+- Worktrees: `-761` = #762; `-728b` (#745), `-752` (unpushed; scratch ref `refs/floors/tooling/752-pre-push-per-commit`), `-36` parked; `-728-probe` has uncommitted probe files (ask before removing).
+- Backups kept 30 days (never delete early): `settings.json.bak-deleting-scripts-2026-10-26`, `reference-guards-and-mechanical-edits.md.bak-deleting-scripts-2026-10-26`, the three `*floors-line*-2026-10-25`, `CLAUDE.md.bak-hook-refusal-final-2026-10-24`, `reference-engineering-standards.md.bak-hook-refusal-final-2026-10-24`, memory `MEMORY.md.bak-compact-2026-10-24`, `settings.json.bak-amend-hook-2026-10-24`, `retest.py.bak-2026-10-22-recursion`; branches `backup/*`; tags `backup/*`, `evidence/*`.
