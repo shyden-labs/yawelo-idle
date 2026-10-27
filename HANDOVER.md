@@ -21,7 +21,7 @@ Branch `tooling/762-native-coverage` (worktree `yawelo-idle-761`): origin at `b2
 - **Finding told to Shyden:** `b2ce07c` is red. The unit step writes `test-reports/unit.json`, which was not ignored, so five committable walks read 742 against 741. Fixed locally in `9e577b1` (anchored, planted both ways).
 - Links fixed and read back: #732, #737, #738 are blocked by #762 (were #728); #738 is also blocked by #737; #728 is still blocked by #748 and #733.
 - #732 spike: `createTestHarness` hard-codes `inspector: false` (wrangler 4.148.0, `cli.js:370747`). Via wrangler's proxy, `Profiler.startPreciseCoverage` answered "Profiler is not enabled"; via workerd's own inspector, `Profiler.enable` got no answer within 60 s. Stopped at two routes.
-- Plan review pass 1: 7 findings, all fixed (log at the plan's end).
+- Plan review pass 1: 7 findings, all fixed (log at the plan's end). Addendum (side agent): T2's `set -x` trace would have written expanded secrets (`ROADMAP_APP_KEY`, board-orphans.yml:37) into a PUBLIC repo's artifact. Now a line-number-only DEBUG trap, measured to leak 0 against xtrace's 4 lines; leak test added; recorded on #737 and in memory.
 - Shyden relayed via repo-template (2026-10-27): **the phones are not available**. Parked: any device run (#713 AC5).
 
 ## Plan facts to keep
