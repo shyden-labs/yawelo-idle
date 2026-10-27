@@ -1,7 +1,7 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-27 (eighteenth session). **Running when written:** nothing. No jobs are DEAD. Docker Desktop is running (started this session for act); quit it if nothing needs it.
-**Next session:** `ListAgents`, then `board-next` (expect #762). Resume #762's plan at **review pass 6** (step 2), not at coding.
+**Written:** 2026-10-27 (nineteenth session). **Running when written:** nothing. No jobs are DEAD. Docker Desktop is running (server 29.9.2, started in session 18 for act); quit it if nothing needs it.
+**Next session:** `ListAgents`, then `board-next`. It will name #728 (P0, In Progress, blocked by #733): its rank puts In Progress ahead of unblocked (#772 filed). The chain is #728 ← #733 (inside #762) ← **#771**, so **start #771**.
 
 ## Node
 
@@ -9,20 +9,20 @@ The Mac's Node is `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3). If `no
 
 ## Resume steps
 
-Branch `tooling/762-native-coverage` (worktree `yawelo-idle-761`): origin at `b2ce07c` (red: Guards, run 40252518322); local `9e577b1` = Task 0, **not pushed, by design**. Nothing is pushed until Task 6, which lands ONE commit on a fresh branch `tooling/762-one-map` with a new PR (b2ce07c can never pass alone, and force-push is forbidden). Draft PR #767 stays as it is until then.
-
-1. The plan is `yawelo-idle-761/.superpowers/sdd/762/plan.md` (git-ignored). Its probes and logs are in `.superpowers/sdd/762/probes/` and `spike-a/`.
-2. **Pass 6:** read the whole plan once. No finding means self-approve and start Task 1 (child processes, #733). A finding means fix, log, and read again.
-3. Task 1 is now small (F11): Node propagates `NODE_V8_COVERAGE` into hand-built `env:` objects (`lib/child_process.js:722`), so there is no `measuredEnv` and no 16-file conversion. It adds `autoAttachSubprocess: true`, a premise test, a narrow guard (`env -i`, naming the variable), and the post-measure checker with the spike's literals (`used` 2, `uncalled` 0, `side` 2).
-4. Task 3 (#732): the workerd spike is still open (Miniflare 5 `inspectorPort` straight to workerd), then the route question to Shyden.
-5. Floors are recorded in CI only. Run the unit suite by hand before each push, and push under `source ~/.claude/scripts/test-lock.zsh heavy <label>`.
+1. **#771** (P0, 5 points, Todo, no branch yet; Shyden's ruling "Make room first", 2026-10-27). Read its ACs on GitHub. Branch `tooling/771-record-rehearse-job` off `origin/develop`, then write its plan (`superpowers:writing-plans`) into the git-ignored `.superpowers/sdd/771/plan.md`, reviewed to zero.
+   - Budget (develop `04aefda`, `codeLines`): `record-floors.yml` 105 code lines. Freed: the scratch-ref gate's 19-line `run:` block (line 57) plus its 5-line `env:`, less 1 for a develop checkout = 23. Needed: an 18-line host `rehearse` job (no `npm ci`: built-ins only, setup-node without `cache`) plus a 4-line download step in `record-coverage` = 22. Re-count the real diff with `codeLines`; AC1 says no rise.
+   - The gate must run from **develop's checkout** before the measured SHA is checked out, reading the inputs from `$GITHUB_EVENT_PATH`. It is a security gate: it must never run the measured commit's code.
+   - The first record of #771's own branch runs develop's OLD workflow (no rehearse job). That is expected, and it passes only if no file's untested count rises.
+2. **#762** (blocked by #771). Plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`, pass 6 logged (P6-1 to P6-6). After #771 merges, do pass 7: rewrite Tasks 2, 4 and 6 so the record reads the `rehearse` job's act traces, with real-runner traces feeding #728. Worktree `-761`, branch `tooling/762-native-coverage`: origin `b2ce07c` (red), local `9e577b1` = Task 0, **not pushed, by design** (Task 6 lands one commit on a fresh `tooling/762-one-map`; draft PR #767 stays until then).
+3. Floors are recorded on an unpushed commit: scratch ref `refs/floors/<branch>`, the record probe, dispatch develop's `record-floors.yml` with `-f branch= -f sha=`, `floors:fetch`, amend, first push with `Floors:`. Run the unit suite by hand before each push; push under `source ~/.claude/scripts/test-lock.zsh heavy <label>`.
 
 ## Done this session
 
-- **Plan review passes 2 to 5**, all logged in the plan (F10 to F20, P5-1 to P5-8). Highlights: the scratch-PR premise was unpushable (F10: first-push floors hook plus the refused coverage rise). F11, above. GitHub's runner writes `run:` verbatim (offset 0); act adds a blank line before and after (offset +1, count +2; `step_run.go:132`), so trace headers carry `lineCount` and `writer`. On bash 5.2.21 the DEBUG trap leaked 0 lines against xtrace's 8. act ignores `environment:`, runs reusable workflows and `secrets: inherit`, and with no `ref` runs NOTHING and exits 0, so rehearsals always write the ref and require a trace per job. `token-reach.ts` hard-codes Cloudflare's URL, so stand-ins are network-level (hosts file plus a CA through `NODE_EXTRA_CA_CERTS`).
-- **Rulings (Shyden, 2026-10-27):** the trial ran "On this Mac" (act 0.2.89 installed with Homebrew, MIT). The five hand-started and scheduled workflows go "All five on practice runner", scope "Every project". The global reference got a 2026-10-27 paragraph (`reference-engineering-standards.md`, after the 2026-10-22 ruling).
-- **Tickets amended and read back:** #738 AC1 (practice runner) plus a spike comment; #737 AC1 (DEBUG trap, not `-x`); #762 AC5 ("with no approval", quoting Shyden's 2026-10-26 words).
-- **A slip, fixed and told:** my one-clause pointer, written to `~/.claude/CLAUDE.md` through Bash, took it to 33,715 bytes against a 33,542 ceiling. That blocked shytalk-07's Bash calls (it messaged me). I restored the backup with `cp` (33,540 bytes), so the ruling lives only in the reference. Memory `feedback-edit-global-rules-with-edit-tool`. A pointer in CLAUDE.md would need Shyden to choose a cut.
+- **#762 plan review pass 6: not clean, 6 findings.** P6-1 (structural): records run develop's `record-floors.yml` on an unpushed commit, so no PR run exists to join, and the ratchet refuses every added workflow line (this branch's +61/−5 on `ci.yml` too). Ruled out by measurement: act from the record's scripts (Playwright container, user 1001, no Docker socket) and a CI replay in the 12-min Measure step (jobs sum 10.6 min, run 40070428755). P6-2: label flow retired. P6-3: Review Focus order. P6-4: the premise test would overwrite coverage-v8's child coverage folder (`dist/index.js` `startCoverage` sets `process.env.NODE_V8_COVERAGE`); dropped. P6-5: the `codeWithoutLiterals` guard is blind to shell inside TS strings; now an AST read of `child_process` arguments. P6-6: non-unit red-first moves to the PR's `mutations` job.
+- **Asked Shyden:** "Make room first (Recommended)". Comment on #762 (issuecomment-6437978563).
+- **Filed and read back:** #771 (P0, 5, Todo; #762 "Blocked by" #771 via REST `dependencies/blocked_by`). I had told Shyden about 3 points; the drafted job puts it at 5. #772 (`board-next` follows the Blocked-by chain; P2, 2, Todo).
+- Router: GraphQL naming no `-R` or board id is refused; use REST `repos/shyden-labs/yawelo-idle/…`.
+- Memory: `project-record-cannot-measure-its-own-change`.
 
 ## Waiting on Shyden
 
@@ -32,9 +32,9 @@ Branch `tooling/762-native-coverage` (worktree `yawelo-idle-761`): origin at `b2
 
 ## Progress (board read 2026-10-27, this session)
 
-- **By tickets:** 32% complete (140 of 436 in-scope stories closed), 1.29/day over 7 days (5, 0, 1, 3, 0, 0, 0); board ETA 2027-06-15; release about 2027-06-26 to 2027-07-03 (low confidence).
-- **By effort:** 1,295 points remaining across 296 open stories, 4.86/day; board ETA 2027-07-21; release about 2027-08-01 to 2027-08-08 (low confidence).
-- Measured: the board and its 7-day pace (four of seven days at zero). Assumed: about 30 unfiled prestige stories, 1.5 to 2.5 weeks of outside waits, and the real-phone sign-off (phones unavailable, with no date). Nothing closed this session (plan work only).
+- **By tickets:** 32% complete (140 of 438 in-scope stories closed), 1.29/day over 7 days (5, 0, 1, 3, 0, 0, 0); board ETA 2027-06-16; release about 2027-06-27 to 2027-07-04 (low confidence).
+- **By effort:** 1,302 points remaining across 298 open stories, 4.86/day; board ETA 2027-07-23; release about 2027-08-03 to 2027-08-10 (low confidence).
+- Measured: the board and its 7-day pace (four of seven days at zero). Assumed: about 30 unfiled prestige stories, 1.5 to 2.5 weeks of outside waits, and the real-phone sign-off (phones unavailable, no date). Nothing closed this session; +7 points filed (#771, #772).
 
 ## State
 
