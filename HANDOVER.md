@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-28 (twenty-third session). **Running when written:** a LOCAL mutation batch in `../yawelo-idle-771` (771, 748, 718, 728 files on `09e406e`). It dies with the session: if no `mutate-*-b.log` ends in `matched`, re-run step 1.
+**Written:** 2026-10-28 (twenty-third session). **Running when written:** PR **#777** CI on `09e406e` (GitHub-side; survives `/clear`): board-orphans 40709327179, build-and-test 40709327186, mutations 40709327199. The local waiters die with the session: re-wait with step 1.
 **Next session:** `ListAgents`, then `board-next`. It names **#771** (P0, In Progress): resume it.
 
 ## Node
@@ -9,15 +9,14 @@
 
 ## Resume steps (#771, worktree `../yawelo-idle-771`, branch `tooling/771-record-rehearse-job`)
 
-Pushed head `66bad12` (PR #777). Local, NOT pushed: `402ddb2`, `09e406e` (HEAD, in `.superpowers/sdd/771/local-head.sha`). Both commits passed the unit suite (158 files, 14090 tests).
+HEAD `09e406e`, pushed (`66bad12`, `402ddb2`, `09e406e`), recorded in `.superpowers/sdd/771/pr-head.sha`. Before the push: unit 158 files / 14090 tests green; mutation files 771 19/19, 748 8/8, 718 18/18, 728 30/30 on `09e406e` (`mutate-*-b.log`); CI's selector run locally lists those four plus `771-measure-cli.ts` (integration target, untouched).
 
-1. Read `.superpowers/sdd/771/mutate-{771-record-rehearse,748-coverage-job,718-scratch-ref,728-coverage-unit}-b.log`; each must end `N of N matched`. Re-run any missing one: `source ~/.claude/scripts/test-lock.zsh heavy && npm run mutate -- tests/mutations/<f>.ts > .superpowers/sdd/771/mutate-<f>-b.log 2>&1; echo "rc=$?"` (background).
-2. All matched: run the unit suite again, push (no running CI on the branch now), update `pr-head.sha` from `git rev-parse HEAD`, wait for PR #777's three required runs with `~/.claude/scripts/wait-run.sh` per run id, and read every job and step by name.
-3. Floors: the two commits add no test (14090 before and after), so no floor should move. If CI's guards say otherwise, label `record-floors` after squashing (CLAUDE.md flow).
-4. Green on `headRefOid`: squash-merge into develop with `--match-head-commit "$(cat .superpowers/sdd/771/pr-head.sha)"`.
-5. DoD: the next develop record shows `rehearse` green; post its manifest on #771 and close it by hand.
-6. The scratch ref `refs/floors/tooling/771-record-rehearse-job` still exists on origin; its delete was refused as "Git Destructive" (final). Shyden deletes it, or rules otherwise.
-7. Then #762 pass 7 (plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`); merge develop into #762's branch first.
+1. Wait for the three runs: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 <run-id> /Users/shyden/Developer/Repos/yawelo-idle-771/.superpowers/sdd/771/pr-head.sha > <log> 2>&1; echo "rc=$?"` in the background, once per run id above. Read every job and step BY NAME; required = board-orphans, build-and-test, mutations.
+2. Floors: the commits add no test (14090 before and after), so none should move. If the guards say one did, squash and label `record-floors` (CLAUDE.md flow).
+3. Green on `headRefOid`: squash-merge into develop with `--match-head-commit "$(cat .superpowers/sdd/771/pr-head.sha)"`. Keep the squash message's reasons (memory).
+4. DoD: the next develop record shows `rehearse` green; post its manifest on #771 and close it by hand.
+5. The scratch ref `refs/floors/tooling/771-record-rehearse-job` still exists on origin; its delete was refused as "Git Destructive" (final). Shyden deletes it, or rules otherwise.
+6. Then #762 pass 7 (plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`); merge develop into #762's branch first.
 
 ## Done this session
 
