@@ -1,25 +1,25 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-28/29 (twenty-third session). **Running when written:** PR **#777** CI on `12c6c64` (GitHub-side; survives `/clear`): board-orphans 40731393002, build-and-test 40731393083, mutations 40731392980. The local waiters die with the session: re-wait with step 1.
-**Next session:** `ListAgents`, then `board-next`. It names **#771** (P0, In Progress): resume it.
+**Written:** 2026-10-29 (twenty-third session). **Running when written:** nothing.
+**Next session:** `ListAgents`, then `board-next`. It names **#762** (P0, In Progress): resume it.
 
 ## Node
 
 `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3). If `node -p process.versions.icu` is not 78.3, prefix with `export PATH=$HOME/.local/share/node/current/bin:$PATH;`.
 
-## Resume steps (#771, worktree `../yawelo-idle-771`, branch `tooling/771-record-rehearse-job`)
+## Resume steps (#762, worktree `../yawelo-idle-761`)
 
-HEAD `12c6c64`, pushed, in `.superpowers/sdd/771/pr-head.sha`. Commits: `66bad12`, `402ddb2`, `09e406e`, `bd0c303` (empty, Shyden's route), `12c6c64` (act fix + floors from record run 40729358920, `Floors:` line). Unit on `12c6c64`: 158 files, 14092 tests green.
+#771 is MERGED into develop as `bb7179e` (PR #777, squash); develop's deploy-dev (8 jobs, 96 steps) and schedule-watch are green on it. #771 stays open (Todo) for its DoD: the next record through develop's `record-floors.yml` shows `rehearse` green. That record is #762's, so #771 is now **blocked by #762** (the old link, #762 blocked by #771, was reversed: its need, the rehearse job on develop, is met).
 
-1. Wait for the three runs: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 <run-id> /Users/shyden/Developer/Repos/yawelo-idle-771/.superpowers/sdd/771/pr-head.sha > <log> 2>&1; echo "rc=$?"` in the background, per run id above. Read every job and step BY NAME; required = board-orphans, build-and-test, mutations. Mutations runs 6 files, including the new `771-gate-io.ts` (integration, CI-only; predictions never run yet).
-2. Green on `headRefOid`: squash-merge into develop with `--match-head-commit "$(cat .superpowers/sdd/771/pr-head.sha)"`; keep each commit's reasons in the squash message.
-3. DoD: the next develop record shows `rehearse` green; post its manifest on #771 and close it by hand.
-4. Scratch ref `refs/floors/tooling/771-record-rehearse-job` (now at `1450a1e`) is still on origin; its delete was refused as "Git Destructive" (final). Shyden deletes it, or rules otherwise.
-5. Then #762 pass 7 (plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`); merge develop into #762's branch first.
+1. #762's branch predates #771 (local `9e577b1`, not pushed by design): merge `origin/develop` in first, re-record anything the resolved files feed.
+2. #762 pass 7 of its plan review (plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`): run the plan's code in a scratch worktree, fix findings, log the pass.
+3. When #762's record runs (develop's workflow, `rehearse` job): post its manifest on #771 and close #771 by hand; unlink the block.
+4. The #771 scratch ref `refs/floors/tooling/771-record-rehearse-job` (at `1450a1e`) is still on origin; its delete was refused ("Git Destructive", final). Shyden deletes it, or rules otherwise.
 
 ## Done this session
 
 - PR #777 on `66bad12`: mutations red (748 6/8, 718 16/18), stale after #771's new tests. Fixed in `402ddb2` (labelled hindsight entries; sibling rows predicted first) and `09e406e` (four index orderings that passed with a step missing). Log: `.superpowers/sdd/771/stale-predictions.md`.
+- Merged: PR #777 squash `bb7179e`, matched on `12c6c64` (board-orphans 10, build-and-test 36, mutations 95 steps, all six files matched, `771-gate-io.ts` first run).
 - On `09e406e`: guards red on three grown floors (pushed before recording). Shyden chose "Empty commit on top": `bd0c303`.
 - Record run 40723820849 failed at Rehearse: act's version check printed a notice and one extra stdout newline (3 of 5 fresh-cache runs, measured locally). Fix in `12c6c64`: `ACT_DISABLE_VERSION_CHECK=1` on both act calls via an optional env on `GateIo.run`; parser stays strict; integration test `record-gate-io.test.ts`; rows in 771 (22/22 apart from one timeout row) and `771-gate-io.ts`. Record run 40729358920 green; 31 floors rose, none fell; coverage untested unchanged (4345).
 - Filed **#778** (P2, 3): the -1 ordering form elsewhere and a guard. **#775** AC6 + Estimate 8. **#536**: three local 1 s timeouts at load 42 to 106; own CPU unmeasured (the overlay is refused by `local-suites-unit-only`).
