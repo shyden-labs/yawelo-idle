@@ -2919,7 +2919,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 124
+        "total": 125
       },
       "branches": {
         "untested": 0,
@@ -3419,6 +3419,17 @@
       "branches": {
         "untested": 2,
         "total": 4
+      }
+    },
+    "tests/integration/record-gate-io.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 8
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
       }
     },
     "tests/integration/script-loads.test.ts": {
@@ -4569,7 +4580,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 154
+        "total": 157
       },
       "branches": {
         "untested": 9,
@@ -4624,7 +4635,7 @@
       "measure": "v8",
       "statements": {
         "untested": 0,
-        "total": 156
+        "total": 167
       },
       "branches": {
         "untested": 0,
@@ -5306,7 +5317,7 @@
   "totals": {
     "statements": {
       "untested": 4345,
-      "total": 28225
+      "total": 28248
     },
     "branches": {
       "untested": 1666,
