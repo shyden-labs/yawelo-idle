@@ -37,6 +37,7 @@ const SUITE = `${CLI} › a suite that did not run measures nothing (#728, #771)
 const FILE = '.github/workflows/record-floors.yml';
 const KINDS = 'tests/unit/coverage-kinds.test.ts';
 const KIND = `${KINDS} › every tracked file has one kind (#728) >`;
+const RECORDER = 'tests/unit/record-floors.test.ts';
 
 // The workflow's inline start lines (Shyden, 2026-10-28: "Start line in the workflow").
 const GATE_RUN =
@@ -48,7 +49,7 @@ const SHA_CHECKOUT =
   '      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          ref: ${{ inputs.sha }}\n          persist-credentials: false\n';
 
 export default mutationFile({
-  targets: [WORKFLOW, GATE, REHEARSE, REHEARSAL, CLI, KINDS],
+  targets: [WORKFLOW, GATE, REHEARSE, REHEARSAL, CLI, KINDS, RECORDER],
   mutations: [
     {
       name: 'gate-after-the-checkout',
@@ -250,6 +251,12 @@ export default mutationFile({
           'to deeply equal',
         [`${F} measures coverage without the switch on a fresh install of the commit, the recorded floors laid over it, then records it with the switch (#728, #748)`]:
           'to deeply equal',
+        // A step fewer moves two floored step counts. These two entries
+        // were added after the first run, not predicted.
+        [`${F} pushes nothing: no step of either job runs git push or holds a token`]:
+          'record-floors-workflow/steps',
+        [`${RECORDER} › the recorder over this repository > runs from no CI workflow step but the record-floors workflow’s (#547)`]:
+          'record-floors/workflow-steps',
       },
     },
     {

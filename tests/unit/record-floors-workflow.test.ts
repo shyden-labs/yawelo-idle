@@ -196,6 +196,8 @@ describe('the record-floors workflow (#547, #718)', () => {
       floorBreach('record-floors-workflow/sha-checkouts', checkingOut.length),
     ).toBeUndefined();
     const labels = rehearseSteps().map(label);
+    // A missing gate's index is -1, which sorts before any step.
+    expect(labels).toContain(REFUSE);
     expect(labels.indexOf(REFUSE)).toBeLessThan(
       labels.indexOf('${{ inputs.sha }}'),
     );
@@ -279,11 +281,16 @@ describe('the record-floors workflow (#547, #718)', () => {
         s.uses?.startsWith('actions/download-artifact@') &&
         s.with?.name === REHEARSAL,
     );
+    // A missing install's index is -1, which sorts before any step.
+    const install = steps.findIndex(
+      (s) => s.name === 'Install (a warning fails it)',
+    );
     expect([
       steps[at]?.with,
-      steps.findIndex((s) => s.name === 'Install (a warning fails it)') < at,
+      install !== -1,
+      install < at,
       at < steps.findIndex((s) => s.name === 'Measure coverage'),
-    ]).toEqual([{ name: REHEARSAL, path: `${OUTPUT_DIR}/` }, true, true]);
+    ]).toEqual([{ name: REHEARSAL, path: `${OUTPUT_DIR}/` }, true, true, true]);
   });
 
   it('pushes nothing: no step of either job runs git push or holds a token', () => {
@@ -378,11 +385,14 @@ describe('the record-floors workflow (#547, #718)', () => {
     // floors (the guards fail on every branch whose floors moved) or after
     // the floors recorder ran every suite (one file's total moved, #745).
     const at = (name: string): number => coverageNames().indexOf(name);
+    // A missing install's index is -1, which sorts before any step; the
+    // other three are found by name above.
     expect([
+      coverageNames().includes('Install (a warning fails it)'),
       at('Install (a warning fails it)') < at(LAY),
       at(LAY) < at('Measure coverage'),
       at('Measure coverage') < at('Record coverage'),
-    ]).toEqual([true, true, true]);
+    ]).toEqual([true, true, true, true]);
     // The floors job measures nothing; the coverage job measures once.
     expect(
       [job(), coverageJob()].map(
@@ -402,6 +412,8 @@ describe('the record-floors workflow (#547, #718)', () => {
       path: 'tests/coverage/record.json',
       'if-no-files-found': 'error',
     });
+    // A missing record step's index is -1, which sorts before any step.
+    expect(coverageNames()).toContain('Record coverage');
     expect(
       coverageNames().indexOf('Upload the coverage record'),
     ).toBeGreaterThan(coverageNames().indexOf('Record coverage'));
