@@ -11,13 +11,13 @@
 
 **Mid-merge, uncommitted:** `origin/develop` (`bb7179e`, #771) merged in with `--no-commit`. Resolved and staged: `.gitignore`, `scripts/coverage.ts`, `tests/unit/coverage-cli.test.ts`, `tests/unit/record-floors-workflow.test.ts`, plus `tests/unit/rehearse.test.ts` (#771's 3 extensionless imports given `.ts`). Still conflicted: **18 files**, 17 `tests/floors/*.json` and `tests/coverage/record.json`, all to take develop's copy (`floors:fetch` judges against the merge-base's record, `scripts/fetch-floors.ts:287`). `checkout-keeps-uncommitted-work` refused `git checkout --theirs`; Shyden ruled **"You type the command"** (not yet run). The list is `git diff --name-only --diff-filter=U` in the worktree.
 
-Pass 7 of the plan (`yawelo-idle-761/.superpowers/sdd/762/plan.md`, review log) is **not clean**: P7-1, rehearsing every workflow on the measured SHA costs about 95 job-minutes per record (measured from each workflow's latest green run, `probes/wf-cost.sh`) against the `rehearse` job's 10 minutes. Route question asked: (a) one rehearse job per workflow, side by side; (b) rehearse only changed workflows, carrying unchanged files' line results by matching bytes (a carry-forward only he grants).
+Pass 7 of the plan (`yawelo-idle-761/.superpowers/sdd/762/plan.md`, review log) is **not clean**: P7-1, rehearsing every workflow on the measured SHA costs about 95 job-minutes per record (measured from each workflow's latest green run, `probes/wf-cost.sh`) against the `rehearse` job's 10 minutes. **Ruled by Shyden, 2026-10-29: "Practise all, side by side"**: one rehearse job per workflow file (a matrix), each with its own limit; no carry-forward.
 
 ## Resume steps
 
 1. If `git -C ../yawelo-idle-761 diff --name-only --diff-filter=U` still lists the 18 files, Shyden has not run his command: do nothing on #762 that needs the merge.
 2. Once it is empty: `git add` the 18, check that no conflict markers are left (`/usr/bin/grep -rlE '^(<<<<<<<|>>>>>>>)' --include=*.json --include=*.ts .`), run the unit suite under the test lock, then commit the merge (`Refs #762, Refs #771`). Floors stay red until the record (expected, CLAUDE.md).
-3. On the route answer: rewrite Tasks 2, 4 and 6 for it, then pass 8 (run the plan's code in a scratch worktree, fix, log).
+3. Rewrite Tasks 2, 4 and 6 for the matrix route, then pass 8 (run the plan's code in a scratch worktree, measure act's overhead over a real runner, fix, log).
 4. Task 1 (child processes) does not depend on the route, apart from its checker's one `run:` line: it can start after step 2.
 5. When #762's record runs: post its manifest on #771, close #771 by hand, unlink the block.
 6. The #771 scratch ref `refs/floors/tooling/771-record-rehearse-job` (`1450a1e`) is still on origin; its delete was refused (final). Shyden deletes it, or rules otherwise.
@@ -25,7 +25,6 @@ Pass 7 of the plan (`yawelo-idle-761/.superpowers/sdd/762/plan.md`, review log) 
 ## Waiting on Shyden
 
 - Run the `checkout --theirs` command for the 18 files (given in chat, 2026-10-29).
-- The P7-1 route (a or b).
 - Delete the #771 scratch ref (step 6).
 - `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
 - How to measure a unit test's own CPU now the overlay is refused (#536).
@@ -43,4 +42,5 @@ Pass 7 of the plan (`yawelo-idle-761/.superpowers/sdd/762/plan.md`, review log) 
 - Worktrees: `-761` (#762, mid-merge, above); `-771`; `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files, so ask before removing it.
 - Phones connected; nothing phone-held runs before the release (#713 AC5).
 - Backups kept 30 days: tag `backup/771-pre-squash-2026-10-28`, `~/.claude/hooks/*.bak-2026-10-28-*`.
+- Restart-safe: no local job runs; the mid-merge lives in `-761`'s `.git`; nothing needed is in `$TMPDIR` (the cost script is in `.superpowers/sdd/762/probes/`).
 - This shell's `grep` is a wrapper that missed a planted control: use `/usr/bin/grep` for searches whose empty result matters.
