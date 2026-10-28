@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-28 (twenty-third session). **Running when written:** PR **#777** CI on `09e406e` (GitHub-side; survives `/clear`): board-orphans 40709327179, build-and-test 40709327186, mutations 40709327199. The local waiters die with the session: re-wait with step 1.
+**Written:** 2026-10-28/29 (twenty-third session). **Running when written:** PR **#777** CI on `12c6c64` (GitHub-side; survives `/clear`): board-orphans 40731393002, build-and-test 40731393083, mutations 40731392980. The local waiters die with the session: re-wait with step 1.
 **Next session:** `ListAgents`, then `board-next`. It names **#771** (P0, In Progress): resume it.
 
 ## Node
@@ -9,30 +9,28 @@
 
 ## Resume steps (#771, worktree `../yawelo-idle-771`, branch `tooling/771-record-rehearse-job`)
 
-HEAD `09e406e`, pushed (`66bad12`, `402ddb2`, `09e406e`), recorded in `.superpowers/sdd/771/pr-head.sha`. Before the push: unit 158 files / 14090 tests green; mutation files 771 19/19, 748 8/8, 718 18/18, 728 30/30 on `09e406e` (`mutate-*-b.log`); CI's selector run locally lists those four plus `771-measure-cli.ts` (integration target, untouched).
+HEAD `12c6c64`, pushed, in `.superpowers/sdd/771/pr-head.sha`. Commits: `66bad12`, `402ddb2`, `09e406e`, `bd0c303` (empty, Shyden's route), `12c6c64` (act fix + floors from record run 40729358920, `Floors:` line). Unit on `12c6c64`: 158 files, 14092 tests green.
 
-1. Wait for the three runs: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 <run-id> /Users/shyden/Developer/Repos/yawelo-idle-771/.superpowers/sdd/771/pr-head.sha > <log> 2>&1; echo "rc=$?"` in the background, once per run id above. Read every job and step BY NAME; required = board-orphans, build-and-test, mutations.
-2. Floors: the commits add no test (14090 before and after), so none should move. If the guards say one did, squash and label `record-floors` (CLAUDE.md flow).
-3. Green on `headRefOid`: squash-merge into develop with `--match-head-commit "$(cat .superpowers/sdd/771/pr-head.sha)"`. Keep the squash message's reasons (memory).
-4. DoD: the next develop record shows `rehearse` green; post its manifest on #771 and close it by hand.
-5. The scratch ref `refs/floors/tooling/771-record-rehearse-job` still exists on origin; its delete was refused as "Git Destructive" (final). Shyden deletes it, or rules otherwise.
-6. Then #762 pass 7 (plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`); merge develop into #762's branch first.
+1. Wait for the three runs: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 <run-id> /Users/shyden/Developer/Repos/yawelo-idle-771/.superpowers/sdd/771/pr-head.sha > <log> 2>&1; echo "rc=$?"` in the background, per run id above. Read every job and step BY NAME; required = board-orphans, build-and-test, mutations. Mutations runs 6 files, including the new `771-gate-io.ts` (integration, CI-only; predictions never run yet).
+2. Green on `headRefOid`: squash-merge into develop with `--match-head-commit "$(cat .superpowers/sdd/771/pr-head.sha)"`; keep each commit's reasons in the squash message.
+3. DoD: the next develop record shows `rehearse` green; post its manifest on #771 and close it by hand.
+4. Scratch ref `refs/floors/tooling/771-record-rehearse-job` (now at `1450a1e`) is still on origin; its delete was refused as "Git Destructive" (final). Shyden deletes it, or rules otherwise.
+5. Then #762 pass 7 (plan `yawelo-idle-761/.superpowers/sdd/762/plan.md`); merge develop into #762's branch first.
 
 ## Done this session
 
-- PR #777 CI on `66bad12`: build-and-test (36 steps) and board-orphans (10) green; **mutations red**: `748-coverage-job.ts` 6 of 8, `718-scratch-ref.ts` 16 of 18 (728 and both 771 files matched). Cause: #771 added a SHA-tip test and an AC6 credential test that also catch older mutants, and I had edited 748/718/728 but run only the new 771 file before pushing.
-- `402ddb2`: 748 and 718 rows gain the extra reds, labelled as added after the run. Sibling rows predicted first in `771-record-rehearse.ts` test each explanation (reach of `needs`, list spelling, rehearse checkout, workflow permissions); all matched. The rehearse-checkout row found a hole: an ordering of indexes passes when a step is missing (-1 sorts first). Fixed there.
-- `09e406e`: three more such orderings fixed in `record-floors-workflow.test.ts`, each first watched staying green under its row. Predictions log: `.superpowers/sdd/771/stale-predictions.md` (one of mine was wrong: 718 write-permission).
-- Filed **#778** (P2, 3 points): the same blind form in `coverage-table.test.ts:231`, an offset mix in `supply-chain.test.ts:315`, and a guard. AST sweep: 17 sites in 508 files.
-- **#775** gained AC6 (a local `npm run mutate:changed`), Estimate 5 → 8: the mechanism for running every changed mutation file before a push.
-- **#536** comment: two 1 s timeouts during a local mutation run at load 70-106 on 6 cores. Own CPU not measured: the overlay method is refused by `local-suites-unit-only` (cannot read an overlay config), and that refusal is final. The same row matched in CI and in the next local run.
+- PR #777 on `66bad12`: mutations red (748 6/8, 718 16/18), stale after #771's new tests. Fixed in `402ddb2` (labelled hindsight entries; sibling rows predicted first) and `09e406e` (four index orderings that passed with a step missing). Log: `.superpowers/sdd/771/stale-predictions.md`.
+- On `09e406e`: guards red on three grown floors (pushed before recording). Shyden chose "Empty commit on top": `bd0c303`.
+- Record run 40723820849 failed at Rehearse: act's version check printed a notice and one extra stdout newline (3 of 5 fresh-cache runs, measured locally). Fix in `12c6c64`: `ACT_DISABLE_VERSION_CHECK=1` on both act calls via an optional env on `GateIo.run`; parser stays strict; integration test `record-gate-io.test.ts`; rows in 771 (22/22 apart from one timeout row) and `771-gate-io.ts`. Record run 40729358920 green; 31 floors rose, none fell; coverage untested unchanged (4345).
+- Filed **#778** (P2, 3): the -1 ordering form elsewhere and a guard. **#775** AC6 + Estimate 8. **#536**: three local 1 s timeouts at load 42 to 106; own CPU unmeasured (the overlay is refused by `local-suites-unit-only`).
+- Global, Shyden's "Every push": `~/.claude/hooks/floors-line-before-first-push.py` judges each commit a later push adds (31 cases, 20 mutants matched). Backups `*.bak-2026-10-28-every-push`; the test file's true original is `...test.py.bak-2026-10-28-every-push-original` (the plain `.bak` one is one blank line short). CLAUDE.md line reworded (", first pushed with a" → "; every pushed commit has a", "2026-10-21" → "2026-10-21/28"); reference section added.
 
 ## Waiting on Shyden
 
-- Delete the #771 scratch ref (step 6).
+- Delete the #771 scratch ref (step 4).
 - `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
+- How to measure a unit test's own CPU now the overlay is refused (#536).
 - Offered: a hook refusing a call sent beside a failed Edit.
-- How should a unit test's own CPU be measured now that the overlay route is refused (#536)?
 
 ## Progress (board read 2026-10-28)
 
@@ -42,7 +40,7 @@ HEAD `09e406e`, pushed (`66bad12`, `402ddb2`, `09e406e`), recorded in `.superpow
 
 ## State
 
-- The main checkout is on `handover/2026-10-17-d` (local handover commits, not pushed). Its CLAUDE.md is OLD; read develop's.
-- Worktrees: `-771` (#771, above); `-761` (#762, local `9e577b1`, not pushed by design); `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files, so ask before removing it.
-- Phones: OnePlus CPH2653 and iPhone Air connected; nothing phone-held is runnable before the release (#713 AC5's production half).
-- Backups kept 30 days: tag `backup/771-pre-squash-2026-10-28`, plus the hook backups `~/.claude/hooks/*.bak-2026-10-28-*`.
+- Main checkout on `handover/2026-10-17-d` (local handover commits). Its CLAUDE.md is OLD; read develop's.
+- Worktrees: `-771` (above); `-761` (#762, local `9e577b1`, not pushed by design); `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files, so ask before removing it.
+- Phones connected; nothing phone-held runs before the release (#713 AC5).
+- Backups kept 30 days: tag `backup/771-pre-squash-2026-10-28`, `~/.claude/hooks/*.bak-2026-10-28-*`.
