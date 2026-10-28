@@ -22,6 +22,10 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * compares: an index of -1 passed every such ordering until each test
  * asserted the step present (predicted before their first run, which ran
  * them against the tests without that assertion).
+ *
+ * The last three rows put back the version check record run 40723820849
+ * failed on, and a listing read past the blank line it adds (predicted
+ * before their first run).
  */
 
 const WORKFLOW = 'tests/unit/record-floors-workflow.test.ts';
@@ -30,6 +34,8 @@ const GATE = 'tests/unit/record-gate.test.ts';
 const REHEARSE = 'tests/unit/rehearse.test.ts';
 const STEP = `${REHEARSE} › the rehearse step (#771) >`;
 const FLOOR = `${REHEARSE} › the floor of workflow files (#771) >`;
+const LISTED = `${REHEARSE} › act’s listing, read as act prints it (#771) >`;
+const CHECK_OFF = `${STEP} runs every act command with its version check off`;
 const REHEARSAL = 'tests/unit/rehearsal.test.ts';
 const MEASURED = `${REHEARSAL} › the rehearsal the record measures with (#771 AC4) >`;
 const CLI = 'tests/unit/coverage-cli.test.ts';
@@ -284,6 +290,33 @@ export default mutationFile({
           'holds 0 steps named',
         [`${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`]:
           'to include',
+      },
+    },
+    {
+      // Record run 40723820849: act's version check added a blank line to
+      // the listing, and the rehearse step failed.
+      name: 'act-lists-with-the-check-on',
+      file: 'scripts/rehearse.ts',
+      anchor: "  const listing = io.run(binary, ['--list'], ACT_ENV);\n",
+      replacement: "  const listing = io.run(binary, ['--list']);\n",
+      red: { [CHECK_OFF]: 'to deeply equal' },
+    },
+    {
+      name: 'act-versioned-with-the-check-on',
+      file: 'scripts/rehearse.ts',
+      anchor: "io.run(binary, ['--version'], ACT_ENV)",
+      replacement: "io.run(binary, ['--version'])",
+      red: { [CHECK_OFF]: 'to deeply equal' },
+    },
+    {
+      name: 'listing-reads-past-the-notice',
+      file: 'scripts/rehearse.ts',
+      anchor: "  if (after !== '' && after !== `\\n${DUPLICATE_NOTE}\\n`)\n",
+      replacement:
+        "  if (after !== '' && after !== `\\n${DUPLICATE_NOTE}\\n` && after !== `\\n${DUPLICATE_NOTE}\\n\\n`)\n",
+      red: {
+        [`${LISTED} refuses the blank line act’s update notice adds after its note`]:
+          'to throw',
       },
     },
   ],

@@ -76,6 +76,14 @@ export interface Manifest {
   workflows: Record<string, string[]>;
 }
 
+/**
+ * act's version check, when a newer release exists and its answer comes in
+ * time, adds a blank line to stdout after the listing (record run
+ * 40723820849, 2026-10-28; 3 of 5 runs from a fresh cache, measured). Off,
+ * act also asks no server.
+ */
+export const ACT_ENV = { ACT_DISABLE_VERSION_CHECK: '1' } as const;
+
 /** The one note act 0.2.89 prints after its table (cmd/list.go). */
 export const DUPLICATE_NOTE =
   'Detected multiple jobs with the same job name, use `-W` to specify the path to the specific workflow.';
@@ -247,11 +255,11 @@ async function refusal(io: RehearseIo, act: Tool): Promise<string | undefined> {
   if (unpacked.status !== 0)
     return `tar could not unpack ${act.asset}: ${unpacked.stderr.trim()} (#771).`;
   const binary = `${dir}/act`;
-  const version = io.run(binary, ['--version']).stdout.trim();
+  const version = io.run(binary, ['--version'], ACT_ENV).stdout.trim();
   const wanted = `act version ${act.version}`;
   if (version !== wanted)
     return `${binary} --version printed '${version}', not '${wanted}' (#771).`;
-  const listing = io.run(binary, ['--list']);
+  const listing = io.run(binary, ['--list'], ACT_ENV);
   if (listing.status !== 0)
     return `act --list failed: ${listing.stderr.trim()} (#771).`;
   let listed: Record<string, string[]>;

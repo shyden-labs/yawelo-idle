@@ -155,6 +155,17 @@ describe('act’s listing, read as act prints it (#771)', () => {
     ).toEqual({ 'w.yml': ['a'] });
   });
 
+  // act's update notice adds this blank line to stdout (record run
+  // 40723820849, 2026-10-28); the rehearsal turns the notice off rather
+  // than read past it.
+  it('refuses the blank line act’s update notice adds after its note', () => {
+    expect(() =>
+      listedWorkflows(
+        `${table([['0', 'a', 'a', 'w', 'w.yml', 'push']])}\n${DUPLICATE_NOTE}\n\n`,
+      ),
+    ).toThrow(`text after its table, "\\n${DUPLICATE_NOTE}\\n\\n"`);
+  });
+
   it('reads a job name holding spaces and a cell holding multi-byte text by act’s byte columns', () => {
     expect(
       listedWorkflows(
@@ -352,6 +363,8 @@ interface Fake {
   logs: string[];
   written: Record<string, string | Uint8Array>;
   commands: string[];
+  /** The environment each command was given, by command. */
+  envs: Record<string, Readonly<Record<string, string>> | undefined>;
   fetched: string[];
 }
 
@@ -368,6 +381,7 @@ const fake = (
   const logs: string[] = [];
   const written: Fake['written'] = {};
   const commands: string[] = [];
+  const envs: Fake['envs'] = {};
   const fetched: string[] = [];
   const runs: Record<string, Run> = {
     'git config --includes --get-regexp ^http\\..*\\.extraheader$': ran('', 1),
@@ -383,6 +397,7 @@ const fake = (
     logs,
     written,
     commands,
+    envs,
     fetched,
     io: {
       env: options.env ?? { RUNNER_TEMP: '/runner/temp' },
@@ -390,9 +405,10 @@ const fake = (
       readFile: vi.fn<(path: string) => string>(),
       // A command the fake does not know answers undefined, which the
       // rehearsal cannot read: the test fails, never passes, on one.
-      run: (command, args) => {
+      run: (command, args, env) => {
         const key = [command, ...args].join(' ');
         commands.push(key);
+        envs[key] = env;
         return runs[key] as Run;
       },
       error: (message) => errors.push(message),
@@ -442,6 +458,21 @@ describe('the rehearse step (#771)', () => {
     expect(written['/runner/temp/act/act_Linux_x86_64.tar.gz']).toBe(ASSET);
     expect(logs).toEqual([
       `rehearse: act 0.2.89 lists 11 workflow files (24 jobs) at ${HEAD}`,
+    ]);
+  });
+
+  // With the check on, act's update notice adds a blank line to its
+  // listing, which the rehearsal refuses (record run 40723820849).
+  it('runs every act command with its version check off', async () => {
+    const { io, commands, envs } = fake();
+    await rehearse(io, pin());
+    expect(
+      commands
+        .filter((command) => command.startsWith(`${ACT_PATH} `))
+        .map((command) => [command, envs[command]]),
+    ).toEqual([
+      [`${ACT_PATH} --version`, { ACT_DISABLE_VERSION_CHECK: '1' }],
+      [`${ACT_PATH} --list`, { ACT_DISABLE_VERSION_CHECK: '1' }],
     ]);
   });
 

@@ -28,7 +28,12 @@ export interface Run {
 export interface GateIo {
   env: Readonly<Record<string, string | undefined>>;
   readFile(path: string): string;
-  run(command: string, args: readonly string[]): Run;
+  /** `env` is added to the runner's environment for this command alone. */
+  run(
+    command: string,
+    args: readonly string[],
+    env?: Readonly<Record<string, string>>,
+  ): Run;
   error(message: string): void;
 }
 
@@ -156,7 +161,13 @@ export const toRun = (
 export const nodeIo: GateIo = {
   env: process.env,
   readFile: (path) => readFileSync(path, 'utf8'),
-  run: (command, args) => toRun(spawnSync(command, args, { encoding: 'utf8' })),
+  run: (command, args, env) =>
+    toRun(
+      spawnSync(command, args, {
+        encoding: 'utf8',
+        env: { ...process.env, ...env },
+      }),
+    ),
   error: (message) => {
     console.error(message);
   },
