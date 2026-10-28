@@ -6,6 +6,7 @@ import {
   metaRefusal,
   percent,
   renamesFrom,
+  suiteFailure,
 } from '../../scripts/coverage.ts';
 
 describe("a suite's coverage run never carries the record switch (#728)", () => {
@@ -174,5 +175,31 @@ describe('a count reads as the share of code run (#728)', () => {
     expect(percent({ untested: 0, total: 0 })).toBe(
       '100.0% run (0 of 0 untested)',
     );
+  });
+});
+
+describe('a suite that did not run measures nothing (#728, #771)', () => {
+  it.each([
+    [
+      'one that never started',
+      { error: new Error('spawn npx ENOENT'), status: null },
+      'the unit suite did not start: spawn npx ENOENT',
+    ],
+    [
+      'one that failed',
+      { status: 3 },
+      'the unit suite failed (exit 3): nothing measured',
+    ],
+    [
+      'one stopped by a signal',
+      { status: null },
+      'the unit suite failed (exit null): nothing measured',
+    ],
+  ])('stops on %s', (_case, run, failure) => {
+    expect(suiteFailure('unit', run)).toBe(failure);
+  });
+
+  it('goes on after one that passed', () => {
+    expect(suiteFailure('unit', { status: 0 })).toBeUndefined();
   });
 });

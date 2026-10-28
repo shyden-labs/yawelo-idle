@@ -11,7 +11,11 @@ import { onAllowlist } from './ci-scope.ts';
 import { RECORD_FILE } from './coverage.ts';
 import { MINIMUMS_DIR } from './minimums-method.ts';
 import { UNIT_SUITE } from './mutate.ts';
-import { FILE_SEPARATOR, type MutationFile } from './mutation-file.ts';
+import {
+  FILE_SEPARATOR,
+  isMutationFile,
+  type MutationFile,
+} from './mutation-file.ts';
 import { FLOORS_DIR } from './record-floors.ts';
 
 /**
@@ -51,14 +55,6 @@ export function readNameStatus(text: string): Changed[] {
 
 /** A mutation file's path as the workflow passes it on: nothing a shell could read as more. */
 const MUTATION_FILE = /^tests\/mutations\/[A-Za-z0-9._-]+\.ts$/;
-
-/**
- * Whether `path` is where a mutation file lives: TypeScript in
- * `tests/mutations/`. The one spelling of the rule, read by
- * `mutationFilesIn` and by `changedHelpers`, which leaves these out (#670).
- */
-const isMutationFile = (path: string): boolean =>
-  path.startsWith('tests/mutations/') && path.endsWith('.ts');
 
 /**
  * The mutation files among `changed` that exist after the change (added,

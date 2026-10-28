@@ -4,7 +4,7 @@
  * untested statements and branch arms; `record` writes that table as the
  * committed record, in the record-floors workflow only.
  *
- *   node scripts/coverage.ts measure
+ *   node scripts/coverage.ts measure [<rehearsal folder>]   (the record's coverage job names rehearsal/, #771)
  *   node scripts/coverage.ts record
  */
 import { spawnSync } from 'node:child_process';
@@ -22,6 +22,7 @@ import {
   type Table,
 } from './coverage-table.ts';
 import { RECORD_JOB_ENV, recordRefusal } from './record-floors.ts';
+import { checkRehearsal } from './rehearsal.ts';
 
 export const RECORD_FILE = 'tests/coverage/record.json';
 export const TABLE_FILE = 'coverage/table.json';
@@ -114,6 +115,18 @@ export function fetchedRecordRefusals(
   return rises(before, next, renamed);
 }
 
+/** Why a suite's run left nothing to measure, or nothing. */
+export function suiteFailure(
+  name: string,
+  run: { error?: Error; status: number | null },
+): string | undefined {
+  if (run.error !== undefined)
+    return `the ${name} suite did not start: ${run.error.message}`;
+  if (run.status !== 0)
+    return `the ${name} suite failed (exit ${String(run.status)}): nothing measured`;
+  return undefined;
+}
+
 const die = (message: string): never => {
   console.error(`coverage: ${message}`);
   process.exit(1);
@@ -140,8 +153,9 @@ const readOrUndefined = (path: string): string | undefined => {
 export const percent = ({ untested, total }: Count): string =>
   `${(total === 0 ? 100 : (100 * (total - untested)) / total).toFixed(1)}% run (${untested.toLocaleString('en')} of ${total.toLocaleString('en')} untested)`;
 
-function measure(): void {
+function measure(rehearsal: string | undefined): void {
   const head = output('git', ['rev-parse', 'HEAD']);
+  checkRehearsal(rehearsal, readOrUndefined, head, die);
   for (const { name } of COVERAGE_SUITES) {
     console.log(`coverage: the ${name} suite`);
     const run = spawnSync(
@@ -149,12 +163,8 @@ function measure(): void {
       ['vitest', 'run', '-c', coverageConfigFile(name)],
       { stdio: 'inherit', env: childEnv(process.env) },
     );
-    if (run.error !== undefined)
-      die(`the ${name} suite did not start: ${run.error.message}`);
-    if (run.status !== 0)
-      die(
-        `the ${name} suite failed (exit ${String(run.status)}): nothing measured`,
-      );
+    const failure = suiteFailure(name, run);
+    if (failure !== undefined) die(failure);
   }
   const maps = COVERAGE_SUITES.map(
     ({ name }) =>
@@ -206,7 +216,7 @@ function record(): void {
 
 if (import.meta.main) {
   const command = process.argv[2];
-  if (command === 'measure') measure();
+  if (command === 'measure') measure(process.argv[3]);
   else if (command === 'record') record();
   else die('name a command: measure or record');
 }

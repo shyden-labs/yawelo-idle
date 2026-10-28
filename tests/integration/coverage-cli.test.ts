@@ -85,6 +85,17 @@ describe('the coverage CLI (#728)', () => {
     ]);
   });
 
+  it('refuses to measure without the rehearsal it was pointed at, before any suite runs (#771)', () => {
+    const { dir } = repository();
+    mkdirSync(join(dir, 'rehearsal'));
+    const run = cli(dir, ['measure', 'rehearsal/']);
+    expect([run.status, run.stderr.trim(), run.stdout]).toEqual([
+      1,
+      'coverage: no rehearsal manifest at rehearsal/manifest.json: the record’s rehearse job writes it (#771).',
+      '',
+    ]);
+  });
+
   it('refuses to record outside the record-floors workflow', () => {
     const { dir } = repository();
     const run = cli(dir, ['record']);

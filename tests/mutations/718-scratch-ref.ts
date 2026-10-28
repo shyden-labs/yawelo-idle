@@ -9,10 +9,19 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * artifact named by develop's commit; and in the fetch, a run of another
  * branch or commit accepted, a pushed HEAD accepted, the scratch ref named
  * as a branch.
+ *
+ * #771's tests also red two rows (CI mutations run 40697004648): a write
+ * permission reaches the rehearse job, which inherits the workflow's
+ * permissions, and another commit checked out leaves the jobs checking out
+ * the given SHA. Those two entries (NO_CREDENTIAL, SHA_TIP) were added
+ * after that run, not predicted; 771-record-rehearse.ts's sibling rows test
+ * the explanation.
  */
 
 const FLOORS = 'tests/unit/record-floors-workflow.test.ts';
 const F = `${FLOORS} › the record-floors workflow (#547, #718) >`;
+const NO_CREDENTIAL = `${F} holds no credential in the rehearse job (#771 AC6)`;
+const SHA_TIP = `${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`;
 const MINIMUMS = 'tests/unit/record-minimums-workflow.test.ts';
 const M = `${MINIMUMS} › the record-minimums workflow (#84, #718) >`;
 const RECORDER = 'tests/unit/record-floors.test.ts';
@@ -20,9 +29,11 @@ const FETCH = 'tests/unit/fetch-floors.test.ts';
 const REFUSAL = `${FETCH} › fetchRefusal >`;
 const SCRATCH = `${FETCH} › the scratch ref >`;
 const GUIDANCE = 'tests/unit/minimums.test.ts';
+// The gate moved out of record-floors.yml's shell into a tested script (#771).
+const GATE = 'tests/unit/record-gate.test.ts';
 
 export default mutationFile({
-  targets: [FLOORS, MINIMUMS, RECORDER, FETCH, GUIDANCE],
+  targets: [FLOORS, MINIMUMS, RECORDER, FETCH, GUIDANCE, GATE],
   mutations: [
     {
       // The checker's guidance, which nine non-unit suites print (#659),
@@ -60,6 +71,7 @@ export default mutationFile({
       replacement: 'permissions:\n  contents: write\n',
       red: {
         [`${F} reads the repository and writes nothing`]: 'to deeply equal',
+        [NO_CREDENTIAL]: 'to deeply equal',
       },
     },
     {
@@ -112,16 +124,21 @@ export default mutationFile({
       red: {
         [`${F} checks out exactly the SHA it was given, in each job`]:
           'to deeply equal',
+        [SHA_TIP]: 'to deeply equal',
       },
     },
     {
+      // The comparison record-floors.yml's shell made until #771.
       name: 'tip-not-compared',
-      file: '.github/workflows/record-floors.yml',
-      anchor: '          if ! [ "$tip" = "$SHA" ]; then\n',
-      replacement: '          if false; then\n',
+      file: 'scripts/record-gate.ts',
+      anchor:
+        "  return tip === sha ? undefined : `${ref} is at '${tip}', not ${sha} (#718).`;\n",
+      replacement: '  return undefined;\n',
       red: {
-        [`${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`]:
-          'to be greater than',
+        [`${GATE} › the SHA is the scratch ref’s tip, read from the repository (#718) > refuses another commit at the ref`]:
+          'to be',
+        [`${GATE} › the gate step (#771) > refuses a SHA that is not the tip`]:
+          'to deeply equal',
       },
     },
     {
