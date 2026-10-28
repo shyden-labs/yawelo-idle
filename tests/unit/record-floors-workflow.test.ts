@@ -261,12 +261,15 @@ describe('the record-floors workflow (#547, #718)', () => {
       },
     ]);
     const labels = rehearseSteps().map(label);
+    // A missing checkout's index is -1, which sorts before any step: its
+    // presence is asserted first.
     expect([
+      labels.includes('${{ inputs.sha }}'),
       labels.indexOf('${{ inputs.sha }}') <
         labels.indexOf('Rehearse the workflows'),
       labels.indexOf('Rehearse the workflows') <
         labels.findIndex((l) => l?.startsWith('actions/upload-artifact@')),
-    ]).toEqual([true, true]);
+    ]).toEqual([true, true, true]);
   });
 
   it('lays the rehearsal over the tree after the install and before Measure judges it (#771)', () => {

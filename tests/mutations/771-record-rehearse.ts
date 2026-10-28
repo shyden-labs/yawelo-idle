@@ -10,6 +10,18 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * unrefused, ls-remote's first answer taken, a failed suite measured, and a
  * rehearsal of another commit accepted; and a mutation file counted as code
  * again (Shyden, 2026-10-28: "Count them as not code").
+ *
+ * The last three rows were predicted before their first run, after CI
+ * mutations run 40697004648 found 748-coverage-job.ts's rows also red the
+ * SHA-tip test: they test that explanation rather than copy it. A coverage
+ * job that still reaches the gate, by another job or in the list spelling,
+ * leaves the SHA-tip test green; the rehearse job checking out another
+ * commit reds it, and the rehearse-host test's ordering with it. The
+ * permissions row tests 718's write-permission explanation the same way.
+ * The last three rows remove or rename a step whose index an ordering
+ * compares: an index of -1 passed every such ordering until each test
+ * asserted the step present (predicted before their first run, which ran
+ * them against the tests without that assertion).
  */
 
 const WORKFLOW = 'tests/unit/record-floors-workflow.test.ts';
@@ -175,6 +187,96 @@ export default mutationFile({
       red: {
         [`${KIND} tests/mutations/771-record-rehearse.ts is not-code`]: 'to be',
         [`${KIND} tests/mutations/718-scratch-ref.ts is not-code`]: 'to be',
+      },
+    },
+    {
+      name: 'coverage-waits-on-the-gate-directly',
+      file: FILE,
+      anchor: '  record-coverage:\n    needs: record-floors\n',
+      replacement: '  record-coverage:\n    needs: rehearse\n',
+      red: {
+        [`${F} holds the floors job, then a coverage job that waits for it, unconditionally (#748)`]:
+          'to deeply equal',
+      },
+    },
+    {
+      name: 'coverage-needs-as-a-list',
+      file: FILE,
+      anchor: '  record-coverage:\n    needs: record-floors\n',
+      replacement: '  record-coverage:\n    needs: [record-floors]\n',
+      red: {
+        [`${F} holds the floors job, then a coverage job that waits for it, unconditionally (#748)`]:
+          'to deeply equal',
+      },
+    },
+    {
+      name: 'rehearsal-checks-out-another-commit',
+      file: FILE,
+      anchor: SHA_CHECKOUT,
+      replacement: SHA_CHECKOUT.replace('inputs.sha', 'github.sha'),
+      red: {
+        [`${F} checks out exactly the SHA it was given, in each job`]:
+          'to deeply equal',
+        [`${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`]:
+          'to deeply equal',
+        [`${F} rehearses on the runner host, uploading the manifest named by the commit, failing when it is missing (#771)`]:
+          'to deeply equal',
+      },
+    },
+    {
+      // 718's write-permission row also reds the AC6 test: the rehearse job
+      // inherits the workflow's permissions.
+      name: 'workflow-grants-actions-write',
+      file: FILE,
+      anchor: 'permissions:\n  contents: read\n',
+      replacement: 'permissions:\n  contents: read\n  actions: write\n',
+      red: {
+        [`${F} reads the repository and writes nothing`]: 'to deeply equal',
+        [`${F} holds no credential in the rehearse job (#771 AC6)`]:
+          'to deeply equal',
+      },
+    },
+    {
+      // An index of -1 sorts before every step: each ordering below also
+      // asserts the step is there.
+      name: 'coverage-installs-nothing',
+      file: FILE,
+      anchor:
+        "          cache: 'npm'\n      - name: Install (a warning fails it)\n        run: scripts/fail-on-warnings.sh npm ci\n      # The rehearse job's manifest",
+      replacement:
+        "          cache: 'npm'\n      # The rehearse job's manifest",
+      red: {
+        [`${F} lays the rehearsal over the tree after the install and before Measure judges it (#771)`]:
+          'to deeply equal',
+        [`${F} measures coverage without the switch on a fresh install of the commit, the recorded floors laid over it, then records it with the switch (#728, #748)`]:
+          'to deeply equal',
+      },
+    },
+    {
+      name: 'coverage-recorded-by-another-name',
+      file: FILE,
+      anchor: '      - name: Record coverage\n',
+      replacement: '      - name: Record the coverage\n',
+      red: {
+        [`${F} measures coverage without the switch on a fresh install of the commit, the recorded floors laid over it, then records it with the switch (#728, #748)`]:
+          'holds 0 steps named "Record coverage"',
+        [`${F} uploads the coverage record as its own artifact named by the commit, after recording it (#728)`]:
+          'to include',
+        [`${F} is the only workflow that sets the recorder’s switch: a run that checks figures never records them`]:
+          'to deeply equal',
+      },
+    },
+    {
+      name: 'gate-by-another-name',
+      file: FILE,
+      anchor:
+        "      - name: Refuse anything but the tip of a ticket branch's scratch ref\n",
+      replacement: '      - name: Refuse all but the scratch ref tip\n',
+      red: {
+        [`${F} gates the commit first, from the workflow’s own checkout, through the tested gate (#771)`]:
+          'holds 0 steps named',
+        [`${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`]:
+          'to include',
       },
     },
   ],

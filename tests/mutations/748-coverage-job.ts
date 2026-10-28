@@ -7,6 +7,12 @@ import { mutationFile } from '../../scripts/mutation-file.ts';
  * the floors job, lays the recorded floors over tests/floors/ before it
  * measures, measures under ci.yml's limit and image, records with the
  * switch, and checks out the commit it was given.
+ *
+ * #771's SHA-tip test also reds the first and seventh rows (CI mutations run
+ * 40697004648): a coverage job that waits on nothing no longer reaches the
+ * gate, and one that checks out another commit leaves the jobs checking out
+ * the given SHA. Those two SHA_TIP entries were added after that run, not
+ * predicted; 771-record-rehearse.ts's last three rows test the explanation.
  */
 
 const FLOORS = 'tests/unit/record-floors-workflow.test.ts';
@@ -16,6 +22,7 @@ const FRESH = `${F} measures coverage without the switch on a fresh install of t
 const LIMITS = `${F} measures coverage in the pull request's coverage job's image, user and limits (#748)`;
 const SWITCH = `${F} is the only workflow that sets the recorder’s switch: a run that checks figures never records them`;
 const CHECKOUT = `${F} checks out exactly the SHA it was given, in each job`;
+const SHA_TIP = `${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`;
 const FILE = '.github/workflows/record-floors.yml';
 const DIRS = 'tests/unit/mutations-recorded-dirs.test.ts';
 const D = `${DIRS} › the recorded-count folders the judge leaves out (#728) >`;
@@ -32,7 +39,7 @@ export default mutationFile({
       file: FILE,
       anchor: '  record-coverage:\n    needs: record-floors\n',
       replacement: '  record-coverage:\n',
-      red: { [JOBS]: 'to deeply equal' },
+      red: { [JOBS]: 'to deeply equal', [SHA_TIP]: 'to deeply equal' },
     },
     {
       name: 'floors-laid-elsewhere',
@@ -80,7 +87,7 @@ export default mutationFile({
       anchor: '          ref: ${{ inputs.sha }}\n          fetch-depth: 2\n',
       replacement:
         '          ref: ${{ github.sha }}\n          fetch-depth: 2\n',
-      red: { [CHECKOUT]: 'to deeply equal' },
+      red: { [CHECKOUT]: 'to deeply equal', [SHA_TIP]: 'to deeply equal' },
     },
     {
       // Shyden, 2026-10-22: the coverage record counts like floors.
