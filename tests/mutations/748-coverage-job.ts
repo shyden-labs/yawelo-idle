@@ -22,7 +22,7 @@ const D = `${DIRS} › the recorded-count folders the judge leaves out (#728) >`
 const LAY =
   '      - name: Lay the recorded floors over the tree\n        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2\n        with:\n          name: floors-${{ inputs.sha }}\n          path: tests/floors/\n';
 const MEASURE =
-  "      # ci.yml's measured limit for the same command (#476).\n      - name: Measure coverage\n        timeout-minutes: 12\n        run: npm run test:coverage\n";
+  "      # ci.yml's measured limit for the same command (#476).\n      - name: Measure coverage\n        timeout-minutes: 12\n        run: npm run test:coverage -- rehearsal/\n";
 
 export default mutationFile({
   targets: [FLOORS, DIRS],
@@ -52,8 +52,8 @@ export default mutationFile({
       name: 'measure-without-the-limit',
       file: FILE,
       anchor:
-        '        timeout-minutes: 12\n        run: npm run test:coverage\n',
-      replacement: '        run: npm run test:coverage\n',
+        '        timeout-minutes: 12\n        run: npm run test:coverage -- rehearsal/\n',
+      replacement: '        run: npm run test:coverage -- rehearsal/\n',
       red: { [LIMITS]: 'to deeply equal' },
     },
     {

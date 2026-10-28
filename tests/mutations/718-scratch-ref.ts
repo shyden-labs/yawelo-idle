@@ -20,9 +20,11 @@ const FETCH = 'tests/unit/fetch-floors.test.ts';
 const REFUSAL = `${FETCH} › fetchRefusal >`;
 const SCRATCH = `${FETCH} › the scratch ref >`;
 const GUIDANCE = 'tests/unit/minimums.test.ts';
+// The gate moved out of record-floors.yml's shell into a tested script (#771).
+const GATE = 'tests/unit/record-gate.test.ts';
 
 export default mutationFile({
-  targets: [FLOORS, MINIMUMS, RECORDER, FETCH, GUIDANCE],
+  targets: [FLOORS, MINIMUMS, RECORDER, FETCH, GUIDANCE, GATE],
   mutations: [
     {
       // The checker's guidance, which nine non-unit suites print (#659),
@@ -115,13 +117,17 @@ export default mutationFile({
       },
     },
     {
+      // The comparison record-floors.yml's shell made until #771.
       name: 'tip-not-compared',
-      file: '.github/workflows/record-floors.yml',
-      anchor: '          if ! [ "$tip" = "$SHA" ]; then\n',
-      replacement: '          if false; then\n',
+      file: 'scripts/record-gate.ts',
+      anchor:
+        "  return tip === sha ? undefined : `${ref} is at '${tip}', not ${sha} (#718).`;\n",
+      replacement: '  return undefined;\n',
       red: {
-        [`${F} refuses, before the checkout, a SHA that is not the scratch ref’s tip`]:
-          'to be greater than',
+        [`${GATE} › the SHA is the scratch ref’s tip, read from the repository (#718) > refuses another commit at the ref`]:
+          'to be',
+        [`${GATE} › the gate step (#771) > refuses a SHA that is not the tip`]:
+          'to deeply equal',
       },
     },
     {

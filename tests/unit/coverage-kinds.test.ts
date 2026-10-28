@@ -42,6 +42,14 @@ const KINDS: readonly (readonly [string, string, string | undefined])[] = [
   ['NOTICE', '', 'not-code'],
   ['LICENSE', '', 'not-code'],
   ['.github/CODEOWNERS', '', 'not-code'],
+  // Mutation files are test plans the mutation runner reads in its own CI
+  // job, never code a suite runs (Shyden, 2026-10-28: "Count them as not
+  // code", #771). Only TypeScript directly under tests/mutations/ is one.
+  ['tests/mutations/771-record-rehearse.ts', '', 'not-code'],
+  ['tests/mutations/718-scratch-ref.ts', '', 'not-code'],
+  ['tests/mutationsx/a.ts', '', 'v8'],
+  ['tests/unit/mutations/a.ts', '', 'v8'],
+  ['tests/mutations/a.js', '', 'v8'],
   // Unknown kinds fail closed: the table must name every kind the tree holds.
   ['apps/x/y.py', '', undefined],
   ['apps/x/y.png', '', undefined],

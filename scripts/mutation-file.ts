@@ -12,6 +12,16 @@
 /** Between a test's file and its describe-and-title path. */
 export const FILE_SEPARATOR = ' › ';
 
+/**
+ * Whether `path` is where a mutation file lives: TypeScript in
+ * `tests/mutations/`. The one spelling of the rule, read by the mutations
+ * judge (`mutationFilesIn`, and `changedHelpers`, which leaves these out,
+ * #670) and by the coverage kinds, which count them as not code (Shyden,
+ * 2026-10-28: "Count them as not code", #771).
+ */
+export const isMutationFile = (path: string): boolean =>
+  path.startsWith('tests/mutations/') && path.endsWith('.ts');
+
 export interface Mutation {
   /** Unique in its file; names the run's log files. */
   readonly name: string;

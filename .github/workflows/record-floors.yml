@@ -32,7 +32,45 @@ permissions:
   contents: read
 
 jobs:
+  # The scratch-ref gate and the rehearsal (#771), on the runner host, where
+  # #762's act runs will find Docker. The gate runs first, from this
+  # workflow's own ref (develop), so the commit it judges never runs its own
+  # gate (scripts/record-gate.ts: develop and main, a malformed branch or SHA,
+  # and a SHA that is not the scratch ref's tip are refused). The commit is
+  # checked out only after it passes, and the other jobs need this one, so
+  # nothing checks it out sooner. The second checkout keeps no credential
+  # (actions/checkout's configureAuth removes the first's; the rehearsal
+  # refuses one it finds). No install: both scripts import node built-ins
+  # only. Each script starts from one inline line, counted as an untested
+  # workflow line in the coverage record (Shyden, 2026-10-28: "Start line in
+  # the workflow"): a start file would be either an untested new file or a
+  # call at collection. The upload and the coverage job's download are found by the
+  # artifact's name, rehearsal-<sha>.
+  rehearse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Refuse anything but the tip of a ticket branch's scratch ref
+        run: node --input-type=module -e "const { gate, nodeIo } = await import('./scripts/record-gate.ts'); process.exitCode = gate(nodeIo);"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - name: Rehearse the workflows
+        run: node --input-type=module -e "const { rehearse, nodeRehearseIo } = await import('./scripts/rehearse.ts'); process.exitCode = await rehearse(nodeRehearseIo);"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rehearsal-${{ inputs.sha }}
+          path: rehearsal/
+          if-no-files-found: error
+
   record-floors:
+    # The gate passed this commit first (rehearse, above).
+    needs: rehearse
     runs-on: ubuntu-24.04
     # The recorder runs every suite with a floor, the browser suites included,
     # each of which ci.yml holds to its own limit; 30 covers them in one job.
@@ -42,38 +80,6 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
       options: --user 1001
     steps:
-      # develop and main are never recorded into: their floors come from the
-      # ticket branches merged into them. The inputs reach the shell only
-      # through env, and only in the shapes checked here. The SHA alone could
-      # name any commit: only the one the session pushed to the branch's
-      # scratch ref is measured, read from the public repository before
-      # anything is checked out (a failed read leaves the tip empty: refused).
-      - name: Refuse anything but the tip of a ticket branch's scratch ref
-        env:
-          BRANCH: ${{ inputs.branch }}
-          SHA: ${{ inputs.sha }}
-          REFUSED: develop main
-          REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
-        run: |
-          for branch in $REFUSED; do
-            if [ "$BRANCH" = "$branch" ]; then
-              echo "::error::record-floors records ticket branches, not $BRANCH (#547)."
-              exit 1
-            fi
-          done
-          if ! printf '%s' "$BRANCH" | grep -Eqx '[A-Za-z0-9._/-]+'; then
-            echo "::error::branch must be a branch name (#718)."
-            exit 1
-          fi
-          if ! printf '%s' "$SHA" | grep -Eqx '[0-9a-f]{40}'; then
-            echo "::error::sha must be 40 lowercase hex characters (#718)."
-            exit 1
-          fi
-          tip="$(git ls-remote "$REPOSITORY" "refs/floors/$BRANCH" | cut -f1)"
-          if ! [ "$tip" = "$SHA" ]; then
-            echo "::error::refs/floors/$BRANCH is at '${tip}', not $SHA (#718)."
-            exit 1
-          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.sha }}
@@ -125,6 +131,11 @@ jobs:
           cache: 'npm'
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
+      # The rehearse job's manifest, which Measure judges (#771).
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rehearsal-${{ inputs.sha }}
+          path: rehearsal/
       - name: Lay the recorded floors over the tree
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -133,7 +144,7 @@ jobs:
       # ci.yml's measured limit for the same command (#476).
       - name: Measure coverage
         timeout-minutes: 12
-        run: npm run test:coverage
+        run: npm run test:coverage -- rehearsal/
       - name: Record coverage
         env:
           FLOORS_RECORD_JOB: record-floors

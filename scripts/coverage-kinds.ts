@@ -1,4 +1,5 @@
 import { basename, extname } from 'node:path';
+import { isMutationFile } from './mutation-file.ts';
 
 /**
  * What kind of file each tracked path is, for the coverage record (#728).
@@ -9,7 +10,9 @@ import { basename, extname } from 'node:path';
  * - `lines`: code no tool here measures yet. It enters the record at full
  *   size (every line of code untested) until its own story measures it:
  *   workflows (#737, #738), templates and pages (#734), shell (#736).
- * - `not-code`: settings, data, documents and media.
+ * - `not-code`: settings, data, documents and media; and mutation files,
+ *   test plans the mutation runner reads in its own CI job and no suite
+ *   loads (Shyden, 2026-10-28: "Count them as not code", #771).
  *
  * A kind the table does not name is `undefined`, and the record refuses it:
  * a new kind of file is classified here before it is tracked.
@@ -47,6 +50,7 @@ const isWorkflow = (path: string): boolean =>
   path.startsWith('.github/workflows/') && /\.ya?ml$/.test(path);
 
 export function kindOf(path: string, firstLine: string): Kind | undefined {
+  if (isMutationFile(path)) return 'not-code';
   const extension = extname(path);
   if (V8.has(extension)) return 'v8';
   if (LINES.has(extension) || isWorkflow(path)) return 'lines';

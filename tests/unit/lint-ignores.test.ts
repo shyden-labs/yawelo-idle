@@ -15,9 +15,16 @@ const ignoredEntries = readFileSync('.gitignore', 'utf8')
     (line) => line !== '' && !line.startsWith('#') && !line.startsWith('!'),
   );
 
-/** A directory entry is probed with a file inside it; a file entry as itself. */
-const probeFor = (entry: string): string =>
-  entry.endsWith('/') ? `${entry}probe.ts` : entry;
+/**
+ * A directory entry is probed with a file inside it; a file entry as itself.
+ * A leading `/` anchors an entry to the repository root (`/rehearsal/`,
+ * #771), so the probe is that path relative to the root, never an absolute
+ * one ESLint finds no config for.
+ */
+const probeFor = (entry: string): string => {
+  const path = entry.startsWith('/') ? entry.slice(1) : entry;
+  return path.endsWith('/') ? `${path}probe.ts` : path;
+};
 
 /**
  * Only entries ESLint would lint with every ignore switched off can show
