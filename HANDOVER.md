@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-28 (twentieth session). **Running when written:** record run **40646185607** (develop's `record-floors.yml` on `4268b8a`, GitHub-side; it survives `/clear`). Earlier runs: 40620512744 refused a falling floor (`literal-floors/comparisons` 191→189, lowered by hand with per-file accounting); 40621407368 was green but its fetch refused the test and mutation files' coverage (fixed: test fallbacks cut; mutation files ruled not code). The local waiter dies with the session, so re-wait with the command in step 1.
+**Written:** 2026-10-28 (twentieth session). **Running when written:** record run **40646855523** (develop's `record-floors.yml` on `9ea878f`, GitHub-side; it survives `/clear`). Three earlier runs each refused something (two falling floors, lowered by hand; test and mutation files in the coverage record); each is accounted for in the commit message. The local waiter dies with the session, so re-wait with step 1.
 **Next session:** `ListAgents`, then `board-next`. It names #728 (blocked); the chain is #728 ← #733 (#762) ← **#771**, so **resume #771**.
 
 ## Node
@@ -9,8 +9,8 @@
 
 ## Resume steps (#771, worktree `../yawelo-idle-771`, branch `tooling/771-record-rehearse-job`)
 
-1. HEAD `4268b8a` (one squashed commit, **not pushed to the branch**; on scratch ref `refs/floors/tooling/771-record-rehearse-job`; probe-stamped). Pre-squash commits are tagged `backup/771-pre-squash-2026-10-28`. Wait for the run: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 40646185607 <file holding 4268b8a's SHA>` (write it with `git rev-parse HEAD > file`). Read both jobs by name. It runs develop's OLD workflow (no rehearse job). That is expected.
-2. Green: `npm run floors:fetch 40646185607` in the worktree, then `git commit --amend` (message file: re-create from `git log -1 --format=%B`). Expected floor moves:
+1. HEAD `9ea878f` (one squashed commit, **not pushed to the branch**; on scratch ref `refs/floors/tooling/771-record-rehearse-job`; probe-stamped). Pre-squash commits are tagged `backup/771-pre-squash-2026-10-28`. Wait for the run: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 40646855523 <file holding 9ea878f's SHA>` (write it with `git rev-parse HEAD > file`). Read both jobs by name. It runs develop's OLD workflow (no rehearse job). That is expected.
+2. Green: `npm run floors:fetch 40646855523` in the worktree, then `git commit --amend` (message file: re-create from `git log -1 --format=%B`). Expected floor moves:
    - `record-floors-workflow/steps` 13→19.
    - `record-floors/workflow-steps` 133→139.
    - `supply-chain/pinned-uses` and `versioned-uses` 52→57.
@@ -26,7 +26,7 @@ Plan + review log + execution notes: `../yawelo-idle-771/.superpowers/sdd/771/pl
 ## Done this session
 
 - #771 planned (3 passes, spikes run), then built: `scripts/record-gate.ts`, `scripts/rehearse.ts` (act 0.2.89, SHA-256 pinned), `scripts/rehearsal.ts`, the `coverage.ts measure rehearsal/` check, the `rehearse` job, `/rehearsal/` ignored, and the lint-ignores probe now reads anchored entries.
-- **Shyden ruled "Count them as not code"** (2026-10-28): `tests/mutations/*.ts` is `not-code` in `scripts/coverage-kinds.ts`, because no suite loads mutation files and the record otherwise refused every new or changed one.
+- **Shyden ruled "Count them as not code"** (2026-10-28), then made it **global**: "we still need to make sure mutations correctly exist without any gaps and they work as intended". `tests/mutations/*.ts` is `not-code` in #771. The global CLAUDE.md coverage line, the reference ("Mutation files are not code; they are proven instead") and `global-rules/pending-mutation-files-proven.md` record it. Proofs here: the existing guard, #761 (anchors; unblocked from #733; near-duplicate #666), and **#775** (predicted tests exist; a target change re-runs its file; P2, 5 points).
 - **Shyden ruled "Start line in the workflow" (2026-10-28). The coverage rule and the collection-calls rule clash over any new script's start file, so each script starts from an inline `node --input-type=module -e` line. The general fix rides on #733 (comment there).
 - **Filed:**
   - #773: record-minimums gets the same gate. P2, 2 points, blocked by #771.
