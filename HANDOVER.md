@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-28 (twentieth session). **Running when written:** record run **40620512744** (develop's `record-floors.yml` on `ae0c803`, GitHub-side; it survives `/clear`). The local waiter dies with the session, so re-wait with the command in step 1.
+**Written:** 2026-10-28 (twentieth session). **Running when written:** record run **40621407368** (develop's `record-floors.yml` on `a867b6a`, GitHub-side; it survives `/clear`). The first run (40620512744, on `ae0c803`) refused a falling floor: `literal-floors/comparisons` 191→189, lowered by hand in `a867b6a` with per-file accounting in its message. The local waiter dies with the session, so re-wait with the command in step 1.
 **Next session:** `ListAgents`, then `board-next`. It names #728 (blocked); the chain is #728 ← #733 (#762) ← **#771**, so **resume #771**.
 
 ## Node
@@ -9,8 +9,8 @@
 
 ## Resume steps (#771, worktree `../yawelo-idle-771`, branch `tooling/771-record-rehearse-job`)
 
-1. HEAD `ae0c803` (one squashed commit, **not pushed to the branch**; on scratch ref `refs/floors/tooling/771-record-rehearse-job`; probe-stamped). Pre-squash commits are tagged `backup/771-pre-squash-2026-10-28`. Wait for the run: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 40620512744 <file holding ae0c803's SHA>` (write it with `git rev-parse HEAD > file`). Read both jobs by name. It runs develop's OLD workflow (no rehearse job). That is expected.
-2. Green: `npm run floors:fetch 40620512744` in the worktree, then `git commit --amend` (message file: re-create from `git log -1 --format=%B`). Expected floor moves:
+1. HEAD `a867b6a` (one squashed commit, **not pushed to the branch**; on scratch ref `refs/floors/tooling/771-record-rehearse-job`; probe-stamped). Pre-squash commits are tagged `backup/771-pre-squash-2026-10-28`. Wait for the run: `~/.claude/scripts/wait-run.sh /Users/shyden/Developer/Repos/yawelo-idle-771 40621407368 <file holding a867b6a's SHA>` (write it with `git rev-parse HEAD > file`). Read both jobs by name. It runs develop's OLD workflow (no rehearse job). That is expected.
+2. Green: `npm run floors:fetch 40621407368` in the worktree, then `git commit --amend` (message file: re-create from `git log -1 --format=%B`). Expected floor moves:
    - `record-floors-workflow/steps` 13→19.
    - `record-floors/workflow-steps` 133→139.
    - `supply-chain/pinned-uses` and `versioned-uses` 52→57.
