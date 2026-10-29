@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30, 04:50 WIB (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB). **Running when written:** nothing.
+**Written:** 2026-10-30, 04:50 WIB (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB). **Running when written:** nothing (machine shutting down at Shyden's request; no local job to re-run).
 **Next session:** `ListAgents`, then `board-next` (it names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`). Every P0 now waits on Shyden's #780 answer; the P1s wait on him too (below). The workable P2s include #697 (the sibling of #786, ShyTalk's fix described on it).
 
 ## Node
@@ -13,9 +13,9 @@
 - **#785**: `.nvmrc` = 26.12.1 exactly (PR #789, `c802418`); CI resolved v26.12.1.
 - **#786**: scalar zeros on settled or polled values read (PR #792, `f4a9bd3`), after #790 (refused by the mutations judge: no guards row) and #791 (guards row green on an unmeasured guess).
 
-## #762 (worktree `../yawelo-idle-761`, HEAD `2e28892`, not pushed by design)
+## #762 (worktree `../yawelo-idle-761`, HEAD `a6eece7`, not pushed by design)
 
-Blocked by #780. Task 1 (#733) is fully written: `6d36f3b` attach, `0958de0` checker, `0235816` measure calls it (+ end-to-end measure cases), `267c496` coverage-env reader, `01502e0` whole-tree guard + `733-child-coverage.ts`, `2e28892` guards and integration mutation rows. Unit: the same 9 floor breaches as the merge. **Never run (CI-only):** integration, guards and all 733 mutation rows. Plan log: pass 8 in `.superpowers/sdd/762/plan.md`. The branch now sits behind develop by #782, #785 and #786: merge develop in before its record (floors re-recorded, never hand-merged).
+Blocked by #780. Task 1 (#733) is fully written: `6d36f3b` attach, `0958de0` checker, `0235816` measure calls it (+ end-to-end measure cases), `267c496` coverage-env reader, `01502e0` whole-tree guard + `733-child-coverage.ts`, `2e28892` guards and integration mutation rows, `a6eece7` the three argv plants `01502e0` left out of the fixture (found at shutdown: until it, `01502e0` alone failed its liveness test). **First step after restart:** run the unit suite on `-761` to confirm the coverage-env tests are 162 green (not re-run before shutdown). Unit: the same 9 floor breaches as the merge. **Never run (CI-only):** integration, guards and all 733 mutation rows. Plan log: pass 8 in `.superpowers/sdd/762/plan.md`. The branch now sits behind develop by #782, #785 and #786: merge develop in before its record (floors re-recorded, never hand-merged).
 
 ## #780 (P0): parked on Shyden
 
