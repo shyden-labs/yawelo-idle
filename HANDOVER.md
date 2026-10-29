@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** #785's record run 40930726807 on GitHub, with a local waiter that dies with this session (re-run: `~/.claude/scripts/wait-run.sh ../yawelo-idle-785 40930726807 ../yawelo-idle-785/.superpowers/sdd/785/head.sha`).
+**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** #785's record run 40934037479 on GitHub, with a local waiter that dies with this session (re-run: `~/.claude/scripts/wait-run.sh ../yawelo-idle-785 40934037479 ../yawelo-idle-785/.superpowers/sdd/785/head.sha`).
 **Next session:** `ListAgents`, then `board-next` (names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`).
 
 ## Node
@@ -9,9 +9,9 @@
 
 ## #782: closed (PR #787, merged as `2d9f7d0`, dev deploy green, Done on the board)
 
-## #785 (P2, worktree `../yawelo-idle-785`, branch `tooling/785-nvmrc-exact-d`, HEAD `666f3bb` on develop `2d9f7d0`, not pushed)
+## #785 (P2, worktree `../yawelo-idle-785`, branch `tooling/785-nvmrc-exact-e`, HEAD `2f27ff1` on develop `2d9f7d0`, not pushed)
 
-The first record (run 40926295849, on `-b`) was refused by the coverage ratchet: the new test code had paths today's tree never takes. Each decision is now a function run both ways by planted steps, and the test file measures 67/67 statements with only the record's old arm unrun. Each fix went on a fresh branch (`-b`, `-c`, `-d`), since a scratch ref can't be rewritten without forcing; the `-b` and `-c` refs are deleted, and the old local branches are kept. Probe stamped `666f3bb`; scratch `refs/floors/tooling/785-nvmrc-exact-d`; record **40930726807**. Next: `npm run floors:fetch 40930726807`, amend (`.superpowers/sdd/785/msg.txt` + `Floors: recorded in run 40930726807`), run the 785 mutation rows locally (`source ~/.claude/scripts/test-lock.zsh heavy || exit $?; npm run mutate -- tests/mutations/785-nvmrc-exact.ts`), unit, push `-d`, PR, merge, verify dev, close.
+Five branches (`-b` to `-e`), because each record-moving fix needs a fresh scratch ref (no ref is rewritten): `-b` was refused by the coverage ratchet (test code with unrun paths), `-c` was pushed before a failing probe (`;` not `&&`), `-d` was recorded and fetched, then a mutation miss added a seventh row (a hindsight red plus a sibling predicted first; 7 of 7 matched). The `-b`, `-c` and `-d` refs are deleted, and the local branches kept. Record **40934037479** on `refs/floors/tooling/785-nvmrc-exact-e`. Next: `npm run floors:fetch 40934037479`, amend with `Floors: recorded in run 40934037479` (message `.superpowers/sdd/785/msg.txt`), unit, push `-e`, PR (body `.superpowers/sdd/785/pr.md`), merge when green, verify dev, close #785, delete the `-e` scratch ref.
 
 ## #762 (worktree `../yawelo-idle-761`, HEAD `2e28892`, not pushed by design)
 
