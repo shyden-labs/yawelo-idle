@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** #785's record run 40934037479 on GitHub, with a local waiter that dies with this session (re-run: `~/.claude/scripts/wait-run.sh ../yawelo-idle-785 40934037479 ../yawelo-idle-785/.superpowers/sdd/785/head.sha`).
+**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** nothing.
 **Next session:** `ListAgents`, then `board-next` (names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`).
 
 ## Node
@@ -9,9 +9,11 @@
 
 ## #782: closed (PR #787, merged as `2d9f7d0`, dev deploy green, Done on the board)
 
-## #785 (P2, worktree `../yawelo-idle-785`, branch `tooling/785-nvmrc-exact-e`, HEAD `2f27ff1` on develop `2d9f7d0`, not pushed)
+## #785: closed (PR #789, merged as `c802418`, dev deploy green, CI resolved Node v26.12.1)
 
-Five branches (`-b` to `-e`), because each record-moving fix needs a fresh scratch ref (no ref is rewritten): `-b` was refused by the coverage ratchet (test code with unrun paths), `-c` was pushed before a failing probe (`;` not `&&`), `-d` was recorded and fetched, then a mutation miss added a seventh row (a hindsight red plus a sibling predicted first; 7 of 7 matched). The `-b`, `-c` and `-d` refs are deleted, and the local branches kept. Record **40934037479** on `refs/floors/tooling/785-nvmrc-exact-e`. Next: `npm run floors:fetch 40934037479`, amend with `Floors: recorded in run 40934037479` (message `.superpowers/sdd/785/msg.txt`), unit, push `-e`, PR (body `.superpowers/sdd/785/pr.md`), merge when green, verify dev, close #785, delete the `-e` scratch ref.
+## #780: parked on Shyden (credential)
+
+Mac spike (comment on #780; logs in `-761/.superpowers/sdd/762/probes/act-spike-780/`): under act, checkout, setup-node and **the gate pass**, but the `ref:` checkout needs a token, and a fake token breaks act's own action cloning. A rehearsal needs a real token (the job's read-only `GITHUB_TOKEN`) or a copy of the workflow with the `ref:` checkouts dropped. AC9 says no real secrets: **his call.** Docker Desktop was started for the spike and quit after.
 
 ## #762 (worktree `../yawelo-idle-761`, HEAD `2e28892`, not pushed by design)
 
@@ -26,6 +28,8 @@ Shyden: **"test the 3 lines, fix the problem"**, then **"Yes, re-scope #780"** (
 - **#783 (P0): nothing on GitHub stops a pull request into `main` from a branch that isn't a `release/*` cut** (`main` requires only `build-and-test`; only my local hook guards it). Blocked by #762.
 - **#784 (P2, 13 points): Yawelo's own Cloudflare login and accounts.** It needs your new Gmail and login. Question: should #425 (site prod infrastructure, P1) wait for them, or be built in shyden.co.uk's account and moved later?
 - **#782** closed (PR #787). **#785** (exact `.nvmrc`) is in its record; Node 26.13.0 is out (2026-10-28), a bump left to the alignment skill. **#786** (P2): a guard blind spot (ShyTalk's), sibling of #697.
+- **#780 (P0): may the rehearsal hand act the job's own read-only `GITHUB_TOKEN`?** Without it, act can't check out the measured commit (spike above). The alternative rehearses a copy of the workflow with its `ref:` checkouts dropped.
+- **`hooks/disguised-waits.py` misses perl's `select(undef,undef,undef,N)`.** I used it once by mistake and it ran unrefused; recorded in the guard reference. The hook change is yours.
 - **#788 (P2): your route.** `allowScripts` approves esbuild and workerd for every version. Exact pins (re-approved on each Dependabot bump), denying both scripts, or keeping bare names? Measurements are planned first.
 - repo-template#134 (mutation runner). ShyTalk says you allowed b2 a one-time read of Yawelo.
 
