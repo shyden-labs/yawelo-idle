@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import semver from 'semver';
 import { parse } from 'yaml';
 import { withoutYamlComments, withoutYamlQuotes } from './source-text';
 import { isRecord } from './workflow-secrets';
@@ -379,7 +380,8 @@ describe('Dependabot keeps the pins from rotting', () => {
     const entry: unknown = npm[0];
     const ignore =
       isRecord(entry) && Array.isArray(entry.ignore) ? entry.ignore : [];
-    const above = `>=${String(Number(readFileSync('.nvmrc', 'utf8').trim()) + 1)}.0.0`;
+    // .nvmrc holds an exact version (#785); semver throws on anything else.
+    const above = `>=${String(semver.major(readFileSync('.nvmrc', 'utf8').trim()) + 1)}.0.0`;
     expect(ignore).toContainEqual({
       'dependency-name': '@types/node',
       versions: [above],

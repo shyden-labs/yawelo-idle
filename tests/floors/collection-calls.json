@@ -24,10 +24,10 @@
   "collection-calls/allowed/workspace code in a script’s entry point, which a test’s import never runs (#554)": 1,
   "collection-calls/call-counted-files": 373,
   "collection-calls/configure-forms": 1,
-  "collection-calls/corpus-calls": 33231,
+  "collection-calls/corpus-calls": 33308,
   "collection-calls/corpus-judged": 720,
   "collection-calls/files-with-describe": 227,
-  "collection-calls/helper-imports": 933,
+  "collection-calls/helper-imports": 936,
   "collection-calls/helper-modules": 140,
   "collection-calls/todo-forms": 1
 }
