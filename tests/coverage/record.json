@@ -3931,7 +3931,7 @@
       "measure": "v8",
       "statements": {
         "untested": 1,
-        "total": 142
+        "total": 144
       },
       "branches": {
         "untested": 0,
@@ -3942,11 +3942,11 @@
       "measure": "v8",
       "statements": {
         "untested": 5,
-        "total": 250
+        "total": 260
       },
       "branches": {
         "untested": 13,
-        "total": 321
+        "total": 328
       }
     },
     "tests/unit/floorless-searches.twins.ts": {
@@ -5328,11 +5328,11 @@
   "totals": {
     "statements": {
       "untested": 4345,
-      "total": 28306
+      "total": 28318
     },
     "branches": {
       "untested": 1666,
-      "total": 8873
+      "total": 8880
     }
   }
 }

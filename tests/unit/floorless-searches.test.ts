@@ -590,6 +590,46 @@ const ZERO_CASES = [
   ['a negated zero', 'expect(x).not.toBe(0);', [], 1],
   ['toHaveLength(0), which is no scalar', 'expect(x).toHaveLength(0);', [], 0],
   ['a non-zero', 'expect(x).toBe(1);', [], 0],
+  // A zero a promise settles to, or a polled value reaches (#786): counted as
+  // the text counts it, and never a site, since nothing settled is a list.
+  [
+    'a zero a promise resolves to',
+    'await expect(p).resolves.toBe(0);',
+    ['line 1: expect(p).resolves.toBe(0)'],
+    1,
+  ],
+  [
+    'a zero a promise rejects with',
+    'await expect(p).rejects.toEqual(0);',
+    ['line 1: expect(p).rejects.toEqual(0)'],
+    1,
+  ],
+  ['a negated settled zero', 'await expect(p).resolves.not.toBe(0);', [], 1],
+  [
+    'a zero negated before it settles',
+    'await expect(p).not.resolves.toBe(0);',
+    [],
+    1,
+  ],
+  [
+    'a soft settled zero',
+    'await expect.soft(p).resolves.toStrictEqual(0);',
+    ['line 1: expect.soft(p).resolves.toStrictEqual(0)'],
+    1,
+  ],
+  [
+    'a settled length of 0, which is no site',
+    'await expect(list.length).resolves.toBe(0);',
+    ['line 1: expect(list.length).resolves.toBe(0)'],
+    1,
+  ],
+  [
+    'a polled zero',
+    'await expect.poll(() => count).toBe(0);',
+    ['line 1: expect.poll(() => count).toBe(0)'],
+    1,
+  ],
+  ['a settled non-zero', 'await expect(p).resolves.toBe(1);', [], 0],
 ] as const;
 
 describe('searchSitesIn: scalar zeros it does not read as sites (#367)', () => {
@@ -598,6 +638,12 @@ describe('searchSitesIn: scalar zeros it does not read as sites (#367)', () => {
       scalarZeros,
       zeroAssertions,
     });
+  });
+
+  it('reads no zero from a matcher on expect itself, which has no subject (#786)', () => {
+    // The text counts its `.toBe(0)`, so a file holding it reads as misread
+    // in the per-file check: it fails closed.
+    expect(scalarZerosIn(parse('expect.toBe(0);')).zeroAssertions).toBe(0);
   });
 
   it.each(ZERO_CASES)(
