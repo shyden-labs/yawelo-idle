@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-29 (twenty-fifth session). **Running when written:** nothing.
+**Written:** 2026-10-29 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** nothing.
 **Next session:** `ListAgents`, then `board-next`. It names **#728** (P0, In Progress, blocked by #733). The ranking is by design: In Progress before unblocked (`scripts/board-next.ts:8`). Its chain is #728 ← #733 (#762's Task 1) ← #762 ← **#780**, so **#780 is the first workable ticket**.
 
 ## Node
@@ -13,26 +13,19 @@
 - **Ruled by Shyden: "Drop 3 step labels"** pays for the +3.
 - Filed **#780** (P0, 3 points, Todo, on the board; body also in `.superpowers/sdd/762/precursor-issue.md`). #762 is now blocked by #780 (read back through REST; the router refuses a bare GraphQL `addBlockedBy`, so name the repo with `repos/…/issues/N/dependencies/blocked_by`). Rulings commented on #762 (issuecomment-6483613396).
 
-## #780 (next, independent of the -761 merge)
+## #780 (next; re-scoped, 8 points)
 
-1. Worktree off `origin/develop` (`bb7179e`), branch `tooling/780-rehearse-shards`. Run `npm ci` (memory: a fresh worktree has no node_modules).
-2. TDD per its ACs: `rehearse(io, index, total)` (AC2), `checkRehearsal` per-shard folders (AC4), tests that find the three unlabelled steps by artifact (AC5, `record-floors-workflow.test.ts`, `748-coverage-job.ts`), then the YAML (AC1, AC5), and `codeLines` ≤ 105 (AC6), mutation file (AC7).
-3. AC3 (the job ceiling) needs act's overhead over a real runner, which #762's pass 8 measures. Every other AC can go first.
-4. Squash into one commit, run the scratch-ref record (`CLAUDE.md` Flow), `floors:fetch`, then push with its `Floors:` line.
+Shyden withdrew "Drop 3 step labels" (it hid 3 untested lines) and ruled **"test the 3 lines, fix the problem"**, then **"Yes, re-scope #780"**. #780's ACs 6-11 (read on GitHub): develop's one-job `rehearse` runs the measured commit's `rehearse.ts`, which runs `act -j rehearse` on the commit's own `record-floors.yml`, traced by `scripts/trace-step.sh` (which measures its own lines by observation: AC7) and joined by `traceTable` (kind `trace` for that file and the tracer). Body source: `../yawelo-idle-761/.superpowers/sdd/762/precursor-issue.md`.
 
-## #762 state (worktree `../yawelo-idle-761`, HEAD `9e577b1`, not pushed by design)
+1. **Measure first** (AC6): does act run `record-floors.yml`'s `rehearse` job inside develop's 10-minute job on a runner? If not, stop and report.
+2. Worktree off `origin/develop` (`bb7179e`), branch `tooling/780-rehearse-shards`, `npm ci`. TDD per the ACs, then one squashed commit, scratch-ref record, `floors:fetch`, and a push with its `Floors:` line.
 
-Mid-merge with `origin/develop` `bb7179e`, uncommitted. **18 files still conflicted** (17 `tests/floors/*.json` and `tests/coverage/record.json`, all to take develop's copy). Shyden ruled "You type the command"; he hasn't run it yet:
+## #762 (worktree `../yawelo-idle-761`, HEAD `8fc4704`, not pushed by design)
 
-```
-cd /Users/shyden/Developer/Repos/yawelo-idle-761 && git diff --name-only --diff-filter=U | xargs git checkout --theirs --
-```
-
-Once `git diff --name-only --diff-filter=U` is empty: `git add` the 18, check no markers are left (`/usr/bin/grep -rlE '^(<<<<<<<|>>>>>>>)' --include=*.json --include=*.ts .`), run unit under the test lock, then commit the merge (`Refs #762, Refs #771`). Then Task 1 (#733) can start. Tasks 2, 4 and 6 get rewritten on the shard shape (#780), then pass 8 part 2 measures act's overhead.
+Merge of develop `bb7179e` committed as `8fc4704`. Unit on the merged tree: 14,250 tests, 9 fail, all floor breaches (expected until the record; list in `.superpowers/sdd/762/unit-merge-fails.txt`). Next: Task 1 (#733, child processes) can start. Tasks 2, 4 and 6 get rewritten on #780's machinery once it lands. #762 is blocked by #780.
 
 ## Waiting on Shyden
 
-- The `checkout --theirs` command above.
 - Delete the #771 scratch ref `refs/floors/tooling/771-record-rehearse-job` (`1450a1e`); its delete was refused (final).
 - `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
 - How to measure a unit test's own CPU now the overlay is refused (#536).
@@ -47,8 +40,8 @@ Once `git diff --name-only --diff-filter=U` is empty: `git add` the 18, check no
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (local handover commits). Its CLAUDE.md is OLD; read develop's.
-- Worktrees: `-761` (#762, mid-merge); `-771`; `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files, so ask before removing it.
+- Worktrees: `-761` (#762, merge committed); `-771`; `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files, so ask before removing it.
 - Phones connected; nothing phone-held runs before the release (#713 AC5).
 - Backups kept 30 days: tag `backup/771-pre-squash-2026-10-28`, `~/.claude/hooks/*.bak-2026-10-28-*`, `.superpowers/HANDOVER.bak-2026-10-29-s25`, the plan backup above.
-- Restart-safe: no local job runs, the mid-merge lives in `-761`'s `.git`, and nothing needed is in `$TMPDIR`.
+- Restart-safe: no local job runs, and nothing needed is in `$TMPDIR`.
 - This shell's `grep` is a wrapper that missed a planted control: use `/usr/bin/grep` for searches whose empty result matters.
