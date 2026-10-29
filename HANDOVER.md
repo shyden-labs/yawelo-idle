@@ -20,9 +20,18 @@ Shyden withdrew "Drop 3 step labels" (it hid 3 untested lines) and ruled **"test
 1. **Measure first** (AC6): does act run `record-floors.yml`'s `rehearse` job inside develop's 10-minute job on a runner? If not, stop and report.
 2. Worktree off `origin/develop` (`bb7179e`), branch `tooling/780-rehearse-shards`, `npm ci`. TDD per the ACs, then one squashed commit, scratch-ref record, `floors:fetch`, and a push with its `Floors:` line.
 
-## #762 (worktree `../yawelo-idle-761`, HEAD `8fc4704`, not pushed by design)
+## #762 (worktree `../yawelo-idle-761`, HEAD `0235816`, not pushed by design)
 
-Merge of develop `bb7179e` committed as `8fc4704`. Unit on the merged tree: 14,250 tests, 9 fail, all floor breaches (expected until the record; list in `.superpowers/sdd/762/unit-merge-fails.txt`). Next: Task 1 (#733, child processes) can start. Tasks 2, 4 and 6 get rewritten on #780's machinery once it lands. #762 is blocked by #780.
+Merge `8fc4704`. Task 1 (#733) steps 1-3 committed: `6d36f3b` attach on, `0958de0` checker (`scripts/coverage-checks.ts`, own coverage 41/41 statements, 10/10 arms), `0235816` measure calls it, plus the join fixture and two end-to-end measure cases in `tests/integration/coverage-cli.test.ts`. **The integration cases have never run** (CI-only by rule): their first run is #762's PR. Plan log pass 8 (P8-2, P8-3) has the redesign: `parentOnly`/`childOnly` replace `uncalled` (measured in `.superpowers/sdd/762/spike-b/`).
+
+Next: Task 1's guard (`tests/guards/coverage-env.test.ts`, the detector unit-tested per form, its floor), then the mutation file `733-child-coverage.ts` (predictions first). Then #780.
+
+## For Shyden in the morning (filed overnight)
+
+- **#783 (P0): nothing on GitHub stops a pull request into `main` from a branch that isn't a `release/*` cut.** `main` requires only `build-and-test`, and no workflow reads the head branch. Only my local hook guards it. Blocked by #762 (new `ci.yml` lines).
+- **#784 (P2, 13 points): Yawelo's own Cloudflare login and accounts.** Needs your new Gmail and login. Question: should #425 (site prod infrastructure, P1) wait for the new accounts (it becomes P1 and waits on you), or be built in shyden.co.uk's account and moved later? Also: which account Pages Function requests bill (ShyTalk asked; needs PROD analytics, so your approval).
+- **#782 (P0, 2 points):** the required-check jobs' own keys aren't pinned (ShyTalk's finding, verified). **#785 (P2, 1 point):** `.nvmrc` exact pin.
+- Template: repo-template#134 (mutation runner; you allowed b2 a one-time read).
 
 ## Waiting on Shyden
 
