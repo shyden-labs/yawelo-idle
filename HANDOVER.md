@@ -1,58 +1,45 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** PR #792's CI (runs 40957214098, 40957214045, 40957214047 on `cefa94a`), with a local waiter that dies with this session.
-**Next session:** `ListAgents`, then `board-next` (names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`).
+**Written:** 2026-10-30, 04:50 WIB (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB). **Running when written:** nothing.
+**Next session:** `ListAgents`, then `board-next` (it names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`). Every P0 now waits on Shyden's #780 answer; the P1s wait on him too (below). The workable P2s include #697 (the sibling of #786, ShyTalk's fix described on it).
 
 ## Node
 
 `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3). If `node -p process.versions.icu` is not 78.3, prefix with `export PATH=$HOME/.local/share/node/current/bin:$PATH;`.
 
-## #782: closed (PR #787, merged as `2d9f7d0`, dev deploy green, Done on the board)
+## Closed overnight (each merged into develop, CI green on its head, dev deploy green)
 
-## #785: closed (PR #789, merged as `c802418`, dev deploy green, CI resolved Node v26.12.1)
-
-## #786 (P2): PR #792, branch `tooling/786-zero-resolves-c`, head `cefa94a`
-
-Third PR. #790 was refused by the mutations judge (the helper is loaded by the guards suite, which had no row); #791's guards row stayed green (my unmeasured guess: the tree holds no real length or size zero site). #792's row stops direct zeros being read at all, visible through the 74 recorded scalar zeros. Record 40955583782 (no floor moved). Unit 14,128/14,128; unit rows 4 of 4 in CI too. Next: read the three runs (`-786/.superpowers/sdd/786/wait-pr-c-*.log`); if green on `cefa94a`, merge, verify dev, close #786; if the guards row misses again, stop and report.
-
-## #780: parked on Shyden (credential)
-
-Mac spike (comment on #780; logs in `-761/.superpowers/sdd/762/probes/act-spike-780/`): under act, checkout, setup-node and **the gate pass**, but the `ref:` checkout needs a token, and a fake token breaks act's own action cloning. A rehearsal needs a real token (the job's read-only `GITHUB_TOKEN`) or a copy of the workflow with the `ref:` checkouts dropped. AC9 says no real secrets: **his call.** Docker Desktop was started for the spike and quit after.
+- **#782**: required-check jobs' key sets pinned (PR #787, `2d9f7d0`).
+- **#785**: `.nvmrc` = 26.12.1 exactly (PR #789, `c802418`); CI resolved v26.12.1.
+- **#786**: scalar zeros on settled or polled values read (PR #792, `f4a9bd3`), after #790 (refused by the mutations judge: no guards row) and #791 (guards row green on an unmeasured guess).
 
 ## #762 (worktree `../yawelo-idle-761`, HEAD `2e28892`, not pushed by design)
 
-Blocked by #780. Task 1 (#733) is fully written: `6d36f3b` attach, `0958de0` checker, `0235816` measure calls it (+ end-to-end measure cases), `267c496` coverage-env reader, `01502e0` whole-tree guard + `733-child-coverage.ts` (11 rows), `2e28892` the guards (4) and integration (2) mutation rows. Unit: 14,433 tests, the same 9 floor breaches as the merge. **Never run (CI-only):** integration, guards and all 733 mutation rows. Plan log: pass 8 (P8-1 to P8-3) in `.superpowers/sdd/762/plan.md`.
+Blocked by #780. Task 1 (#733) is fully written: `6d36f3b` attach, `0958de0` checker, `0235816` measure calls it (+ end-to-end measure cases), `267c496` coverage-env reader, `01502e0` whole-tree guard + `733-child-coverage.ts`, `2e28892` guards and integration mutation rows. Unit: the same 9 floor breaches as the merge. **Never run (CI-only):** integration, guards and all 733 mutation rows. Plan log: pass 8 in `.superpowers/sdd/762/plan.md`. The branch now sits behind develop by #782, #785 and #786: merge develop in before its record (floors re-recorded, never hand-merged).
 
-## #780 (P0, 8 points, re-scoped)
+## #780 (P0): parked on Shyden
 
-Shyden: **"test the 3 lines, fix the problem"**, then **"Yes, re-scope #780"** (ACs 6-11 on GitHub). Develop's one-job `rehearse` runs the measured commit's `rehearse.ts`, which runs `act -j rehearse` on the commit's own `record-floors.yml`, traced by `scripts/trace-step.sh` (measures its own lines by observation, AC7) and joined by `traceTable`. **First:** measure whether act runs that job inside the 10-minute job on a runner; if not, stop and report.
+Mac spike (comment on #780; logs in `-761/.superpowers/sdd/762/probes/act-spike-780/`): under act, checkout, setup-node and the gate pass, but the `ref:` checkout needs a token, and a fake token breaks act's own action cloning.
 
 ## For Shyden in the morning
 
-- **#783 (P0): nothing on GitHub stops a pull request into `main` from a branch that isn't a `release/*` cut** (`main` requires only `build-and-test`; only my local hook guards it). Blocked by #762.
-- **#784 (P2, 13 points): Yawelo's own Cloudflare login and accounts.** It needs your new Gmail and login. Question: should #425 (site prod infrastructure, P1) wait for them, or be built in shyden.co.uk's account and moved later?
-- **#782** closed (PR #787). **#785** (exact `.nvmrc`) is in its record; Node 26.13.0 is out (2026-10-28), a bump left to the alignment skill. **#786** (P2): a guard blind spot (ShyTalk's), sibling of #697.
-- **#780 (P0): may the rehearsal hand act the job's own read-only `GITHUB_TOKEN`?** Without it, act can't check out the measured commit (spike above). The alternative rehearses a copy of the workflow with its `ref:` checkouts dropped.
-- **`hooks/disguised-waits.py` misses perl's `select(undef,undef,undef,N)`.** I used it once by mistake and it ran unrefused; recorded in the guard reference. The hook change is yours.
-- **#788 (P2): your route.** `allowScripts` approves esbuild and workerd for every version. Exact pins (re-approved on each Dependabot bump), denying both scripts, or keeping bare names? Measurements are planned first.
-- repo-template#134 (mutation runner). ShyTalk says you allowed b2 a one-time read of Yawelo.
+- **#780: may the rehearsal hand act the job's own read-only `GITHUB_TOKEN`?** Without it, act can't check out the measured commit. The alternative rehearses a copy of the workflow with its `ref:` checkouts dropped. AC9 says no real secrets, so it's your call.
+- **#783 (P0):** nothing on GitHub stops a PR into `main` from a non-`release/*` branch; only my local hook does. Blocked by #762.
+- **#784:** Yawelo's own Cloudflare login and accounts need your new Gmail and login. Should #425 (P1) wait for them? #588/#589 (P1, Swagger) also wait on #425 for production (comment on #588).
+- **#788:** allowScripts route (exact pins re-approved per bump, deny both scripts, or keep bare names).
+- **`hooks/disguised-waits.py` misses perl's `select(undef,undef,undef,N)`** (I used it once by mistake; recorded in the guard reference).
+- Node 26.13.0 is out (2026-10-28): a bump for the alignment skill. repo-template#134 is the mutation runner.
 
-## Waiting on Shyden
+## Waiting on Shyden (older)
 
 - Delete the #771 scratch ref `refs/floors/tooling/771-record-rehearse-job` (`1450a1e`).
 - `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
 - How to measure a unit test's own CPU now the overlay is refused (#536).
 
-## Progress (board read 2026-10-29, after #780 was filed)
-
-- **By tickets:** 32% complete (140 of 444 in-scope stories), 0.57/day over 7 days. ETA 2028-04-12 before outside waits (low confidence).
-- **By effort:** 1,326 points remaining across 304 open stories, 1.57 points/day. ETA 2029-02-18 before outside waits (low confidence).
-- Measured: the board and its 7-day pace. Assumed: about 30 unfiled prestige stories, 1.5 to 2.5 weeks of outside waits, and the real-phone sign-off (no date). Re-read the board at close-out: #782 to #786 were filed since.
-
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (local handover commits). Its CLAUDE.md is OLD; read develop's.
-- Worktrees: `-761` (#762), `-782` (#782), `-771`; `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files (ask before removing).
+- Worktrees: `-761` (#762); `-782`, `-785` and `-786` merged and done (safe to remove after a look); `-771`; `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files (ask before removing).
+- Local branches kept after their merges: `tooling/785-nvmrc-exact*`, `tooling/786-zero-resolves*`. No scratch ref of tonight's is left on origin (read with `git ls-remote`). Older ones remain: `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit` (parked tickets) and #771's.
 - Run logs go in `.superpowers/sdd/<ticket>/` (ignored), never a worktree root.
-- Backups kept 30 days: tag `backup/771-pre-squash-2026-10-28`, `.superpowers/HANDOVER.bak-2026-10-29-s25`, `-761/.superpowers/sdd/762/plan.md.bak-pass8-2026-10-29`.
-- Use `/usr/bin/grep` for searches whose empty result matters (the shell's `grep` wrapper missed a control).
+- Use `/usr/bin/grep` for searches whose empty result matters.
