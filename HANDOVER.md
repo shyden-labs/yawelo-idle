@@ -1,19 +1,17 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** #785's record run 40926295849 and develop's deploy-dev run 40925696169 on GitHub, each with a local waiter that dies with this session (re-run: `~/.claude/scripts/wait-run.sh <worktree> <run> <sha-file>`).
+**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** #785's record run 40930726807 on GitHub, with a local waiter that dies with this session (re-run: `~/.claude/scripts/wait-run.sh ../yawelo-idle-785 40930726807 ../yawelo-idle-785/.superpowers/sdd/785/head.sha`).
 **Next session:** `ListAgents`, then `board-next` (names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`).
 
 ## Node
 
 `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3). If `node -p process.versions.icu` is not 78.3, prefix with `export PATH=$HOME/.local/share/node/current/bin:$PATH;`.
 
-## #782: merged into develop as `2d9f7d0` (PR #787)
+## #782: closed (PR #787, merged as `2d9f7d0`, dev deploy green, Done on the board)
 
-CI green on `c74cf75` (build-and-test, mutations, board-orphans), the record was run 40922257030, and the scratch ref is deleted. **Left:** read develop's deploy-dev run 40925696169 (`../yawelo-idle-782/.superpowers/sdd/782/deploy-wait.log`), then close #782 by hand and reply to shytalk-36 with PR #787.
+## #785 (P2, worktree `../yawelo-idle-785`, branch `tooling/785-nvmrc-exact-d`, HEAD `666f3bb` on develop `2d9f7d0`, not pushed)
 
-## #785 (P2, worktree `../yawelo-idle-785`, branch `tooling/785-nvmrc-exact-b`, HEAD `e197190` on develop `2d9f7d0`, not pushed)
-
-Rebuilt as one change on the new develop by `merge --squash` (the first commit `51fb465`, on the old base, is kept on the local `tooling/785-nvmrc-exact`; its scratch ref is deleted). `.nvmrc` = 26.12.1; `node-version.test.ts` (exact form, every setup-node from .nvmrc); `supply-chain.test.ts` reads the major with semver (was `Number()`, NaN on an exact version); `tests/mutations/785-nvmrc-exact.ts` (6 rows, 1 control). Unit 14,105: only the 2 new floors red. Scratch `refs/floors/tooling/785-nvmrc-exact-b` pushed, record **40926295849**. Next: `npm run floors:fetch 40926295849`, amend (`.superpowers/sdd/785/msg.txt` + `Floors: recorded in run 40926295849`), run the 785 mutation rows locally (`source ~/.claude/scripts/test-lock.zsh heavy || exit $?; npm run mutate -- tests/mutations/785-nvmrc-exact.ts`), unit, push, PR, merge.
+The first record (run 40926295849, on `-b`) was refused by the coverage ratchet: the new test code had paths today's tree never takes. Each decision is now a function run both ways by planted steps, and the test file measures 67/67 statements with only the record's old arm unrun. Each fix went on a fresh branch (`-b`, `-c`, `-d`), since a scratch ref can't be rewritten without forcing; the `-b` and `-c` refs are deleted, and the old local branches are kept. Probe stamped `666f3bb`; scratch `refs/floors/tooling/785-nvmrc-exact-d`; record **40930726807**. Next: `npm run floors:fetch 40930726807`, amend (`.superpowers/sdd/785/msg.txt` + `Floors: recorded in run 40930726807`), run the 785 mutation rows locally (`source ~/.claude/scripts/test-lock.zsh heavy || exit $?; npm run mutate -- tests/mutations/785-nvmrc-exact.ts`), unit, push `-d`, PR, merge, verify dev, close.
 
 ## #762 (worktree `../yawelo-idle-761`, HEAD `2e28892`, not pushed by design)
 
@@ -27,7 +25,7 @@ Shyden: **"test the 3 lines, fix the problem"**, then **"Yes, re-scope #780"** (
 
 - **#783 (P0): nothing on GitHub stops a pull request into `main` from a branch that isn't a `release/*` cut** (`main` requires only `build-and-test`; only my local hook guards it). Blocked by #762.
 - **#784 (P2, 13 points): Yawelo's own Cloudflare login and accounts.** It needs your new Gmail and login. Question: should #425 (site prod infrastructure, P1) wait for them, or be built in shyden.co.uk's account and moved later?
-- **#782** merged (PR #787). **#785** (exact `.nvmrc`) is in its record; Node 26.13.0 is out (2026-10-28), a bump left to the alignment skill. **#786** (P2): a guard blind spot (ShyTalk's), sibling of #697.
+- **#782** closed (PR #787). **#785** (exact `.nvmrc`) is in its record; Node 26.13.0 is out (2026-10-28), a bump left to the alignment skill. **#786** (P2): a guard blind spot (ShyTalk's), sibling of #697.
 - **#788 (P2): your route.** `allowScripts` approves esbuild and workerd for every version. Exact pins (re-approved on each Dependabot bump), denying both scripts, or keeping bare names? Measurements are planned first.
 - repo-template#134 (mutation runner). ShyTalk says you allowed b2 a one-time read of Yawelo.
 
