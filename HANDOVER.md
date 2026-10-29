@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** PR #791's CI (runs 40954181718, 40954181744, 40954181845 on `56c4fd5`), with a local waiter that dies with this session.
+**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** PR #792's CI (runs 40957214098, 40957214045, 40957214047 on `cefa94a`), with a local waiter that dies with this session.
 **Next session:** `ListAgents`, then `board-next` (names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`).
 
 ## Node
@@ -11,9 +11,9 @@
 
 ## #785: closed (PR #789, merged as `c802418`, dev deploy green, CI resolved Node v26.12.1)
 
-## #786 (P2): PR #791, branch `tooling/786-zero-resolves-b`, head `56c4fd5`
+## #786 (P2): PR #792, branch `tooling/786-zero-resolves-c`, head `cefa94a`
 
-PR #790 was refused by the mutations judge (the helper is loaded by the guards suite, which had no row), and is closed with a pointer. #791 is the same change plus `tests/mutations/786-zero-resolves-guards.ts` (1 guards row), as one commit, recorded in run 40952491752; its scratch ref is deleted. Unit 14,128/14,128; unit rows 4 of 4. Next: read the three runs by step (`-786/.superpowers/sdd/786/wait-pr-b-*.log`), merge when green on `56c4fd5`, verify dev, close #786.
+Third PR. #790 was refused by the mutations judge (the helper is loaded by the guards suite, which had no row); #791's guards row stayed green (my unmeasured guess: the tree holds no real length or size zero site). #792's row stops direct zeros being read at all, visible through the 74 recorded scalar zeros. Record 40955583782 (no floor moved). Unit 14,128/14,128; unit rows 4 of 4 in CI too. Next: read the three runs (`-786/.superpowers/sdd/786/wait-pr-c-*.log`); if green on `cefa94a`, merge, verify dev, close #786; if the guards row misses again, stop and report.
 
 ## #780: parked on Shyden (credential)
 
