@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** nothing.
+**Written:** 2026-10-30 (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB, said to carry on without him). **Running when written:** #786's record run 40949807953, with a local waiter that dies with this session (re-run: `~/.claude/scripts/wait-run.sh ../yawelo-idle-786 40949807953 ../yawelo-idle-786/.superpowers/sdd/786/head.sha`).
 **Next session:** `ListAgents`, then `board-next` (names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`).
 
 ## Node
@@ -10,6 +10,10 @@
 ## #782: closed (PR #787, merged as `2d9f7d0`, dev deploy green, Done on the board)
 
 ## #785: closed (PR #789, merged as `c802418`, dev deploy green, CI resolved Node v26.12.1)
+
+## #786 (P2, worktree `../yawelo-idle-786`, branch `tooling/786-zero-resolves`, HEAD `6990ec8` on develop `c802418`, not pushed)
+
+`zeroExpectationOf` for scalar zeros (settled and polled zeros counted, never sites). Mutation rows 4 of 4 matched; new code fully covered; probe stamped; scratch `refs/floors/tooling/786-zero-resolves`; record **40949807953**. Next: `npm run floors:fetch 40949807953`, amend (`.superpowers/sdd/786/msg.txt` + `Floors: recorded in run 40949807953`), unit, push, PR (body `.superpowers/sdd/786/pr.md`), merge when green, verify dev, close #786, delete the scratch ref.
 
 ## #780: parked on Shyden (credential)
 
