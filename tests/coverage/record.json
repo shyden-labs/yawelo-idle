@@ -4642,6 +4642,17 @@
         "total": 14
       }
     },
+    "tests/unit/required-checks.test.ts": {
+      "measure": "v8",
+      "statements": {
+        "untested": 0,
+        "total": 5
+      },
+      "branches": {
+        "untested": 0,
+        "total": 0
+      }
+    },
     "tests/unit/sample-minimums.test.ts": {
       "measure": "v8",
       "statements": {
@@ -5317,7 +5328,7 @@
   "totals": {
     "statements": {
       "untested": 4345,
-      "total": 28248
+      "total": 28253
     },
     "branches": {
       "untested": 1666,
