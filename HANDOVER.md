@@ -28,7 +28,7 @@ Mac spike (comment on #780; logs in `-761/.superpowers/sdd/762/probes/act-spike-
 - **#784:** Yawelo's own Cloudflare login and accounts need your new Gmail and login. Should #425 (P1) wait for them? #588/#589 (P1, Swagger) also wait on #425 for production (comment on #588).
 - **#788:** allowScripts route (exact pins re-approved per bump, deny both scripts, or keep bare names).
 - **`hooks/disguised-waits.py` misses perl's `select(undef,undef,undef,N)`** (I used it once by mistake; recorded in the guard reference).
-- Node 26.13.0 is out (2026-10-28): a bump for the alignment skill. repo-template#134 is the mutation runner.
+- Node: your 2026-10-30 amendment (the version in one Dockerfile Dependabot bumps; `.nvmrc` goes) supersedes #785's pin. Yawelo's follow-up is **#793** (P2, 5 points), after repo-template#143. Node 26.13.0 then arrives as Dependabot's PR. repo-template#134 is the mutation runner.
 
 ## Waiting on Shyden (older)
 
