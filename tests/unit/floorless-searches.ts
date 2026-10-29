@@ -610,6 +610,32 @@ export interface ZeroReading {
   readonly scalarZeros: readonly string[];
 }
 
+/**
+ * `expectationOf` for a zero assertion (#786), which also reads a zero a
+ * promise settles to (`.resolves`, `.rejects`, `.not` on either side) or a
+ * polled value reaches (`expect.poll`): `expectationOf` stops at those, while
+ * `zerosWritten` counts them. Each property link back to the `expect(…)` call
+ * is stepped through, so a modifier not named here is read too. Such a zero
+ * is never a site, since nothing settled or polled is a list.
+ */
+function zeroExpectationOf(
+  matcher: ts.PropertyAccessExpression,
+):
+  | { expectation: ts.CallExpression; negated: boolean; settled: boolean }
+  | undefined {
+  const direct = expectationOf(matcher);
+  if (direct !== undefined) return { ...direct, settled: false };
+  let target: ts.Expression = matcher.expression;
+  let negated = false;
+  while (ts.isPropertyAccessExpression(target)) {
+    if (target.name.text === 'not') negated = true;
+    target = target.expression;
+  }
+  return ts.isCallExpression(target)
+    ? { expectation: target, negated, settled: true }
+    : undefined;
+}
+
 export function scalarZerosIn(sf: ts.SourceFile): ZeroReading {
   let zeroAssertions = 0;
   const scalarZeros: string[] = [];
@@ -620,7 +646,7 @@ export function scalarZerosIn(sf: ts.SourceFile): ZeroReading {
       chainRoot(node) === EXPECT
     ) {
       const name = node.expression.name.text;
-      const read = expectationOf(node.expression);
+      const read = zeroExpectationOf(node.expression);
       const subject = read?.expectation.arguments[0];
       if (
         read &&
@@ -630,6 +656,7 @@ export function scalarZerosIn(sf: ts.SourceFile): ZeroReading {
       ) {
         zeroAssertions += 1;
         const isSite =
+          !read.settled &&
           !startsFromWrapper(subject) &&
           bareForm(name, node.arguments[0], subject, read.negated) !==
             undefined;
