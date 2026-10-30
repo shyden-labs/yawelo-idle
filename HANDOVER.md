@@ -14,7 +14,7 @@
 2. (Done: the first run failed only on the threshold; the second commit sets it to the measured figures.)
 3. When green on the head SHA, change develop's required checks from `build-and-test, board-orphans, mutations` to `build-and-test, board-orphans, coverage` (app 15368), and read them back. `mutations` never reports on #796, so it cannot merge before this.
 4. Squash-merge #796, check the dev deploy, re-read #795's ACs, and close it by hand with a comment.
-5. File two small tickets, Shyden's calls: (a) the roadmap App's Administration: read was granted only for owner-review, now gone (narrowing it means updating `INSTALLED` in `apps/site/test/github-fake/contract.ts` and the Worker check); (b) develop's "Require review from Code Owners" does nothing now CODEOWNERS is gone.
+5. (Done: filed #797, P2, 1 point, for the roadmap App's unused Administration: read and develop's "Require review from Code Owners"; both Shyden's calls.)
 6. Then `board-next` (expected: #765, then #768, #783, the P1 website items, game M1).
 
 ## State
