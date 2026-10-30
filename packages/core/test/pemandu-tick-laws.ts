@@ -233,9 +233,11 @@ export function caseOf(r: CaseRecord): Case {
         understanding: Num.toTuple(Num.from(understanding)),
       },
     },
+    // On a tick: the first tick of the grid at or after the horizon's end,
+    // which is the end itself when it falls on one, 0 included (#800).
     until: simMs(
-      r.untilOnTick
-        ? nextGridTick(simMs(anchor + horizon - 1), r.interval)
+      r.untilOnTick && (anchor + horizon) % r.interval !== 0
+        ? nextGridTick(simMs(anchor + horizon), r.interval)
         : anchor + horizon,
     ),
   };
