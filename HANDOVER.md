@@ -1,45 +1,34 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-30, 04:50 WIB (twenty-fifth session, overnight; Shyden asleep until 06:00 WIB). **Running when written:** nothing (machine shutting down at Shyden's request; no local job to re-run).
-**Next session:** `ListAgents`, then `board-next` (it names #728, In Progress and blocked by #733, by design: `scripts/board-next.ts:8`). Every P0 now waits on Shyden's #780 answer; the P1s wait on him too (below). The workable P2s include #697 (the sibling of #786, ShyTalk's fix described on it).
+**Written:** 2026-10-30, ~07:30 WIB (twenty-sixth session). **Running when written:** nothing.
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin` (v26.12.1, ICU 78.3).
 
-## Node
+## What changed today (read this first)
 
-`~/.local/share/node/current/bin` (v26.12.1, ICU 78.3). If `node -p process.versions.icu` is not 78.3, prefix with `export PATH=$HOME/.local/share/node/current/bin:$PATH;`.
+Shyden ruled globally on 2026-10-30, "just keep it simple" (`~/.claude/CLAUDE.md` "Keep it simple" and "Value test before EVERY decision"; `~/.claude/global-rules/pending-keep-it-simple.md`). Dropped: per-file coverage floors and record/fold, `Floors:` lines, Gaps-checked sections, guard floors and meta-guards, mutation checks, workflow-line coverage, per-test CPU and load limits. 21 paperwork hooks are disconnected. In this session he also said "shorten it down and get it fixed properly, then lets move on to the game again", and that files no coverage tool can measure (workflows, shell) leave the coverage score in every project.
 
-## Closed overnight (each merged into develop, CI green on its head, dev deploy green)
+Done here:
+- **Filed #795** (P0, 8 points): remove the dropped machinery and keep one overall v8 coverage threshold. It's the one cleanup ticket for this repo. Its ACs list every piece (74 floors files, 69 mutation files, `floorBreach` in 103 files, `searched` in 88, `record-floors.yml`, `record-minimums.yml`, `mutations.yml` and about 20 scripts).
+- **Closed 41 tickets as not needed**, each with a comment citing the rulings: #794, #780, #776, #775, #774, #773, #771, #770, #766, #762, #761, #752, #740, #739, #738, #737, #736, #734, #733, #732, #731, #729, #728, #727, #697, #681, #666, #609, #604, #603, #586, #572, #541, #536, #505, #432, #415, #414, #413, #412, #36. Blocker links to them were removed from #783, #252 and #254.
+- **#425 waits for Yawelo's own Cloudflare login** (Shyden's ruling). Linked as blocked by #784, and #784 raised to P1.
+- **Board order kept as is** (Shyden, AskUserQuestion): #795 (my pick to go first, since it unblocks every PR), then the other P0s #765, #768, #783, then the P1 website items, then game M1.
+- repo-template-af was told about the coverage trap: the per-file ratchet refused every added `.svelte` line. It added AC6 to repo-template#149.
+- Memory: `feedback-record-inputs-come-from-develops-file` (asked Shyden about a token before checking develop's workflow could pass it).
 
-- **#782**: required-check jobs' key sets pinned (PR #787, `2d9f7d0`).
-- **#785**: `.nvmrc` = 26.12.1 exactly (PR #789, `c802418`); CI resolved v26.12.1.
-- **#786**: scalar zeros on settled or polled values read (PR #792, `f4a9bd3`), after #790 (refused by the mutations judge: no guards row) and #791 (guards row green on an unmeasured guess).
+## Resume steps
 
-## #762 (worktree `../yawelo-idle-761`, HEAD `a6eece7`, not pushed by design)
-
-Blocked by #780. Task 1 (#733) is fully written: `6d36f3b` attach, `0958de0` checker, `0235816` measure calls it (+ end-to-end measure cases), `267c496` coverage-env reader, `01502e0` whole-tree guard + `733-child-coverage.ts`, `2e28892` guards and integration mutation rows, `a6eece7` the three argv plants `01502e0` left out of the fixture (found at shutdown: until it, `01502e0` alone failed its liveness test). **First step after restart:** run the unit suite on `-761` to confirm the coverage-env tests are 162 green (not re-run before shutdown). Unit: the same 9 floor breaches as the merge. **Never run (CI-only):** integration, guards and all 733 mutation rows. Plan log: pass 8 in `.superpowers/sdd/762/plan.md`. The branch now sits behind develop by #782, #785 and #786: merge develop in before its record (floors re-recorded, never hand-merged).
-
-## #780 (P0): parked on Shyden
-
-Mac spike (comment on #780; logs in `-761/.superpowers/sdd/762/probes/act-spike-780/`): under act, checkout, setup-node and the gate pass, but the `ref:` checkout needs a token, and a fake token breaks act's own action cloning.
-
-## For Shyden in the morning
-
-- **#780: may the rehearsal hand act the job's own read-only `GITHUB_TOKEN`?** Without it, act can't check out the measured commit. The alternative rehearses a copy of the workflow with its `ref:` checkouts dropped. AC9 says no real secrets, so it's your call.
-- **#783 (P0):** nothing on GitHub stops a PR into `main` from a non-`release/*` branch; only my local hook does. Blocked by #762.
-- **#784:** Yawelo's own Cloudflare login and accounts need your new Gmail and login. Should #425 (P1) wait for them? #588/#589 (P1, Swagger) also wait on #425 for production (comment on #588).
-- **#788:** allowScripts route (exact pins re-approved per bump, deny both scripts, or keep bare names).
-- **`hooks/disguised-waits.py` misses perl's `select(undef,undef,undef,N)`** (I used it once by mistake; recorded in the guard reference).
-- Node: your 2026-10-30 amendment (the version in one Dockerfile Dependabot bumps; `.nvmrc` goes) supersedes #785's pin. Yawelo's follow-up is **#793** (P2, 5 points), after repo-template#143. Node 26.13.0 then arrives as Dependabot's PR. repo-template#134 is the mutation runner.
-
-## Waiting on Shyden (older)
-
-- Delete the #771 scratch ref `refs/floors/tooling/771-record-rehearse-job` (`1450a1e`).
-- `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
-- How to measure a unit test's own CPU now the overlay is refused (#536).
+1. **Start #795.** Branch `tooling/795-simplify` off `origin/develop` in a new worktree, and set #795 In Progress. Suggested PR order (each one reviewable alone): (a) coverage, replacing the per-file record with an overall `thresholds` block in the coverage config at today's measured figures, rounded down. This unblocks game UI first. Then (b) mutations, (c) floors, `searched` and the record workflows, (d) meta-guards and limits, then the repo `CLAUDE.md` Flow section and branch protection's required checks (read back). Until (c) lands, a PR still needs a floors record; do (a) and (c) early.
+2. Apply the value test as you go: delete rather than rewrite, and keep a guard only if it checks the product (content, licences, supply chain, workflow secrets).
+3. Then follow `board-next`.
 
 ## State
 
-- Main checkout on `handover/2026-10-17-d` (local handover commits). Its CLAUDE.md is OLD; read develop's.
-- Worktrees: `-761` (#762); `-782`, `-785` and `-786` merged and done (safe to remove after a look); `-771`; `-728b`, `-752`, `-36` parked; `-728-probe` has uncommitted probe files (ask before removing).
-- Local branches kept after their merges: `tooling/785-nvmrc-exact*`, `tooling/786-zero-resolves*`. No scratch ref of tonight's is left on origin (read with `git ls-remote`). Older ones remain: `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit` (parked tickets) and #771's.
-- Run logs go in `.superpowers/sdd/<ticket>/` (ignored), never a worktree root.
-- Use `/usr/bin/grep` for searches whose empty result matters.
+- Main checkout on `handover/2026-10-17-d` (local handover commits only). Its `CLAUDE.md` is old; develop's is current.
+- Dead worktrees, safe to remove after a look (nothing in them is needed now): `../yawelo-idle-794` (#794, commit `6f95480`, never pushed), `-761` (#762), `-771`, `-782`, `-785`, `-786`, `-728b`, `-752`, `-36`. `-728-probe` has uncommitted probe files: ask before removing. Local branch `tooling/780-rehearse-shards` has no commits.
+- Scratch refs still on origin: `refs/floors/tooling/771-record-rehearse-job`, `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit`. These are now pointless; deleting them is Shyden's call.
+- Still waiting on Shyden: #784 (new Gmail and Cloudflare login for Yawelo), #788 (needs measurements first, then his pick), `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
+
+## Progress (board, measured 2026-10-30 after the closes)
+
+- By tickets: 35% (143 of 412 in-scope stories). Pace 0.86 a day over 7 days, giving an ETA of 2027-09-09 (low confidence: 5 of the 7 days closed nothing).
+- By effort: 1,180 points remaining across 269 open stories. Pace 1.86 a day, giving an ETA of 2028-07-27 (low confidence). Both are before outside waits (#784's login, device sign-off).
