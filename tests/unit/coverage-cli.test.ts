@@ -88,7 +88,7 @@ describe('coverage fails below one overall threshold (#795)', () => {
     );
   });
 
-  it('holds the figures #795 measured in CI, rounded down', () => {
+  it('holds the figures CI measured with Svelte counted, rounded down', () => {
     expect(THRESHOLDS).toEqual({ statements: 85, branches: 76 });
   });
 });
@@ -103,6 +103,12 @@ describe('a count reads as the share of code run (#728)', () => {
   it('groups thousands, as the probe figures were written', () => {
     expect(percent({ untested: 5290, total: 25566 })).toBe(
       '79.3% run (5,290 of 25,566 untested)',
+    );
+  });
+
+  it('rounds down, so a share just under a threshold never prints as it (#798)', () => {
+    expect(percent({ untested: 1275, total: 5542 })).toBe(
+      '76.9% run (1,275 of 5,542 untested)',
     );
   });
 

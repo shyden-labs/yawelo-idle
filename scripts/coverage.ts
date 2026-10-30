@@ -13,11 +13,11 @@ import type { CoverageMapData } from 'istanbul-lib-coverage';
 import { COVERAGE_SUITES, coverageConfigFile } from './coverage-config.ts';
 
 /**
- * The overall thresholds, in percent: the figures #795's own tree measured
- * in CI (run 40999845202: statements 85.8%, branches 76.9%), rounded down.
- * Develop at f4a9bd3 measured 88.3% and 81.2%, but the machinery #795
- * removed was better tested than the rest. Raise them as coverage grows;
- * lower one only in the change that removes tested code, saying so.
+ * The overall thresholds, in percent: the figures measured in CI with
+ * Svelte counted (#798, run 41089966299: statements 2,720 of 19,234
+ * untested, 85.86%; branches 1,275 of 5,542, 76.99%), rounded down. Develop at f4a9bd3 measured 88.3% and 81.2% before #795
+ * removed machinery better tested than the rest. Raise them as coverage
+ * grows; lower one only in the change that removes tested code, saying so.
  */
 export const THRESHOLDS = { statements: 85, branches: 76 } as const;
 
@@ -46,9 +46,12 @@ export function suiteFailure(
 const share = ({ untested, total }: Count): number =>
   total === 0 ? 100 : (100 * (total - untested)) / total;
 
-/** A count as the run prints it: the share run, then both counts. */
+/**
+ * A count as the run prints it: the share run, rounded down to a tenth so
+ * the figure printed is never above the one judged, then both counts.
+ */
 export const percent = (count: Count): string =>
-  `${share(count).toFixed(1)}% run (${count.untested.toLocaleString('en')} of ${count.total.toLocaleString('en')} untested)`;
+  `${(Math.floor(share(count) * 10) / 10).toFixed(1)}% run (${count.untested.toLocaleString('en')} of ${count.total.toLocaleString('en')} untested)`;
 
 /** Each measure below its threshold, named with both figures. */
 export const shortfalls = (
