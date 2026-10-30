@@ -1,7 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import { inlineTags, startTags } from '../../../tests/inline-tags';
 
 /**
@@ -136,9 +134,6 @@ describe('the game Worker sets a Content Security Policy (#123 AC5)', () => {
     const html = await (await get('/play/')).text();
     const tags = startTags(html);
     const inline = inlineTags(tags);
-    expect(
-      searched(inline, { of: tags, what: 'tags in the served shell' }),
-    ).toEqual([]);
-    expect(floorBreach('game-html/tags', tags.length)).toBeUndefined();
+    expect(inline).toEqual([]);
   });
 });

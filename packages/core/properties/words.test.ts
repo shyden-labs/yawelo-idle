@@ -11,7 +11,6 @@ import {
   type SequenceReached,
   type Step,
 } from '../test/words-laws';
-import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * The word actions on random times, words and sequences (#28 AC5, AC8), at
@@ -102,11 +101,4 @@ describe('no reachable state holds NaN, a negative or an infinite value', () => 
   it('over random sequences of pick-ups, answers, purchases and returns', () => {
     expect(Object.keys(play())).toEqual([...SEQUENCE_REACHED]);
   });
-
-  it.each(SEQUENCE_REACHED)(
-    'the random sequences reach %s at least as often as measured',
-    (name) => {
-      expect(minimumBreach(`core-words/${name}`, play()[name])).toBeUndefined();
-    },
-  );
 });

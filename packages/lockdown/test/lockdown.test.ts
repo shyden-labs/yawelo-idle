@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import {
   BLOCKING_ROBOTS_TXT,
   NO_INDEX,
@@ -172,28 +170,9 @@ describe('gateWebRequest', () => {
       );
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
       const sentences = (await response.text()).split('. ');
-      expect(
-        searched(
-          sentences.filter((s) => s.includes('app bytes')),
-          { of: sentences, what: 'sentences of the challenge' },
-        ),
-      ).toEqual([]);
-      const handed = await handedOn(url);
-      expect(
-        searched(calls, { of: handed, what: 'hand-overs with the password' }),
-      ).toEqual([]);
-      expect(
-        floorBreach(
-          `lockdown/challenge sentences for ${name}`,
-          sentences.length,
-        ),
-      ).toBeUndefined();
-      expect(
-        floorBreach(
-          `lockdown/hand-overs with the password, for ${name}`,
-          handed.length,
-        ),
-      ).toBeUndefined();
+      expect(sentences.filter((s) => s.includes('app bytes'))).toEqual([]);
+      await handedOn(url);
+      expect(calls).toEqual([]);
     },
   );
 
@@ -206,13 +185,8 @@ describe('gateWebRequest', () => {
       serve,
     );
     expect(response.status).toBe(401);
-    const handed = await handedOn(url);
-    expect(
-      searched(calls, { of: handed, what: 'hand-overs once one is set' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('lockdown/hand-overs once a password is set', handed.length),
-    ).toBeUndefined();
+    await handedOn(url);
+    expect(calls).toEqual([]);
   });
 
   it('serves blocking robots.txt on a non-prod host without credentials', async () => {
@@ -226,16 +200,8 @@ describe('gateWebRequest', () => {
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
     expect(BLOCKING_ROBOTS_TXT).toContain('User-agent: *\nDisallow: /\n');
     expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-    const handed = await handedOn(`${dev}/`);
-    expect(
-      searched(calls, { of: handed, what: 'hand-overs off robots.txt' }),
-    ).toEqual([]);
-    expect(
-      floorBreach(
-        'lockdown/hand-overs off robots.txt on the web host',
-        handed.length,
-      ),
-    ).toBeUndefined();
+    await handedOn(`${dev}/`);
+    expect(calls).toEqual([]);
   });
 
   it('serves an authorised request with noindex added and the rest kept', async () => {
@@ -275,18 +241,7 @@ describe('markApiRequest', () => {
     // The working run: off robots.txt the same host hands the request on.
     const working = recordingServe();
     await markApiRequest(request(`${sync}/health`), working.serve);
-    expect(
-      searched(calls, {
-        of: working.calls,
-        what: 'hand-overs off robots.txt',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach(
-        'lockdown/hand-overs off robots.txt on the sync host',
-        working.calls.length,
-      ),
-    ).toBeUndefined();
+    expect(calls).toEqual([]);
   });
 
   it.each(['/health', '/robots.txt'])(

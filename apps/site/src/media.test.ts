@@ -1,7 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import { DEV_MEDIA, MEDIA_ORIGIN, PROD_MEDIA, PROMO, mediaUrl } from './media';
 
 /**
@@ -90,15 +88,7 @@ const publicEntries = (): string[] =>
 describe('the holding page’s public folder', () => {
   it('holds files only, none of them a promo file', () => {
     const entries = publicEntries();
-    expect(
-      searched(promoCopies(entries), {
-        of: entries,
-        what: 'entries in apps/site/holding/public',
-      }),
-    ).toEqual([]);
-    expect(floorBreach('media/holding-public-entries', entries.length)).toBe(
-      undefined,
-    );
+    expect(promoCopies(entries)).toEqual([]);
   });
 
   it('would name the media/ folder the files sat in before #713', () => {

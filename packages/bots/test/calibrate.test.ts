@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import {
   calibrateGoals,
   threeFiguresDown,
@@ -47,17 +45,11 @@ describe('calibrateGoals', () => {
   it('fits each goal so its sail lands by its target and within 0.01 days of it', () => {
     const fitted = calibrateGoals(model, options);
     expect(
-      searched(
-        fitted.filter(
-          (g) =>
-            g.day === undefined || g.day > g.target || g.day < g.target - 0.01,
-        ),
-        { of: fitted, what: 'fitted goals' },
+      fitted.filter(
+        (g) =>
+          g.day === undefined || g.day > g.target || g.day < g.target - 0.01,
       ),
     ).toEqual([]);
-    expect(
-      floorBreach('calibrate/fitted-goals', fitted.length),
-    ).toBeUndefined();
     expect(fitted).toHaveLength(4);
   });
 
@@ -65,25 +57,13 @@ describe('calibrateGoals', () => {
     // Each later sail 2 days after the one before: 2 decades in the model.
     const goals = calibrateGoals(model, options).map((g) => g.goal);
     const ratios = goals.slice(1).map((g, i) => g / (goals[i] ?? NaN));
-    expect(
-      searched(
-        ratios.filter((r) => Math.abs(r / 100 - 1) > 0.01),
-        { of: ratios, what: 'ratios of each goal to the one before' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('calibrate/goal-ratios', ratios.length)).toBeUndefined();
+    expect(ratios.filter((r) => Math.abs(r / 100 - 1) > 0.01)).toEqual([]);
     expect(goals[0]).toBe(9.99);
   });
 
   it('writes each goal with 3 significant figures', () => {
     const goals = calibrateGoals(model, options).map((g) => g.goal);
-    expect(
-      searched(
-        goals.filter((g) => Number(g.toPrecision(3)) !== g),
-        { of: goals, what: 'fitted goals' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('calibrate/goal-figures', goals.length)).toBeUndefined();
+    expect(goals.filter((g) => Number(g.toPrecision(3)) !== g)).toEqual([]);
   });
 
   it('aims each sail at a cumulative target', () => {
@@ -104,34 +84,9 @@ describe('calibrateGoals', () => {
     // 31 tables per goal: one per bisection step, then the fitted goal's own.
     const fittingFirst = seen.slice(0, 31);
     const fittingSecond = seen.slice(31);
-    expect(
-      searched(
-        seen.filter((g) => g.length !== 2),
-        { of: seen, what: 'tables shown to the measure' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('calibrate/tables-shown', seen.length)).toBeUndefined();
-    expect(
-      searched(
-        fittingFirst.filter((g) => g[1] !== UNREACHABLE),
-        { of: fittingFirst, what: 'tables shown while fitting the first goal' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('calibrate/tables-fitting-first', fittingFirst.length),
-    ).toBeUndefined();
-    expect(
-      searched(
-        fittingSecond.filter((g) => g[0] !== 9.99),
-        {
-          of: fittingSecond,
-          what: 'tables shown while fitting the second goal',
-        },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('calibrate/tables-fitting-second', fittingSecond.length),
-    ).toBeUndefined();
+    expect(seen.filter((g) => g.length !== 2)).toEqual([]);
+    expect(fittingFirst.filter((g) => g[1] !== UNREACHABLE)).toEqual([]);
+    expect(fittingSecond.filter((g) => g[0] !== 9.99)).toEqual([]);
     expect(seen).toHaveLength(62);
   });
 

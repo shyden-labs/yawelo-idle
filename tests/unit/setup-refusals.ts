@@ -7,7 +7,6 @@ import { beforeEach, vi } from 'vitest';
 import { asking, inIgnoreLookup } from './setup-refuse';
 import {
   connectProblem,
-  FLOORS_DIR,
   gitDirsOf,
   gitProblem,
   insideCheckout,
@@ -120,7 +119,6 @@ vi.mock('./old-name', async (importOriginal) => {
 // test lists, refused at the third; a recursive listing or a glob at once.
 const fsModule = require('node:fs') as typeof fs;
 const CHECKOUT = resolve('.');
-const FLOORS = resolve(FLOORS_DIR);
 const listed = new Set<string>();
 /** The absolute path a path argument names, or null for a descriptor. */
 const fullPath = (given: unknown): string | null => {
@@ -136,8 +134,7 @@ const fullPath = (given: unknown): string | null => {
 const inside = (dir: unknown): string | null => {
   const full = fullPath(dir);
   if (full === null) return null;
-  if (!insideCheckout(full, CHECKOUT) || insideCheckout(full, FLOORS))
-    return null;
+  if (!insideCheckout(full, CHECKOUT)) return null;
   return relative(CHECKOUT, full) || '.';
 };
 /** What a listing of `dir` would break, or null. */
@@ -207,8 +204,7 @@ const byRead: Check = (args) => {
   if (full === null) return null;
   if (GIT_DIRS.some((dir) => insideCheckout(full, dir)))
     return gitProblem(asking(), relative(CHECKOUT, full));
-  if (!insideCheckout(full, CHECKOUT) || insideCheckout(full, FLOORS))
-    return null;
+  if (!insideCheckout(full, CHECKOUT)) return null;
   // Node's own module loader reads every file a require loads through this
   // fs (wrangler pulls in undici's 20 and more at collection): a dependency
   // being loaded, not files a test reads. Only under node_modules: the tree's

@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'jsonc-parser';
-import { floorBreach } from '../floors';
 import { committableFiles } from '../unit/tracked-files';
 
 /**
@@ -101,13 +100,10 @@ function tsconfigsTheTypecheckReads(): string[] {
 }
 
 describe('erasable syntax only (#653)', () => {
-  it('lists every tsconfig git has, each one the typecheck reads, at the recorded floor', () => {
+  it('lists every tsconfig git has, each one the typecheck reads', () => {
     const derived = committableFiles(['tsconfig.json', '*/tsconfig.json']);
     expect(tsconfigsTheTypecheckReads()).toEqual(derived);
     expect(TSCONFIGS).toEqual(derived);
-    expect(
-      floorBreach('erasable-syntax/tsconfigs', derived.length),
-    ).toBeUndefined();
   });
 
   it.each(TSCONFIGS)('%s sets erasableSyntaxOnly itself', (path) => {

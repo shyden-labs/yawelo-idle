@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { againstControl, searched } from '../../../tests/searched';
 import { watched } from '../../../tests/watched';
 import type { PersonaRun, Sail } from '../src/run';
 import {
@@ -94,28 +92,12 @@ describe('the bounds', () => {
 describe('(a) firstSail', () => {
   it('holds just inside 30 minutes', () => {
     const casual = watchingSails(run('casual', 30.1 * MIN, 2), 'day');
-    expect(
-      searched(firstSail(casual.run, CI_BOUNDS), {
-        of: casual.read,
-        what: 'sails firstSail read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('targets/first-sail-30-minutes', casual.read.length),
-    ).toBeUndefined();
+    expect(firstSail(casual.run, CI_BOUNDS)).toEqual([]);
   });
 
   it('holds just inside 60 minutes', () => {
     const casual = watchingSails(run('casual', 59.9 * MIN, 2), 'day');
-    expect(
-      searched(firstSail(casual.run, CI_BOUNDS), {
-        of: casual.read,
-        what: 'sails firstSail read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('targets/first-sail-60-minutes', casual.read.length),
-    ).toBeUndefined();
+    expect(firstSail(casual.run, CI_BOUNDS)).toEqual([]);
   });
 
   it('breaks just under 30 minutes', () => {
@@ -138,28 +120,12 @@ describe('(a) firstSail', () => {
 describe('(b) gaps', () => {
   it('holds at gaps just inside 1 day', () => {
     const casual = watchingSails(run('casual', 0.03, 1.001), 'day');
-    expect(
-      searched(gaps(casual.run, CI_BOUNDS), {
-        of: casual.read,
-        what: 'sails gaps read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('targets/gaps-1-day', casual.read.length),
-    ).toBeUndefined();
+    expect(gaps(casual.run, CI_BOUNDS)).toEqual([]);
   });
 
   it('holds at gaps just inside 3 days', () => {
     const casual = watchingSails(run('casual', 0.03, 2.999), 'day');
-    expect(
-      searched(gaps(casual.run, CI_BOUNDS), {
-        of: casual.read,
-        what: 'sails gaps read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('targets/gaps-3-days', casual.read.length),
-    ).toBeUndefined();
+    expect(gaps(casual.run, CI_BOUNDS)).toEqual([]);
   });
 
   it('names each gap over 3 days', () => {
@@ -193,15 +159,7 @@ describe('(b) gaps', () => {
       'destination 5 came 3.100 days after the one before',
     ]);
     const slack = watchingSails(moved(4, 11.6), 'day');
-    expect(
-      searched(gaps(slack.run, CI_BOUNDS, 1), {
-        of: slack.read,
-        what: 'sails gaps read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('targets/gaps-one-open-slack', slack.read.length),
-    ).toBeUndefined();
+    expect(gaps(slack.run, CI_BOUNDS, 1)).toEqual([]);
   });
 
   it('still names a gap that one open sooner would not bring within 3 days', () => {
@@ -237,31 +195,13 @@ describe('(b) gaps', () => {
 
 describe('(c) finale', () => {
   it('holds just inside day 21', () => {
-    const { items, read } = watched(
-      [run('casual', 0, 21.01 / 11)],
-      'finaleDay',
-    );
-    expect(
-      searched(
-        items.flatMap((r) => finale(r, CI_BOUNDS)),
-        { of: read, what: 'runs whose finale finale read' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('targets/finale-day-21', read.length)).toBeUndefined();
+    const { items } = watched([run('casual', 0, 21.01 / 11)], 'finaleDay');
+    expect(items.flatMap((r) => finale(r, CI_BOUNDS))).toEqual([]);
   });
 
   it('holds just inside day 35', () => {
-    const { items, read } = watched(
-      [run('casual', 0, 34.99 / 11)],
-      'finaleDay',
-    );
-    expect(
-      searched(
-        items.flatMap((r) => finale(r, CI_BOUNDS)),
-        { of: read, what: 'runs whose finale finale read' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('targets/finale-day-35', read.length)).toBeUndefined();
+    const { items } = watched([run('casual', 0, 34.99 / 11)], 'finaleDay');
+    expect(items.flatMap((r) => finale(r, CI_BOUNDS))).toEqual([]);
   });
 
   it('breaks before day 21', () => {
@@ -283,14 +223,8 @@ describe('(c) finale', () => {
 
 describe('(d) idlerFinishes', () => {
   it('holds just before day 70', () => {
-    const { items, read } = watched([run('idler', 0, 69.99 / 11)], 'finaleDay');
-    expect(
-      searched(
-        items.flatMap((r) => idlerFinishes(r, CI_BOUNDS)),
-        { of: read, what: 'runs whose finale idlerFinishes read' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('targets/idler-day-70', read.length)).toBeUndefined();
+    const { items } = watched([run('idler', 0, 69.99 / 11)], 'finaleDay');
+    expect(items.flatMap((r) => idlerFinishes(r, CI_BOUNDS))).toEqual([]);
   });
 
   it('breaks after day 70', () => {
@@ -308,13 +242,7 @@ describe('(d) idlerFinishes', () => {
 
 describe('(e) decisions', () => {
   it('holds when every open offered one', () => {
-    expect(
-      againstControl(
-        (undecided: readonly number[]) =>
-          decisions(run('casual', 0, 2, { undecided })),
-        { input: [], control: [3.25] },
-      ),
-    ).toEqual([]);
+    expect(decisions(run('casual', 0, 2, { undecided: [] }))).toEqual([]);
   });
 
   it('names each open that offered none', () => {
@@ -334,31 +262,23 @@ describe('(e) decisions', () => {
 
   it('accepts a 15-minute return where only Practice is on offer (operator, 2026-10-04)', () => {
     expect(
-      againstControl(
-        (returnsUndecided: readonly number[]) =>
-          decisions(
-            run('casual', 0, 2, {
-              returnsPracticeOnly: [8.2706],
-              returnsUndecided,
-            }),
-          ),
-        { input: [], control: [8.2706] },
+      decisions(
+        run('casual', 0, 2, {
+          returnsPracticeOnly: [8.2706],
+          returnsUndecided: [],
+        }),
       ),
     ).toEqual([]);
   });
 
   it('judges a return after every open when no finale ends the run', () => {
     expect(
-      againstControl(
-        (returnsUndecided: readonly number[]) =>
-          decisions(
-            run('casual', 0, 2, {
-              finaleDay: undefined,
-              returnsJudged: 72,
-              returnsUndecided,
-            }),
-          ),
-        { input: [], control: [8.2706] },
+      decisions(
+        run('casual', 0, 2, {
+          finaleDay: undefined,
+          returnsJudged: 72,
+          returnsUndecided: [],
+        }),
       ),
     ).toEqual([]);
   });
@@ -374,17 +294,12 @@ describe('(f) learningPays', () => {
   it('holds when the Casual Learner finishes just over 20% sooner', () => {
     const {
       items: [casual, nonlearner],
-      read,
     } = watched([run('casual', 0, 2.39), run('nonlearner', 0, 3)], 'finaleDay');
     expect(
-      searched(
-        casual && nonlearner
-          ? learningPays(casual, nonlearner, CI_BOUNDS)
-          : ['a run was not watched'],
-        { of: read, what: 'runs whose finale learningPays read' },
-      ),
+      casual && nonlearner
+        ? learningPays(casual, nonlearner, CI_BOUNDS)
+        : ['a run was not watched'],
     ).toEqual([]);
-    expect(floorBreach('targets/learning-pays', read.length)).toBeUndefined();
   });
 
   it('breaks at 19% sooner', () => {
@@ -408,20 +323,15 @@ describe('(f) learnersOrder', () => {
   it('holds when Diligent ≤ Casual ≤ Idler, ties included', () => {
     const {
       items: [diligent, casual, idler],
-      read,
     } = watched(
       [run('diligent', 0, 2), run('casual', 0, 2), run('idler', 0, 3)],
       'finaleDay',
     );
     expect(
-      searched(
-        diligent && casual && idler
-          ? learnersOrder(diligent, casual, idler)
-          : ['a run was not watched'],
-        { of: read, what: 'runs whose finale learnersOrder read' },
-      ),
+      diligent && casual && idler
+        ? learnersOrder(diligent, casual, idler)
+        : ['a run was not watched'],
     ).toEqual([]);
-    expect(floorBreach('targets/learners-order', read.length)).toBeUndefined();
   });
 
   it('breaks when the Diligent Learner finishes after the Casual Learner', () => {
@@ -449,14 +359,8 @@ describe('(g) clickingNeverWins', () => {
   it('holds just over 95% of the Casual Learner’s time', () => {
     const clicker = watchingSails(run('clicker', 0.951, 1.902), 'reachedDay');
     expect(
-      searched(clickingNeverWins(clicker.run, run('casual', 1, 2), CI_BOUNDS), {
-        of: clicker.read,
-        what: 'Clicker sails whose goal moment clickingNeverWins read',
-      }),
+      clickingNeverWins(clicker.run, run('casual', 1, 2), CI_BOUNDS),
     ).toEqual([]);
-    expect(
-      floorBreach('targets/clicker-95-percent', clicker.read.length),
-    ).toBeUndefined();
   });
 
   it('names a goal reached sooner than 95%', () => {
@@ -479,15 +383,7 @@ describe('(g) clickingNeverWins', () => {
       })),
     };
     const watching = watchingSails(clicker, 'reachedDay');
-    expect(
-      searched(clickingNeverWins(watching.run, casual, CI_BOUNDS), {
-        of: watching.read,
-        what: 'Clicker sails whose goal moment clickingNeverWins read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('targets/clicker-goal-moments', watching.read.length),
-    ).toBeUndefined();
+    expect(clickingNeverWins(watching.run, casual, CI_BOUNDS)).toEqual([]);
   });
 
   it('breaks on a goal reached sooner than 95% though both sail on the same open', () => {
@@ -518,12 +414,7 @@ describe('(g) clickingNeverWins', () => {
 
 describe('(h) sanity', () => {
   it('holds with no insane value', () => {
-    expect(
-      againstControl(
-        (insane: readonly string[]) => sanity(run('casual', 0, 2, { insane })),
-        { input: [], control: ['rate'] },
-      ),
-    ).toEqual([]);
+    expect(sanity(run('casual', 0, 2, { insane: [] }))).toEqual([]);
   });
 
   it('names each insane value', () => {

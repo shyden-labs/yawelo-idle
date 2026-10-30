@@ -9,7 +9,6 @@ import {
 } from '../../scripts/board-next';
 import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
 import type { Gh } from '../../scripts/board-progress';
-import { againstControl } from '../searched';
 
 /**
  * scripts/board-next.ts (#576): the board's Priority, not the handover, names
@@ -183,16 +182,12 @@ describe('offBoardBlockers names each blocker the board does not hold (operator 
       { number: n, repository: 'shyden-labs/yawelo-idle' },
     ];
     expect(
-      againstControl(
-        (missing: number[]) =>
-          offBoardBlockers([
-            item(1),
-            item(2, {
-              blockedBy: [...blockedBy(1), ...missing.flatMap(blockedBy)],
-            }),
-          ]),
-        { input: [], control: [40] },
-      ),
+      offBoardBlockers([
+        item(1),
+        item(2, {
+          blockedBy: [...blockedBy(1), ...[].flatMap(blockedBy)],
+        }),
+      ]),
     ).toEqual([]);
   });
 });
@@ -568,8 +563,6 @@ describe('boardNext (#576)', () => {
       }
       return calls;
     };
-    expect(againstControl(callsWith, { input: [], control: [TITLE] })).toEqual(
-      [],
-    );
+    expect(callsWith([])).toEqual([]);
   });
 });

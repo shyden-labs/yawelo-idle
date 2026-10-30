@@ -8,8 +8,8 @@ import { runOf } from './workflow-steps';
 /**
  * The integration suite stays wired (#490). A unit test starts no process
  * (global rule, 2026-10-08), so the tests where a process is the thing tested
- * run as their own suite, under one measured limit at their CI step and none
- * of their own (both held in suite-limits.test.ts, #476). A step removed, or
+ * run as their own suite, under one measured limit at their CI step
+ * (#476). A step removed, or
  * a glob that lets a test run twice or not at all would let them
  * pass by not running; this suite fails instead. The workflow is read as
  * parsed YAML, so a comment naming a command cannot stand in for a step.

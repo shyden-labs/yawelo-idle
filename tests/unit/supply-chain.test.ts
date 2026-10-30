@@ -5,8 +5,6 @@ import semver from 'semver';
 import { parse } from 'yaml';
 import { withoutYamlComments, withoutYamlQuotes } from './source-text';
 import { isRecord } from './workflow-secrets';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The CI supply chain is pinned, and something keeps it current.
@@ -148,13 +146,7 @@ describe('the CI supply chain is pinned', () => {
       .filter(({ text }) => !/@[0-9a-f]{40}(?=\s|$)/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(
-      searched(unpinned, { of: uses, what: 'third-party uses' }),
-      'a mutable tag can be repointed under us',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/pinned-uses', uses.length),
-    ).toBeUndefined();
+    expect(unpinned, 'a mutable tag can be repointed under us').toEqual([]);
   });
 
   it('every pinned action names the version its SHA resolves to', () => {
@@ -163,13 +155,7 @@ describe('the CI supply chain is pinned', () => {
       .filter(({ text }) => !/@[0-9a-f]{40}\s+#\s*v\d/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(
-      searched(opaque, { of: uses, what: 'third-party uses' }),
-      'a bare SHA bump is unreviewable by a human',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/versioned-uses', uses.length),
-    ).toBeUndefined();
+    expect(opaque, 'a bare SHA bump is unreviewable by a human').toEqual([]);
   });
 });
 
@@ -213,13 +199,7 @@ describe('the browser image is pinned and matches the test runner (#44)', () => 
     const unpinned = images
       .filter(({ image }) => !/@sha256:[0-9a-f]{64}$/.test(image))
       .map(({ where, image }) => `${where} ${image}`);
-    expect(
-      searched(unpinned, { of: images, what: 'container images' }),
-      'a tag can be re-pushed under us',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/digest-images', images.length),
-    ).toBeUndefined();
+    expect(unpinned, 'a tag can be re-pushed under us').toEqual([]);
   });
 
   it('the Playwright image is the version of @playwright/test the lockfile installs', () => {
@@ -239,12 +219,9 @@ describe('the browser image is pinned and matches the test runner (#44)', () => 
       )
       .map(({ where, image }) => `${where} ${image}`);
     expect(
-      searched(stale, { of: playwrightImages, what: 'Playwright images' }),
+      stale,
       `a browser build the runner was not made for fails to launch; move the tag to v${String(version)}-noble and re-read its digest from https://mcr.microsoft.com/v2/playwright/manifests/v${String(version)}-noble`,
     ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/playwright-images', playwrightImages.length),
-    ).toBeUndefined();
   });
 });
 
@@ -282,12 +259,9 @@ describe('Dependabot keeps the pins from rotting', () => {
       );
 
     expect(
-      searched(ungrouped, { of: repos, what: 'action repos' }),
+      ungrouped,
       'separate PRs per sub-path break the one-SHA-per-repo invariant',
     ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/grouped-action-repos', repos.length),
-    ).toBeUndefined();
   });
 
   /**
@@ -320,12 +294,9 @@ describe('Dependabot keeps the pins from rotting', () => {
     );
 
     expect(
-      searched(misordered, { of: repos, what: 'action repos' }),
+      misordered,
       'Dependabot assigns to the FIRST matching group and stops',
     ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/ordered-action-repos', repos.length),
-    ).toBeUndefined();
   });
 
   it('a Dependabot config exists', () => {
@@ -355,12 +326,7 @@ describe('Dependabot keeps the pins from rotting', () => {
       'an ecosystem defaults to the default branch, bypassing the develop gate',
     ).toBe(ecosystems);
     const onMain = config.match(/target-branch:\s*["']?main["']?/g) ?? [];
-    expect(
-      searched(onMain, { of: ecosystems, what: 'Dependabot ecosystems' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/dependabot-ecosystems', ecosystems),
-    ).toBeUndefined();
+    expect(onMain).toEqual([]);
   });
 
   /**

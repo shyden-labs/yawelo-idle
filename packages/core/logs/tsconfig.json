@@ -1,15 +1,12 @@
 {
   // The core logs suite (#84, spec §5.12): the event log's checks, run in CI
   // before a release. Like the properties beside it they run in Node under
-  // vitest, share the unit tests' checks (../test) and call `minimumBreach`,
-  // which reads `tests/minimums/` from disk, so they see Node's types.
+  // vitest and share the unit tests' checks (../test), so they see Node's
+  // types.
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "erasableSyntaxOnly": true,
-    "types": ["node"],
-    // tests/minimums.ts reaches scripts/record-floors.ts by its .ts name, as
-    // Node's type stripping needs.
-    "allowImportingTsExtensions": true
+    "types": ["node"]
   },
   "include": ["**/*.ts", "../src/**/*.ts", "../fixtures/**/*.ts"]
 }

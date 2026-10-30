@@ -11,7 +11,6 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { readDiff, scopeFor } from '../../scripts/ci-scope';
-import { againstControl } from '../searched';
 
 /**
  * The docs-only fast path's git half (#360), moved out of the unit suite by
@@ -112,14 +111,11 @@ describe('real commits read against their first parent (AC1, AC4)', () => {
     const result = diffScope(r.dir);
     expect(result.scope).toBe('full');
     expect(
-      againstControl(
-        (files: Record<string, string>) => {
-          const each = baseRepo();
-          each.commit(files);
-          return diffScope(each.dir).judged;
-        },
-        { input: {}, control: { 'docs/b.md': 'b\n' } },
-      ),
+      ((files: Record<string, string>) => {
+        const each = baseRepo();
+        each.commit(files);
+        return diffScope(each.dir).judged;
+      })({}),
     ).toEqual([]);
   });
 

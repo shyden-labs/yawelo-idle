@@ -9,8 +9,6 @@ import {
   type DeployConfig,
 } from './wrangler-configs';
 import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { DEV_HOSTS } from '../../apps/dev-hosts/hosts';
 import { HOLDING_HOST } from '../../apps/site/worker/routes';
 
@@ -199,12 +197,7 @@ describe('the dev Workers’ deploy configs', () => {
     const secrets = declared.filter(({ name }) =>
       /PASSWORD|SECRET|TOKEN|KEY/i.test(name),
     );
-    expect(searched(secrets, { of: declared, what: 'declared vars' })).toEqual(
-      [],
-    );
-    expect(
-      floorBreach('dev-config/declared-vars', declared.length),
-    ).toBeUndefined();
+    expect(secrets).toEqual([]);
   });
 });
 

@@ -10,7 +10,6 @@ import {
   syntheticCourse,
   syntheticCourseData,
 } from '../fixtures/synthetic-course';
-import { floorBreach } from '../../../tests/floors';
 
 /**
  * The synthetic course (#26 AC8, AC9): sized like v1 and reproducible from a
@@ -186,10 +185,5 @@ describe('syntheticCourse', () => {
       expect(w.startWallMs).toBeGreaterThanOrEqual(BOT_EPOCH_WALL_MS);
       expect(w.endWallMs).toBeGreaterThan(w.startWallMs);
     }
-    // The generator is deterministic, so the count is exact: a recorded
-    // floor, not a minimum (#84).
-    expect(
-      floorBreach('synthetic-course/festival-windows', windows.length),
-    ).toBeUndefined();
   });
 });

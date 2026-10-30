@@ -10,9 +10,8 @@ import { jobIn } from './workflow-file.ts';
  * passes (#782, found by ShyTalk's review, 2026-10-29). Each required job
  * holds exactly the keys below, in order.
  *
- * The required checks, read through the App on 2026-10-29: develop requires
- * build-and-test, board-orphans and mutations, and main requires
- * build-and-test, each pinned to app 15368 (GitHub Actions). Each is the id
+ * The required checks (#795): develop requires build-and-test,
+ * board-orphans and coverage, and main requires build-and-test, each pinned to app 15368 (GitHub Actions). Each is the id
  * of a job with no `name:`. No test reads that list from GitHub, so it is
  * held here as written there.
  */
@@ -27,13 +26,7 @@ const REQUIRED: readonly (readonly [string, string, readonly string[]])[] = [
     'board-orphans',
     ['runs-on', 'timeout-minutes', 'environment', 'steps'],
   ],
-  // Its `if` makes it report even when the matrix it gathers was skipped;
-  // the value itself is pinned in mutations-ci.test.ts.
-  [
-    'mutations.yml',
-    'mutations',
-    ['needs', 'if', 'runs-on', 'timeout-minutes', 'steps'],
-  ],
+  ['ci.yml', 'coverage', ['runs-on', 'timeout-minutes', 'container', 'steps']],
 ];
 
 describe('each required check is a job that always runs under its own id (#782)', () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import logs from '../../vitest.logs.config';
+import { workflow as parsed, workflowFiles } from './workflow-file';
 import { runOf } from './workflow-steps';
 
 /**
@@ -10,7 +11,7 @@ import { runOf } from './workflow-steps';
  * pre-requisite to a release", and "for now, you can create the workflow
  * that the release pipeline will call later". So its workflow is started by
  * hand on the release ref or called by the release pipeline (#252), and no
- * pull request runs it. Its time limit is held in suite-limits.test.ts. The
+ * pull request runs it. The
  * workflows are read as parsed YAML, so a comment naming a command cannot
  * stand in for a step.
  */
@@ -69,9 +70,19 @@ describe('the logs workflow (spec §5.12)', () => {
   });
 });
 
-// That no pull request runs the logs suite is suite-limits.test.ts's exact
-// list of every suite step across ci.yml, deploy-dev.yml and logs.yml: a
-// test:logs step anywhere but logs.yml makes that list unequal.
+describe('only logs.yml runs the logs suite (#252)', () => {
+  it.each(workflowFiles().filter((file) => file !== 'logs.yml'))(
+    '%s runs no test:logs step',
+    (file) => {
+      const runs = Object.values(parsed(file).jobs ?? {}).flatMap((job) =>
+        (job.steps ?? []).map((step) =>
+          typeof step.run === 'string' ? step.run : '',
+        ),
+      );
+      expect(runs.filter((run) => run.includes('test:logs'))).toEqual([]);
+    },
+  );
+});
 
 describe('the logs suite’s config', () => {
   it('is what npm run test:logs runs: each package’s logs folder and nothing else', () => {

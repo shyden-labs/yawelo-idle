@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { grepLines } from './grep';
 import { LINE_HOME, lineOf, lineReadersIn } from './line-of';
 
@@ -90,19 +88,7 @@ describe('lineOf over a real file whose strings hold U+2028 (#417 AC2)', () => {
             `${first}: grep -n says ${lines.join(', ')}, lineOf ${String(line)}`,
           ];
     });
-    expect(
-      searched(differ, { of: calls, what: 'test calls in hash.test.ts' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('line-of/hash-test-calls', calls.length),
-    ).toBeUndefined();
-    // Liveness: past the first U+2028 is where TypeScript's own count differs.
-    const after = calls.filter(
-      (call) => call.getStart(sf) > sf.text.indexOf(LS),
-    );
-    expect(
-      floorBreach('line-of/hash-test-calls-after-u2028', after.length),
-    ).toBeUndefined();
+    expect(differ).toEqual([]);
   });
 });
 

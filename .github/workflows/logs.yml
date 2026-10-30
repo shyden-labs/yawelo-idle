@@ -29,7 +29,6 @@ jobs:
           cache: 'npm'
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
-      # Its one limit (tests/unit/suite-limits.test.ts).
       - name: Logs (the event log’s checks, before a release)
         timeout-minutes: 1
         run: npm run test:logs

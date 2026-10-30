@@ -631,3 +631,16 @@ export const isIgnored = (path: string, root = '.'): boolean => {
   const { tracked, tree, settings } = repository(root);
   return ignoredBy(tracked, tree, settings)(path);
 };
+
+/** Paths one list holds and the other does not, both ways. */
+export const walkDisagreements = (
+  walked: readonly string[],
+  known: readonly string[],
+): string[] => [
+  ...walked
+    .filter((path) => !known.includes(path))
+    .map((path) => `${path}: walked, not in git's list`),
+  ...known
+    .filter((path) => !walked.includes(path))
+    .map((path) => `${path}: in git's list, not walked`),
+];

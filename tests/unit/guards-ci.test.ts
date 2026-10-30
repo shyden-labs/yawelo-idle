@@ -9,7 +9,7 @@ import { runOf } from './workflow-steps';
  * The guards suite stays wired (#475). Whole-repo guards, which read or parse
  * the whole tree, run as their own suite (global rule, 2026-10-08), out of
  * the unit suite and its limits, under one measured limit at their CI step
- * (held in suite-limits.test.ts, #476). A step removed, a docs-only skip
+ * (#476). A step removed, a docs-only skip
  * added (the guards read docs too), or a glob that lets a guard run twice or not at all would let
  * them pass by not running; this suite fails instead. The workflow is read
  * as parsed YAML, so a comment naming a command cannot stand in for a step.

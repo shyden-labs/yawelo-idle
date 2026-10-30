@@ -1,16 +1,11 @@
 {
-  // The lockdown tests run in Node under vitest, and the ones holding
-  // recorded floors (#375) call `floorBreach`, which reads `tests/floors/`
-  // from disk. So the tests see Node's types, while the package's own
+  // The lockdown tests run in Node under vitest, so they see Node's types, while the package's own
   // tsconfig.json keeps `src/` to the web platform APIs workerd and Node
   // share.
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "erasableSyntaxOnly": true,
-    "types": ["node"],
-    // tests/floors.ts imports scripts/record-floors.ts by its .ts name, as
-    // Node's type stripping needs.
-    "allowImportingTsExtensions": true
+    "types": ["node"]
   },
   "include": ["**/*.ts", "../src/**/*.ts"]
 }

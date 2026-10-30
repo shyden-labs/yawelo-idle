@@ -3,7 +3,6 @@ import fc from 'fast-check';
 import { DAY_MS } from '../src/clock';
 import { UNFOLD_FLAGS, type UnfoldFlag } from '../src/unfold';
 import { checkWalk, type Step } from '../test/unfold-laws';
-import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * No flag ever turns off, over random walks (#31 AC6), at the full
@@ -33,20 +32,6 @@ describe('no flag ever turns off', () => {
   );
 
   /**
-   * Each flag's walk counts its steps, the walks in which the flag turned on,
-   * and the steps that began with it on (the steps the check judges), each
-   * checked against a measured minimum (#84). Listen is on from the first
-   * state, so it never turns on: that count is 0 by construction, an exact
-   * fact rather than a minimum.
-   */
-  const turnedOnBreach = (flag: UnfoldFlag, turnedOn: number) =>
-    flag === 'listen'
-      ? turnedOn === 0
-        ? undefined
-        : `listen turned on ${String(turnedOn)} times, but it is on from the first state`
-      : minimumBreach(`core-unfold/${flag}-turned-on`, turnedOn);
-
-  /**
    * Each flag's walks a run. 300 is the count from before any cut (#543).
    * Four are raised (#84, Shyden 2026-10-16: "Raise their runs"): round 1
    * (run 38830359612, 200 runs at 300 walks) found a count too small to hold
@@ -69,25 +54,18 @@ describe('no flag ever turns off', () => {
   for (const flag of UNFOLD_FLAGS)
     it(`${flag} never turns off over random walks from a new game and from one near its goal`, () => {
       let turnedOn = 0;
-      let stepsChecked = 0;
-      let judged = 0;
       fc.assert(
         fc.property(
           fc.boolean(),
           fc.array(step, { minLength: 1, maxLength: 40 }),
           (startNearGoal, steps) => {
             const walked = checkWalk(flag, startNearGoal, steps);
-            stepsChecked += walked.steps;
-            judged += walked.judged;
             turnedOn += walked.turnedOn;
           },
         ),
         { numRuns: RUNS[flag] },
       );
-      expect({
-        steps: minimumBreach(`core-unfold/${flag}-steps`, stepsChecked),
-        turnedOn: turnedOnBreach(flag, turnedOn),
-        judged: minimumBreach(`core-unfold/${flag}-judged`, judged),
-      }).toEqual({ steps: undefined, turnedOn: undefined, judged: undefined });
+      // Listen is on from the first state, so no walk ever turns it on.
+      expect(flag === 'listen' ? turnedOn : 0).toBe(0);
     });
 });

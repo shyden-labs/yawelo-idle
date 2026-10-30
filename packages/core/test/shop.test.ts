@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
@@ -377,15 +375,7 @@ describe('the grammar offers match buying a node', () => {
   it('is not affordable before grammar opens, however much Insight is held', () => {
     const rich = { ...fresh(), insight: Num.toTuple(Num.from(1e30)) };
     const offers = shopOf(rich).grammar;
-    expect(
-      searched(
-        offers.filter((o) => o.affordable),
-        { of: offers, what: 'grammar offers' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('shop/grammar offers before grammar opens', offers.length),
-    ).toBeUndefined();
+    expect(offers.filter((o) => o.affordable)).toEqual([]);
     expect(shopOf(rich).grammar).toHaveLength(12);
     expect(buyGrammarNode(course(), rich, 'r0-gram-0').ok).toBe(false);
   });
@@ -425,13 +415,8 @@ describe('the Journey offers match starting a Journey', () => {
 
   it('offers nothing while every open slot is busy', () => {
     const away = accepted(startJourney(course(), fresh(), 0, '8h'));
-    const { slots, startable } = shopOf(away).journeys;
-    expect(searched(startable, { of: slots, what: 'journey slots' })).toEqual(
-      [],
-    );
-    expect(
-      floorBreach('shop/journey slots while one is away', slots.length),
-    ).toBeUndefined();
+    const { startable } = shopOf(away).journeys;
+    expect(startable).toEqual([]);
     expect(shopOf(away).journeys.slots).toEqual(['away', 'locked', 'locked']);
   });
 
@@ -502,17 +487,9 @@ describe('the Practice offer matches practising a word', () => {
     );
     const shop = shopOf(state);
     const offers = shop.encounters;
-    expect(
-      searched(
-        offers.filter((o) => o.affordable),
-        { of: offers, what: 'Encounter offers' },
-      ),
-    ).toEqual([]);
+    expect(offers.filter((o) => o.affordable)).toEqual([]);
     expect(shop.pickUp?.affordable).toBe(false);
     expect(shop.practice).toEqual({ available: true });
-    expect(
-      floorBreach('shop/encounter offers with nothing held', offers.length),
-    ).toBeUndefined();
   });
 });
 

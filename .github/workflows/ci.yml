@@ -143,10 +143,10 @@ jobs:
         run: scripts/fail-on-warnings.sh npm run build
 
   # Every suite pull-request CI runs, under coverage, one after another, in a
-  # job of its own so the unit step above keeps coverage off and its limits
-  # (#728). It measures and keeps the report; the ratchet that judges it, and
-  # this job as a required check, follow once develop's record-floors can
-  # record the figures (#728 design: two pull requests).
+  # job of its own so the unit step above keeps coverage off (#728). It fails
+  # below the overall thresholds in scripts/coverage.ts (#795), and is a
+  # required check, so like build-and-test it reports on a docs-only change
+  # without measuring.
   coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -161,11 +161,17 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+      - name: Classify the change as docs-only or full (#360)
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: node scripts/ci-scope.ts
       - name: Install (a warning fails it)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm ci
-      # One measured limit (#476), held in suite-limits.test.ts.
       - name: Measure coverage (every suite pull-request CI runs)
         id: measure
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         timeout-minutes: 12
         run: npm run test:coverage
       # Only after a measure that ran: an upload after a skipped one would fail

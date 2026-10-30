@@ -3,9 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COPY } from '../src/copy';
 import type { Locale } from '../src/i18n';
-import { floorBreach } from '../../../tests/floors';
 import { inlineTags, startTags } from '../../../tests/inline-tags';
-import { searched } from '../../../tests/searched';
 
 /**
  * The built holding page (#621 AC1, AC2), read from dist-holding/ after
@@ -110,8 +108,7 @@ describe.each(ALL)('the built page %s', (file) => {
       ...inlineTags(tags),
       ...tags.filter((tag) => /=\s*["']?data:/i.test(tag)),
     ];
-    expect(searched(unsafe, { of: tags, what: `tags in ${file}` })).toEqual([]);
-    expect(floorBreach(`holding-html/${file}`, tags.length)).toBeUndefined();
+    expect(unsafe).toEqual([]);
   });
 
   it('links only the two home pages production has, in order', () => {

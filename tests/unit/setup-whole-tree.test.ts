@@ -42,7 +42,7 @@ import { everyFileHere } from './whole-tree-helper';
 const own = (): string => expect.getState().currentTestName ?? '';
 const CHECKOUT = resolve('.');
 
-/** Three directories of the checkout, none of them tests/floors. */
+/** Three directories of the checkout. */
 const THREE = ['.github', '.github/workflows', 'tests'];
 
 describe('the named whole-tree readers are refused on the checkout (#530 AC1, AC2)', () => {
@@ -152,12 +152,6 @@ describe('a walk of the checkout is refused, by any route (#530 AC1, AC2)', () =
     expect(readdirSync(THREE[1] ?? '').length).toBeGreaterThan(0);
   });
 
-  it('tests/floors is not counted: floorBreach lists it', () => {
-    readdirSync('tests/floors');
-    readdirSync(THREE[0] ?? '');
-    expect(readdirSync(THREE[1] ?? '').length).toBeGreaterThan(0);
-  });
-
   it('a fixture under the OS temp directory may be walked', () => {
     const fixture = mkdtempSync(join(tmpdir(), 'whole-tree-'));
     for (const dir of ['a', 'b', 'c', 'd']) mkdirSync(join(fixture, dir));
@@ -252,15 +246,6 @@ describe('twenty of the checkout’s files are a whole-tree read (#530)', () => 
       () => readFileSync(first).length,
     );
     expect(lengths).toHaveLength(25);
-  });
-
-  it('tests/floors is not counted: floorBreach reads it', () => {
-    const floors = readdirSync('tests/floors').map((f) => `tests/floors/${f}`);
-    for (const path of floors) readFileSync(path);
-    const read = files()
-      .slice(0, 19)
-      .map((path) => readFileSync(path).length);
-    expect(read).toHaveLength(19);
   });
 
   it('a require of the tree’s own files counts like any other read', () => {
