@@ -1,5 +1,5 @@
-import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import type { ViteUserConfig } from 'vitest/config';
+import { SVELTE_PLUGINS } from './svelte-plugin.ts';
 import unit from '../vitest.config.ts';
 import guards from '../vitest.guards.config.ts';
 import integration from '../vitest.integration.config.ts';
@@ -77,12 +77,7 @@ export const COVERAGE: NonNullable<
 };
 
 /**
- * The plugins every suite runs with under coverage (#798): Svelte's, so a
- * component no test loads is still compiled and counts as untested, and one
- * a test does load maps back to its own lines. Its own preprocess, as
- * packages/ui/svelte.config.js has, so the script's TypeScript compiles.
+ * The plugins a suite under coverage adds when its own config lacks them
+ * (#798): the unit suite's config already carries Svelte (#802).
  */
-export const COVERAGE_PLUGINS = svelte({
-  configFile: false,
-  preprocess: vitePreprocess(),
-});
+export const COVERAGE_PLUGINS = SVELTE_PLUGINS;

@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { SVELTE_PLUGINS } from './scripts/svelte-plugin.ts';
 
 /**
  * The unit suite: tests/unit and every workspace that runs in plain Node.
@@ -7,10 +8,11 @@ import { defineConfig } from 'vitest/config';
  *
  * Every unit test runs in under 1 s, and no limit is ever raised (global
  * rule, 2026-10-07; #477): a hook is held to the same second. The setup
- * fails a test over 1 s of its own CPU, and refuses every process start and
- * outside socket (tests/unit/setup.ts).
+ * refuses every process start and outside socket (tests/unit/setup.ts).
+ * Svelte compiles here, so a component test renders the component (#802).
  */
 export default defineConfig({
+  plugins: [SVELTE_PLUGINS],
   test: {
     testTimeout: 1_000,
     hookTimeout: 1_000,

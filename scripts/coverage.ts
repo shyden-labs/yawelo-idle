@@ -1,7 +1,8 @@
 /**
  * Coverage (#728, #795): `npm run test:coverage` measures every suite
  * pull-request CI runs, joins them, and fails below one overall threshold
- * for statements and one for branches.
+ * for statements and one for branches, or when a Svelte component is never
+ * rendered by a test (#802).
  *
  *   node scripts/coverage.ts
  */
@@ -82,6 +83,26 @@ export function totalsOf(maps: readonly CoverageMapData[]): Totals {
   };
 }
 
+/**
+ * Every Svelte file whose component no suite rendered (#802): no function in
+ * its joined entry was ever called. An entry with no function at all is
+ * named too, since it cannot show a render.
+ */
+export function unrenderedComponents(
+  maps: readonly CoverageMapData[],
+): string[] {
+  const joined = libCoverage.createCoverageMap({});
+  for (const map of maps) joined.merge(map);
+  return joined
+    .files()
+    .filter((path) => path.endsWith('.svelte'))
+    .filter((path) => {
+      const calls = Object.values(joined.fileCoverageFor(path).f);
+      return calls.length === 0 || calls.every((n) => n === 0);
+    })
+    .sort();
+}
+
 const die = (message: string): never => {
   console.error(`coverage: ${message}`);
   process.exit(1);
@@ -98,14 +119,13 @@ function measure(): void {
     const failure = suiteFailure(name, run);
     if (failure !== undefined) die(failure);
   }
-  const totals = totalsOf(
-    COVERAGE_SUITES.map(
-      ({ name }) =>
-        JSON.parse(
-          readFileSync(join('coverage', name, 'coverage-final.json'), 'utf8'),
-        ) as CoverageMapData,
-    ),
+  const maps = COVERAGE_SUITES.map(
+    ({ name }) =>
+      JSON.parse(
+        readFileSync(join('coverage', name, 'coverage-final.json'), 'utf8'),
+      ) as CoverageMapData,
   );
+  const totals = totalsOf(maps);
   console.log(
     `coverage: every suite joined\n` +
       `  statements: ${percent(totals.statements)}\n` +
@@ -113,6 +133,11 @@ function measure(): void {
   );
   const below = shortfalls(totals);
   if (below.length > 0) die(`below threshold:\n  ${below.join('\n  ')}`);
+  const unrendered = unrenderedComponents(maps);
+  if (unrendered.length > 0)
+    die(
+      `every screen needs a test that renders it (#802); none renders:\n  ${unrendered.join('\n  ')}`,
+    );
 }
 
 if (import.meta.main) measure();

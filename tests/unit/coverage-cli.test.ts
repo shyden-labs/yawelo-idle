@@ -6,6 +6,7 @@ import {
   suiteFailure,
   THRESHOLDS,
   totalsOf,
+  unrenderedComponents,
 } from '../../scripts/coverage';
 
 /** One file's map: two statements, one branch with two arms. */
@@ -55,6 +56,64 @@ describe('every suite is joined before the totals are taken (#795)', () => {
       statements: { untested: 2, total: 4 },
       branches: { untested: 2, total: 4 },
     });
+  });
+});
+
+describe('every Svelte screen is rendered by a test (#802)', () => {
+  /** A component's entry: its one function, called `calls` times. */
+  const component = (path: string, calls: number): CoverageMapData => {
+    const loc = { start: { line: 1, column: 0 }, end: { line: 9, column: 0 } };
+    return {
+      [path]: {
+        path,
+        statementMap: {},
+        fnMap: { 0: { name: 'Screen', decl: loc, loc, line: 1 } },
+        branchMap: {},
+        s: {},
+        f: { 0: calls },
+        b: {},
+      },
+    };
+  };
+
+  it('passes a component one suite rendered, whatever the others did', () => {
+    expect(
+      unrenderedComponents([
+        component('/r/Shop.svelte', 0),
+        component('/r/Shop.svelte', 2),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('names a component no suite rendered', () => {
+    expect(
+      unrenderedComponents([
+        component('/r/Shop.svelte', 0),
+        component('/r/Map.svelte', 1),
+      ]),
+    ).toEqual(['/r/Shop.svelte']);
+  });
+
+  it('names a Svelte file whose entry holds no function, rather than passing it', () => {
+    expect(
+      unrenderedComponents([
+        {
+          '/r/Odd.svelte': {
+            path: '/r/Odd.svelte',
+            statementMap: {},
+            fnMap: {},
+            branchMap: {},
+            s: {},
+            f: {},
+            b: {},
+          },
+        },
+      ]),
+    ).toEqual(['/r/Odd.svelte']);
+  });
+
+  it('judges only Svelte files', () => {
+    expect(unrenderedComponents([fileMap('a.ts', [0, 0], [0, 0])])).toEqual([]);
   });
 });
 

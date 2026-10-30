@@ -148,15 +148,17 @@ describe('every suite writes one report the measure step joins (#728)', () => {
 
 describe('every suite under coverage compiles Svelte (#798)', () => {
   for (const [name, config] of CONFIGS)
-    it(`${name}: carries the Svelte plugin, so an untested component counts as untested`, () => {
-      const names = config.plugins
+    it(`${name}: carries the Svelte plugin once, so an untested component counts as untested`, () => {
+      const names = (config.plugins ?? [])
         .flat()
         .map((plugin) =>
           plugin !== null && typeof plugin === 'object' && 'name' in plugin
             ? plugin.name
             : undefined,
         );
-      expect(names).toContain('vite-plugin-svelte:config');
+      expect(
+        names.filter((n) => n === 'vite-plugin-svelte:config'),
+      ).toHaveLength(1);
     });
 });
 

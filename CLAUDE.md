@@ -24,7 +24,7 @@ The global `~/.claude/CLAUDE.md` rules all apply here. This file adds what is sp
 - Write `Refs #N` in commit messages and PR bodies, never close/fix/resolve next to an issue number unless you mean it.
 - Pull requests into `develop` merge by squash alone (#679, Shyden 2026-10-18): a ruleset on `develop` allows no other method, and build-and-test's "Develop merges by squash only" step fails while it allows any other. The one squash commit is what lands, so a branch's own commits need not pass one by one. Pull requests into `main` (release cuts) keep merge commits.
 - The pre-push hook runs format, lint and typecheck, and no test suite (global rule, 2026-10-12). Run the unit suite yourself before each push.
-- Coverage is one overall threshold for statements and one for branches, joined over every suite pull-request CI runs (`npm run test:coverage`, `scripts/coverage.ts`, #795), JS, TS and Svelte alike: a component no test loads counts as untested (#798). The `coverage` job fails below them and is a required check. Raise them as coverage grows.
+- Coverage is one overall threshold for statements and one for branches, joined over every suite pull-request CI runs (`npm run test:coverage`, `scripts/coverage.ts`, #795), JS, TS and Svelte alike: a component no test loads counts as untested (#798). Every screen must have tests (Shyden, 2026-10-31): the job also fails when any Svelte component is never rendered by a test in the suites it measures (#802); render it in a unit test with `svelte/server`, as `packages/ui/test/Shell.test.ts` does. The `coverage` job fails below them and is a required check. Raise them as coverage grows.
 
 ## Progress at close-out
 
