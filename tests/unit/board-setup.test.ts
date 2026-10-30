@@ -8,7 +8,6 @@ import {
   PRIORITY_OPTIONS,
   READ,
 } from '../../scripts/board-setup';
-import { againstControl } from '../searched';
 
 /**
  * scripts/board-setup.ts (#576): the board's `Estimate` and `Priority`
@@ -208,8 +207,6 @@ describe('boardSetup (#576)', () => {
       }
       return calls;
     };
-    expect(againstControl(callsWith, { input: [], control: [TITLE] })).toEqual(
-      [],
-    );
+    expect(callsWith([])).toEqual([]);
   });
 });

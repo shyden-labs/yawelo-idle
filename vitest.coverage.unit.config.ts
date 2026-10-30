@@ -4,10 +4,8 @@ import unit from './vitest.config.ts';
 
 // The unit suite under coverage (#728): run by `npm run test:coverage`,
 // never by hand. It keeps every refusal (process, socket, checkout reads)
-// but not the CPU check, and carries no per-test limit: the unit step judges
-// those with coverage off (global rule, "Both global"), and suite-limits
-// holds this non-unit config to no limit of its own. Spreads, not a call:
-// tests load it.
+// and carries no per-test timeout, since coverage slows every test.
+// Spreads, not a call: tests load it.
 export default {
   ...unit,
   test: {

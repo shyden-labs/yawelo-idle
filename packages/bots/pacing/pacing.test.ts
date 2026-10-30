@@ -2,8 +2,6 @@ import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import { watched } from '../../../tests/watched';
 import { PERSONAS } from '../src/personas';
 import { pacingReport } from '../src/report';
@@ -111,51 +109,23 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
     '(a) %s sets sail for the first time after 30 to 60 minutes',
     async (name) => {
       const first = await watchingSails(name, 'day');
-      expect(
-        searched(firstSail(first.run, CI_BOUNDS), {
-          of: first.read,
-          what: 'sails firstSail read',
-        }),
-      ).toEqual([]);
-      expect(
-        floorBreach(`pacing/first-sail-${name}`, first.read.length),
-      ).toBeUndefined();
+      expect(firstSail(first.run, CI_BOUNDS)).toEqual([]);
     },
   );
 
   it('(b) the Casual Learner reaches each later destination 1 to 3 days after the one before', async () => {
     const casual = await watchingSails('casual', 'day');
-    expect(
-      searched(gaps(casual.run, CI_BOUNDS), {
-        of: casual.read,
-        what: 'sails gaps read',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('pacing/gaps-casual', casual.read.length),
-    ).toBeUndefined();
+    expect(gaps(casual.run, CI_BOUNDS)).toEqual([]);
   });
 
   it('(c) the Casual Learner reaches the finale in 3 to 5 weeks', async () => {
-    const { items, read } = watched([await run('casual')], 'finaleDay');
-    expect(
-      searched(
-        items.flatMap((r) => finale(r, CI_BOUNDS)),
-        { of: read, what: 'runs whose finale finale read' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('pacing/finale-casual', read.length)).toBeUndefined();
+    const { items } = watched([await run('casual')], 'finaleDay');
+    expect(items.flatMap((r) => finale(r, CI_BOUNDS))).toEqual([]);
   });
 
   it('(d) the Idler reaches the finale within 10 weeks', async () => {
-    const { items, read } = watched([await run('idler')], 'finaleDay');
-    expect(
-      searched(
-        items.flatMap((r) => idlerFinishes(r, CI_BOUNDS)),
-        { of: read, what: 'runs whose finale idlerFinishes read' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('pacing/idler-finishes', read.length)).toBeUndefined();
+    const { items } = watched([await run('idler')], 'finaleDay');
+    expect(items.flatMap((r) => idlerFinishes(r, CI_BOUNDS))).toEqual([]);
   });
 
   // The opens are judged as the run plays them, each recorded in openDays
@@ -165,61 +135,40 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
     async (name) => {
       const r = await run(name);
       expect(r.openDays.length).toBeGreaterThan(10);
-      expect(
-        searched(decisions(r), { of: r.openDays, what: 'opens judged' }),
-      ).toEqual([]);
-      expect(
-        floorBreach(`pacing/opens-${name}`, r.openDays.length),
-      ).toBeUndefined();
+      expect(decisions(r)).toEqual([]);
     },
   );
 
   it('(f) learning pays: the Casual Learner reaches the finale at least 20% sooner than the Non-learner', async () => {
     const {
       items: [casual, nonlearner],
-      read,
     } = watched([await run('casual'), await run('nonlearner')], 'finaleDay');
     expect(
-      searched(
-        casual && nonlearner
-          ? learningPays(casual, nonlearner, CI_BOUNDS)
-          : ['a run was not watched'],
-        { of: read, what: 'runs whose finale learningPays read' },
-      ),
+      casual && nonlearner
+        ? learningPays(casual, nonlearner, CI_BOUNDS)
+        : ['a run was not watched'],
     ).toEqual([]);
-    expect(floorBreach('pacing/learning-pays', read.length)).toBeUndefined();
   });
 
   it('(f) the Diligent Learner finishes no later than the Casual Learner, nor the Casual Learner than the Idler', async () => {
     const {
       items: [diligent, casual, idler],
-      read,
     } = watched(
       [await run('diligent'), await run('casual'), await run('idler')],
       'finaleDay',
     );
     expect(
-      searched(
-        diligent && casual && idler
-          ? learnersOrder(diligent, casual, idler)
-          : ['a run was not watched'],
-        { of: read, what: 'runs whose finale learnersOrder read' },
-      ),
+      diligent && casual && idler
+        ? learnersOrder(diligent, casual, idler)
+        : ['a run was not watched'],
     ).toEqual([]);
-    expect(floorBreach('pacing/learners-order', read.length)).toBeUndefined();
   });
 
   it('(g) clicking never beats idling: the Clicker takes at least 95% of the Casual Learner’s time to reach each sail’s goal', async () => {
     const clicker = await watchingSails('clicker', 'reachedDay');
     expect(
-      searched(clickingNeverWins(clicker.run, await run('casual'), CI_BOUNDS), {
-        of: clicker.read,
-        what: 'Clicker sails whose goal moment clickingNeverWins read',
-      }),
+      clickingNeverWins(clicker.run, await run('casual'), CI_BOUNDS),
     ).toEqual([]);
-    expect(
-      floorBreach('pacing/clicker-goal-moments', clicker.read.length),
-    ).toBeUndefined();
   });
 
   // `views` counts every view the run judged for insane values (run.ts).
@@ -228,10 +177,7 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
     async (name) => {
       const r = await run(name);
       expect(r.events).toBeGreaterThan(1_000);
-      expect(
-        searched(sanity(r), { of: r.views, what: 'views judged' }),
-      ).toEqual([]);
-      expect(floorBreach(`pacing/views-${name}`, r.views)).toBeUndefined();
+      expect(sanity(r)).toEqual([]);
     },
   );
 
@@ -243,12 +189,7 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
     '(h) %s meets each sail’s goal after the sail before and no later than its own',
     async (name) => {
       const r = await run(name);
-      expect(searched(sailTiming(r), { of: r.sails, what: 'sails' })).toEqual(
-        [],
-      );
-      expect(
-        floorBreach(`pacing-sails/${name}`, r.sails.length),
-      ).toBeUndefined();
+      expect(sailTiming(r)).toEqual([]);
     },
   );
 

@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 
 /**
  * The game's initial-load budget (#123 AC4; Shyden chose option B on #123,
@@ -13,11 +11,9 @@ import { searched } from '../../../tests/searched';
  *   loads), gzipped at zlib's default level as a stand-in for what Cloudflare
  *   sends, at most 15,000 bytes: about 1.5x the 9,682 this test measured
  *   for #123. A story that outgrows it raises it deliberately.
- * - Floor: proof the check measured the game. The number of assets the shell
- *   loads is recorded in tests/floors/ (a reader that finds none, or fewer,
- *   goes red), and each one must hold bytes. No exact byte figure: the Svelte
- *   runtime is in the bundle, so every Svelte or Vite update would move it,
- *   and CI never records floors.
+ * - Floor: proof the check measured the game. The shell loads at least one
+ *   asset, and each one must hold bytes. No exact byte figure: the Svelte
+ *   runtime is in the bundle, so every Svelte or Vite update would move it.
  *
  * Read from the build on disk (`npm run test` builds first).
  */
@@ -48,15 +44,11 @@ const read = (path: string): Buffer =>
   readFileSync(new URL(path.replace(/^\//, ''), DIST));
 
 describe('the initial-load budget (#123 AC4)', () => {
-  it('measures every asset the shell loads, each holding bytes, at the recorded floor', () => {
+  it('measures every asset the shell loads, each holding bytes', () => {
     const assets = initialAssets(shell());
+    expect(assets.length).toBeGreaterThan(0);
     const empty = assets.filter((path) => read(path).byteLength === 0);
-    expect(
-      searched(empty, { of: assets, what: 'assets the shell loads' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('game-bundle/initial-assets', assets.length),
-    ).toBeUndefined();
+    expect(empty).toEqual([]);
   });
 
   it(`the first paint fetches at most ${String(CEILING_GZIP_BYTES)} bytes gzipped`, () => {

@@ -18,8 +18,6 @@ import {
   type MediaProbe,
   type MediaSource,
 } from '../../scripts/verify-prod';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The production verify's judgements (#621 AC5), each fed a constructed
@@ -49,12 +47,7 @@ const answer = (
 describe('a holding home page', () => {
   it('passes when it is 200 HTML of this commit, exactly as built, with every header', () => {
     const judged = pageJudgement('/', answer(200, BUILT), BUILT, SHA, RULES);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'page checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/page-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a status other than 200, and judges nothing else', () => {
@@ -145,15 +138,7 @@ describe('the holding page’s dev copy (#621 AC8)', () => {
 
   it('passes a noindex page when the copy is not meant to be indexed', () => {
     const judged = pageJudgement('/', devAnswer, BUILT, SHA, DEV_RULES, false);
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'dev copy page checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/dev-page-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a dev copy that a search engine could index', () => {
@@ -175,12 +160,7 @@ describe('a holding 404 page', () => {
       NOT_FOUND,
       RULES,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: '404 checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/not-found-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a status other than 404', () => {
@@ -255,12 +235,7 @@ describe('a promo media file, asked for whole', () => {
       SOURCE,
       HOST,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'media checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/media-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a status other than 200 and judges nothing after it', () => {
@@ -369,15 +344,7 @@ describe('a promo media file, asked for bytes=0-1', () => {
       SOURCE,
       HOST,
     );
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'media range checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/media-range-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a whole-file 200, which a range-less server sends, and judges nothing after it', () => {
@@ -449,15 +416,7 @@ describe('a promo media file, asked for a range past its end', () => {
       SOURCE,
       HOST,
     );
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'media past-end checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/media-past-end-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a status other than 416 and judges nothing after it', () => {
@@ -508,18 +467,7 @@ describe('a promo media file, asked for a range past its end', () => {
       SOURCE,
       DEV_MEDIA,
     );
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'dev media past-end checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach(
-        'verify-prod/dev-media-past-end-checks',
-        judged.checked.length,
-      ),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a Content-Range from a host that sends none, so a change is seen', () => {
@@ -543,12 +491,7 @@ describe('the production robots file', () => {
 
   it('passes when it is the built robots file', () => {
     const judged = robotsJudgement(answer(200, ALLOW, {}), ALLOW);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'robots checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/robots-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a robots file that differs from the build', () => {

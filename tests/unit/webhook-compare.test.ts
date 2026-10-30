@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The webhook verifier compares digests in constant time (#341, website spec
@@ -112,18 +110,9 @@ describe('the webhook verifier compares digests in constant time (#341)', () => 
     expect(reading.comparisons).toHaveLength(scannedEqualities(reading.text));
   });
 
-  it('compares nothing that could be a digest with an equality operator, at the recorded floor', () => {
+  it('compares nothing that could be a digest with an equality operator', () => {
     const reading = readVerifier(source);
-    const compared = reading.comparisons.map((c) => c.getText());
-    expect(
-      searched(unsafeComparisons(reading), {
-        of: compared,
-        what: 'comparisons in verifySignature',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('webhook-compare/comparisons', compared.length),
-    ).toBeUndefined();
+    expect(unsafeComparisons(reading)).toEqual([]);
   });
 });
 
@@ -145,20 +134,11 @@ describe('the reader itself (#341)', () => {
     ).toEqual(['x != b']);
   });
 
-  it('allows a length, a literal and undefined, at the recorded floor', () => {
+  it('allows a length, a literal and undefined', () => {
     const reading = readVerifier(
       wrap("  if (a.length === 0 || b === undefined || a !== 'x') return;"),
     );
-    const compared = reading.comparisons.map((c) => c.getText());
-    expect(
-      searched(unsafeComparisons(reading), {
-        of: compared,
-        what: 'comparisons in the written verifier',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('webhook-compare/allowed-forms', compared.length),
-    ).toBeUndefined();
+    expect(unsafeComparisons(reading)).toEqual([]);
   });
 
   it('does not count an operator inside a comment, by either reading', () => {

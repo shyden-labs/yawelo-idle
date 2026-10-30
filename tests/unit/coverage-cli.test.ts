@@ -1,160 +1,95 @@
 import { describe, expect, it } from 'vitest';
+import type { CoverageMapData } from 'istanbul-lib-coverage';
 import {
-  childEnv,
-  coveragePlan,
-  fetchedRecordRefusals,
-  metaRefusal,
   percent,
-  renamesFrom,
+  shortfalls,
   suiteFailure,
-} from '../../scripts/coverage.ts';
+  THRESHOLDS,
+  totalsOf,
+} from '../../scripts/coverage';
 
-describe("a suite's coverage run never carries the record switch (#728)", () => {
-  it('drops FLOORS_RECORD_JOB, so the measured code runs as it does on a pull request', () => {
+/** One file's map: two statements, one branch with two arms. */
+const fileMap = (
+  path: string,
+  statementHits: [number, number],
+  armHits: [number, number],
+): CoverageMapData => {
+  const at = (line: number) => ({
+    start: { line, column: 0 },
+    end: { line, column: 1 },
+  });
+  const loc = at(1);
+  return {
+    [path]: {
+      path,
+      statementMap: { 0: loc, 1: at(2) },
+      fnMap: {},
+      branchMap: { 0: { loc, type: 'if', locations: [loc, at(2)], line: 1 } },
+      s: { 0: statementHits[0], 1: statementHits[1] },
+      f: {},
+      b: { 0: armHits },
+    },
+  };
+};
+
+describe('every suite is joined before the totals are taken (#795)', () => {
+  it('counts a statement one suite ran as run, whichever suite ran it', () => {
     expect(
-      childEnv({ FLOORS_RECORD_JOB: 'record-floors', CI: 'true' }),
-    ).toEqual({ CI: 'true' });
-  });
-
-  it('drops a variable the environment holds unset', () => {
-    expect(childEnv({ CI: 'true', GONE: undefined })).toEqual({ CI: 'true' });
-  });
-});
-
-const SHA = 'a'.repeat(40);
-
-describe('a report is judged only on the commit it measured (#728)', () => {
-  it('the same commit passes', () => {
-    expect(metaRefusal(JSON.stringify({ commit: SHA }), SHA)).toBeUndefined();
-  });
-
-  it('another commit is refused, naming both', () => {
-    expect(metaRefusal(JSON.stringify({ commit: SHA }), 'b'.repeat(40))).toBe(
-      `the coverage report measured ${SHA}, not ${'b'.repeat(40)}: run npm run test:coverage again`,
-    );
-  });
-
-  it('a missing report is refused', () => {
-    expect(metaRefusal(undefined, SHA)).toBe(
-      'no coverage report (coverage/meta.json): run npm run test:coverage first',
-    );
-  });
-
-  it('an unreadable report is refused', () => {
-    expect(metaRefusal('{', SHA)).toBe(
-      'coverage/meta.json is not a coverage report: run npm run test:coverage again',
-    );
-  });
-
-  it('a report naming no commit is refused', () => {
-    expect(metaRefusal('{}', SHA)).toBe(
-      'coverage/meta.json is not a coverage report: run npm run test:coverage again',
-    );
-  });
-});
-
-/**
- * floors:fetch brings the coverage record back with the floors (#728). A
- * run from before the record existed uploads none, and nothing is lost; a
- * tree that holds a record must get one back.
- */
-describe('floors:fetch brings the coverage record back (#728)', () => {
-  it('fetches when the run uploaded one and the tree holds one', () => {
-    expect(coveragePlan(true, true)).toBe('fetch');
-  });
-
-  it('fetches the first record, when the tree holds none yet', () => {
-    expect(coveragePlan(true, false)).toBe('fetch');
-  });
-
-  it('skips when neither the run nor the tree has one', () => {
-    expect(coveragePlan(false, false)).toBe('skip');
-  });
-
-  it('refuses when the tree has a record and the run uploaded none', () => {
-    expect(coveragePlan(false, true)).toBe(
-      'the tree holds tests/coverage/record.json but the run uploaded no coverage record: dispatch record-floors again',
-    );
-  });
-});
-
-describe('renamed files are judged against their old path (#728)', () => {
-  it('maps each rename, new path to old', () => {
-    expect(
-      renamesFrom([
-        { status: 'R087', paths: ['old.ts', 'new.ts'] },
-        { status: 'M', paths: ['kept.ts'] },
-        { status: 'C100', paths: ['src.ts', 'copy.ts'] },
+      totalsOf([
+        fileMap('a.ts', [1, 0], [0, 0]),
+        fileMap('a.ts', [0, 1], [0, 1]),
       ]),
-    ).toEqual(new Map([['new.ts', 'old.ts']]));
+    ).toEqual({
+      statements: { untested: 0, total: 2 },
+      branches: { untested: 1, total: 2 },
+    });
+  });
+
+  it('adds the files of different suites together', () => {
+    expect(
+      totalsOf([
+        fileMap('a.ts', [1, 1], [1, 1]),
+        fileMap('b.ts', [0, 0], [0, 0]),
+      ]),
+    ).toEqual({
+      statements: { untested: 2, total: 4 },
+      branches: { untested: 2, total: 4 },
+    });
   });
 });
 
-const recordText = (files: Record<string, number>): string =>
-  JSON.stringify({
-    files: Object.fromEntries(
-      Object.entries(files).map(([path, statements]) => [
-        path,
-        {
-          measure: 'v8',
-          statements: { untested: statements, total: 9 },
-          branches: { untested: 0, total: 0 },
-        },
-      ]),
-    ),
+describe('coverage fails below one overall threshold (#795)', () => {
+  const at = (statements: number, branches: number) => ({
+    statements: { untested: 100 - statements, total: 100 },
+    branches: { untested: 100 - branches, total: 100 },
   });
 
-/**
- * floors:fetch writes a fetched record only when no file's untested code grew
- * against the record at the merge base, the same test the pull request's
- * coverage job makes (#728 design, check (b)).
- */
-describe('a fetched coverage record is ratcheted before it is written (#728)', () => {
-  it('names only the file that grew, not the one that fell', () => {
-    expect(
-      fetchedRecordRefusals(
-        recordText({ 'a.ts': 2, 'b.ts': 0 }),
-        recordText({ 'a.ts': 1, 'b.ts': 1 }),
-        new Map(),
-      ),
-    ).toEqual(['b.ts: untested statements rose from 0 to 1']);
+  it('passes at both thresholds exactly', () => {
+    expect(shortfalls(at(THRESHOLDS.statements, THRESHOLDS.branches))).toEqual(
+      [],
+    );
   });
 
-  it('refuses a record a file grew in, naming it', () => {
-    expect(
-      fetchedRecordRefusals(
-        recordText({ 'a.ts': 2 }),
-        recordText({ 'a.ts': 3 }),
-        new Map(),
-      ),
-    ).toEqual(['a.ts: untested statements rose from 2 to 3']);
-  });
-
-  it('judges the first record against nothing, where a base record would refuse it', () => {
-    expect([
-      fetchedRecordRefusals(undefined, recordText({ 'a.ts': 3 }), new Map()),
-      fetchedRecordRefusals(
-        recordText({ 'a.ts': 2 }),
-        recordText({ 'a.ts': 3 }),
-        new Map(),
-      ),
-    ]).toEqual([[], ['a.ts: untested statements rose from 2 to 3']]);
-  });
-
-  it('refuses a fetched record it cannot read', () => {
-    expect(fetchedRecordRefusals(undefined, '{', new Map())).toEqual([
-      'the fetched coverage record is not a record',
+  it('names statements below theirs', () => {
+    expect(shortfalls(at(87, 90), { statements: 88, branches: 81 })).toEqual([
+      'statements: 87.0% run (13 of 100 untested), below the 88% threshold',
     ]);
   });
 
-  it('refuses a base record it cannot read', () => {
-    expect(
-      fetchedRecordRefusals(
-        '{"files": 1}',
-        recordText({ 'a.ts': 0 }),
-        new Map(),
-      ),
-    ).toEqual(['the coverage record at the merge base is not a record']);
+  it('names branches below theirs', () => {
+    expect(shortfalls(at(95, 80), { statements: 88, branches: 81 })).toEqual([
+      'branches: 80.0% run (20 of 100 untested), below the 81% threshold',
+    ]);
+  });
+
+  it('names both when both are below', () => {
+    expect(shortfalls(at(0, 0), { statements: 88, branches: 81 })).toHaveLength(
+      2,
+    );
+  });
+
+  it('holds the figures #795 measured in CI, rounded down', () => {
+    expect(THRESHOLDS).toEqual({ statements: 85, branches: 76 });
   });
 });
 

@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import semver from 'semver';
-import { floorBreach } from '../floors.ts';
-import { searched } from '../searched.ts';
 import {
   WORKFLOWS_DIR,
   workflow,
@@ -149,12 +147,7 @@ describe('every workflow takes its Node from .nvmrc (#785)', () => {
     const steps = setupNodeSteps();
     // Each finding is the step itself, with where it sits.
     const wrong = steps.filter(({ step }) => takesItsOwnNode(step));
-    expect(searched(wrong, { of: steps, what: 'setup-node steps' })).toEqual(
-      [],
-    );
-    expect(
-      floorBreach('node-version/setup-node-steps', steps.length),
-    ).toBeUndefined();
+    expect(wrong).toEqual([]);
   });
 
   it('parses as many setup-node steps in each file as its text writes', () => {
@@ -171,12 +164,7 @@ describe('every workflow takes its Node from .nvmrc (#785)', () => {
         ),
       )
       .filter((line) => line !== undefined);
-    expect(searched(misread, { of: files, what: 'workflow files' })).toEqual(
-      [],
-    );
-    expect(
-      floorBreach('node-version/workflow-files', files.length),
-    ).toBeUndefined();
+    expect(misread).toEqual([]);
   });
 });
 

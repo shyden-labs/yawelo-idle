@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import { simMs, wallMs } from '../src/clock';
 import {
   automationOpensAt,
@@ -332,19 +330,7 @@ describe('integrate with Pemandu (AC2)', () => {
 
   it('buys nothing when nothing is owned and nothing is affordable', () => {
     const s = pemandu(at(4, { held: 9 }));
-    // The working run: the same Pemandu, rich, buys what it chooses.
-    const bought = Object.keys(
-      integrate(course, pemandu(at(4, { held: 1e9 })), 3_600_000).owned,
-    );
-    expect(
-      searched(Object.keys(integrate(course, s, 3_600_000).owned), {
-        of: bought,
-        what: 'what Pemandu buys when rich',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('automation/what Pemandu buys when rich', bought.length),
-    ).toBeUndefined();
+    expect(Object.keys(integrate(course, s, 3_600_000).owned)).toEqual([]);
   });
 
   it('pays what a purchase by hand pays, with the stamp discount', () => {

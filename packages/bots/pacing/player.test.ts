@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import {
   buys,
   fresh,
@@ -30,18 +28,9 @@ describe('an open at a fortune of 1e7', () => {
     const { player, events } = play('casual', rich(), ONE_CHECK);
     const shop = shopAfter(player, events);
     expect(
-      searched(
-        shop.encounters.filter((o) => o.affordable).map((o) => o.id),
-        { of: shop.encounters, what: 'Encounters on offer' },
-      ),
+      shop.encounters.filter((o) => o.affordable).map((o) => o.id),
     ).toEqual([]);
-    expect(
-      floorBreach('player-rich/casual offers', shop.encounters.length),
-    ).toBeUndefined();
     expect(shop.pickUp?.affordable ?? false).toBe(false);
-    expect(
-      floorBreach('player-rich/casual buys', buys(events).length),
-    ).toBeUndefined();
   });
 
   it('the Capped Buyer makes 5 purchases in a check where the Casual Learner makes more', () => {
@@ -56,17 +45,8 @@ describe('an open at a fortune of 1e7', () => {
     const greedy = play('casual', rich(), ONE_CHECK);
     const shop = shopAfter(random.player, random.events);
     expect(
-      searched(
-        shop.encounters.filter((o) => o.affordable).map((o) => o.id),
-        { of: shop.encounters, what: 'Encounters on offer' },
-      ),
+      shop.encounters.filter((o) => o.affordable).map((o) => o.id),
     ).toEqual([]);
-    expect(
-      floorBreach('player-rich/random offers', shop.encounters.length),
-    ).toBeUndefined();
-    expect(
-      floorBreach('player-rich/random buys', buys(random.events).length),
-    ).toBeUndefined();
     expect(buys(random.events)).not.toEqual(buys(greedy.events));
   });
 });

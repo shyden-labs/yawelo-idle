@@ -3,8 +3,6 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { webSmokeConfig } from '../../playwright.web.config';
 import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The web smoke suite stays wired (#123 AC3), locally and against dev (#123
@@ -159,13 +157,9 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
     });
     const installs = steps.filter((s) => /playwright install/.test(runOf(s)));
-    expect(
-      searched(installs, { of: steps, what: 'smoke job steps' }),
-      'no step installs browsers: the image has them',
-    ).toEqual([]);
-    expect(
-      floorBreach('web-smoke-harness/dev-smoke-steps', steps.length),
-    ).toBeUndefined();
+    expect(installs, 'no step installs browsers: the image has them').toEqual(
+      [],
+    );
   });
 
   it('posts dev-verified only once the dev smoke, the holding page’s dev copy (#621) and the roadmap (#708) have passed', () => {

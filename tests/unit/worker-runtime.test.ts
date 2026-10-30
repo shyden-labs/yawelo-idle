@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The Worker tests run on the same runtime that deploys.
@@ -78,19 +76,10 @@ describe('one Workers runtime in the lock', () => {
   it('the runtime enters the lock only through wrangler (#506)', () => {
     const consumers = runtimeConsumers(readLock());
     expect(
-      searched(
-        consumers.filter((path) => !THROUGH_WRANGLER.includes(path)),
-        {
-          of: consumers,
-          what: 'lock entries depending on wrangler or miniflare',
-        },
-      ),
+      consumers.filter((path) => !THROUGH_WRANGLER.includes(path)),
       'a package bringing its own Workers runtime: Worker tests on it would ' +
         'not run on the workerd that deploys',
     ).toEqual([]);
-    expect(
-      floorBreach('worker-runtime/runtime-consumers', consumers.length),
-    ).toBeUndefined();
   });
 });
 

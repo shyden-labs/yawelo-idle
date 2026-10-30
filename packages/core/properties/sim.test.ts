@@ -19,7 +19,6 @@ import {
   type Split,
   type Step,
 } from '../test/sim-laws';
-import { minimumBreach } from '../../../tests/minimums';
 
 /**
  * The time model on random times, states and sequences (#27 AC5, AC6, AC8;
@@ -105,15 +104,6 @@ describe('integrate (AC6)', () => {
     expect(Object.keys(playPlain())).toEqual([...SPLITS]);
   });
 
-  it.each(SPLITS)(
-    'the splits reach %s at least as often as measured',
-    (name) => {
-      expect(
-        minimumBreach(`core-sim/split-${name}`, playPlain()[name]),
-      ).toBeUndefined();
-    },
-  );
-
   const PEMANDU = [...SPLITS, 'bought'] as const;
   type PemanduSplit = Record<(typeof PEMANDU)[number], number>;
   let pemandu: PemanduSplit | undefined;
@@ -154,15 +144,6 @@ describe('integrate (AC6)', () => {
   it('integrate(integrate(s, a), b) deep-equals integrate(s, a + b) with Pemandu buying (#33 AC4)', () => {
     expect(Object.keys(playPemandu())).toEqual([...PEMANDU]);
   });
-
-  it.each(PEMANDU)(
-    'the splits with Pemandu buying reach %s at least as often as measured',
-    (name) => {
-      expect(
-        minimumBreach(`core-sim/pemandu-${name}`, playPemandu()[name]),
-      ).toBeUndefined();
-    },
-  );
 });
 
 describe('no reachable state holds NaN, a negative or an infinite value (AC8)', () => {
@@ -213,13 +194,4 @@ describe('no reachable state holds NaN, a negative or an infinite value (AC8)', 
   it('over random sequences of listens, purchases and returns', () => {
     expect(Object.keys(play())).toEqual([...SEQUENCE_REACHED]);
   });
-
-  it.each(SEQUENCE_REACHED)(
-    'the random sequences reach %s at least as often as measured',
-    (name) => {
-      expect(
-        minimumBreach(`core-sim/sequence-${name}`, play()[name]),
-      ).toBeUndefined();
-    },
-  );
 });

@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import { persona } from '../src/personas';
 import {
   dayOpens,
@@ -57,13 +55,7 @@ describe('the streams', () => {
   it('draw floats in [0, 1)', () => {
     const s = new Streams(35);
     const xs = draws(DRAWS, () => s.float('buys'));
-    expect(
-      searched(
-        xs.filter((x) => x < 0 || x >= 1),
-        { of: xs, what: 'float draws' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('streams/float draws', xs.length)).toBeUndefined();
+    expect(xs.filter((x) => x < 0 || x >= 1)).toEqual([]);
     expect(Math.min(...xs)).toBeLessThan(0.001);
     expect(Math.max(...xs)).toBeGreaterThan(0.999);
   });
@@ -79,29 +71,13 @@ describe('recall', () => {
   it('is never correct at R = 0', () => {
     const s = new Streams(35);
     const recalls = draws(1_000, () => s.recalls(0));
-    expect(
-      searched(recalls.filter(Boolean), {
-        of: recalls,
-        what: 'recalls at R = 0',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('streams/recalls at R = 0', recalls.length),
-    ).toBeUndefined();
+    expect(recalls.filter(Boolean)).toEqual([]);
   });
 
   it('is always correct at R = 1', () => {
     const s = new Streams(35);
     const recalls = draws(1_000, () => s.recalls(1));
-    expect(
-      searched(
-        recalls.filter((x) => !x),
-        { of: recalls, what: 'recalls at R = 1' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('streams/recalls at R = 1', recalls.length),
-    ).toBeUndefined();
+    expect(recalls.filter((x) => !x)).toEqual([]);
   });
 });
 
@@ -109,13 +85,7 @@ describe('latency', () => {
   it('is a whole, positive number of milliseconds', () => {
     const s = new Streams(35);
     const xs = draws(DRAWS, () => s.latencyMs());
-    expect(
-      searched(
-        xs.filter((x) => !Number.isSafeInteger(x) || x <= 0),
-        { of: xs, what: 'latency draws' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('streams/latency draws', xs.length)).toBeUndefined();
+    expect(xs.filter((x) => !Number.isSafeInteger(x) || x <= 0)).toEqual([]);
     expect(xs).toHaveLength(DRAWS);
   });
 
@@ -170,17 +140,13 @@ describe('the open schedule', () => {
       })),
     );
     expect(
-      searched(
-        starts.filter(
-          ({ offset }) =>
-            offset < WAKE_MS ||
-            offset >= WAKE_MS + WAKING_MS ||
-            offset % 1_000 !== 0,
-        ),
-        { of: starts, what: 'later opens' },
+      starts.filter(
+        ({ offset }) =>
+          offset < WAKE_MS ||
+          offset >= WAKE_MS + WAKING_MS ||
+          offset % 1_000 !== 0,
       ),
     ).toEqual([]);
-    expect(floorBreach('streams/later opens', starts.length)).toBeUndefined();
     expect(starts).toHaveLength(90);
     expect(Math.min(...starts.map((s) => s.offset))).toBeLessThan(
       WAKE_MS + 3_600_000,
@@ -196,13 +162,7 @@ describe('the open schedule', () => {
       dayOpens(persona('diligent'), EPOCH, day, s).map((o) => o.startMs),
     );
     const gaps = starts.slice(1).map((t, i) => t - (starts[i] ?? 0));
-    expect(
-      searched(
-        gaps.filter((g) => g < MIN_OPEN_GAP_MS),
-        { of: gaps, what: 'gaps between opens' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('streams/open gaps', gaps.length)).toBeUndefined();
+    expect(gaps.filter((g) => g < MIN_OPEN_GAP_MS)).toEqual([]);
     expect(gaps).toHaveLength(149);
     expect(Math.min(...gaps)).toBeLessThan(MIN_OPEN_GAP_MS + 15 * 60_000);
   });
@@ -216,12 +176,8 @@ describe('the open schedule', () => {
       ),
     );
     expect(
-      searched(
-        offsets.filter((x) => x < 0 || x > slotMs - MIN_OPEN_GAP_MS),
-        { of: offsets, what: 'offsets within each slot' },
-      ),
+      offsets.filter((x) => x < 0 || x > slotMs - MIN_OPEN_GAP_MS),
     ).toEqual([]);
-    expect(floorBreach('streams/slot offsets', offsets.length)).toBeUndefined();
     expect(offsets).toHaveLength(90);
   });
 

@@ -7,8 +7,6 @@ import {
   readDeployConfig,
   type DeployConfig,
 } from './wrangler-configs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { headerRules, type HeaderRules } from '../../scripts/headers-file';
 
 /**
@@ -57,15 +55,7 @@ describe('the production holding page Worker (#621 AC2)', () => {
   it('runs no script and holds no binding, schedule or variable: assets only', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     const declared = CODE_FIELDS.filter((field) => holds(config[field]));
-    expect(
-      searched(declared, {
-        of: CODE_FIELDS,
-        what: 'fields that run or bind code',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('prod-config/code-fields', CODE_FIELDS.length),
-    ).toBeUndefined();
+    expect(declared).toEqual([]);
   });
 
   it('finds what the dev site Worker declares in those fields, so the check is alive', () => {

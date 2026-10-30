@@ -20,10 +20,6 @@ reports/mutation/
 # Test output
 playwright-report/
 test-results/
-# Written by record-floors.yml's rehearse job (scripts/rehearse.ts, #771) and
-# laid over the tree before Measure: never committable, or the committable-file
-# walks would count it.
-/rehearsal/
 # Written by `npm run test:pacing`; CI uploads it as an artifact (#35)
 pacing-report.json
 

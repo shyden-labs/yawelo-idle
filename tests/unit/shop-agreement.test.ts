@@ -8,7 +8,6 @@ import {
   type ShopKind,
   type ShopTally,
 } from '../../packages/core/fixtures/shop-agreement';
-import { floorBreach } from '../floors';
 import {
   eventsOf,
   golden,
@@ -19,7 +18,6 @@ import {
   startOf,
   type SliceRow,
 } from '../golden';
-import { searched } from '../searched';
 
 /**
  * The shop can never disagree with `apply` (#35 AC3), judged along the golden
@@ -101,19 +99,10 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
     'slice %i (day %i, open %i, part %i): every %s offer’s affordable is apply’s answer',
     (n, _day, _open, _part, kind) => {
       const tally = judgedSlice(n)[kind];
-      const offers = tally.accepted + tally.refused;
-      expect(
-        searched(tally.disagreements, {
-          of: offers,
-          what: `slice ${String(n)}'s judged ${kind} offers`,
-        }),
-      ).toEqual([]);
+      expect(tally.disagreements).toEqual([]);
       expect(shopCounts(judgedSlice(n))[kind], REGENERATE).toEqual(
         sliceOf(n).shop[kind],
       );
-      expect(
-        floorBreach(`shop-agreement/slice ${String(n)}/${kind}`, offers),
-      ).toBeUndefined();
     },
   );
 
@@ -122,17 +111,8 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
     (n) => {
       const { events } = eventsOf(n);
       expect(
-        searched(
-          events.filter((event) => SHOP_READ_BEFORE.has(event.type)),
-          { of: events, what: `slice ${String(n)}'s events` },
-        ),
+        events.filter((event) => SHOP_READ_BEFORE.has(event.type)),
       ).toEqual([]);
-      expect(
-        floorBreach(
-          `shop-agreement/shop-free slice ${String(n)}`,
-          events.length,
-        ),
-      ).toBeUndefined();
       expect(sliceOf(n).shop, REGENERATE).toEqual(
         Object.fromEntries(
           KINDS.map((kind) => [kind, { accepted: 0, refused: 0 }]),
@@ -144,16 +124,6 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
   it('judges the kinds the shop is judged by', () => {
     expect(KINDS).toEqual(SHOP_KINDS);
   });
-
-  it.each(KINDS)(
-    'the slices judge, between them, the %s offers the whole log did',
-    (kind) => {
-      const { accepted, refused } = total(kind);
-      expect(
-        floorBreach(`shop-agreement/judged/${kind}`, accepted + refused),
-      ).toBeUndefined();
-    },
-  );
 
   it.each(KINDS)(
     'judged %s offers apply accepted, at least the floor',

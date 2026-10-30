@@ -14,10 +14,7 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    // The pacing suite records floors (#475): tests/floors.ts imports
-    // scripts/record-floors.ts by its .ts name, as Node's type stripping needs.
-    "allowImportingTsExtensions": true
+    "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "pacing/**/*.ts"]
 }

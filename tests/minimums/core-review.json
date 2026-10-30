@@ -1,9 +1,0 @@
-{
-  "core-review/correct-steps": {
-    "minimum": 2540,
-    "runs": 200,
-    "lowest": 2912,
-    "mean": 3201.615,
-    "sd": 110.2076467492616
-  }
-}

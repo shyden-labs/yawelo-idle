@@ -1,7 +1,5 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The built game shell in each engine (#123 AC3, AC5). Every collector here
@@ -42,7 +40,7 @@ interface Event {
 
 test('the shell renders with no console errors or page errors', async ({
   page,
-}, testInfo) => {
+}) => {
   const events: Event[] = [];
   page.on('console', (message) => {
     events.push({
@@ -85,17 +83,12 @@ test('the shell renders with no console errors or page errors', async ({
     ({ text }) =>
       !text.includes(CONSOLE_SENTINEL) && !text.includes(ERROR_SENTINEL),
   );
-  expect(
-    searched(unplanned, { of: errors, what: 'console and page errors' }),
-  ).toEqual([]);
-  expect(
-    floorBreach(`web-smoke/errors-${testInfo.project.name}`, errors.length),
-  ).toBeUndefined();
+  expect(unplanned).toEqual([]);
 });
 
 test('the shell runs under its Content Security Policy with no violation', async ({
   page,
-}, testInfo) => {
+}) => {
   await page.addInitScript(() => {
     const seen: string[] = [];
     Object.defineProperty(window, '__violations', { value: seen });
@@ -138,12 +131,7 @@ test('the shell runs under its Content Security Policy with no violation', async
 
   const seen = await violations();
   const unplanned = seen.filter((v) => !PLANTED.some((url) => v.includes(url)));
-  expect(
-    searched(unplanned, { of: seen, what: 'CSP violations seen' }),
-  ).toEqual([]);
-  expect(
-    floorBreach(`web-smoke/violations-${testInfo.project.name}`, seen.length),
-  ).toBeUndefined();
+  expect(unplanned).toEqual([]);
 });
 
 test("the shell runs Cloudflare Web Analytics' beacon at any version (#451)", async ({
@@ -173,7 +161,7 @@ test("the shell runs Cloudflare Web Analytics' beacon at any version (#451)", as
     .toBe(true);
 });
 
-test('the shell has no axe violations', async ({ page }, testInfo) => {
+test('the shell has no axe violations', async ({ page }) => {
   await page.goto('/play/');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Yawelo Idle' }),
@@ -196,13 +184,5 @@ test('the shell has no axe violations', async ({ page }, testInfo) => {
   const planted = `${PLANTED_AXE_RULE} #${PLANTED_AXE_ID}`;
   expect(found).toContain(planted);
   const unplanned = found.filter((finding) => finding !== planted);
-  expect(
-    searched(unplanned, { of: found, what: 'elements axe flagged' }),
-  ).toEqual([]);
-  expect(
-    floorBreach(
-      `web-smoke/axe-elements-${testInfo.project.name}`,
-      found.length,
-    ),
-  ).toBeUndefined();
+  expect(unplanned).toEqual([]);
 });

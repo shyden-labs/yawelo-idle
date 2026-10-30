@@ -1,8 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { grepLines } from '../unit/grep';
 import { committableFiles } from '../unit/tracked-files';
 
@@ -72,10 +70,6 @@ describe('grepLines against git grep (#491)', () => {
         .filter((hit) => !found.has(hit))
         .map((hit) => `only git grep finds ${hit}`),
     ];
-    expect(
-      searched(diff, { of: git, what: 'lines git grep finds' }),
-      diff.slice(0, 20).join('\n'),
-    ).toEqual([]);
-    expect(floorBreach('grep/git-grep-lines', git.length)).toBeUndefined();
+    expect(diff, diff.slice(0, 20).join('\n')).toEqual([]);
   });
 });

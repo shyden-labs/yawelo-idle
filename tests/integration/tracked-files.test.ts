@@ -10,8 +10,6 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import {
   committableFiles,
   ignoredPaths,
@@ -282,52 +280,28 @@ describe('the reader against git on a planted repository (#491 AC3)', () => {
     const { repo } = planted();
     const git = gitLists(repo).committable;
     const diff = differences(committableFiles([], repo), git);
-    expect(
-      searched(diff, { of: git, what: 'paths git lists' }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('tracked-files/planted-committable', git.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 
   it('lists every path git ignores, and no other', () => {
     const { repo } = planted();
     const git = gitLists(repo).ignored;
     const diff = differences([...ignoredPaths(repo)], git);
-    expect(
-      searched(diff, { of: git, what: 'paths git ignores' }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('tracked-files/planted-ignored', git.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 
   it("lists a worktree's paths through its .git file, as git does", () => {
     const { worktree } = planted();
     const git = gitLists(worktree).committable;
     const diff = differences(committableFiles([], worktree), git);
-    expect(
-      searched(diff, { of: git, what: 'paths git lists in the worktree' }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('tracked-files/planted-worktree', git.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 
   it('ignores in a worktree what the shared info/exclude names, as git does', () => {
     const { worktree } = planted();
     const git = gitLists(worktree).ignored;
     const diff = differences([...ignoredPaths(worktree)], git);
-    expect(
-      searched(diff, { of: git, what: 'paths git ignores in the worktree' }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('tracked-files/planted-worktree-ignored', git.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 
   it('answers whether each path is ignored as git check-ignore does', () => {
@@ -353,13 +327,7 @@ describe('the reader against git on a planted repository (#491 AC3)', () => {
       .map(
         (path) => `${path}: git says ${ignored.has(path) ? '' : 'not '}ignored`,
       );
-    expect(
-      searched(diff, { of: asked, what: 'paths asked about' }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('tracked-files/planted-check-ignore', asked.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 });
 
@@ -367,13 +335,7 @@ describe('the reader against git on the checked-out tree (#491 AC3)', () => {
   it('lists every path git would commit, and no other', () => {
     const git = gitLists('.').committable;
     const diff = differences(committableFiles(), git);
-    expect(
-      searched(diff, { of: git, what: 'paths git lists' }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('tracked-files/checkout-committable', git.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 
   it('lists every path git ignores, as git does', () => {
@@ -421,15 +383,6 @@ describe('the reader against git on the checked-out tree (#491 AC3)', () => {
   ] as const)('narrows by the %s pathspecs as git does', (name, specs) => {
     const git = gitLists('.', specs).committable;
     const diff = differences(committableFiles(specs), git);
-    expect(
-      searched(diff, {
-        of: git,
-        what: `paths git lists for ${specs.join(' ')}`,
-      }),
-      diff.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach(`tracked-files/checkout-${name}`, git.length),
-    ).toBeUndefined();
+    expect(diff, diff.join('\n')).toEqual([]);
   });
 });

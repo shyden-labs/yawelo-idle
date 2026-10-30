@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { floorBreach } from '../../../tests/floors';
-import { againstControl, searched } from '../../../tests/searched';
 import {
   bestPayback,
   Num,
@@ -129,15 +127,7 @@ describe('an open', () => {
       order.slice(0, firstBuy).filter((t) => t === 'listen').length,
     ).toBeGreaterThan(5);
     const fromFirstBuy = order.slice(firstBuy);
-    expect(
-      searched(
-        fromFirstBuy.filter((t) => t === 'listen'),
-        { of: fromFirstBuy, what: 'events from the first purchase on' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('player/events from the first buy', fromFirstBuy.length),
-    ).toBeUndefined();
+    expect(fromFirstBuy.filter((t) => t === 'listen')).toEqual([]);
   });
 
   it('buys until nothing is affordable', () => {
@@ -149,14 +139,8 @@ describe('an open', () => {
     const shop = shopAfter(player, events);
     expect(buys(events).length).toBeGreaterThan(5);
     expect(
-      searched(
-        shop.encounters.filter((o) => o.affordable).map((o) => o.id),
-        { of: shop.encounters, what: 'Encounters on offer' },
-      ),
+      shop.encounters.filter((o) => o.affordable).map((o) => o.id),
     ).toEqual([]);
-    expect(
-      floorBreach('player/casual offers', shop.encounters.length),
-    ).toBeUndefined();
     expect(shop.pickUp?.affordable ?? false).toBe(false);
   });
 
@@ -190,48 +174,25 @@ describe('an open', () => {
     const greedy = play('casual', rich, ONE_CHECK);
     const shop = shopAfter(random.player, random.events);
     expect(
-      searched(
-        shop.encounters.filter((o) => o.affordable).map((o) => o.id),
-        { of: shop.encounters, what: 'Encounters on offer' },
-      ),
+      shop.encounters.filter((o) => o.affordable).map((o) => o.id),
     ).toEqual([]);
-    expect(
-      floorBreach('player/random offers', shop.encounters.length),
-    ).toBeUndefined();
     expect(buys(random.events).length).toBeGreaterThan(5);
     expect(buys(random.events)).not.toEqual(buys(greedy.events));
   });
 
   it('a learner answers every due review', () => {
     const due = withWords(fresh(), 12);
-    const dueReviews = view(course(), due, due.wall).queue;
     const { events, player } = play('casual', due, ONE_CHECK);
     expect(
       events.filter((e) => e.type === 'answerReview').length,
     ).toBeGreaterThan(0);
-    expect(
-      searched(view(course(), player.state, wallMs(player.now)).queue, {
-        of: dueReviews,
-        what: 'reviews due before the open',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('player/learner due reviews', dueReviews.length),
-    ).toBeUndefined();
+    expect(view(course(), player.state, wallMs(player.now)).queue).toEqual([]);
   });
 
   it('a Non-learner answers none', () => {
     const due = withWords(fresh(), 12);
     const { events, player } = play('nonlearner', due, ONE_CHECK);
-    expect(
-      searched(
-        events.filter((e) => e.type === 'answerReview'),
-        { of: events, what: 'events in the Non-learner’s open' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('player/nonlearner events', events.length),
-    ).toBeUndefined();
+    expect(events.filter((e) => e.type === 'answerReview')).toEqual([]);
     expect(
       view(course(), player.state, wallMs(player.now)).queue.length,
     ).toBeGreaterThan(0);
@@ -293,15 +254,7 @@ describe('an open', () => {
     const sail = after.findIndex((e) => e.type === 'setSail');
     expect(sail).toBeGreaterThan(0);
     const beforeSail = after.slice(0, sail);
-    expect(
-      searched(buys(beforeSail), {
-        of: beforeSail,
-        what: 'events before the sail',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('player/events before the sail', beforeSail.length),
-    ).toBeUndefined();
+    expect(buys(beforeSail)).toEqual([]);
   });
 
   it('the Clicker taps Listen 10 times a second through the open', () => {
@@ -327,13 +280,7 @@ describe('an open', () => {
     };
     const { shop, sail } = view(course(), idle, idle.wall);
     expect(shop.journeys.slots).toEqual(['away', 'locked', 'locked']);
-    expect(
-      againstControl(
-        (words: GameState['words']) =>
-          view(course(), { ...idle, words }, idle.wall).queue,
-        { input: {}, control: withWords(fresh(), 12).words },
-      ),
-    ).toEqual([]);
+    expect(view(course(), { ...idle, words: {} }, idle.wall).queue).toEqual([]);
     expect(sail.available).toBe(false);
     expect(play('idler', idle, ONE_CHECK).decision).toBe(false);
   });

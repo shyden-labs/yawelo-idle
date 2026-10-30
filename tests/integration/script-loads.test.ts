@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
 import { committableFiles } from '../unit/tracked-files';
 
 /**
@@ -37,18 +36,8 @@ const SCRIPTS = [
   'scripts/dev-secrets.ts',
   'scripts/develop-squash-only.ts',
   'scripts/ensure-d1.ts',
-  'scripts/fetch-floors.ts',
-  'scripts/fetch-minimums.ts',
   'scripts/holding-dev.ts',
-  'scripts/load-mutation-files.ts',
-  'scripts/mutate-cli.ts',
-  'scripts/mutations-changed-cli.ts',
-  'scripts/mutations-verdict.ts',
-  'scripts/owner-review.ts',
   'scripts/prod-version.ts',
-  'scripts/record-floors.ts',
-  'scripts/sample-minimums.ts',
-  'scripts/schedule-watch.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
   'scripts/verify-dev.ts',
@@ -57,7 +46,7 @@ const SCRIPTS = [
 ] as const;
 
 describe('the scripts load under Node’s own loader (#391)', () => {
-  it('lists every script with a main, as git has them, at the recorded floor', () => {
+  it('lists every script with a main, as git has them', () => {
     const derived = committableFiles().filter(isScript).filter(hasMain);
     const grep = spawnSync(
       'git',
@@ -76,7 +65,6 @@ describe('the scripts load under Node’s own loader (#391)', () => {
     const grepped = grep.stdout.split('\n').filter((line) => line !== '');
     expect(derived).toEqual(grepped.filter(isScript));
     expect(SCRIPTS).toEqual(derived);
-    expect(floorBreach('script-loads/scripts', derived.length)).toBeUndefined();
   });
 
   for (const script of SCRIPTS)

@@ -6,8 +6,7 @@ import { runOf } from './workflow-steps';
 /**
  * The coverage job (#728): every suite pull-request CI runs, under coverage,
  * in a job of its own on every pull request, with the report kept. Read as
- * parsed YAML, so a comment naming a command cannot stand in for a step. Its
- * one limit is held in suite-limits.test.ts.
+ * parsed YAML, so a comment naming a command cannot stand in for a step.
  */
 interface Step {
   id?: string;
@@ -71,5 +70,20 @@ describe('the coverage job (#728)', () => {
       path: 'coverage/',
       'if-no-files-found': 'error',
     });
+  });
+
+  it('reports on a docs-only change without installing or measuring (#795)', () => {
+    const skip = "${{ steps.classify.outputs.scope != 'docs-only' }}";
+    const classify = steps().findIndex((s) => s.id === 'classify');
+    expect(runOf(steps()[classify] ?? {})).toBe('node scripts/ci-scope.ts');
+    const gated = [
+      ...at('scripts/fail-on-warnings.sh npm ci'),
+      ...at('npm run test:coverage'),
+    ];
+    expect(gated).toHaveLength(2);
+    for (const i of gated) {
+      expect(i).toBeGreaterThan(classify);
+      expect(steps()[i]?.if).toBe(skip);
+    }
   });
 });

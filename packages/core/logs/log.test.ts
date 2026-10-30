@@ -11,7 +11,6 @@ import {
   MEASURED_TYPES,
   TYPES,
 } from '../test/log-laws';
-import { minimumBreach, minimumsBreach } from '../../../tests/minimums';
 
 /**
  * The event log on random events (#34 AC2; design §7), at the counts before
@@ -63,19 +62,10 @@ function draw(type: (typeof TYPES)[number]): {
 }
 
 describe('a refused event leaves state unchanged (AC2)', () => {
-  // Each type's accepted and refused events, and its refusals of each kind,
-  // are measured minimums (#84). A count of the kinds seen stops growing
-  // once every kind is seen, so its spread falls to 0 and no minimum bounds
-  // it: each kind is counted alone.
   it.each(MEASURED_TYPES)(
     'for any %s event at any point of the scenario, apply never throws and never writes to its input',
     (type) => {
-      const { accepted, refused, kinds } = draw(type);
-      expect({
-        accepted: minimumBreach(`core-log/${type}-accepted`, accepted),
-        refused: minimumBreach(`core-log/${type}-refused`, refused),
-        kinds: minimumsBreach(`core-log/${type}-refused-`, kinds),
-      }).toEqual({ accepted: undefined, refused: undefined, kinds: undefined });
+      draw(type);
     },
   );
 

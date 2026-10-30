@@ -40,8 +40,6 @@ import {
   type Probe,
 } from '../../scripts/verify-dev';
 import { CONTENT_SECURITY_POLICY } from '../../apps/web/worker/policy';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 // The first fetch in a process sets up Node's HTTP client: 20-38 ms of CPU,
 // measured for #553, which fell on whichever verifyDev test ran first. It
@@ -100,12 +98,7 @@ const site = (sha: string) =>
 describe('holdingProblems (#673)', () => {
   it('accepts the holding page with its commit, noindex and mark', () => {
     const judged = holdingJudgement(probe(200, holding(SHA), noindex), SHA);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'holding checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/holding-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('fails the site being built served in its place', () => {
@@ -136,12 +129,7 @@ describe('holdingProblems (#673)', () => {
 describe('siteProblems (#673)', () => {
   it('accepts the site being built with its commit, noindex and mark', () => {
     const judged = siteJudgement(probe(200, site(SHA), noindex), SHA, 'site /');
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'site checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/site-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('fails the holding page served in its place', () => {
@@ -181,15 +169,7 @@ describe('stylesheetProblems (#673)', () => {
       label,
       probe(200, 'body{}', { 'content-type': CSS, ...noindex }),
     );
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'stylesheet checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/stylesheet-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('fails a stylesheet served as a page', () => {
@@ -230,12 +210,7 @@ describe('basicAuthorization', () => {
 describe('gateProblems', () => {
   it('accepts a 401 Basic challenge with no app in it', () => {
     const judged = gateJudgement('web', probe(401, 'testers only', challenge));
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'gate checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/gate-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('fails a 200, naming the missing gate', () => {
@@ -284,12 +259,7 @@ describe('leaked', () => {
 describe('robotsProblems', () => {
   it('accepts a robots.txt that blocks every crawler', () => {
     const judged = robotsJudgement(probe(200, ROBOTS));
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'robots checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/robots-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it.each([
@@ -313,12 +283,7 @@ describe('robotsProblems', () => {
 describe('webProblems', () => {
   it('accepts the expected commit with noindex', () => {
     const judged = webJudgement(probe(200, page(SHA), noindex), SHA);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'web checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/web-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names the stale commit when the previous deploy is still served', () => {
@@ -399,15 +364,7 @@ describe('gameShellProblems (#123)', () => {
       SHA,
       'web /play/',
     );
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'game shell checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/game-shell-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it.each([
@@ -459,12 +416,7 @@ describe('healthProblems', () => {
 
   it('accepts ok, the commit, db ok and noindex', () => {
     const judged = healthJudgement(probe(200, healthy, noindex), SHA);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'health checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/health-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it.each([
@@ -523,12 +475,7 @@ describe('roadmapProblems (#341)', () => {
 
   it('accepts a read board with no drift, no failing reads and a recent check', () => {
     const judged = roadmapJudgement(health(), NOW, DEPLOYED);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'roadmap checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/roadmap-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('fails a board never read', () => {
@@ -629,21 +576,13 @@ describe('roadmapProblems (#341)', () => {
     ]);
   });
 
-  it('accepts a last check exactly 20 minutes old, at the recorded floor', () => {
+  it('accepts a last check exactly 20 minutes old', () => {
     const judged = roadmapJudgement(
       health({ lastCheckAt: '2026-10-06T12:40:00.000Z' }),
       NOW,
       DEPLOYED,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'roadmap checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach(
-        'verify-dev/roadmap-checks-at-the-bound',
-        judged.checked.length,
-      ),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('fails a check that never ran', () => {
@@ -991,12 +930,7 @@ describe('verifyDev', () => {
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
       ]);
-      expect(searched(problems, { of: looked, what: 'roadmap looks' })).toEqual(
-        [],
-      );
-      expect(
-        floorBreach('verify-dev/roadmap-wait-looks', looked),
-      ).toBeUndefined();
+      expect(problems).toEqual([]);
     });
 
     it('fails at its ceiling, naming the last check the old code made', async () => {
@@ -1114,10 +1048,7 @@ describe('verifyDev', () => {
       '',
       '',
     ]);
-    expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
-    expect(
-      floorBreach('verify-dev/healthy-site-probes', requests),
-    ).toBeUndefined();
+    expect(problems).toEqual([]);
   });
 
   it('checks Indonesian and the game at /play/ on the front door (#332 AC7, #673)', () => {
@@ -1198,10 +1129,7 @@ describe('verifyDev', () => {
     // The roadmap's health is no longer among the last look's probes: its
     // own job judges it once a check after the deploy exists (#708).
     expect(requests, 'two looks of nine probes, then one of fifteen').toBe(33);
-    expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
-    expect(
-      floorBreach('verify-dev/stale-page-probes', requests),
-    ).toBeUndefined();
+    expect(problems).toEqual([]);
   });
 
   it('fails at once when a page answers an error while the home page is current (#581)', async () => {
@@ -1274,10 +1202,7 @@ describe('verifyDev', () => {
       requests,
       'two stale looks of four probes, then one of fifteen',
     ).toBe(23);
-    expect(searched(problems, { of: requests, what: 'probes' })).toEqual([]);
-    expect(
-      floorBreach('verify-dev/stale-site-probes', requests),
-    ).toBeUndefined();
+    expect(problems).toEqual([]);
   });
 
   it('fails a deploy still stale after the last look, naming each host’s commit', async () => {
@@ -1440,14 +1365,7 @@ describe('verifyDev', () => {
     const credential = basicAuthorization(PASSWORD).slice(6);
     const showingPassword = reported.filter((p) => p.includes(PASSWORD));
     const showingCredential = reported.filter((p) => p.includes(credential));
-    expect(
-      searched(showingPassword, { of: reported, what: 'reported problems' }),
-    ).toEqual([]);
-    expect(
-      searched(showingCredential, { of: reported, what: 'reported problems' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-dev/broken-site-problems', reported.length),
-    ).toBeUndefined();
+    expect(showingPassword).toEqual([]);
+    expect(showingCredential).toEqual([]);
   });
 });

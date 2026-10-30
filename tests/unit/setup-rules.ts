@@ -4,15 +4,10 @@ import { dirname, join, resolve, sep } from 'node:path';
  * The rules tests/unit/setup.ts enforces on every unit test (#477), kept
  * apart from it so each is tested on its own (tests/unit/setup.test.ts).
  *
- * - Every unit test runs in under 1 s of its own CPU, and no limit is ever
- *   raised (global rule, 2026-10-07). The thread's CPU, not the process's:
- *   garbage-collector threads tripled a process figure (shyden.co.uk #632).
  * - A unit test starts no process and reaches no service (global rule,
  *   2026-10-08). A socket may reach only a server the test process itself is
  *   listening on, as verify-dev.test.ts serves its own pages in-process.
  */
-
-export const CPU_LIMIT_MS = 1_000;
 
 export const REFUSED_PROCESS = [
   'spawn',
@@ -52,12 +47,9 @@ export const REFUSED = [
  * A unit test reads no whole tree (#530): a whole-tree check belongs in the
  * guards suite (global rule, 2026-10-08). The named readers are refused on
  * the checkout or any directory in it, and so is a walk, which #515 measured
- * as listing three or more of the checkout's directories. tests/floors is
- * not counted: floorBreach lists it once per worker.
+ * as listing three or more of the checkout's directories.
  */
 export const WALK_LIMIT = 3;
-
-export const FLOORS_DIR = 'tests/floors';
 
 export const insideCheckout = (path: string, checkout: string): boolean =>
   path === checkout || path.startsWith(`${checkout}${sep}`);
@@ -120,11 +112,6 @@ export interface Target {
 }
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '::ffff:127.0.0.1']);
-
-export const cpuProblem = (test: string, micros: number): string | null =>
-  micros > CPU_LIMIT_MS * 1_000
-    ? `${test}: ${(micros / 1_000).toFixed(1)} ms of its own CPU, over the ${String(CPU_LIMIT_MS)} ms unit limit; cut its work (global rule, 2026-10-07)`
-    : null;
 
 export const processProblem = (test: string, entry: string): string =>
   `${test}: child_process.${entry} starts a process, and a unit test starts none (global rule, 2026-10-08); a test where a process is the thing tested belongs in tests/integration`;

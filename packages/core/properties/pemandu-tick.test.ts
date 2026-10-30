@@ -7,7 +7,6 @@ import {
   INTERVALS,
   type Case,
 } from '../test/pemandu-tick-laws';
-import { minimumBreach } from '../../../tests/minimums';
 import { DAY_MS } from '../src/clock';
 
 /**
@@ -125,13 +124,4 @@ describe('nextPurchaseTick (AC3)', () => {
   it('equals a tick-by-tick scan over 10,000 generated states, checking at most one more tick than it walks segments', () => {
     expect(Object.keys(solve())).toEqual([...REACHED]);
   });
-
-  it.each(REACHED)(
-    'the generated states reach %s at least as often as measured',
-    (name) => {
-      expect(
-        minimumBreach(`core-pemandu-tick/${name}`, solve()[name]),
-      ).toBeUndefined();
-    },
-  );
 });

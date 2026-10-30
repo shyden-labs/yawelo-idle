@@ -10,7 +10,7 @@ import { runOf } from './workflow-steps';
  * there at its full count, and the unit suite keeps only stand-ins of each
  * (global rule, 2026-10-12), so a CI step removed, or a glob that lets the
  * properties run nowhere, would let them pass by not running; this suite
- * fails instead. Its time limit is held in suite-limits.test.ts (#476). The
+ * fails instead. The
  * workflow is read as parsed YAML, so a comment naming a command cannot
  * stand in for a step.
  */

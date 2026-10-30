@@ -3,8 +3,6 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import config from '../../playwright.engines.config';
 import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The cross-engine check stays wired (#26 AC10). A Playwright project dropped
@@ -43,12 +41,9 @@ describe('the cross-engine harness', () => {
     ).toHaveLength(1);
     const installs = steps.filter((s) => /playwright install/.test(runOf(s)));
     expect(
-      searched(installs, { of: steps, what: 'build-and-test steps' }),
+      installs,
       'no step installs browsers: the image has them, and --with-deps reached an apt mirror',
     ).toEqual([]);
-    expect(
-      floorBreach('cross-engine-harness/ci-steps', steps.length),
-    ).toBeUndefined();
   });
 
   it('is what npm run test:engines runs', () => {

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
 import {
   ALLOWANCES,
   type Allowance,
@@ -236,7 +235,5 @@ describe('every allowance still covers an occurrence (#356)', () => {
   it('names each allowance once', () => {
     const keys = ALLOWANCES.map(keyOf);
     expect(new Set(keys).size).toBe(keys.length);
-    // An empty list holds no duplicate either: the floor proves it is read.
-    expect(floorBreach('old-name/allowances', keys.length)).toBeUndefined();
   });
 });

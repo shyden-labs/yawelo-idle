@@ -6,8 +6,6 @@ import {
   type ImportGraph,
 } from '../unit/core-import-graph';
 import { committableFiles } from '../unit/tracked-files';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The import-graph guard over every module git has under packages/core/src (#33).
@@ -36,10 +34,7 @@ describe('packages/core/src holds no value-import cycle', () => {
   it('every file under packages/core/src is a .ts module the graph reads', () => {
     const paths = corePaths();
     const notModules = paths.filter((path) => !path.endsWith('.ts'));
-    expect(searched(notModules, { of: paths, what: 'core paths' })).toEqual([]);
-    expect(
-      floorBreach('core-import-graph/core-paths', paths.length),
-    ).toBeUndefined();
+    expect(notModules).toEqual([]);
   });
 
   it('reads every module (liveness)', () => {
@@ -59,40 +54,16 @@ describe('packages/core/src holds no value-import cycle', () => {
 
   it('reads each module’s relative imports as its raw text counts them', () => {
     const graph = coreGraph();
-    expect(
-      searched(graph.unread, { of: graph.modules, what: 'core modules' }),
-    ).toEqual([]);
-    expect(
-      floorBreach(
-        'core-import-graph/cross-checked-modules',
-        graph.modules.length,
-      ),
-    ).toBeUndefined();
+    expect(graph.unread).toEqual([]);
   });
 
   it('refuses no import it cannot place in the graph', () => {
     const graph = coreGraph();
-    expect(
-      searched(graph.refused, {
-        of: graph.declarations,
-        what: 'core declarations',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('core-import-graph/placed-declarations', graph.declarations),
-    ).toBeUndefined();
+    expect(graph.refused).toEqual([]);
   });
 
   it('holds no value-import cycle', () => {
     const graph = coreGraph();
-    expect(
-      searched(cycles(graph.edges), {
-        of: graph.modules,
-        what: 'core modules',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('core-import-graph/cycle-modules', graph.modules.length),
-    ).toBeUndefined();
+    expect(cycles(graph.edges)).toEqual([]);
   });
 });

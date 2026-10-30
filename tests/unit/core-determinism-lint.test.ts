@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { ESLint, type Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { coreDeterminismBlock } from '../../eslint.core-determinism';
-import { againstTwin } from '../searched';
 
 /**
  * The determinism ban on packages/core/src (M1 design §2.1 and §3, #26 AC3).
@@ -64,10 +63,7 @@ async function lint(
   const fatalIn = async (text: string) =>
     (await messagesOf(text)).filter((m) => m.fatal === true);
   // The twin, with a stray bracket, cannot parse: a fatal error must show.
-  expect(
-    await againstTwin(fatalIn, { input: sample, twin: `${sample}\n)` }),
-    `fixture must parse: ${sample}`,
-  ).toEqual([]);
+  expect(await fatalIn(sample), `fixture must parse: ${sample}`).toEqual([]);
   return messagesOf(sample);
 }
 
@@ -75,9 +71,6 @@ async function bans(code: string, filePath = CORE_FIXTURE) {
   const messages = await lint(code, filePath);
   return messages.filter((m) => m.ruleId !== null && BAN_RULES.has(m.ruleId));
 }
-
-/** A ban added to a clean sample makes its bad twin. */
-const TWIN_BAN = 'export const twin = Math.random();';
 
 const MATH = [
   'pow',
@@ -192,31 +185,15 @@ describe('the ban leaves deterministic code alone', () => {
   ];
   for (const [label, sample] of ALLOWED) {
     it(label, async () => {
-      expect(
-        await againstTwin(bans, {
-          input: sample,
-          twin: `${sample}\n${TWIN_BAN}`,
-        }),
-        sample,
-      ).toEqual([]);
+      expect(await bans(sample), sample).toEqual([]);
     });
   }
 
   it('is scoped to packages/core/src: the same code elsewhere is not banned', async () => {
     const code = 'export const x = Math.pow(2, 3) + Date.now();';
     const at = (filePath: string) => bans(code, filePath);
-    expect(
-      await againstTwin(at, {
-        input: 'packages/core/test/fixture.test.ts',
-        twin: CORE_FIXTURE,
-      }),
-    ).toEqual([]);
-    expect(
-      await againstTwin(at, {
-        input: 'apps/web/src/fixture.ts',
-        twin: CORE_FIXTURE,
-      }),
-    ).toEqual([]);
+    expect(await at('packages/core/test/fixture.test.ts')).toEqual([]);
+    expect(await at('apps/web/src/fixture.ts')).toEqual([]);
     // Liveness: the same text IS banned at a core source path.
     expect(await bans(code)).toHaveLength(2);
   });
