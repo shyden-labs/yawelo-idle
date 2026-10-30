@@ -373,6 +373,35 @@ describe('nextPurchaseTick (AC3)', () => {
     },
   );
 
+  // The draw that failed PR #799's properties step (#800): anchor 0 and
+  // horizon 0, ending on a tick. The first tick at or after 0 is 0 itself.
+  it.each([
+    ['ends on a tick', true],
+    ['ends at the horizon', false],
+  ])(
+    'a case at anchor 0 with no horizon %s, until 0',
+    (_label, untilOnTick) => {
+      const c = caseOf({ ...BASE, offset: 0, ticks: 0, untilOnTick });
+      expect([c.state.anchor.sim, c.until]).toEqual([0, 0]);
+    },
+  );
+
+  it('a horizon ending between ticks rounds until up to the next tick', () => {
+    const c = caseOf({
+      ...BASE,
+      offset: 0,
+      ticks: 2,
+      jitter: 0.5,
+      untilOnTick: true,
+    });
+    expect([c.state.anchor.sim, c.until]).toEqual([0, 30_000]);
+  });
+
+  it('a horizon ending on a tick keeps until there', () => {
+    const c = caseOf({ ...BASE, offset: 0, ticks: 2, untilOnTick: true });
+    expect([c.state.anchor.sim, c.until]).toEqual([0, 20_000]);
+  });
+
   // The case the properties suite shrank to on its first fresh seed
   // (721970856, #607): the solve puts the crossing exactly on tick 658,000,
   // and Num's rounding there leaves Understanding 3e-14 short of the price.
