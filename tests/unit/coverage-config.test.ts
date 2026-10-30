@@ -128,12 +128,12 @@ describe('every suite writes one report the measure step joins (#728)', () => {
   });
 
   for (const [name, config] of CONFIGS)
-    it(`${name}: the custom provider, every JS and TS file, our exclude only`, () => {
+    it(`${name}: the custom provider, every JS, TS and Svelte file, our exclude only`, () => {
       expect(config.test.coverage).toEqual({
         enabled: true,
         provider: 'custom',
         customProviderModule: 'scripts/coverage-provider.ts',
-        include: ['**/*.{ts,js,mjs,cjs,mts,cts}'],
+        include: ['**/*.{ts,js,mjs,cjs,mts,cts,svelte}'],
         exclude: [...COVERAGE_EXCLUDE],
         reporter: [
           ['json', { file: 'coverage-final.json' }],
@@ -143,6 +143,20 @@ describe('every suite writes one report the measure step joins (#728)', () => {
         reportOnFailure: false,
         clean: true,
       });
+    });
+});
+
+describe('every suite under coverage compiles Svelte (#798)', () => {
+  for (const [name, config] of CONFIGS)
+    it(`${name}: carries the Svelte plugin, so an untested component counts as untested`, () => {
+      const names = config.plugins
+        .flat()
+        .map((plugin) =>
+          plugin !== null && typeof plugin === 'object' && 'name' in plugin
+            ? plugin.name
+            : undefined,
+        );
+      expect(names).toContain('vite-plugin-svelte:config');
     });
 });
 
