@@ -5,13 +5,13 @@
 
 ## Where it stands
 
-- **#795 (P0, In Progress): PR #796**, branch `tooling/795-simplify`, worktree `../yawelo-idle-795`, one commit `9dbf6bdd497aa9e68a3c1844078013b4f2e8b9ba`, pushed. It removes floors, mutations, minimums, the meta-guards and limits, the per-file coverage record, CODEOWNERS, owner-review and schedule-watch (359 files, −45,317 lines), and makes coverage one overall threshold (statements 88%, branches 81%) in `scripts/coverage.ts`. Locally: format, lint, typecheck and unit (12,516 tests) green. Guards, integration, properties, pacing and coverage run in CI only.
+- **#795 (P0, In Progress): PR #796**, branch `tooling/795-simplify`, worktree `../yawelo-idle-795`, two commits, head `835af7d79def4d3160d0b4ae21cac94d068c5298`, pushed. It removes floors, mutations, minimums, the meta-guards and limits, the per-file coverage record, CODEOWNERS, owner-review and schedule-watch (359 files, −45,317 lines), and makes coverage one overall threshold (statements 85%, branches 76%, as this tree measured in CI run 40999845202: 85.8% and 76.9%) in `scripts/coverage.ts`. Locally: format, lint, typecheck and unit (12,516 tests) green. Guards, integration, properties, pacing and coverage run in CI only.
 - One PR, not four: floors, meta-guards, mutations and coverage were entangled (deleting any test tripped the floors). The squash commit's message lists every verdict it turns into a pass.
 
 ## Resume steps
 
 1. Read PR #796's CI: `~/.claude/scripts/pr-verdict.sh 796`. Fix any red in a new commit on the branch (never amend a pushed branch).
-2. If the `coverage` job fails only on the threshold, the removed code was better tested than the rest: set `THRESHOLDS` in `scripts/coverage.ts` to the job's printed figures rounded down, and update the test pinning them.
+2. (Done: the first run failed only on the threshold; the second commit sets it to the measured figures.)
 3. When green on the head SHA, change develop's required checks from `build-and-test, board-orphans, mutations` to `build-and-test, board-orphans, coverage` (app 15368), and read them back. `mutations` never reports on #796, so it cannot merge before this.
 4. Squash-merge #796, check the dev deploy, re-read #795's ACs, and close it by hand with a comment.
 5. File two small tickets, Shyden's calls: (a) the roadmap App's Administration: read was granted only for owner-review, now gone (narrowing it means updating `INSTALLED` in `apps/site/test/github-fake/contract.ts` and the Worker check); (b) develop's "Require review from Code Owners" does nothing now CODEOWNERS is gone.
