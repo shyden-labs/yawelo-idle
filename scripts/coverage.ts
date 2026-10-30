@@ -13,12 +13,13 @@ import type { CoverageMapData } from 'istanbul-lib-coverage';
 import { COVERAGE_SUITES, coverageConfigFile } from './coverage-config.ts';
 
 /**
- * The overall thresholds, in percent: the figures measured on develop at
- * f4a9bd3 (statements 88.3%, branches 81.2%), rounded down (#795). Raise
- * them as coverage grows; lower one only in the change that removes tested
- * code, saying so.
+ * The overall thresholds, in percent: the figures #795's own tree measured
+ * in CI (run 40999845202: statements 85.8%, branches 76.9%), rounded down.
+ * Develop at f4a9bd3 measured 88.3% and 81.2%, but the machinery #795
+ * removed was better tested than the rest. Raise them as coverage grows;
+ * lower one only in the change that removes tested code, saying so.
  */
-export const THRESHOLDS = { statements: 88, branches: 81 } as const;
+export const THRESHOLDS = { statements: 85, branches: 76 } as const;
 
 export interface Count {
   untested: number;
