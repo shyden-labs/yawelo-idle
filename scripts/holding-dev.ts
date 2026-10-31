@@ -20,7 +20,7 @@ import { headerRules } from './headers-file.ts';
 
 /**
  * `text` with every address on the media host `from` moved to `to` (#713):
- * the dev copy is on workers.dev, another site, where production's
+ * the dev copy was on workers.dev, another site, where production's
  * same-site media policy blocks the video, so it takes the media from the
  * dev-only bucket. An origin counts only where it ends (a path, `;`, a quote,
  * a space or the end), so a longer host is left alone. Throws unless exactly

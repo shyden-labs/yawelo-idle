@@ -38,21 +38,16 @@ describe('the promo media', () => {
         'cross-origin-resource-policy': 'same-site',
         'x-content-type-options': 'nosniff',
       },
-      sizeOnPastEnd: true,
     });
   });
 
-  // Measured 2026-10-20 (#713): the r2.dev address sends neither header,
-  // which the cross-site dev copy needs for CORP, and its 416 has no
-  // Content-Range. Shyden, the same day: "Yes, test checks what it sends".
-  it('are judged on the dev store by exactly what its r2.dev address sends', () => {
+  // Measured 2026-10-26 (#768) from Biznet's own DNS and from DNS over
+  // HTTPS: dev-media.shyden.co.uk answers 200, 206 on bytes=0-1 and 416 past
+  // the end with the size, each with both headers, as production does.
+  it('are judged on the dev store exactly as on production, apart from the origin', () => {
     expect(DEV_MEDIA).toEqual({
-      origin: 'https://pub-cc0bef26b6c5493a8c18f31547d2bc72.r2.dev',
-      headers: {
-        'cross-origin-resource-policy': null,
-        'x-content-type-options': null,
-      },
-      sizeOnPastEnd: false,
+      ...PROD_MEDIA,
+      origin: 'https://dev-media.shyden.co.uk',
     });
   });
 

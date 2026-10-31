@@ -122,7 +122,7 @@ describe('the dev Workers’ deploy configs', () => {
     expect(byName('yawelo-idle-sync-dev').routes).toBeUndefined();
   });
 
-  it('keeps each public dev Worker’s workers.dev address, and the game at none, with no preview URLs (#395, #332, #429)', () => {
+  it('keeps each public dev Worker’s workers.dev address, and the game and the holding page’s dev copy at none, with no preview URLs (#395, #332, #429, #768)', () => {
     // The Pages adapter sets neither key: Pages has no workers.dev address,
     // and its own pages.dev address answers 404 (apps/dev-hosts/test).
     expect(
@@ -135,7 +135,7 @@ describe('the dev Workers’ deploy configs', () => {
         .sort(),
     ).toEqual([
       ['yawelo-idle-dev-hosts', undefined, undefined],
-      ['yawelo-idle-holding-dev', true, false],
+      ['yawelo-idle-holding-dev', false, false],
       ['yawelo-idle-site-dev', true, false],
       ['yawelo-idle-sync-dev', true, false],
       ['yawelo-idle-web-dev', false, false],
@@ -165,7 +165,7 @@ describe('the dev Workers’ deploy configs', () => {
     expect(workflow.jobs['verify']?.environment).toEqual(dev);
   });
 
-  it('serves the dev hostnames through a Pages project bound to the site and sync Workers (#429)', () => {
+  it('serves the dev hostnames through a Pages project bound to the site, sync and holding dev copy Workers (#429, #768)', () => {
     const adapter = byName('yawelo-idle-dev-hosts');
     expect(adapter.main).toBeUndefined();
     expect(adapter.pages_build_output_dir).toBe(
@@ -174,7 +174,25 @@ describe('the dev Workers’ deploy configs', () => {
     expect(adapter.services).toEqual([
       { binding: 'SITE', service: byName('yawelo-idle-site-dev').name },
       { binding: 'SYNC', service: byName('yawelo-idle-sync-dev').name },
+      { binding: 'HOLDING', service: byName('yawelo-idle-holding-dev').name },
     ]);
+  });
+
+  // Indonesian providers block free shared domains (#768), and the media's
+  // CORP same-site lets only shyden.co.uk pages show it.
+  it('serves every dev hostname on shyden.co.uk (#768)', () => {
+    expect(
+      [...DEV_HOSTS.keys()].filter((host) => !host.endsWith('.shyden.co.uk')),
+    ).toEqual([]);
+  });
+
+  it('verifies the holding page’s dev copy at its dev hostname (#768)', () => {
+    const verify = jobSteps('verify-holding').find(
+      (step) => runOf(step) === 'node scripts/verify-prod.ts --dev-copy',
+    );
+    expect(verify?.env).toMatchObject({
+      DEV_HOLDING_URL: `https://${devHost('HOLDING')}`,
+    });
   });
 
   it('binds every Worker a dev hostname names (#429)', () => {
@@ -210,7 +228,7 @@ interface Step {
   env?: Record<string, unknown>;
 }
 /** A deploy-dev.yml job's steps. */
-const jobSteps = (job: 'deploy' | 'verify'): Step[] => {
+const jobSteps = (job: 'deploy' | 'verify' | 'verify-holding'): Step[] => {
   const workflow = parse(
     readFileSync(join(ROOT, '.github/workflows/deploy-dev.yml'), 'utf8'),
   ) as { jobs: Record<string, { steps?: Step[] }> };

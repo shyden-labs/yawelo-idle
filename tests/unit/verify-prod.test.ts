@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Probe } from '../../scripts/verify-dev';
-import { DEV_MEDIA, type MediaHost } from '../../apps/site/src/media';
+import type { MediaHost } from '../../apps/site/src/media';
 import {
   mediaJudgement,
   mediaProblems,
@@ -194,7 +194,6 @@ const HOST: MediaHost = {
     'cross-origin-resource-policy': 'same-site',
     'x-content-type-options': 'nosniff',
   },
-  sizeOnPastEnd: true,
 };
 const URL_ = 'https://media.example/m.mp4';
 const SENT = {
@@ -320,20 +319,6 @@ describe('a promo media file, asked for whole', () => {
       ),
     ).toEqual([`${URL_}: x-content-type-options is missing, expected nosniff`]);
   });
-
-  it('names a header the host must not send', () => {
-    expect(
-      mediaProblems(URL_, mediaAnswer(200, [1, 2, 3, 4, 5], WHOLE), SOURCE, {
-        ...HOST,
-        headers: {
-          ...HOST.headers,
-          'cross-origin-resource-policy': null,
-        },
-      }),
-    ).toEqual([
-      `${URL_}: cross-origin-resource-policy is same-site, expected none`,
-    ]);
-  });
 });
 
 describe('a promo media file, asked for bytes=0-1', () => {
@@ -456,27 +441,6 @@ describe('a promo media file, asked for a range past its end', () => {
     ).toEqual([
       `${URL_} bytes=5-: cross-origin-resource-policy is missing, expected same-site`,
     ]);
-  });
-
-  // The dev store's r2.dev address answers 416 with no Content-Range, CORP or
-  // nosniff (measured 2026-10-20, #713), and its verify expects exactly that.
-  it('passes a 416 with no Content-Range from a host that sends none', () => {
-    const judged = pastEndJudgement(
-      URL_,
-      mediaAnswer(416, [], {}),
-      SOURCE,
-      DEV_MEDIA,
-    );
-    expect(judged.problems).toEqual([]);
-  });
-
-  it('names a Content-Range from a host that sends none, so a change is seen', () => {
-    expect(
-      pastEndProblems(URL_, mediaAnswer(416, [], PAST_END), SOURCE, {
-        ...HOST,
-        sizeOnPastEnd: false,
-      }),
-    ).toEqual([`${URL_} bytes=5-: Content-Range bytes */5, expected none`]);
   });
 
   it('names a missing Content-Range from a host that names the size', () => {

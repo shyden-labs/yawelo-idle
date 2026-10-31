@@ -141,6 +141,19 @@ jobs:
       - name: Build (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm run build
+      # No page built for production or either dev copy loads a file from a
+      # free shared domain such as r2.dev, which Indonesian providers block
+      # (#768). The holding page and its dev copy are built as deploy-dev.yml
+      # builds them, then every built file is read.
+      - name: Build the holding page
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run build:holding --workspace @yawelo-idle/site
+      - name: Make its dev copy
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: node scripts/holding-dev.ts
+      - name: No built page loads from a free shared domain
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: node scripts/free-hosts.ts apps/site/dist apps/site/dist-holding apps/site/dist-holding-dev
 
   # Every suite pull-request CI runs, under coverage, one after another, in a
   # job of its own so the unit step above keeps coverage off (#728). It fails

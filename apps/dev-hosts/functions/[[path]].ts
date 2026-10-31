@@ -2,7 +2,8 @@
  * The dev hostname adapter's one Function (#429), on every path (`[[path]]`
  * matches the root too). It forwards each request, unchanged, to the Worker
  * its host names in ../hosts.ts: the site Worker (`SITE`), whose gate, game
- * binding and pages stay as they are, or the sync Worker (`SYNC`).
+ * binding and pages stay as they are, the sync Worker (`SYNC`), or the
+ * holding page's dev copy (`HOLDING`, #768).
  *
  * Any other host answers 404 and reaches neither Worker. That covers the
  * project's own pages.dev address and every preview deployment's, which are
