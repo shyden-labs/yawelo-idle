@@ -41,6 +41,7 @@ const TSCONFIGS = [
   'packages/lockdown/test/tsconfig.json',
   'packages/lockdown/tsconfig.json',
   'packages/progress/tsconfig.json',
+  'packages/ui/test/tsconfig.json',
   'packages/ui/tsconfig.json',
   'tests/web/tsconfig.json',
   'tsconfig.json',
