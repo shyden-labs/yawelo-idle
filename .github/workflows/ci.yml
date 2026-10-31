@@ -95,9 +95,8 @@ jobs:
       # hook, git on fixture repositories, scripts loading under Node (#490).
       # A unit test starts no process. One measured limit. Since #818 the
       # suite runs the real pre-push hook on four copies of the repository
-      # (clean, then a break at each gate): 49 s for each full hook run on
-      # the laptop, 2026-10-31, so about 2 minutes in all, doubled for CI's
-      # slower runner and rounded up.
+      # (clean, then a break at each gate). Measured on PR #821's first run,
+      # 2026-10-31: the step took 3 min 40 s, the pre-push file 217 s of it.
       - name: Integration tests
         timeout-minutes: 5
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
