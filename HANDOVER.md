@@ -1,20 +1,21 @@
 # Handover: Yawelo Idle
 
 **Written:** 2026-10-31 (thirty-second session). Shyden is away until the afternoon of 2026-11-01 (relayed by the repo-template session): keep working; anything needing him waits here.
-**Running when written:** a local unit run for #818 (`npm run test:unit` in `../yawelo-idle-818`), queued behind another session's test lock. It dies with `/clear`: treat it as DEAD and re-run it (step 1).
+**Running when written:** a queued local edit script in `../yawelo-idle-816` (test-locked; dies with `/clear`: then redo step 3's edits by hand). External: CI on PR #822 (#817, head `9944e1e`) and PR #823 (#815, head `db3efb3`).
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. board-next names #768 first, but #768 and #783 wait only on Shyden (below), so take the #813 children.
 
 ## Done this session
 
-- #819 merged (PR #820, squash `d3b1255`), closed by hand with AC evidence; worktree removed.
-- #768 moved In Progress → Todo (no branch names it).
-- #818: branch `test/818-real-pre-push`, worktree `../yawelo-idle-818`, commit `afb2b0f` (committed, NOT pushed). The integration test runs the real hook on repo copies (node_modules symlinked): clean passes; format/lint/type cases each plant that break plus every later gate's break, and assert the later files are not named. Integration step limit 1 → 5 min. Hook (format, lint, typecheck) green locally; board set to In Progress.
-- #817: AC1 research posted on the ticket. Corrupt local D1 file gives a real `internal error`; `createTestHarness` runs `persist: false`, so the plan is a Worker started with `unstable_startWorker` and a persist dir holding the corrupt file.
+- #819 merged (PR #820) and closed. #818 merged (PR #821, squash `162ba38`) and closed: CI ran the real hook, 7 tests, step 3 min 40 s against a 5 min limit.
+- #817: PR #822. Real Worker against a corrupt on-disk local D1 (`health-broken-d1.test.ts`); first CI run showed Linux workerd also logs `SQLITE_NOTADB`, so only the Worker's `health:` lines are counted (fixed in `ccda060`, branch updated with develop → `9944e1e`).
+- #815: PR #823. #332 re-measured on wrangler 4.148.0: site + real game serve together, recorded on #815. Site and roadmap harnesses run `../web/wrangler.jsonc`; `game-echo.ts` deleted; the lost "credentials unchanged" assertion is named in the PR.
+- #816: branch `test/816-real-dev-hosts`, worktree `../yawelo-idle-816`, NOT committed. `forward()` moved into `apps/dev-hosts/hosts.ts` (unit test `tests/unit/dev-hosts.test.ts` with mocked bindings); echo harness deleted; `scripts/verify-dev-hosts.ts` (+ `tests/unit/verify-dev-hosts.test.ts`) runs after verify-dev in deploy-dev: `/play?q=1` → 307 `/play/?q=1`, POST `/health` → 405, signed ping 204 and one-byte-altered 401, `yawelo-idle-dev-hosts.pages.dev` → 404 `not found`.
+- The test lock was held 6 h by a hung `cat` in the Steadyhand session; freed on request.
 
 ## Next
 
-1. In `../yawelo-idle-818`: `npm run test:unit` (background). If green, push, open PR into develop (`Refs #818`), run `~/.claude/scripts/pr-verdict.sh <pr>` in the background. In the CI log, see the five pre-push cases pass in "Integration tests", and read that step's time. If it is well under 5 min, set the limit from that measurement in the same PR before merge.
-2. Then #817 by the plan on the ticket, then #815 and #816 (dev Workers).
+1. PR #822 and #823: `~/.claude/scripts/pr-verdict.sh <n>` (it can return while in progress: re-read `gh pr view <n> --json statusCheckRollup`). Read the Worker tests step log for the new cases, then merge with `gh pr view N --json headRefOid --jq .headRefOid > f && test -s f && gh pr merge N --squash --match-head-commit "$(cat f)"` (one PR per command; the hook needs a literal number). The second needs `gh pr update-branch` after the first merges. Close #817 / #815 by hand with evidence; remove worktrees.
+2. #816: check the queued edit landed (`apps/dev-hosts/package.json` has no `test` script, root `test:worker` drops dev-hosts, `.gitignore` drops `.build`, `dev-config.test.ts` comment names verify-dev-hosts). Then format, lint, typecheck, unit; commit; merge develop; push; PR. Its live check runs only after merge, on the dev deploy: read that run's "Verify the dev hostnames" step before closing #816.
 3. If a Dependabot PR fails on the missing roadmap key, tell Shyden (ruling on #814).
 
 ## Waiting on Shyden
