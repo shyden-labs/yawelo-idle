@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
  * in pre-push"): a branch that adds floors fails the unit suite until CI
  * records them, so a unit run here would refuse the push the record needs.
  * The unit suite runs by hand before each push and in CI on every pull
- * request. The hook itself, run with a stand-in npm, is
- * tests/integration/pre-push.test.ts.
+ * request. The hook itself, run with the real tools on broken copies of
+ * the repository (#818), is tests/integration/pre-push.test.ts.
  */
 
 const HOOK = '.githooks/pre-push';
