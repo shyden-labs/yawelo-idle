@@ -26,6 +26,16 @@ interface Log {
   readonly message: string;
 }
 
+/**
+ * The Worker's own error lines. workerd also logs its SQLite failure at error
+ * level on Linux (`SQLITE_NOTADB`, CI 2026-11-01) but not on macOS, so the
+ * runtime's lines are not counted.
+ */
+const workerErrors = (all: readonly Log[]): Log[] =>
+  all.filter(
+    (log) => log.level === 'error' && log.message.startsWith('health:'),
+  );
+
 const persist = mkdtempSync(join(tmpdir(), 'sync-broken-d1-'));
 const logs: Log[] = [];
 
@@ -90,10 +100,10 @@ beforeAll(async () => {
     // workerd delivers its logs after the answer: wait for the error line,
     // up to a stated ceiling, before disposing the Worker that writes it.
     const ceiling = Date.now() + LOG_CEILING_MS;
-    while (!logs.some((log) => log.level === 'error')) {
+    while (workerErrors(logs).length === 0) {
       if (Date.now() > ceiling) {
         throw new Error(
-          `no error log within ${String(LOG_CEILING_MS)} ms of the 503; logs: ${JSON.stringify(logs)}`,
+          `no "health:" error log within ${String(LOG_CEILING_MS)} ms of the 503; logs: ${JSON.stringify(logs)}`,
         );
       }
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -128,7 +138,7 @@ describe('GET /health against a really broken D1 (#817)', () => {
   });
 
   it("logs D1's own error once, so a 503 can be diagnosed from the Worker logs", () => {
-    const errors = logs.filter((log) => log.level === 'error');
+    const errors = workerErrors(logs);
     expect(errors, JSON.stringify(logs)).toHaveLength(1);
     expect(errors[0]?.message).toMatch(
       /^health: D1 query failed Error: internal error; reference = /,
