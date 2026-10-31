@@ -20,11 +20,13 @@ const FOREIGN_SCRIPT = 'https://example.invalid/planted.js';
  */
 const NEIGHBOUR_SCRIPT = 'https://static.cloudflareinsights.com/planted.js';
 /**
- * Cloudflare Web Analytics' beacon as Cloudflare injects it, the version
- * after `beacon.min.js/` (#451). The test serves a stub from it; nothing is
- * fetched, and the real beacon's own version never matches it.
+ * Cloudflare Web Analytics' real beacon as Cloudflare injects it, with a
+ * version after `beacon.min.js/` (#451). It is fetched from Cloudflare, never
+ * stubbed (#819): with no token it sets `window.__cfBeacon` and sends nothing.
+ * Cloudflare served this version with 200 on 2026-10-31.
  */
-const BEACON = 'https://static.cloudflareinsights.com/beacon.min.js/vsmoke';
+const BEACON =
+  'https://static.cloudflareinsights.com/beacon.min.js/v8b253dfea2ab4077af8c6f58422dfbfd1689876627854';
 /** Every address the CSP test plants; each must be refused. */
 const PLANTED = [FOREIGN_IMAGE, FOREIGN_SCRIPT, NEIGHBOUR_SCRIPT] as const;
 /** The axe rule an image with no text alternative breaks. */
@@ -134,15 +136,10 @@ test('the shell runs under its Content Security Policy with no violation', async
   expect(unplanned).toEqual([]);
 });
 
-test("the shell runs Cloudflare Web Analytics' beacon at any version (#451)", async ({
+test("the shell runs Cloudflare Web Analytics' real beacon (#451, #819)", async ({
   page,
 }) => {
-  await page.route(BEACON, (route) =>
-    route.fulfill({
-      contentType: 'text/javascript',
-      body: 'window.__beaconRan = true;',
-    }),
-  );
+  const fetched = page.waitForResponse(BEACON);
   await page.goto('/play/');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Yawelo Idle' }),
@@ -152,13 +149,18 @@ test("the shell runs Cloudflare Web Analytics' beacon at any version (#451)", as
       Object.assign(document.createElement('script'), { src }),
     );
   }, BEACON);
+  // No fallback: if Cloudflare cannot be reached, the test fails here naming it.
+  const response = await fetched;
+  expect(response.status(), `Cloudflare served ${BEACON}`).toBe(200);
   await expect
     .poll(() =>
       page.evaluate(
-        () => (window as unknown as { __beaconRan?: boolean }).__beaconRan,
+        () =>
+          (window as unknown as { __cfBeacon?: { load?: string } }).__cfBeacon
+            ?.load,
       ),
     )
-    .toBe(true);
+    .toBe('single');
 });
 
 test('the shell has no axe violations', async ({ page }) => {
