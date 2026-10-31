@@ -5,7 +5,7 @@
 
 ## In flight: #783 (and #757) in PR #809
 
-Branch `tooling/783-release-cut-check`, worktree `../yawelo-idle-783`, head `5ad89f1ddf04c19ae429f60168195d1cb0355bc3`, all committed and pushed. Ports repo-template's `release-cut` check (pull_request_target, posts a `release-cut` status on the head) and narrows `tests/unit/workflow-secrets.ts` so pull_request_target passes only with no checkout ref/repository, `persist-credentials: false` and no secret. Local: format, lint, typecheck, unit (12,656) green. #783 and #757 set In Progress; #783 commented (AC3 decided, AC4/AC5 void after #795).
+Branch `tooling/783-release-cut-check`, worktree `../yawelo-idle-783`, head `5ee37d193fad9040e79de3b92d3629df7e9d7701`, all committed and pushed. Ports repo-template's `release-cut` check (pull_request_target, posts a `release-cut` status on the head) and narrows `tests/unit/workflow-secrets.ts` so pull_request_target passes only with no checkout ref/repository, `persist-credentials: false` and no secret; a second commit (from the automated security review) also refuses unset or write-wide permissions and expressions in shell lines. Local: format, lint, typecheck, unit (12,662) green. #783 and #757 set In Progress; #783 commented (AC3 decided, AC4/AC5 void after #795).
 
 1. `~/.claude/scripts/pr-verdict.sh 809` until it reports a finished verdict; read build-and-test, coverage and board-orphans by step name on the head SHA.
 2. Green: squash-merge into develop (`--match-head-commit` from a file), verify the dev deploy.
