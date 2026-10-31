@@ -79,17 +79,67 @@ function environmentName(environment: Yaml): string | undefined {
   return undefined;
 }
 
-const PULL_REQUEST_TARGET =
-  'pull_request_target runs fork code with this repo’s secrets and a write token';
+/** The actions a pull_request_target step may use: each runs only what its inputs name. */
+const TARGET_ACTIONS = ['actions/checkout@', 'actions/setup-node@'] as const;
+/** A tool that can fetch code, standing as a command word in a shell line. */
+const FETCHING_TOOL = /(?:^|[\s;&|(`$])(?:git|gh|curl|wget)(?=\s|$)/m;
+const ONLY_STATUSES = 'only statuses may be written';
+
+const hasExpression = (value: Yaml): boolean =>
+  strings(value).some((text) => text.includes('${{'));
+
+/** Why one step of a pull_request_target job is unsafe, or nothing. */
+function targetStepProblems(id: string, step: Yaml): string[] {
+  if (!isRecord(step)) return [];
+  const problems: string[] = [];
+  if (typeof step.run === 'string') {
+    if (step.run.includes('${{')) {
+      problems.push(
+        `jobs.${id} puts an expression in a shell line, where pull-request text could run as a command; pass it through env`,
+      );
+    }
+    if (FETCHING_TOOL.test(step.run)) {
+      problems.push(
+        `jobs.${id} runs git, gh, curl or wget in a shell line, which could fetch the pull request's code; do that in a reviewed script`,
+      );
+    }
+  }
+  if (typeof step.uses !== 'string') return problems;
+  const uses = step.uses;
+  if (!TARGET_ACTIONS.some((action) => uses.startsWith(action))) {
+    problems.push(
+      `jobs.${id} uses ${uses}; only actions/checkout and actions/setup-node may run here`,
+    );
+  }
+  if (hasExpression(step.with)) {
+    problems.push(
+      `jobs.${id} puts an expression in a with: input of ${uses}, where pull-request text could reach code; pass constants only`,
+    );
+  }
+  if (uses.startsWith('actions/checkout@')) {
+    const options = isRecord(step.with) ? step.with : {};
+    if ('ref' in options || 'repository' in options) {
+      problems.push(
+        `jobs.${id} checks out a ref or repository, which runs code the pull request chose`,
+      );
+    }
+    if (options['persist-credentials'] !== false) {
+      problems.push(
+        `jobs.${id} keeps the checkout credential, which later steps could use; set persist-credentials: false`,
+      );
+    }
+  }
+  return problems;
+}
 
 /**
- * Why a pull_request_target workflow is unsafe, or nothing. GitHub runs the
- * default branch's own copy and checks out the default branch (#783, the
- * release-cut check), so it stays safe only while no checkout fetches the
- * pull request or another repository, no checkout keeps its credential, no
- * step reads a secret, the token writes nothing but commit statuses, and no
- * shell line holds an expression (which could carry text the pull request's
- * author chose, such as its branch name).
+ * Why a pull_request_target workflow is unsafe, or nothing (#783, #810).
+ * GitHub runs the default branch's own copy and checks out the default
+ * branch, so it stays safe only while nothing it runs can reach the pull
+ * request's code or carry its text: no checkout of a ref or repository, no
+ * kept credential, no secret, a token writing nothing but statuses, no
+ * expression in a shell line or action input, no fetching tool in a shell
+ * line, no action beyond checkout and setup-node, and no reusable workflow.
  */
 function targetProblems(
   permissions: Yaml,
@@ -99,7 +149,7 @@ function targetProblems(
   const problems: string[] = [];
   if (!isRecord(permissions)) {
     problems.push(
-      'it sets no permissions; set them, writing nothing but statuses',
+      'it sets no permissions map, so its token keeps the repository default; set one writing nothing but statuses',
     );
   }
   const writes = (scopes: Yaml): string[] =>
@@ -108,45 +158,34 @@ function targetProblems(
           (scope) => scopes[scope] === 'write' && scope !== 'statuses',
         )
       : [];
-  problems.push(...writes(permissions).map((scope) => `it can write ${scope}`));
+  problems.push(
+    ...writes(permissions).map(
+      (scope) => `it can write ${scope}; ${ONLY_STATUSES}`,
+    ),
+  );
   for (const [id, job] of jobs) {
     if (!isRecord(job)) continue;
+    if (typeof job.uses === 'string') {
+      problems.push(
+        `jobs.${id} calls the reusable workflow ${job.uses}, which these rules cannot follow`,
+      );
+    }
     if (job.permissions !== undefined && !isRecord(job.permissions)) {
       problems.push(
-        `jobs.${id} sets its permissions to ${JSON.stringify(job.permissions)}`,
+        `jobs.${id} sets its permissions to ${JSON.stringify(job.permissions)}; set a map writing nothing but statuses`,
       );
     }
     problems.push(
       ...writes(job.permissions).map(
-        (scope) => `jobs.${id} can write ${scope}`,
+        (scope) => `jobs.${id} can write ${scope}; ${ONLY_STATUSES}`,
       ),
     );
     const steps = Array.isArray(job.steps) ? job.steps : [];
-    if (
-      steps.some(
-        (step) =>
-          isRecord(step) &&
-          typeof step.run === 'string' &&
-          step.run.includes('${{'),
-      )
-    ) {
-      problems.push(`jobs.${id} puts an expression in a shell line`);
-    }
-    for (const step of steps) {
-      if (!isRecord(step) || typeof step.uses !== 'string') continue;
-      if (!step.uses.startsWith('actions/checkout@')) continue;
-      const options = isRecord(step.with) ? step.with : {};
-      if ('ref' in options || 'repository' in options) {
-        problems.push(`jobs.${id} checks out a ref or repository`);
-      }
-      if (options['persist-credentials'] !== false) {
-        problems.push(`jobs.${id} keeps the checkout credential`);
-      }
-    }
+    problems.push(...steps.flatMap((step) => targetStepProblems(id, step)));
   }
   for (const reference of references) {
     problems.push(
-      `it reads ${reference.slice(reference.lastIndexOf(' ') + 1)}`,
+      `it reads ${reference.slice(reference.lastIndexOf(' ') + 1)}, which nothing triggered by a pull request may hold`,
     );
   }
   return problems;
@@ -212,7 +251,7 @@ export function scanWorkflow(file: string, source: string): Scan {
     findings.push(
       ...targetProblems(doc.permissions, jobs, references).map((problem) => ({
         where: `${file}: on`,
-        problem: `${PULL_REQUEST_TARGET}: ${problem}`,
+        problem: `pull_request_target: ${problem}`,
       })),
     );
   }
