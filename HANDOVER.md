@@ -5,17 +5,14 @@
 
 ## Done this session
 
-- **#768 code complete**: squashed into one commit `7dd8fd041566d3fabda298229e822f2d7d12a050` on `website/768-own-media-address` (worktree `../yawelo-idle-768`), pushed, **PR #808** into develop. Unit suite 12,568 passed locally; typecheck, lint, format clean.
-- Dead "host sends no headers" support removed from `MediaHost` / `verify-prod`.
-- AC5 as a plain check: `scripts/free-hosts.ts` + CI step "No built page loads from a free shared domain" (builds the holding page and its dev copy after the main build). Watched it fail once on a planted r2.dev address. Evidence on the ticket. `readBuild`'s tests are in `tests/guards/free-hosts-read.test.ts` (unit setup refuses tree walks), so only CI has run them.
-- Board: #768 set In Progress.
+- **#768 merged**: PR #808 squash-merged into develop as `3b031ca245f4923674f37097f44233d2c713152f` after all 50 build-and-test steps (new guards test and "No built page loads from a free shared domain" included), board-orphans and coverage passed on head `7dd8fd04`.
 
 ## Resume steps (#768)
 
-1. `~/.claude/scripts/pr-verdict.sh 808` in the background. Read every job by step name on head `7dd8fd04`, including the new guards test and the three new build-and-test steps. If red, add a fixing commit (no force-push), then squash-merge.
-2. Green: squash-merge into develop; watch the dev deploy and its verify (dev-media files byte for byte, dev-holding reachable).
-3. AC4 needs Shyden on Biznet with ordinary DNS: both `dev.yawelo-idle.shyden.co.uk` and `dev-holding.yawelo-idle.shyden.co.uk` play the video in Chrome (`networkState` not 3, `readyState` 4). Write the reading on the ticket.
-4. Then Shyden turns off the old dev-account bucket and its r2.dev address; the ticket is then shut by hand.
+1. Dev deploy run 41193853222 on `3b031ca2` passed 100/100 steps (recorded on #768).
+2. AC4 needs Shyden on Biznet with ordinary DNS: both `dev.yawelo-idle.shyden.co.uk` and `dev-holding.yawelo-idle.shyden.co.uk` play the video in Chrome (`networkState` not 3, `readyState` 4). Write the reading on the ticket.
+3. Then Shyden turns off the old dev-account bucket and its r2.dev address; the ticket is then shut by hand.
+4. Remove the `../yawelo-idle-768` worktree after a look (branch merged).
 
 ## State
 
