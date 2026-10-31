@@ -6,7 +6,7 @@ import {
   suiteFailure,
   THRESHOLDS,
   totalsOf,
-  unrenderedComponents,
+  untestedScreens,
 } from '../../scripts/coverage';
 
 /** One file's map: two statements, one branch with two arms. */
@@ -59,44 +59,86 @@ describe('every suite is joined before the totals are taken (#795)', () => {
   });
 });
 
-describe('every Svelte screen is rendered by a test (#802)', () => {
-  /** A component's entry: its one function, called `calls` times. */
-  const component = (path: string, calls: number): CoverageMapData => {
-    const loc = { start: { line: 1, column: 0 }, end: { line: 9, column: 0 } };
-    return {
-      [path]: {
-        path,
-        statementMap: {},
-        fnMap: { 0: { name: 'Screen', decl: loc, loc, line: 1 } },
-        branchMap: {},
-        s: {},
-        f: { 0: calls },
-        b: {},
+describe('every Svelte screen is tested in full (#802, #804)', () => {
+  const at = (line: number) => ({
+    start: { line, column: 0 },
+    end: { line, column: 1 },
+  });
+  /**
+   * A screen's entry: the component function on line 1, a handler on line 4,
+   * statements on lines 2 and 5, and an if on line 6 with its two arms.
+   */
+  const screen = (
+    path: string,
+    hits: { s: [number, number]; f: [number, number]; b: [number, number] },
+  ): CoverageMapData => ({
+    [path]: {
+      path,
+      statementMap: { 0: at(2), 1: at(5) },
+      fnMap: {
+        0: { name: 'Screen', decl: at(1), loc: at(1), line: 1 },
+        1: { name: 'buy', decl: at(4), loc: at(4), line: 4 },
       },
-    };
-  };
+      branchMap: {
+        0: { loc: at(6), type: 'if', locations: [at(6), at(7)], line: 6 },
+      },
+      s: { 0: hits.s[0], 1: hits.s[1] },
+      f: { 0: hits.f[0], 1: hits.f[1] },
+      b: { 0: hits.b },
+    },
+  });
+  const ALL: { s: [number, number]; f: [number, number]; b: [number, number] } =
+    { s: [1, 1], f: [1, 1], b: [1, 1] };
 
-  it('passes a component one suite rendered, whatever the others did', () => {
+  it('passes a screen whose every statement, arm and function ran', () => {
+    expect(untestedScreens([screen('/r/Shop.svelte', { ...ALL })])).toEqual([]);
+  });
+
+  it('names an unrun statement with its line', () => {
     expect(
-      unrenderedComponents([
-        component('/r/Shop.svelte', 0),
-        component('/r/Shop.svelte', 2),
+      untestedScreens([screen('/r/Shop.svelte', { ...ALL, s: [1, 0] })]),
+    ).toEqual(['/r/Shop.svelte:5: statement never run']);
+  });
+
+  it('names an unrun branch arm with its line', () => {
+    expect(
+      untestedScreens([screen('/r/Shop.svelte', { ...ALL, b: [3, 0] })]),
+    ).toEqual(['/r/Shop.svelte:7: branch arm 2 of 2 never taken']);
+  });
+
+  it('names an unrun function, a handler no test called', () => {
+    expect(
+      untestedScreens([screen('/r/Shop.svelte', { ...ALL, f: [1, 0] })]),
+    ).toEqual(['/r/Shop.svelte:4: function buy never called']);
+  });
+
+  it('names everything in a screen no test rendered, in line order', () => {
+    expect(
+      untestedScreens([
+        screen('/r/Shop.svelte', { s: [0, 0], f: [0, 0], b: [0, 0] }),
+      ]),
+    ).toEqual([
+      '/r/Shop.svelte:1: function Screen never called',
+      '/r/Shop.svelte:2: statement never run',
+      '/r/Shop.svelte:4: function buy never called',
+      '/r/Shop.svelte:5: statement never run',
+      '/r/Shop.svelte:6: branch arm 1 of 2 never taken',
+      '/r/Shop.svelte:7: branch arm 2 of 2 never taken',
+    ]);
+  });
+
+  it('passes a screen two suites ran between them', () => {
+    expect(
+      untestedScreens([
+        screen('/r/Shop.svelte', { s: [1, 0], f: [1, 0], b: [1, 0] }),
+        screen('/r/Shop.svelte', { s: [0, 1], f: [0, 1], b: [0, 1] }),
       ]),
     ).toEqual([]);
   });
 
-  it('names a component no suite rendered', () => {
-    expect(
-      unrenderedComponents([
-        component('/r/Shop.svelte', 0),
-        component('/r/Map.svelte', 1),
-      ]),
-    ).toEqual(['/r/Shop.svelte']);
-  });
-
   it('names a Svelte file whose entry holds no function, rather than passing it', () => {
     expect(
-      unrenderedComponents([
+      untestedScreens([
         {
           '/r/Odd.svelte': {
             path: '/r/Odd.svelte',
@@ -109,11 +151,11 @@ describe('every Svelte screen is rendered by a test (#802)', () => {
           },
         },
       ]),
-    ).toEqual(['/r/Odd.svelte']);
+    ).toEqual(['/r/Odd.svelte:1: no component function, so no render shows']);
   });
 
   it('judges only Svelte files', () => {
-    expect(unrenderedComponents([fileMap('a.ts', [0, 0], [0, 0])])).toEqual([]);
+    expect(untestedScreens([fileMap('a.ts', [0, 0], [0, 0])])).toEqual([]);
   });
 });
 

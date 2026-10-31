@@ -1,8 +1,8 @@
 /**
  * Coverage (#728, #795): `npm run test:coverage` measures every suite
  * pull-request CI runs, joins them, and fails below one overall threshold
- * for statements and one for branches, or when a Svelte component is never
- * rendered by a test (#802).
+ * for statements and one for branches, or when any statement, branch arm or
+ * function of a Svelte screen goes untested (#802, #804).
  *
  *   node scripts/coverage.ts
  */
@@ -84,23 +84,53 @@ export function totalsOf(maps: readonly CoverageMapData[]): Totals {
 }
 
 /**
- * Every Svelte file whose component no suite rendered (#802): no function in
- * its joined entry was ever called. An entry with no function at all is
- * named too, since it cannot show a render.
+ * Everything in a Svelte screen no suite ran (#802, #804; Shyden, 2026-10-31:
+ * "behaviour must be teste always"): each statement, branch arm and function,
+ * as `path:line: what`, by file and then line. Every screen is held to all
+ * of it. An entry with no function at all is named too, since it cannot
+ * show a render.
  */
-export function unrenderedComponents(
-  maps: readonly CoverageMapData[],
-): string[] {
+export function untestedScreens(maps: readonly CoverageMapData[]): string[] {
   const joined = libCoverage.createCoverageMap({});
   for (const map of maps) joined.merge(map);
   return joined
     .files()
     .filter((path) => path.endsWith('.svelte'))
-    .filter((path) => {
-      const calls = Object.values(joined.fileCoverageFor(path).f);
-      return calls.length === 0 || calls.every((n) => n === 0);
-    })
-    .sort();
+    .sort()
+    .flatMap((path) => {
+      const { data } = joined.fileCoverageFor(path);
+      if (Object.keys(data.fnMap).length === 0)
+        return [`${path}:1: no component function, so no render shows`];
+      const found: [number, string][] = [
+        ...Object.entries(data.fnMap)
+          .filter(([id]) => data.f[id] === 0)
+          .map(([, fn]): [number, string] => [
+            fn.decl.start.line,
+            `function ${fn.name} never called`,
+          ]),
+        ...Object.entries(data.statementMap)
+          .filter(([id]) => data.s[id] === 0)
+          .map(([, loc]): [number, string] => [
+            loc.start.line,
+            'statement never run',
+          ]),
+        ...Object.entries(data.branchMap).flatMap(([id, branch]) =>
+          branch.locations.flatMap((loc, arm): [number, string][] =>
+            data.b[id]?.[arm] === 0
+              ? [
+                  [
+                    loc.start.line,
+                    `branch arm ${String(arm + 1)} of ${String(branch.locations.length)} never taken`,
+                  ],
+                ]
+              : [],
+          ),
+        ),
+      ];
+      return found
+        .sort((x, y) => x[0] - y[0])
+        .map(([line, what]) => `${path}:${String(line)}: ${what}`);
+    });
 }
 
 const die = (message: string): never => {
@@ -133,10 +163,10 @@ function measure(): void {
   );
   const below = shortfalls(totals);
   if (below.length > 0) die(`below threshold:\n  ${below.join('\n  ')}`);
-  const unrendered = unrenderedComponents(maps);
-  if (unrendered.length > 0)
+  const untested = untestedScreens(maps);
+  if (untested.length > 0)
     die(
-      `every screen needs a test that renders it (#802); none renders:\n  ${unrendered.join('\n  ')}`,
+      `every screen's behaviour is tested in full (#804); untested:\n  ${untested.join('\n  ')}`,
     );
 }
 
