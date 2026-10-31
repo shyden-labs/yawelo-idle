@@ -2,13 +2,16 @@
   "$schema": "../../../node_modules/wrangler/config-schema.json",
   // The holding page's dev copy (#621 AC8): the production holding build with
   // crawlers blocked and every response noindex (scripts/holding-dev.ts), in
-  // the dev-only "Shyden Labs Dev" account at its workers.dev address, so
-  // Shyden checks it on his phones before a release. Assets only, like
+  // the dev-only "Shyden Labs Dev" account, so Shyden checks it on his phones
+  // before a release. It has no address of its own: the dev hostname adapter
+  // serves it at dev-holding.yawelo-idle.shyden.co.uk (#768), since
+  // Indonesian providers block free shared domains and the media's CORP
+  // same-site lets only shyden.co.uk pages show it. Assets only, like
   // production; it holds nothing private, since it is what goes public.
   // Deployed by deploy-dev.yml.
   "name": "yawelo-idle-holding-dev",
   "compatibility_date": "2026-09-30",
-  "workers_dev": true,
+  "workers_dev": false,
   "preview_urls": false,
   "assets": {
     "directory": "../dist-holding-dev",

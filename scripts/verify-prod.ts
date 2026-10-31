@@ -198,7 +198,7 @@ const typeCheck = (label: string, answer: MediaProbe, type: string): Check => ({
   },
 });
 
-/** One check per header the media host must send, or must not (`null`). */
+/** One check per header the media host must send. */
 const hostHeaderChecks = (
   label: string,
   answer: MediaProbe,
@@ -208,10 +208,6 @@ const hostHeaderChecks = (
     name: `${label} ${name}`,
     problem: () => {
       const served = answer.headers.get(name);
-      if (expected === null)
-        return served === null
-          ? undefined
-          : `${label}: ${name} is ${served}, expected none`;
       return served === expected
         ? undefined
         : `${label}: ${name} is ${served ?? 'missing'}, expected ${expected}`;
@@ -289,7 +285,7 @@ export const rangeProblems = (
 
 /**
  * A promo file asked for a range past its end: 416 with the host's headers,
- * naming its size where the host does and no Content-Range where it doesn't.
+ * naming the file's size in its Content-Range.
  */
 export function pastEndJudgement(
   url: string,
@@ -299,9 +295,7 @@ export function pastEndJudgement(
 ): Judgement {
   const label = `${url} ${pastEnd(source.bytes.length)}`;
   const range = answer.headers.get('content-range');
-  const expected = host.sizeOnPastEnd
-    ? `bytes */${String(source.bytes.length)}`
-    : null;
+  const expected = `bytes */${String(source.bytes.length)}`;
   return judge([
     statusCheck(label, answer, 416),
     {
@@ -309,7 +303,7 @@ export function pastEndJudgement(
       problem: () =>
         range === expected
           ? undefined
-          : `${label}: Content-Range ${range ?? 'missing'}, expected ${expected ?? 'none'}`,
+          : `${label}: Content-Range ${range ?? 'missing'}, expected ${expected}`,
     },
     ...hostHeaderChecks(label, answer, host),
   ]);

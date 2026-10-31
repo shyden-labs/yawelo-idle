@@ -14,6 +14,7 @@ import { DEV_HOSTS, type DevBinding } from '../hosts';
 const ECHO: Record<DevBinding, string> = {
   SITE: 'site-echo',
   SYNC: 'sync-echo',
+  HOLDING: 'holding-echo',
 };
 
 const server = createTestHarness({
@@ -27,6 +28,7 @@ const server = createTestHarness({
         services: [
           { binding: 'SITE', service: ECHO.SITE },
           { binding: 'SYNC', service: ECHO.SYNC },
+          { binding: 'HOLDING', service: ECHO.HOLDING },
         ],
       },
     },
@@ -50,10 +52,11 @@ afterAll(async () => {
 });
 
 describe('the dev hostnames', () => {
-  it('are exactly the site’s and the sync API’s, each with its binding (#429)', () => {
+  it('are exactly the site’s, the sync API’s and the holding page’s dev copy, each with its binding (#429, #768)', () => {
     expect([...DEV_HOSTS]).toEqual([
       ['dev.yawelo-idle.shyden.co.uk', 'SITE'],
       ['dev-api.yawelo-idle.shyden.co.uk', 'SYNC'],
+      ['dev-holding.yawelo-idle.shyden.co.uk', 'HOLDING'],
     ]);
   });
 });

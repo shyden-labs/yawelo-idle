@@ -29,14 +29,12 @@ export const mediaUrl = (file: string): string => `${MEDIA_ORIGIN}/${file}`;
 
 /**
  * A host the promo media are served from, and the headers each answer must
- * carry: a value is required as given, and `null` must be absent. A host
- * with `sizeOnPastEnd` names the file's size in a 416's Content-Range; one
- * without must send no Content-Range there.
+ * carry, each required as given. A range past the end answers 416 naming
+ * the file's size in its Content-Range.
  */
 export interface MediaHost {
   origin: string;
-  headers: Readonly<Record<string, string | null>>;
-  sizeOnPastEnd: boolean;
+  headers: Readonly<Record<string, string>>;
 }
 
 /** Production's host: its zone rule adds both headers to every answer. */
@@ -46,22 +44,17 @@ export const PROD_MEDIA: MediaHost = {
     'cross-origin-resource-policy': 'same-site',
     'x-content-type-options': 'nosniff',
   },
-  sizeOnPastEnd: true,
 };
 
 /**
- * The dev copy's host (Shyden, 2026-10-20, "Dev media store"): the bucket
- * `yawelo-idle-media-dev` in the dev account, on its free r2.dev address,
- * which has no zone to add headers. It sends no CORP, which lets the dev copy
- * on workers.dev show the files, no nosniff, and a 416 with no Content-Range
- * (measured the same day). Telkomsel's DNS blocks every r2.dev name, so a
- * phone checking the dev copy uses Cloudflare's DNS.
+ * The dev copy's host (#768): the bucket `yawelo-idle-media-dev` on
+ * dev-media.shyden.co.uk, set up like production's. Indonesian providers
+ * block every free r2.dev name (Telkomsel and Biznet, measured 2026-10-20 and
+ * 2026-10-26), so dev's media sit on our own domain, and a zone rule scoped to
+ * this host adds the same two headers as production's. Both dev pages that
+ * show the media are on shyden.co.uk, so CORP same-site lets them load it.
  */
 export const DEV_MEDIA: MediaHost = {
-  origin: 'https://pub-cc0bef26b6c5493a8c18f31547d2bc72.r2.dev',
-  headers: {
-    'cross-origin-resource-policy': null,
-    'x-content-type-options': null,
-  },
-  sizeOnPastEnd: false,
+  ...PROD_MEDIA,
+  origin: 'https://dev-media.shyden.co.uk',
 };

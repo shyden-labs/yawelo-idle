@@ -67,6 +67,9 @@ const ORDER = [
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)',
   'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)',
   'Build (a warning fails it)',
+  'Build the holding page',
+  'Make its dev copy',
+  'No built page loads from a free shared domain',
 ];
 
 /** The steps a docs-only change runs (AC2). */
@@ -97,6 +100,9 @@ const SKIPPED: Record<string, string> = {
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)': `\${{ ${SKIP} }}`,
   'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)': `\${{ ${SKIP} }}`,
   'Build (a warning fails it)': `\${{ ${SKIP} }}`,
+  'Build the holding page': `\${{ ${SKIP} }}`,
+  'Make its dev copy': `\${{ ${SKIP} }}`,
+  'No built page loads from a free shared domain': `\${{ ${SKIP} }}`,
 };
 
 describe('build-and-test’s steps (#360 AC2)', () => {
