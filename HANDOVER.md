@@ -8,7 +8,8 @@
 - **#795 closed** (PR #796, `dc1a57d`): the dropped test machinery is removed, and coverage is one overall threshold. Develop's required checks are build-and-test, board-orphans and coverage.
 - **#798 closed** (PR #799, `4c7805f`): Svelte files count in the coverage score. Thresholds are statements 85 and branches 76, floored from the exact counts. The report rounds down when it prints.
 - **#802 closed** (PR #803, `a96766e`): every screen must have tests (Shyden, 2026-10-31). The coverage job fails when a Svelte component is never rendered by a test; `packages/ui/test/Shell.test.ts` renders the shell with `svelte/server`.
-- **#804 closed** (PR #805, `aee526c`): behaviour must always be tested (Shyden, 2026-10-31). Every Svelte screen is held to 100% of its statements, branch arms and functions, and the job names each unrun line. Limit, measured: a template `{:else}` arm is invisible to coverage, so the story template also asks for a test that draws every template branch. The first screen with buttons will need a DOM test environment.
+- **#804 closed** (PR #805, `aee526c`): behaviour must always be tested (Shyden, 2026-10-31). Every Svelte screen is held to 100% of its statements, branch arms and functions, and the job names each unrun line. Limit, measured: a template `{:else}` arm is invisible to coverage, so the story template also asks for a test that draws every template branch. The DOM test environment is now in place (#806).
+- **#806 closed** (PR #807, `52f91ce`): unit tests can click screens. Add `// @vitest-environment jsdom`, then `mount`, click and `flushSync()`, as `packages/ui/test/Counter.test.ts` does. Svelte is measured in the unit suite alone, and Svelte's own `?? ''` on each `{value}` is not judged.
 - **#800 closed** (PR #801, `f21baae`): the pemandu-tick case generator no longer draws a negative `until`.
 - **Filed #797** (P2): the roadmap App's unused Administration: read, and develop's "Require review from Code Owners". Both are Shyden's calls.
 - The dev deploy on `4c7805f` is green. Told the ShyTalk session how our promo video and site are built.
@@ -24,7 +25,7 @@
 - Scratch refs on origin, now pointless (deleting them is Shyden's call): `refs/floors/tooling/771-record-rehearse-job`, `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit`.
 - Waiting on Shyden: #784 (Gmail and Cloudflare login for Yawelo), #788, #797, `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
 
-## Progress (board, measured 2026-10-31 after #804 closed)
+## Progress (board, measured 2026-10-31 after #806 closed)
 
-- By tickets: 35% (148 of 417), pace 1.14 a day, ETA 2027-06-24 (low confidence: 4 of the 7 days closed nothing).
-- By effort: 1,173 points remaining across 269 open stories, pace 2.86 a day, ETA 2027-12-16 (low confidence). Both before outside waits (#784's login, device sign-off).
+- By tickets: 36% (149 of 418), pace 1.29 a day, ETA 2027-05-29 (low confidence: 4 of the 7 days closed nothing).
+- By effort: 1,173 points remaining across 269 open stories, pace 3.14 a day, ETA 2027-11-09 (low confidence). Both before outside waits (#784's login, device sign-off).
