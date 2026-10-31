@@ -12,6 +12,8 @@
 
 ## Next
 
+0. New global rule (2026-10-31, "Every test is as real as its kind allows"): filed #813 (P0, 13 pts) for the six stand-ins in non-unit suites (fake GitHub, game and dev echo Workers, throwing D1, fake npm, beacon stub). It is the next unblocked P0 after #768. AC2 needs Shyden's ruling on any stand-in kept because nothing real can produce that state.
+
 1. board-next says #768 (P0, In Progress). Its last step is Shyden's: turn off the old dev-account bucket and its r2.dev address, then shut #768 by hand. Until then, take the next ticket that does not wait on him.
 2. The phones are shared: message busy sessions before driving one (memory "Ask before driving a shared phone").
 
