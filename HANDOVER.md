@@ -12,7 +12,7 @@
 
 1. Run `~/.claude/scripts/pr-verdict.sh 820` (background). If green on the head SHA, read the jobs by name, see the beacon test pass in the web job's log, squash-merge into develop, close #819 by hand, remove `../yawelo-idle-819`.
 2. If the web job fails on the beacon, read why (CI network, CSP, the version path) before any change.
-3. Then the next child of #813 by board-next (all P0). #814 needs the App to create a test board in shyden-labs; if it cannot, ask Shyden.
+3. Then the next child of #813 by board-next (all P0). #814 needs the App to create a test board in shyden-labs; if it cannot, ask Shyden. If a Dependabot PR then fails on the missing key, tell Shyden: he adds `ROADMAP_APP_KEY` as a Dependabot secret (ruling on #814).
 4. #768 still waits on Shyden (old bucket and r2.dev off).
 5. The phones are shared: message busy sessions before driving one.
 
