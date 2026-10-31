@@ -124,11 +124,49 @@ describe('scanWorkflow', () => {
     expect(scan.findings).toEqual([]);
   });
 
-  it('refuses pull_request_target outright', () => {
-    const source =
-      'on:\n  pull_request_target:\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: "true"\n';
-    expect(problems(source)).toEqual([
-      'pull_request_target runs fork code with this repo’s secrets and a write token',
+  // pull_request_target runs the default branch's own workflow and checkout
+  // (#783, the release-cut check): it is safe only while no step checks out
+  // the pull request, keeps a credential, or reads a secret.
+  const target = (steps: string, env = '') =>
+    `on:\n  pull_request_target:\njobs:\n  t:\n    runs-on: ubuntu-latest\n${env}    steps:\n${steps}`;
+  const checkout = (extra = '') =>
+    `      - uses: actions/checkout@x\n        with:\n          persist-credentials: false\n${extra}`;
+  const UNSAFE =
+    'pull_request_target runs fork code with this repo’s secrets and a write token';
+
+  it('allows pull_request_target that checks out only the default branch, keeps no credential and reads no secret', () => {
+    expect(
+      problems(target(`${checkout()}      - run: node x.ts "$GITHUB_TOKEN"\n`)),
+    ).toEqual([]);
+  });
+
+  it('refuses pull_request_target whose checkout names a ref', () => {
+    const steps = checkout(
+      '          ref: ${{ github.event.pull_request.head.sha }}\n',
+    );
+    expect(problems(target(steps))).toEqual([
+      `${UNSAFE}: jobs.t checks out a ref or repository`,
+    ]);
+  });
+
+  it('refuses pull_request_target whose checkout names a repository', () => {
+    const steps = checkout('          repository: someone/fork\n');
+    expect(problems(target(steps))).toEqual([
+      `${UNSAFE}: jobs.t checks out a ref or repository`,
+    ]);
+  });
+
+  it('refuses pull_request_target whose checkout keeps its credential', () => {
+    const steps = '      - uses: actions/checkout@x\n';
+    expect(problems(target(steps))).toEqual([
+      `${UNSAFE}: jobs.t keeps the checkout credential`,
+    ]);
+  });
+
+  it('refuses pull_request_target that reads a secret, even in a protected environment', () => {
+    const steps = `${checkout()}      - run: echo "\${{ secrets.DEPLOY }}"\n`;
+    expect(problems(target(steps, '    environment: dev\n'))).toEqual([
+      `${UNSAFE}: it reads secrets.DEPLOY`,
     ]);
   });
 });

@@ -79,6 +79,43 @@ function environmentName(environment: Yaml): string | undefined {
   return undefined;
 }
 
+const PULL_REQUEST_TARGET =
+  'pull_request_target runs fork code with this repo’s secrets and a write token';
+
+/**
+ * Why a pull_request_target workflow is unsafe, or nothing. GitHub runs the
+ * default branch's own copy and checks out the default branch (#783, the
+ * release-cut check), so it stays safe only while no checkout fetches the
+ * pull request or another repository, no checkout keeps its credential, and
+ * no step reads a secret.
+ */
+function targetProblems(
+  jobs: [string, Yaml][],
+  references: string[],
+): string[] {
+  const problems: string[] = [];
+  for (const [id, job] of jobs) {
+    const steps = isRecord(job) && Array.isArray(job.steps) ? job.steps : [];
+    for (const step of steps) {
+      if (!isRecord(step) || typeof step.uses !== 'string') continue;
+      if (!step.uses.startsWith('actions/checkout@')) continue;
+      const options = isRecord(step.with) ? step.with : {};
+      if ('ref' in options || 'repository' in options) {
+        problems.push(`jobs.${id} checks out a ref or repository`);
+      }
+      if (options['persist-credentials'] !== false) {
+        problems.push(`jobs.${id} keeps the checkout credential`);
+      }
+    }
+  }
+  for (const reference of references) {
+    problems.push(
+      `it reads ${reference.slice(reference.lastIndexOf(' ') + 1)}`,
+    );
+  }
+  return problems;
+}
+
 export function scanWorkflow(file: string, source: string): Scan {
   const doc: Yaml = parse(source);
   if (!isRecord(doc)) {
@@ -99,14 +136,6 @@ export function scanWorkflow(file: string, source: string): Scan {
       : Array.isArray(doc.on)
         ? doc.on.filter((t): t is string => typeof t === 'string')
         : [];
-  if (triggers.includes('pull_request_target')) {
-    findings.push({
-      where: `${file}: on`,
-      problem:
-        'pull_request_target runs fork code with this repo’s secrets and a write token',
-    });
-  }
-
   for (const key of Object.keys(doc).filter((k) => k !== 'jobs')) {
     const refs = secretReferences(strings(doc[key]).join('\n'));
     references.push(...refs.map((ref) => `${file}: ${key}: ${ref}`));
@@ -141,6 +170,15 @@ export function scanWorkflow(file: string, source: string): Scan {
         });
       }
     }
+  }
+
+  if (triggers.includes('pull_request_target')) {
+    findings.push(
+      ...targetProblems(jobs, references).map((problem) => ({
+        where: `${file}: on`,
+        problem: `${PULL_REQUEST_TARGET}: ${problem}`,
+      })),
+    );
   }
 
   return {
