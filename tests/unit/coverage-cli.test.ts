@@ -154,6 +154,60 @@ describe('every Svelte screen is tested in full (#802, #804)', () => {
     ).toEqual(['/r/Odd.svelte:1: no component function, so no render shows']);
   });
 
+  /** A screen whose line 3 is `source`, with a logical branch on it. */
+  const logical = (source: string, arms: [number, number]) => ({
+    map: {
+      '/r/Text.svelte': {
+        path: '/r/Text.svelte',
+        statementMap: {},
+        fnMap: { 0: { name: 'Text', decl: at(1), loc: at(1), line: 1 } },
+        branchMap: {
+          0: {
+            loc: {
+              start: { line: 3, column: 13 },
+              end: { line: 3, column: null },
+            },
+            type: 'binary-expr',
+            locations: [
+              {
+                start: { line: 3, column: 13 },
+                end: { line: 3, column: null },
+              },
+              {
+                start: { line: 3, column: 18 },
+                end: { line: 3, column: null },
+              },
+            ],
+            line: 3,
+          },
+        },
+        s: {},
+        f: { 0: 1 },
+        b: { 0: arms },
+      },
+    } as unknown as CoverageMapData,
+    read: () => `<script>\n</script>\n${source}\n`,
+  });
+
+  it("passes the `?? ''` Svelte adds to a {value}, which no test can take", () => {
+    const { map, read } = logical('  <p>Count: {count}</p>', [3, 0]);
+    expect(untestedScreens([map], read)).toEqual([]);
+  });
+
+  it('names an untaken arm of a ?? written in the screen', () => {
+    const { map, read } = logical("  <p>Count: {count ?? 'none'}</p>", [3, 0]);
+    expect(untestedScreens([map], read)).toEqual([
+      '/r/Text.svelte:3: branch arm 2 of 2 never taken',
+    ]);
+  });
+
+  it('names an untaken arm of a || or && written in the screen', () => {
+    const { map, read } = logical('  <p>Count: {a || b && c}</p>', [3, 0]);
+    expect(untestedScreens([map], read)).toEqual([
+      '/r/Text.svelte:3: branch arm 2 of 2 never taken',
+    ]);
+  });
+
   it('judges only Svelte files', () => {
     expect(untestedScreens([fileMap('a.ts', [0, 0], [0, 0])])).toEqual([]);
   });
