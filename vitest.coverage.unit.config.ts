@@ -1,5 +1,5 @@
 import type { ViteUserConfig } from 'vitest/config';
-import { COVERAGE } from './scripts/coverage-config.ts';
+import { COVERAGE, UNIT_INCLUDE } from './scripts/coverage-config.ts';
 import unit from './vitest.config.ts';
 
 // The unit suite under coverage (#728): run by `npm run test:coverage`,
@@ -13,6 +13,10 @@ export default {
     setupFiles: ['tests/unit/setup-refusals.ts'],
     testTimeout: 0,
     hookTimeout: 0,
-    coverage: { ...COVERAGE, reportsDirectory: 'coverage/unit' },
+    coverage: {
+      ...COVERAGE,
+      include: UNIT_INCLUDE,
+      reportsDirectory: 'coverage/unit',
+    },
   },
 } satisfies ViteUserConfig;

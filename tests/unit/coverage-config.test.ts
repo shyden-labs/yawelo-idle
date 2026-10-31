@@ -127,13 +127,24 @@ describe('every suite writes one report the measure step joins (#728)', () => {
     );
   });
 
+  // Svelte is measured in the unit suite alone, where screens are rendered
+  // (#806): another suite would compile an unloaded screen for the server,
+  // a different map that merges in as unrun lines.
+  const INCLUDE: Record<string, string> = {
+    unit: '**/*.{ts,js,mjs,cjs,mts,cts,svelte}',
+    guards: '**/*.{ts,js,mjs,cjs,mts,cts}',
+    integration: '**/*.{ts,js,mjs,cjs,mts,cts}',
+    properties: '**/*.{ts,js,mjs,cjs,mts,cts}',
+    pacing: '**/*.{ts,js,mjs,cjs,mts,cts}',
+  };
+
   for (const [name, config] of CONFIGS)
-    it(`${name}: the custom provider, every JS, TS and Svelte file, our exclude only`, () => {
+    it(`${name}: the custom provider, its files, our exclude only`, () => {
       expect(config.test.coverage).toEqual({
         enabled: true,
         provider: 'custom',
         customProviderModule: 'scripts/coverage-provider.ts',
-        include: ['**/*.{ts,js,mjs,cjs,mts,cts,svelte}'],
+        include: [INCLUDE[name]],
         exclude: [...COVERAGE_EXCLUDE],
         reporter: [
           ['json', { file: 'coverage-final.json' }],
@@ -146,19 +157,21 @@ describe('every suite writes one report the measure step joins (#728)', () => {
     });
 });
 
-describe('every suite under coverage compiles Svelte (#798)', () => {
+describe('only the unit suite compiles Svelte under coverage (#798, #806)', () => {
+  const svelteCopies = (config: (typeof CONFIGS)[number][1]): number =>
+    (config.plugins ?? [])
+      .flat()
+      .filter(
+        (plugin) =>
+          plugin !== null &&
+          typeof plugin === 'object' &&
+          'name' in plugin &&
+          plugin.name === 'vite-plugin-svelte:config',
+      ).length;
+
   for (const [name, config] of CONFIGS)
-    it(`${name}: carries the Svelte plugin once, so an untested component counts as untested`, () => {
-      const names = (config.plugins ?? [])
-        .flat()
-        .map((plugin) =>
-          plugin !== null && typeof plugin === 'object' && 'name' in plugin
-            ? plugin.name
-            : undefined,
-        );
-      expect(
-        names.filter((n) => n === 'vite-plugin-svelte:config'),
-      ).toHaveLength(1);
+    it(`${name}: carries the Svelte plugin ${name === 'unit' ? 'once' : 'not at all'}`, () => {
+      expect(svelteCopies(config)).toBe(name === 'unit' ? 1 : 0);
     });
 });
 
