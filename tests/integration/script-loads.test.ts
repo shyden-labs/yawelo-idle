@@ -38,6 +38,7 @@ const SCRIPTS = [
   'scripts/ensure-d1.ts',
   'scripts/holding-dev.ts',
   'scripts/prod-version.ts',
+  'scripts/release-cut.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
   'scripts/verify-dev.ts',

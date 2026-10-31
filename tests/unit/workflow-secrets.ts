@@ -79,6 +79,79 @@ function environmentName(environment: Yaml): string | undefined {
   return undefined;
 }
 
+const PULL_REQUEST_TARGET =
+  'pull_request_target runs fork code with this repo’s secrets and a write token';
+
+/**
+ * Why a pull_request_target workflow is unsafe, or nothing. GitHub runs the
+ * default branch's own copy and checks out the default branch (#783, the
+ * release-cut check), so it stays safe only while no checkout fetches the
+ * pull request or another repository, no checkout keeps its credential, no
+ * step reads a secret, the token writes nothing but commit statuses, and no
+ * shell line holds an expression (which could carry text the pull request's
+ * author chose, such as its branch name).
+ */
+function targetProblems(
+  permissions: Yaml,
+  jobs: [string, Yaml][],
+  references: string[],
+): string[] {
+  const problems: string[] = [];
+  if (!isRecord(permissions)) {
+    problems.push(
+      'it sets no permissions; set them, writing nothing but statuses',
+    );
+  }
+  const writes = (scopes: Yaml): string[] =>
+    isRecord(scopes)
+      ? Object.keys(scopes).filter(
+          (scope) => scopes[scope] === 'write' && scope !== 'statuses',
+        )
+      : [];
+  problems.push(...writes(permissions).map((scope) => `it can write ${scope}`));
+  for (const [id, job] of jobs) {
+    if (!isRecord(job)) continue;
+    if (job.permissions !== undefined && !isRecord(job.permissions)) {
+      problems.push(
+        `jobs.${id} sets its permissions to ${JSON.stringify(job.permissions)}`,
+      );
+    }
+    problems.push(
+      ...writes(job.permissions).map(
+        (scope) => `jobs.${id} can write ${scope}`,
+      ),
+    );
+    const steps = Array.isArray(job.steps) ? job.steps : [];
+    if (
+      steps.some(
+        (step) =>
+          isRecord(step) &&
+          typeof step.run === 'string' &&
+          step.run.includes('${{'),
+      )
+    ) {
+      problems.push(`jobs.${id} puts an expression in a shell line`);
+    }
+    for (const step of steps) {
+      if (!isRecord(step) || typeof step.uses !== 'string') continue;
+      if (!step.uses.startsWith('actions/checkout@')) continue;
+      const options = isRecord(step.with) ? step.with : {};
+      if ('ref' in options || 'repository' in options) {
+        problems.push(`jobs.${id} checks out a ref or repository`);
+      }
+      if (options['persist-credentials'] !== false) {
+        problems.push(`jobs.${id} keeps the checkout credential`);
+      }
+    }
+  }
+  for (const reference of references) {
+    problems.push(
+      `it reads ${reference.slice(reference.lastIndexOf(' ') + 1)}`,
+    );
+  }
+  return problems;
+}
+
 export function scanWorkflow(file: string, source: string): Scan {
   const doc: Yaml = parse(source);
   if (!isRecord(doc)) {
@@ -99,14 +172,6 @@ export function scanWorkflow(file: string, source: string): Scan {
       : Array.isArray(doc.on)
         ? doc.on.filter((t): t is string => typeof t === 'string')
         : [];
-  if (triggers.includes('pull_request_target')) {
-    findings.push({
-      where: `${file}: on`,
-      problem:
-        'pull_request_target runs fork code with this repo’s secrets and a write token',
-    });
-  }
-
   for (const key of Object.keys(doc).filter((k) => k !== 'jobs')) {
     const refs = secretReferences(strings(doc[key]).join('\n'));
     references.push(...refs.map((ref) => `${file}: ${key}: ${ref}`));
@@ -141,6 +206,15 @@ export function scanWorkflow(file: string, source: string): Scan {
         });
       }
     }
+  }
+
+  if (triggers.includes('pull_request_target')) {
+    findings.push(
+      ...targetProblems(doc.permissions, jobs, references).map((problem) => ({
+        where: `${file}: on`,
+        problem: `${PULL_REQUEST_TARGET}: ${problem}`,
+      })),
+    );
   }
 
   return {
