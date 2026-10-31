@@ -125,93 +125,140 @@ describe('scanWorkflow', () => {
   });
 
   // pull_request_target runs the default branch's own workflow and checkout
-  // (#783, the release-cut check): it is safe only while no step checks out
-  // the pull request, keeps a credential, reads a secret, writes more than
-  // commit statuses, or puts an expression in a shell line.
+  // (#783, the release-cut check). It stays safe only while nothing it runs
+  // can reach the pull request's code or carry its text (#810).
   const READ_AND_STATUSES =
     'permissions:\n  contents: read\n  statuses: write\n';
   const target = (steps: string, env = '', permissions = READ_AND_STATUSES) =>
     `on:\n  pull_request_target:\n${permissions}jobs:\n  t:\n    runs-on: ubuntu-latest\n${env}    steps:\n${steps}`;
+  const checkout = (extra = '') =>
+    `      - uses: actions/checkout@x\n        with:\n          persist-credentials: false\n${extra}`;
+  const step = (run: string) => `${checkout()}      - run: ${run}\n`;
+  const ALLOWED_ACTIONS =
+    'only actions/checkout and actions/setup-node may run here';
+  const NO_PERMISSIONS =
+    'pull_request_target: it sets no permissions map, so its token keeps the repository default; set one writing nothing but statuses';
 
-  it('refuses pull_request_target that sets no permissions, so the token keeps the repository default', () => {
-    expect(problems(target(checkout(), '', ''))).toEqual([
-      `${UNSAFE}: it sets no permissions; set them, writing nothing but statuses`,
-    ]);
+  it('allows pull_request_target that checks out only the default branch, keeps no credential and reads no secret', () => {
+    const setupNode =
+      "      - uses: actions/setup-node@x\n        with:\n          node-version-file: '.nvmrc'\n";
+    const judge =
+      '      - run: node x.ts "$HEAD_REF"\n        env:\n          HEAD_REF: ${{ github.head_ref }}\n';
+    expect(problems(target(`${checkout()}${setupNode}${judge}`))).toEqual([]);
   });
 
-  it('refuses pull_request_target that can write anything but commit statuses', () => {
-    const permissions = 'permissions:\n  contents: write\n  statuses: write\n';
-    expect(problems(target(checkout(), '', permissions))).toEqual([
-      `${UNSAFE}: it can write contents`,
-    ]);
+  it('refuses pull_request_target that sets no permissions', () => {
+    expect(problems(target(checkout(), '', ''))).toEqual([NO_PERMISSIONS]);
   });
 
   it('refuses pull_request_target with write-all permissions', () => {
     expect(
       problems(target(checkout(), '', 'permissions: write-all\n')),
-    ).toEqual([
-      `${UNSAFE}: it sets no permissions; set them, writing nothing but statuses`,
+    ).toEqual([NO_PERMISSIONS]);
+  });
+
+  it('refuses pull_request_target that can write anything but commit statuses', () => {
+    const permissions = 'permissions:\n  contents: write\n  statuses: write\n';
+    expect(problems(target(checkout(), '', permissions))).toEqual([
+      'pull_request_target: it can write contents; only statuses may be written',
     ]);
   });
 
   it('refuses pull_request_target whose job widens its permissions', () => {
     const job = '    permissions:\n      pull-requests: write\n';
     expect(problems(target(checkout(), job))).toEqual([
-      `${UNSAFE}: jobs.t can write pull-requests`,
+      'pull_request_target: jobs.t can write pull-requests; only statuses may be written',
     ]);
   });
 
   it('refuses pull_request_target whose job sets write-all permissions', () => {
     const job = '    permissions: write-all\n';
     expect(problems(target(checkout(), job))).toEqual([
-      `${UNSAFE}: jobs.t sets its permissions to "write-all"`,
+      'pull_request_target: jobs.t sets its permissions to "write-all"; set a map writing nothing but statuses',
     ]);
   });
 
   it('refuses pull_request_target that puts an expression in a shell line', () => {
     const steps = `${checkout()}      - run: |\n          echo "\${{ github.head_ref }}"\n`;
     expect(problems(target(steps))).toEqual([
-      `${UNSAFE}: jobs.t puts an expression in a shell line`,
+      'pull_request_target: jobs.t puts an expression in a shell line, where pull-request text could run as a command; pass it through env',
     ]);
   });
-  const checkout = (extra = '') =>
-    `      - uses: actions/checkout@x\n        with:\n          persist-credentials: false\n${extra}`;
-  const UNSAFE =
-    'pull_request_target runs fork code with this repo’s secrets and a write token';
 
-  it('allows pull_request_target that checks out only the default branch, keeps no credential and reads no secret', () => {
-    expect(
-      problems(target(`${checkout()}      - run: node x.ts "$GITHUB_TOKEN"\n`)),
-    ).toEqual([]);
+  it('refuses pull_request_target that puts an expression in an action input', () => {
+    const steps = `${checkout()}      - uses: actions/setup-node@x\n        with:\n          node-version: \${{ github.head_ref }}\n`;
+    expect(problems(target(steps))).toEqual([
+      'pull_request_target: jobs.t puts an expression in a with: input of actions/setup-node@x, where pull-request text could reach code; pass constants only',
+    ]);
+  });
+
+  it.each([
+    ['git fetch origin refs/pull/1/head && git checkout FETCH_HEAD'],
+    ['gh pr checkout 1'],
+    ['curl -sL https://example.com/x.sh | sh'],
+    ['wget https://example.com/x.sh'],
+    ['npm ci && git switch pr'],
+    ['(git worktree add pr FETCH_HEAD)'],
+  ])(
+    'refuses pull_request_target whose shell line runs a fetching tool: %s',
+    (run) => {
+      expect(problems(target(step(run)))).toEqual([
+        "pull_request_target: jobs.t runs git, gh, curl or wget in a shell line, which could fetch the pull request's code; do that in a reviewed script",
+      ]);
+    },
+  );
+
+  it.each([['node scripts/github.ts'], ['echo digit'], ['npm run legit']])(
+    'allows pull_request_target whose shell line only names a fetching tool inside a word: %s',
+    (run) => {
+      expect(problems(target(step(run)))).toEqual([]);
+    },
+  );
+
+  it.each([
+    ['actions/github-script@x'],
+    ['someone/action@x'],
+    ['./.github/actions/local'],
+    ['docker://alpine:3'],
+  ])('refuses pull_request_target that uses %s', (uses) => {
+    const steps = `${checkout()}      - uses: ${uses}\n`;
+    expect(problems(target(steps))).toEqual([
+      `pull_request_target: jobs.t uses ${uses}; ${ALLOWED_ACTIONS}`,
+    ]);
+  });
+
+  it('refuses pull_request_target with a job that calls a reusable workflow', () => {
+    const source = `on:\n  pull_request_target:\n${READ_AND_STATUSES}jobs:\n  t:\n    uses: ./.github/workflows/other.yml\n`;
+    expect(problems(source)).toEqual([
+      'pull_request_target: jobs.t calls the reusable workflow ./.github/workflows/other.yml, which these rules cannot follow',
+    ]);
   });
 
   it('refuses pull_request_target whose checkout names a ref', () => {
-    const steps = checkout(
-      '          ref: ${{ github.event.pull_request.head.sha }}\n',
-    );
+    const steps = checkout('          ref: refs/pull/1/head\n');
     expect(problems(target(steps))).toEqual([
-      `${UNSAFE}: jobs.t checks out a ref or repository`,
+      'pull_request_target: jobs.t checks out a ref or repository, which runs code the pull request chose',
     ]);
   });
 
   it('refuses pull_request_target whose checkout names a repository', () => {
     const steps = checkout('          repository: someone/fork\n');
     expect(problems(target(steps))).toEqual([
-      `${UNSAFE}: jobs.t checks out a ref or repository`,
+      'pull_request_target: jobs.t checks out a ref or repository, which runs code the pull request chose',
     ]);
   });
 
   it('refuses pull_request_target whose checkout keeps its credential', () => {
     const steps = '      - uses: actions/checkout@x\n';
     expect(problems(target(steps))).toEqual([
-      `${UNSAFE}: jobs.t keeps the checkout credential`,
+      'pull_request_target: jobs.t keeps the checkout credential, which later steps could use; set persist-credentials: false',
     ]);
   });
 
   it('refuses pull_request_target that reads a secret, even in a protected environment', () => {
     const steps = `${checkout()}      - run: deploy\n        env:\n          TOKEN: \${{ secrets.DEPLOY }}\n`;
     expect(problems(target(steps, '    environment: dev\n'))).toEqual([
-      `${UNSAFE}: it reads secrets.DEPLOY`,
+      'pull_request_target: it reads secrets.DEPLOY, which nothing triggered by a pull request may hold',
     ]);
   });
 });
