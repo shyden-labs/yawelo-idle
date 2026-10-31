@@ -84,13 +84,33 @@ export function totalsOf(maps: readonly CoverageMapData[]): Totals {
 }
 
 /**
+ * Whether a logical branch is one Svelte's compiler added rather than one
+ * written in the screen (#806): it compiles every `{value}` in the markup to
+ * `${value ?? ''}`, whose second arm no test can take for a value that is
+ * never null. The source from the branch's start to the end of its line
+ * then holds no logical operator. One written there (`??`, `||`, `&&`) is
+ * judged, even when the line also holds a plain `{value}`.
+ */
+export function compilerMade(
+  branch: { type: string; loc: { start: { line: number; column: number } } },
+  lines: readonly string[],
+): boolean {
+  if (branch.type !== 'binary-expr') return false;
+  const { line, column } = branch.loc.start;
+  return !/\?\?|\|\||&&/.test((lines[line - 1] ?? '').slice(column));
+}
+
+/**
  * Everything in a Svelte screen no suite ran (#802, #804; Shyden, 2026-10-31:
  * "behaviour must be teste always"): each statement, branch arm and function,
  * as `path:line: what`, by file and then line. Every screen is held to all
- * of it. An entry with no function at all is named too, since it cannot
+ * of it, but for the branches its compiler adds (`compilerMade`). An entry with no function at all is named too, since it cannot
  * show a render.
  */
-export function untestedScreens(maps: readonly CoverageMapData[]): string[] {
+export function untestedScreens(
+  maps: readonly CoverageMapData[],
+  read: (path: string) => string = (path) => readFileSync(path, 'utf8'),
+): string[] {
   const joined = libCoverage.createCoverageMap({});
   for (const map of maps) joined.merge(map);
   return joined
@@ -99,6 +119,8 @@ export function untestedScreens(maps: readonly CoverageMapData[]): string[] {
     .sort()
     .flatMap((path) => {
       const { data } = joined.fileCoverageFor(path);
+      let source: string[] | undefined;
+      const lines = (): string[] => (source ??= read(path).split('\n'));
       if (Object.keys(data.fnMap).length === 0)
         return [`${path}:1: no component function, so no render shows`];
       const found: [number, string][] = [
@@ -115,16 +137,18 @@ export function untestedScreens(maps: readonly CoverageMapData[]): string[] {
             'statement never run',
           ]),
         ...Object.entries(data.branchMap).flatMap(([id, branch]) =>
-          branch.locations.flatMap((loc, arm): [number, string][] =>
-            data.b[id]?.[arm] === 0
-              ? [
-                  [
-                    loc.start.line,
-                    `branch arm ${String(arm + 1)} of ${String(branch.locations.length)} never taken`,
-                  ],
-                ]
-              : [],
-          ),
+          branch.type === 'binary-expr' && compilerMade(branch, lines())
+            ? []
+            : branch.locations.flatMap((loc, arm): [number, string][] =>
+                data.b[id]?.[arm] === 0
+                  ? [
+                      [
+                        loc.start.line,
+                        `branch arm ${String(arm + 1)} of ${String(branch.locations.length)} never taken`,
+                      ],
+                    ]
+                  : [],
+              ),
         ),
       ];
       return found

@@ -31,7 +31,10 @@ import { committableFiles } from '../unit/tracked-files';
  * code at collection (tests/guards/collection-calls.test.ts). The first test
  * derives both lists from git and fails on any difference, either way.
  */
-const COMPONENTS = ['packages/ui/src/Shell.svelte'] as const;
+const COMPONENTS = [
+  'packages/ui/src/Shell.svelte',
+  'packages/ui/test/fixtures/Counter.svelte',
+] as const;
 const WORKSPACES = ['packages/ui'] as const;
 
 /** The workspace (`apps/x`, `packages/x`) holding a path. */

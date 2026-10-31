@@ -1,5 +1,4 @@
 import type { ViteUserConfig } from 'vitest/config';
-import { SVELTE_PLUGINS } from './svelte-plugin.ts';
 import unit from '../vitest.config.ts';
 import guards from '../vitest.guards.config.ts';
 import integration from '../vitest.integration.config.ts';
@@ -66,7 +65,7 @@ export const COVERAGE: NonNullable<
   enabled: true,
   provider: 'custom',
   customProviderModule: 'scripts/coverage-provider.ts',
-  include: ['**/*.{ts,js,mjs,cjs,mts,cts,svelte}'],
+  include: ['**/*.{ts,js,mjs,cjs,mts,cts}'],
   exclude: [...COVERAGE_EXCLUDE],
   reporter: [
     ['json', { file: 'coverage-final.json' }],
@@ -77,7 +76,9 @@ export const COVERAGE: NonNullable<
 };
 
 /**
- * The plugins a suite under coverage adds when its own config lacks them
- * (#798): the unit suite's config already carries Svelte (#802).
+ * The unit suite's include under coverage (#798, #806): every JS and TS file
+ * and every Svelte screen. Svelte is measured there alone, where screens are
+ * rendered; another suite would compile an unloaded screen for the server,
+ * a different map that merges in as unrun lines.
  */
-export const COVERAGE_PLUGINS = SVELTE_PLUGINS;
+export const UNIT_INCLUDE = ['**/*.{ts,js,mjs,cjs,mts,cts,svelte}'];

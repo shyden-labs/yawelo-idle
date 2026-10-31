@@ -1,0 +1,11 @@
+{
+  // The ui tests (#802, #806) run in Node under vitest, some in jsdom, so
+  // they see Node's and the DOM's types, while the package's own
+  // tsconfig.json keeps src/ to the DOM alone.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.svelte", "../src/**/*.ts", "../src/**/*.svelte"]
+}

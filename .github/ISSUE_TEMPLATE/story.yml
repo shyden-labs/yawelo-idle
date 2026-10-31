@@ -50,6 +50,6 @@ body:
       value: |
         - Every new test written first and seen red for the stated reason.
         - Every new guard seen failing once when written.
-        - Every new or changed Svelte screen's behaviour tested in full: every statement, branch and handler run by a test (the coverage job fails otherwise, #804), and every template branch ({#if}/{:else}, {#each} and its {:else}) drawn by a test, which coverage cannot see.
+        - Every new or changed Svelte screen's behaviour tested in full: every statement, branch and handler run by a test (the coverage job fails otherwise, #804), driven in jsdom with clicks as packages/ui/test/Counter.test.ts does (#806).
         - Lint, typecheck, formatting and the zero-warnings gate pass; no retries; one test per case.
         - CI green on the PR head SHA, read step by step by name; merged into `develop` and deployed to dev, verified.

@@ -13,6 +13,10 @@ import { SVELTE_PLUGINS } from './scripts/svelte-plugin.ts';
  */
 export default defineConfig({
   plugins: [SVELTE_PLUGINS],
+  // A component test that opts into jsdom (#806) runs in Vite's client
+  // environment; there Svelte must resolve its browser build, which has
+  // mount. Node-environment tests keep the server build.
+  environments: { client: { resolve: { conditions: ['browser'] } } },
   test: {
     testTimeout: 1_000,
     hookTimeout: 1_000,
