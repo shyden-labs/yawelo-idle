@@ -93,9 +93,13 @@ jobs:
         run: npm run test:guards
       # Tests where a process is the thing tested: shell scripts, the git
       # hook, git on fixture repositories, scripts loading under Node (#490).
-      # A unit test starts no process. One measured limit.
+      # A unit test starts no process. One measured limit. Since #818 the
+      # suite runs the real pre-push hook on four copies of the repository
+      # (clean, then a break at each gate): 49 s for each full hook run on
+      # the laptop, 2026-10-31, so about 2 minutes in all, doubled for CI's
+      # slower runner and rounded up.
       - name: Integration tests
-        timeout-minutes: 1
+        timeout-minutes: 5
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:integration
       # Every fast-check property at its count from before any cut to fit the
