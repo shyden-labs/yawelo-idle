@@ -126,9 +126,54 @@ describe('scanWorkflow', () => {
 
   // pull_request_target runs the default branch's own workflow and checkout
   // (#783, the release-cut check): it is safe only while no step checks out
-  // the pull request, keeps a credential, or reads a secret.
-  const target = (steps: string, env = '') =>
-    `on:\n  pull_request_target:\njobs:\n  t:\n    runs-on: ubuntu-latest\n${env}    steps:\n${steps}`;
+  // the pull request, keeps a credential, reads a secret, writes more than
+  // commit statuses, or puts an expression in a shell line.
+  const READ_AND_STATUSES =
+    'permissions:\n  contents: read\n  statuses: write\n';
+  const target = (steps: string, env = '', permissions = READ_AND_STATUSES) =>
+    `on:\n  pull_request_target:\n${permissions}jobs:\n  t:\n    runs-on: ubuntu-latest\n${env}    steps:\n${steps}`;
+
+  it('refuses pull_request_target that sets no permissions, so the token keeps the repository default', () => {
+    expect(problems(target(checkout(), '', ''))).toEqual([
+      `${UNSAFE}: it sets no permissions; set them, writing nothing but statuses`,
+    ]);
+  });
+
+  it('refuses pull_request_target that can write anything but commit statuses', () => {
+    const permissions = 'permissions:\n  contents: write\n  statuses: write\n';
+    expect(problems(target(checkout(), '', permissions))).toEqual([
+      `${UNSAFE}: it can write contents`,
+    ]);
+  });
+
+  it('refuses pull_request_target with write-all permissions', () => {
+    expect(
+      problems(target(checkout(), '', 'permissions: write-all\n')),
+    ).toEqual([
+      `${UNSAFE}: it sets no permissions; set them, writing nothing but statuses`,
+    ]);
+  });
+
+  it('refuses pull_request_target whose job widens its permissions', () => {
+    const job = '    permissions:\n      pull-requests: write\n';
+    expect(problems(target(checkout(), job))).toEqual([
+      `${UNSAFE}: jobs.t can write pull-requests`,
+    ]);
+  });
+
+  it('refuses pull_request_target whose job sets write-all permissions', () => {
+    const job = '    permissions: write-all\n';
+    expect(problems(target(checkout(), job))).toEqual([
+      `${UNSAFE}: jobs.t sets its permissions to "write-all"`,
+    ]);
+  });
+
+  it('refuses pull_request_target that puts an expression in a shell line', () => {
+    const steps = `${checkout()}      - run: |\n          echo "\${{ github.head_ref }}"\n`;
+    expect(problems(target(steps))).toEqual([
+      `${UNSAFE}: jobs.t puts an expression in a shell line`,
+    ]);
+  });
   const checkout = (extra = '') =>
     `      - uses: actions/checkout@x\n        with:\n          persist-credentials: false\n${extra}`;
   const UNSAFE =
@@ -164,7 +209,7 @@ describe('scanWorkflow', () => {
   });
 
   it('refuses pull_request_target that reads a secret, even in a protected environment', () => {
-    const steps = `${checkout()}      - run: echo "\${{ secrets.DEPLOY }}"\n`;
+    const steps = `${checkout()}      - run: deploy\n        env:\n          TOKEN: \${{ secrets.DEPLOY }}\n`;
     expect(problems(target(steps, '    environment: dev\n'))).toEqual([
       `${UNSAFE}: it reads secrets.DEPLOY`,
     ]);

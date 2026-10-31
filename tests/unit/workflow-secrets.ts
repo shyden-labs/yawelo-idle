@@ -86,16 +86,52 @@ const PULL_REQUEST_TARGET =
  * Why a pull_request_target workflow is unsafe, or nothing. GitHub runs the
  * default branch's own copy and checks out the default branch (#783, the
  * release-cut check), so it stays safe only while no checkout fetches the
- * pull request or another repository, no checkout keeps its credential, and
- * no step reads a secret.
+ * pull request or another repository, no checkout keeps its credential, no
+ * step reads a secret, the token writes nothing but commit statuses, and no
+ * shell line holds an expression (which could carry text the pull request's
+ * author chose, such as its branch name).
  */
 function targetProblems(
+  permissions: Yaml,
   jobs: [string, Yaml][],
   references: string[],
 ): string[] {
   const problems: string[] = [];
+  if (!isRecord(permissions)) {
+    problems.push(
+      'it sets no permissions; set them, writing nothing but statuses',
+    );
+  }
+  const writes = (scopes: Yaml): string[] =>
+    isRecord(scopes)
+      ? Object.keys(scopes).filter(
+          (scope) => scopes[scope] === 'write' && scope !== 'statuses',
+        )
+      : [];
+  problems.push(...writes(permissions).map((scope) => `it can write ${scope}`));
   for (const [id, job] of jobs) {
-    const steps = isRecord(job) && Array.isArray(job.steps) ? job.steps : [];
+    if (!isRecord(job)) continue;
+    if (job.permissions !== undefined && !isRecord(job.permissions)) {
+      problems.push(
+        `jobs.${id} sets its permissions to ${JSON.stringify(job.permissions)}`,
+      );
+    }
+    problems.push(
+      ...writes(job.permissions).map(
+        (scope) => `jobs.${id} can write ${scope}`,
+      ),
+    );
+    const steps = Array.isArray(job.steps) ? job.steps : [];
+    if (
+      steps.some(
+        (step) =>
+          isRecord(step) &&
+          typeof step.run === 'string' &&
+          step.run.includes('${{'),
+      )
+    ) {
+      problems.push(`jobs.${id} puts an expression in a shell line`);
+    }
     for (const step of steps) {
       if (!isRecord(step) || typeof step.uses !== 'string') continue;
       if (!step.uses.startsWith('actions/checkout@')) continue;
@@ -174,7 +210,7 @@ export function scanWorkflow(file: string, source: string): Scan {
 
   if (triggers.includes('pull_request_target')) {
     findings.push(
-      ...targetProblems(jobs, references).map((problem) => ({
+      ...targetProblems(doc.permissions, jobs, references).map((problem) => ({
         where: `${file}: on`,
         problem: `${PULL_REQUEST_TARGET}: ${problem}`,
       })),
