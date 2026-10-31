@@ -1,21 +1,20 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-31 (thirtieth session). **Running when written:** nothing local, nothing external.
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin` (v26.12.1). The non-prod login is in `DEV_PASSWORD` / `DEV_BASIC_AUTH_PASSWORD`, loaded by `~/.zshenv` only in `yawelo-idle*` folders (other projects use the same names).
+**Written:** 2026-10-31 (thirty-first session). **Running when written:** nothing local. External: CI on PR #820 (head `0fd1ce86`, in progress when written).
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin` (v26.12.1). The non-prod login is in `DEV_PASSWORD` / `DEV_BASIC_AUTH_PASSWORD`, loaded by `~/.zshenv` only in `yawelo-idle*` folders.
 
 ## Done this session
 
-- #783 + #757: PR #809 merged (`ffd8b907`), the release-cut check. `main` now requires release-cut through the ruleset "main: release cuts only" (GitHub Actions, not strict); `main`'s classic rule has strict off; `develop` is unchanged. All read back by API and recorded. Both tickets are back in Todo: #783 waits for a non-release PR into `main` to be seen refused (the local hook stops the agent opening one); #757 waits for AC6, the next release cut merging green.
-- #810 closed: PR #811 merged (`a359d321`), which closes the `pull_request_target` gaps in `tests/unit/workflow-secrets.ts`.
-- #768 AC4 done on Telkomsel (no Biznet available, Shyden): the video plays on laptop Chrome, Android Chrome and iPhone Safari, on both `dev` and `dev-holding`. Recorded on the ticket.
-- Filed #812 (P2, 3 pts, blocks #632): the agent taps and types on the iPhone itself through shyden.co.uk's WebDriverAgent setup (recipe on the ticket).
+- #813 split (Shyden's rulings, recorded on #813): six P0 children, each linked as a sub-issue and as a "Blocked by" of #813: #814 real GitHub test board (5), #815 site harness to the real game Worker (3), #816 dev-hosts to the real dev Workers (2), #817 real D1 failure, no injected throw (3; Shyden: try a real failure, come back if impossible), #818 pre-push test with the real tools on a broken copy, CI only (2), #819 real beacon (1). #813 itself re-scored to 2 (AC4's guard test only).
+- #819: PR #820 (`test/819-real-beacon`, worktree `../yawelo-idle-819`), loads the real beacon at `beacon.min.js/v8b253dfea2ab4077af8c6f58422dfbfd1689876627854` and checks `window.__cfBeacon.load === 'single'`. Local format, lint, typecheck and unit (12,677) green.
 
 ## Next
 
-0. New global rule (2026-10-31, "Every test is as real as its kind allows"): filed #813 (P0, 13 pts) for the six stand-ins in non-unit suites (fake GitHub, game and dev echo Workers, throwing D1, fake npm, beacon stub). It is the next unblocked P0 after #768. AC2 needs Shyden's ruling on any stand-in kept because nothing real can produce that state.
-
-1. board-next says #768 (P0, In Progress). Its last step is Shyden's: turn off the old dev-account bucket and its r2.dev address, then shut #768 by hand. Until then, take the next ticket that does not wait on him.
-2. The phones are shared: message busy sessions before driving one (memory "Ask before driving a shared phone").
+1. Run `~/.claude/scripts/pr-verdict.sh 820` (background). If green on the head SHA, read the jobs by name, see the beacon test pass in the web job's log, squash-merge into develop, close #819 by hand, remove `../yawelo-idle-819`.
+2. If the web job fails on the beacon, read why (CI network, CSP, the version path) before any change.
+3. Then the next child of #813 by board-next (all P0). #814 needs the App to create a test board in shyden-labs; if it cannot, ask Shyden.
+4. #768 still waits on Shyden (old bucket and r2.dev off).
+5. The phones are shared: message busy sessions before driving one.
 
 ## Waiting on Shyden
 
@@ -28,5 +27,5 @@
 
 ## Progress (board, measured 2026-10-31)
 
-- By tickets: 36% (150 of 419), pace 1.43 a day, ETA 2027-05-08 (low confidence: 4 of 7 days moved nothing).
-- By effort: 1,174 points remaining across 269 open stories, pace 3.57 a day, ETA 2027-09-25 (low confidence). Both before outside waits (#784's login, device sign-off).
+- By tickets: 35% (150 of 426), pace 1.43 a day, ETA 2027-05-13 (low confidence: 4 of 7 days moved nothing).
+- By effort: 1,192 points remaining across 276 open stories, pace 3.57 a day, ETA 2027-09-30 (low confidence). Both before outside waits (#784's login, device sign-off).
