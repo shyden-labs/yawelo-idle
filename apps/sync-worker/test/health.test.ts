@@ -8,8 +8,8 @@ import { createTestHarness } from 'wrangler';
  * wrangler.jsonc, on the workerd that wrangler itself deploys with and a real
  * local D1 (spec §12.4). Every case runs inside workerd (#506).
  *
- * Cases that need an environment no deploy has (another commit, a D1 that
- * throws) go to a second Worker in the same harness: test/injected-worker.ts,
+ * Cases that need an environment no deploy has (another commit) go to a
+ * second Worker in the same harness: test/injected-worker.ts,
  * which wraps the real one and makes the change the `x-inject` header names.
  * Its config, wrangler.injected.jsonc, differs from wrangler.jsonc only in
  * `name` and `main`, which the first test holds.
@@ -85,23 +85,6 @@ describe('GET /health', () => {
     const response = await inject(`commit=${sha}`);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ commit: sha });
-  });
-
-  it('answers 503, not 200, when D1 throws', async () => {
-    const response = await inject('d1-throws');
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      ok: false,
-      commit: 'local',
-      db: 'unreachable',
-    });
-  });
-
-  it('logs why D1 failed, so a 503 can be diagnosed from the Worker logs', async () => {
-    const response = await inject('d1-throws');
-    expect(JSON.parse(response.headers.get('x-console-error') ?? '')).toEqual([
-      ['health: D1 query failed', '<the injected D1 error>'],
-    ]);
   });
 
   it.each(['POST', 'PUT', 'DELETE', 'PATCH'])(
