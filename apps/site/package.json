@@ -7,7 +7,7 @@
     "build": "astro build",
     "build:holding": "astro build --config astro.holding.config.ts",
     "typecheck": "astro check --minimumSeverity hint && tsc --noEmit -p worker && tsc --noEmit -p test/roadmap-worker",
-    "build:harness": "astro build && astro build --config astro.holding.config.ts",
+    "build:harness": "npm run build --workspace @yawelo-idle/web && astro build && astro build --config astro.holding.config.ts",
     "test": "npm run build:harness && vitest run -c vitest.harness.config.ts",
     "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
   },
