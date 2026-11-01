@@ -13,7 +13,7 @@
 ## Next
 
 1. **#827 (PR #832)**, worktree `../yawelo-idle-826`, branch `feat/827-voyage-map`, pushed head `9d16cb5` (svelte-check fix: `test/roadmap` got its own tsconfig; core `contextAt` lost a dead parameter). Local format, lint, typecheck and unit (12,762 passed) green. **CI was running when written: re-read with `~/.claude/scripts/pr-verdict.sh 832`, read checks by name, merge if green.** After merge read deploy-dev's `site-smoke` job (first run of `tests/site`) and set its step limit to ≥3× the measured run (#476).
-2. **#828**, branch `feat/828-roadmap-figures` (same worktree), local head `d1f3e54`, WIP, NOT pushed: failing tests for `etaDate` and `confidence` in `packages/progress` (11 red against throwing stubs). Confidence rule (mine, for Shyden to change): high at ≥6 of 7 days moved, medium at 4–5, low otherwise or a window under 7 days. Then the site's summary (what's left by epic + totals, both estimates, recently shipped, updated-ago, waiting on decisions). The branch was cut from #827's `fad360c`: merge develop in once #832 lands.
+2. **#828**, branch `feat/828-roadmap-figures` (same worktree, checked out now), local head `d977c20`, NOT pushed: `etaDate` and `confidence` done in `packages/progress` (126 tests green; `eta()` reuses `etaDate`). Confidence rule (mine, for Shyden to change): high at ≥6 of 7 days moved, medium at 4–5, low otherwise or under 7 days. Next: the site's summary (what's left by epic + totals, both estimates, recently shipped, updated-ago, waiting on decisions). Cut from #827's `fad360c`: merge develop in once #832 lands.
 3. Then #829 (live updates); #830 waits on Shyden's copy approval.
 4. New: #833 (P2, 3 pts): lint lets an unused non-trailing parameter through (`args: after-used`; 20 of 22 tsconfigs leave noUnused off).
 
@@ -29,7 +29,7 @@
 - Main checkout on `handover/2026-10-17-d` (handover commits only). Dead worktrees, safe to remove after a look: `../yawelo-idle-794`, `-761`, `-771`, `-782`, `-785`, `-786`, `-728b`, `-752`, `-36`. `-728-probe` has uncommitted probe files: ask before removing.
 - Scratch refs on origin (deleting them is Shyden's call): `refs/floors/tooling/771-record-rehearse-job`, `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit`.
 
-## Progress (board, measured 2026-11-01)
+## Progress (board, measured 2026-11-02)
 
-- By tickets: 36% (154 of 426), pace 2.00 a day, ETA 2027-03-17 (low confidence: 3 of 7 days moved nothing).
-- By effort: 1,183 points remaining across 272 open stories, pace 4.86 a day, ETA 2027-07-03 (low confidence). Both before outside waits (#784's login, device sign-off).
+- By tickets: 37% (157 of 430), pace 2.43 a day, ETA 2027-02-22 (medium confidence: 4 of 7 days moved).
+- By effort: 1,177 points remaining across 273 open stories, pace 5.86 a day, ETA 2027-05-21 (medium confidence). Both before outside waits (#784's login, device sign-off).
