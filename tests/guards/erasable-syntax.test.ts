@@ -27,6 +27,7 @@ const TSCONFIGS = [
   'apps/dev-hosts/functions/tsconfig.json',
   'apps/dev-hosts/tsconfig.json',
   'apps/site/test/roadmap-worker/tsconfig.json',
+  'apps/site/test/roadmap/tsconfig.json',
   'apps/site/tsconfig.json',
   'apps/site/worker/tsconfig.json',
   'apps/sync-worker/tsconfig.json',
@@ -43,6 +44,7 @@ const TSCONFIGS = [
   'packages/progress/tsconfig.json',
   'packages/ui/test/tsconfig.json',
   'packages/ui/tsconfig.json',
+  'tests/site/tsconfig.json',
   'tests/web/tsconfig.json',
   'tsconfig.json',
 ] as const;

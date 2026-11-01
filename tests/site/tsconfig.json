@@ -1,0 +1,11 @@
+{
+  // The site's browser specs (#827): their callbacks run in the page, so this
+  // project sees the DOM, like tests/web. The root project excludes them.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["*.ts"],
+  "exclude": []
+}
