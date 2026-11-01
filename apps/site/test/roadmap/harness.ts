@@ -68,16 +68,13 @@ export function roadmapWorld({ appKey = true }: { appKey?: boolean } = {}) {
               ROADMAP_WEBHOOK_SECRET: WEBHOOK_SECRET,
               ...(appKey ? { ROADMAP_APP_KEY: keys.privateKey } : {}),
             },
-            // The roadmap's tests ask the front door for no page (#673).
-            bindingOverrides: { GAME: 'game-echo', HOLDING: 'game-echo' },
+            // The roadmap's tests ask the front door for no page (#673), so
+            // the holding binding takes the real game too, the one other
+            // Worker this harness runs (#815).
+            bindingOverrides: { HOLDING: 'yawelo-idle-web-dev' },
           },
-          {
-            config: {
-              name: 'game-echo',
-              main: './test/game-echo.ts',
-              compatibility_date: '2026-09-30',
-            },
-          },
+          // The real game Worker, the service the GAME binding names (#815).
+          { configPath: '../web/wrangler.jsonc' },
         ],
       });
       await server.listen();
