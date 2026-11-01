@@ -1,7 +1,7 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-02 (thirty-third session), stopped for a computer restart (Shyden, relayed). **Phones unavailable: no device work until Shyden says.**
-**Running when written:** nothing local. External: nothing (PR #832's last CI run finished red, see below).
+**Written:** 2026-11-02 (thirty-fourth session). **Phones unavailable: no device work until Shyden says.**
+**Running when written:** nothing local. External: PR #832 CI on `9d16cb5`.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. Skip #768 and #783 (wait on Shyden).
 
 ## Done this session
@@ -12,9 +12,10 @@
 
 ## Next
 
-1. **#827 (PR #832), worktree `../yawelo-idle-826`, branch `feat/827-voyage-map`, local head `259beb6` (committed, NOT pushed; origin has `fad360c`).** CI on `fad360c` failed in Guards: `tests/guards/erasable-syntax.test.ts` (tsconfig list) and `tests/guards/svelte-gates.test.ts` (components + workspaces). `259beb6` adds `tests/site/tsconfig.json` and the two components + `apps/site` to those lists, `noUnusedLocals`/`noUnusedParameters` to `apps/site/tsconfig.json`, `svelte-check` to the site's devDependencies and to the front of its `typecheck`. **That site typecheck now fails at svelte-check: run `cd apps/site && npx svelte-check --tsconfig ./tsconfig.json --fail-on-warnings` and read why** (likely the `.astro/types.d.ts` include or the worker files). Then lint, `npm run typecheck`, `npm run test:unit`, push, read #832's checks by name, merge. After merge read deploy-dev's `site-smoke` job (first run of `tests/site`) and set its step limit to ≥3× the measured run (#476).
+1. **#827 (PR #832)**, worktree `../yawelo-idle-826`, branch `feat/827-voyage-map`, pushed head `9d16cb5` (svelte-check fix: `test/roadmap` got its own tsconfig; core `contextAt` lost a dead parameter). Local format, lint, typecheck and unit (12,762 passed) green. **CI was running when written: re-read with `~/.claude/scripts/pr-verdict.sh 832`, read checks by name, merge if green.** After merge read deploy-dev's `site-smoke` job (first run of `tests/site`) and set its step limit to ≥3× the measured run (#476).
 2. **#828**, branch `feat/828-roadmap-figures` (same worktree), local head `d1f3e54`, WIP, NOT pushed: failing tests for `etaDate` and `confidence` in `packages/progress` (11 red against throwing stubs). Confidence rule (mine, for Shyden to change): high at ≥6 of 7 days moved, medium at 4–5, low otherwise or a window under 7 days. Then the site's summary (what's left by epic + totals, both estimates, recently shipped, updated-ago, waiting on decisions). The branch was cut from #827's `fad360c`: merge develop in once #832 lands.
 3. Then #829 (live updates); #830 waits on Shyden's copy approval.
+4. New: #833 (P2, 3 pts): lint lets an unused non-trailing parameter through (`args: after-used`; 20 of 22 tsconfigs leave noUnused off).
 
 ## Waiting on Shyden
 
