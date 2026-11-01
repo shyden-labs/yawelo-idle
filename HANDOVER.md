@@ -1,32 +1,24 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-01 (thirty-third session). Shyden back this afternoon.
-**Running when written:** nothing local. External: CI on PR #824 (#816), head `22aee20`.
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`.
+**Written:** 2026-11-01 night (thirty-third session). Shyden asleep until about 06:00 his time; he asked for work to continue all night by Priority, parking whatever needs him.
+**Running when written:** nothing local. External: CI on PR #825 (#813 AC4), head `2825ef0`.
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. board-next names #768 first; #768 and #783 wait on Shyden, so skip them.
 
 ## Done this session
 
-- #815 merged (PR #823, squash `4aa730f`) and shut by hand.
-- #816 (PR #824): CI failed only on `tests/integration/script-loads.test.ts`, whose list must follow git's byte order (`verify-dev-hosts.ts` before `verify-dev.ts`). Fixed with develop merged in; unit 12,696 green; pushed, head `22aee20`.
-- Worktree `../yawelo-idle-815` removed.
+- #815 merged (PR #823) and shut. #816 merged (PR #824, squash `3879867`); its deploy-dev hostname step green; shut. Worktrees -815, -816 removed.
+- #814 closed as not planned (Shyden: real-GitHub roadmap tests not worth it). Its test board exists: shyden-labs project 6, `PVT_kwDOEOcG584BpujW`, empty, App can read and write it; deleting it is Shyden's call.
+- #813: two rulings recorded (roadmap fake GitHub stays; board-progress test's stand-in `gh` stays). AC4 guard `tests/guards/no-stand-ins.test.ts` in PR #825 (worktree `../yawelo-idle-813`, In Progress).
 
 ## Next
 
-1. Read PR #824's checks by name (`gh pr view 824 --json statusCheckRollup`); merge with the `--match-head-commit "$(cat f)"` form.
-2. Shut the #816 ticket only after its deploy-dev run's "Verify the dev hostnames reach the real Workers unchanged" step is green. Remove `../yawelo-idle-816`.
-3. Then #813 itself (AC4 guard test, 2 points), blocked by #814 (Shyden's consent below).
-4. If a Dependabot PR fails on the missing roadmap key, tell Shyden (ruling on #814).
+1. PR #825: read checks by name; merge with `--match-head-commit "$(cat f)"`; shut #813 by hand; remove `../yawelo-idle-813`.
+2. Next by Priority not waiting on Shyden: #342 (voyage-map roadmap page, P1, 13 points; its AC6 page text needs Shyden's approval before translation, so build with the copy parked). #425, #426 and #457 wait on #784 (Shyden's Cloudflare login).
 
 ## Waiting on Shyden
 
-- **#814 test board:** he chose one-time consent. He runs this in his own terminal, then I run the same call once and read the title back:
-  ```
-  cat > ~/.claude/allow-operator-gh-once <<'EOF'
-  gh api graphql -f 'query=mutation{createProjectV2(input:{ownerId:"O_kgDOEOcG5w",title:"Yawelo Idle Roadmap Test Board",repositoryId:"R_kgDOU2Ed2Q"}){projectV2{id number title}}}'
-  EOF
-  ```
-  The board is then made by his account; check the App can read and write it before recording its node id in CLAUDE.md.
-- #768: old bucket and r2.dev address off. #783: a planted non-release PR into main seen refused (his to open, or the next release). #784, #788, #797, `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
+- **Test board** (shyden-labs project 6): keep or delete, his call.
+- #768: old dev bucket's r2.dev address off (Shyden: in the morning, 2026-11-02). #783: a planted non-release PR into main seen refused (his to open, or the next release). #784, #788, #797, `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
 
 ## State
 
