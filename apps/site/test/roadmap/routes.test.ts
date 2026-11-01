@@ -201,6 +201,31 @@ describe('/api/roadmap*', () => {
     expect(snapshot.lines).toHaveLength(2);
   });
 
+  /** The snapshot's card for issue `number`, as the Worker serves it. */
+  const servedItem = async (number: number) => {
+    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const snapshot = (await response.json()) as {
+      items: { number: number }[];
+    };
+    return snapshot.items.find((item) => item.number === number);
+  };
+
+  it('serves each story’s epic and Public title (#826)', async () => {
+    expect(await servedItem(2)).toMatchObject({
+      parent: 1,
+      publicTitle: 'Your village grows',
+      publicSummary: null,
+    });
+  });
+
+  it('serves each epic’s Public summary (#826)', async () => {
+    expect(await servedItem(1)).toMatchObject({
+      parent: null,
+      publicTitle: null,
+      publicSummary: 'The heart of the game.',
+    });
+  });
+
   it('serves the health as JSON, never cached', async () => {
     const response = await call('/api/roadmap/health', { headers: AUTH });
     expect(response.status).toBe(200);

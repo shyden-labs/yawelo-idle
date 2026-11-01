@@ -322,6 +322,9 @@ const item = (
   closedAt: null,
   estimate: 3,
   labels: [],
+  parent: null,
+  publicTitle: null,
+  publicSummary: null,
 });
 const STARTED = Date.parse('2026-10-19T00:41:00Z');
 const owed = (witness: Witness, at = STARTED - 1_000): Owed => ({

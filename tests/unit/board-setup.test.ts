@@ -3,15 +3,19 @@ import type { Gh } from '../../scripts/board-progress';
 import {
   boardSetup,
   CREATE_PRIORITY,
+  CREATE_PUBLIC_SUMMARY,
+  CREATE_PUBLIC_TITLE,
   planEstimateField,
   planPriorityField,
+  planTextField,
   PRIORITY_OPTIONS,
   READ,
 } from '../../scripts/board-setup';
 
 /**
- * scripts/board-setup.ts (#576): the board's `Estimate` and `Priority`
- * fields, created only when missing and read back. In-process with `gh`
+ * scripts/board-setup.ts (#576, #826): the board's `Estimate`, `Priority`,
+ * `Public title` and `Public summary` fields, created only when missing and
+ * read back. In-process with `gh`
  * stood in: a unit test starts no process.
  */
 
@@ -25,6 +29,9 @@ const PRIORITY = {
   dataType: 'SINGLE_SELECT',
   options: RIGHT_OPTIONS,
 };
+const PUBLIC_TITLE = { name: 'Public title', dataType: 'TEXT' };
+const PUBLIC_SUMMARY = { name: 'Public summary', dataType: 'TEXT' };
+const ALL = [ESTIMATE, PRIORITY, PUBLIC_TITLE, PUBLIC_SUMMARY];
 
 describe('the Priority levels (operator 2026-10-12, P1 amended 2026-10-13)', () => {
   it('are P0 to P5 in order', () => {
@@ -107,6 +114,45 @@ describe('planPriorityField (#576)', () => {
   });
 });
 
+describe('planTextField (#826)', () => {
+  it('creates a missing text field', () => {
+    expect(planTextField([ESTIMATE], 'Public title')).toBe('create');
+  });
+
+  it('keeps a text field of that name', () => {
+    expect(planTextField([PUBLIC_TITLE], 'Public title')).toBe('exists');
+  });
+
+  it('does not take one text field for the other', () => {
+    expect(planTextField([PUBLIC_TITLE], 'Public summary')).toBe('create');
+  });
+
+  it('refuses a field of that name of another type', () => {
+    expect(() =>
+      planTextField(
+        [{ name: 'Public summary', dataType: 'NUMBER' }],
+        'Public summary',
+      ),
+    ).toThrow(
+      'the board has a "Public summary" field of type NUMBER; it must be TEXT: rename or delete it first',
+    );
+  });
+});
+
+describe("the text fields' create mutations (#826)", () => {
+  it('create a TEXT field named Public title', () => {
+    expect(CREATE_PUBLIC_TITLE).toContain(
+      'dataType: TEXT, name: "Public title"',
+    );
+  });
+
+  it('create a TEXT field named Public summary', () => {
+    expect(CREATE_PUBLIC_SUMMARY).toContain(
+      'dataType: TEXT, name: "Public summary"',
+    );
+  });
+});
+
 /** A `gh` that answers reads with the board's fields in turn, and records every call. */
 function ghBoard(reads: Array<{ title: string; fields: unknown[] }>): {
   gh: Gh;
@@ -144,20 +190,18 @@ const mutations = (calls: string[][]) =>
   calls.filter((c) => c.some((a) => a.startsWith('query=mutation')));
 
 describe('boardSetup (#576)', () => {
-  it('creates nothing on a board that has both fields, and says so', () => {
-    const { gh, calls } = ghBoard([
-      { title: TITLE, fields: [ESTIMATE, PRIORITY] },
-    ]);
+  it('creates nothing on a board that has all four fields, and says so', () => {
+    const { gh, calls } = ghBoard([{ title: TITLE, fields: ALL }]);
     expect(boardSetup(['PVT_fixture', TITLE], gh)).toBe(
-      '"Yawelo Idle Stories" has a Number field "Estimate" and a single-select field "Priority" (P0-P5).',
+      '"Yawelo Idle Stories" has a Number field "Estimate", a single-select field "Priority" (P0-P5), and text fields "Public title" and "Public summary".',
     );
     expect(calls).toEqual([readCall, readCall]);
   });
 
   it('creates the missing Priority once, then reads it back', () => {
     const { gh, calls } = ghBoard([
-      { title: TITLE, fields: [ESTIMATE] },
-      { title: TITLE, fields: [ESTIMATE, PRIORITY] },
+      { title: TITLE, fields: [ESTIMATE, PUBLIC_TITLE, PUBLIC_SUMMARY] },
+      { title: TITLE, fields: ALL },
     ]);
     boardSetup(['PVT_fixture', TITLE], gh);
     expect(mutations(calls)).toEqual([
@@ -172,8 +216,54 @@ describe('boardSetup (#576)', () => {
     ]);
   });
 
+  it('creates both missing text fields once, title first, then reads them back', () => {
+    const { gh, calls } = ghBoard([
+      { title: TITLE, fields: [ESTIMATE, PRIORITY] },
+      { title: TITLE, fields: ALL },
+    ]);
+    boardSetup(['PVT_fixture', TITLE], gh);
+    expect(mutations(calls)).toEqual([
+      [
+        'api',
+        'graphql',
+        '-f',
+        `query=${CREATE_PUBLIC_TITLE}`,
+        '-f',
+        'id=PVT_fixture',
+      ],
+      [
+        'api',
+        'graphql',
+        '-f',
+        `query=${CREATE_PUBLIC_SUMMARY}`,
+        '-f',
+        'id=PVT_fixture',
+      ],
+    ]);
+  });
+
+  it('refuses when the Public title is not there on reading back', () => {
+    const { gh } = ghBoard([
+      { title: TITLE, fields: [ESTIMATE, PRIORITY, PUBLIC_SUMMARY] },
+    ]);
+    expect(() => boardSetup(['PVT_fixture', TITLE], gh)).toThrow(
+      'the Public title field was not there on reading back',
+    );
+  });
+
+  it('refuses when the Public summary is not there on reading back', () => {
+    const { gh } = ghBoard([
+      { title: TITLE, fields: [ESTIMATE, PRIORITY, PUBLIC_TITLE] },
+    ]);
+    expect(() => boardSetup(['PVT_fixture', TITLE], gh)).toThrow(
+      'the Public summary field was not there on reading back',
+    );
+  });
+
   it('refuses when the Priority is not there on reading back', () => {
-    const { gh } = ghBoard([{ title: TITLE, fields: [ESTIMATE] }]);
+    const { gh } = ghBoard([
+      { title: TITLE, fields: [ESTIMATE, PUBLIC_TITLE, PUBLIC_SUMMARY] },
+    ]);
     expect(() => boardSetup(['PVT_fixture', TITLE], gh)).toThrow(
       'the Priority field was not there on reading back',
     );
@@ -197,9 +287,7 @@ describe('boardSetup (#576)', () => {
   it('calls gh for nothing when the title is missing, and reads when it is given', () => {
     /** The gh calls made for the node id followed by `rest`, the refusal swallowed. */
     const callsWith = (rest: string[]) => {
-      const { gh, calls } = ghBoard([
-        { title: TITLE, fields: [ESTIMATE, PRIORITY] },
-      ]);
+      const { gh, calls } = ghBoard([{ title: TITLE, fields: ALL }]);
       try {
         boardSetup(['PVT_fixture', ...rest], gh);
       } catch {
