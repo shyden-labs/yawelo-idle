@@ -181,6 +181,20 @@ const stories = (n: number, kind: string): string =>
 const sumOf = (pace: number[]): number => pace.reduce((a, b) => a + b, 0);
 
 /** The ETA at the window's mean daily pace, or why there is none. */
+/** The day `remaining` work ends at the pace measured over `pace` (#828); null when nothing closed. */
+export function etaDate(
+  _remaining: number,
+  _pace: number[],
+  _today: string,
+): string | null {
+  throw new Error('not yet');
+}
+
+/** How sure an ETA is, from how many of the window's days moved (#828). */
+export function confidence(_pace: number[]): 'high' | 'medium' | 'low' {
+  throw new Error('not yet');
+}
+
 function eta(remaining: number, pace: number[], today: string): string {
   const closed = sumOf(pace);
   if (closed === 0) {

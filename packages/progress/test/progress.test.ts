@@ -6,6 +6,8 @@ import {
   closeOutLines,
   formatLines,
   inScope,
+  confidence,
+  etaDate,
   parseItems,
   progress,
   roadmapItems,
@@ -924,5 +926,55 @@ describe('closeOutLines', () => {
         TODAY,
       ),
     ).toThrow('the board has 9 items and 5 were read: nothing read');
+  });
+});
+
+describe('etaDate (#828)', () => {
+  it('is the day the remaining work ends at the measured pace', () => {
+    // 10 left at 7 closed in 7 days: 10 days.
+    expect(etaDate(10, [1, 1, 1, 1, 1, 1, 1], '2026-11-01')).toBe('2026-11-11');
+  });
+
+  it('rounds a part day up', () => {
+    // 3 left at 2 a day: 1.5 days, so 2.
+    expect(etaDate(3, [2], '2026-11-01')).toBe('2026-11-03');
+  });
+
+  it('is null when nothing closed in the window', () => {
+    expect(etaDate(5, [0, 0, 0], '2026-11-01')).toBeNull();
+  });
+
+  it('is today when nothing is left', () => {
+    expect(etaDate(0, [1], '2026-11-01')).toBe('2026-11-01');
+  });
+});
+
+describe('confidence (#828): how many of the window’s days moved', () => {
+  it('is high when every day closed something', () => {
+    expect(confidence([1, 2, 1, 1, 3, 1, 1])).toBe('high');
+  });
+
+  it('is high when 6 of 7 days moved', () => {
+    expect(confidence([1, 0, 1, 1, 3, 1, 1])).toBe('high');
+  });
+
+  it('is medium when 5 of 7 days moved', () => {
+    expect(confidence([1, 0, 0, 1, 3, 1, 1])).toBe('medium');
+  });
+
+  it('is medium when 4 of 7 days moved', () => {
+    expect(confidence([0, 0, 0, 1, 3, 1, 1])).toBe('medium');
+  });
+
+  it('is low when 3 of 7 days moved', () => {
+    expect(confidence([0, 0, 0, 0, 3, 1, 1])).toBe('low');
+  });
+
+  it('is low over a window shorter than 7 days, however busy', () => {
+    expect(confidence([5, 5])).toBe('low');
+  });
+
+  it('is low when nothing moved', () => {
+    expect(confidence([0, 0, 0, 0, 0, 0, 0])).toBe('low');
   });
 });
