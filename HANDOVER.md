@@ -1,22 +1,20 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-10-31 (thirty-second session). Shyden is away until the afternoon of 2026-11-01 (relayed by the repo-template session): keep working; anything needing him waits here.
-**Running when written:** nothing local. External: CI on PR #823 (#815, branch updated after #822 merged) and PR #824 (#816).
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. board-next names #768 first, but #768 and #783 wait only on Shyden (below), so take the #813 children.
+**Written:** 2026-11-01 (thirty-third session). Shyden back this afternoon.
+**Running when written:** the #816 unit run (`npm run test:unit` in `../yawelo-idle-816`), queued on the test lock behind shyden.co.uk. It dies with this session: if not reported, re-run it there before pushing.
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
-- #819 merged (PR #820) and closed. #818 merged (PR #821, squash `162ba38`) and closed: CI ran the real hook, 7 tests, step 3 min 40 s against a 5 min limit.
-- #817 merged (PR #822, squash `2590301`) and shut by hand: CI ran the real broken-D1 Worker, 3 tests.
-- #815: PR #823. #332 re-measured on wrangler 4.148.0: site + real game serve together, recorded on #815. Site and roadmap harnesses run `../web/wrangler.jsonc`; `game-echo.ts` deleted; the lost "credentials unchanged" assertion is named in the PR.
-- #816: PR #824 (`test/816-real-dev-hosts`, worktree `../yawelo-idle-816`). `forward()` in `apps/dev-hosts/hosts.ts`, unit-tested with mocks; `scripts/verify-dev-hosts.ts` runs after verify-dev in deploy-dev against the real Workers (path+query, method, signed-ping body, adapter's own 404). Local unit 12,696 green.
-- The test lock was held 6 h by a hung `cat` in the Steadyhand session; freed on request.
+- #815 merged (PR #823, squash `4aa730f`) and shut by hand.
+- #816 (PR #824): CI failed only on `tests/integration/script-loads.test.ts`, whose list must follow git's byte order (`verify-dev-hosts.ts` before `verify-dev.ts`). Fixed and committed locally with develop merged in; head `22aee20`, NOT pushed yet.
+- Worktree `../yawelo-idle-815` removed.
 
 ## Next
 
-1. PR #823 and #824: read `gh pr view <n> --json statusCheckRollup` (pr-verdict can return while in progress). Merge each with `gh pr view N --json headRefOid --jq .headRefOid > f && test -s f && gh pr merge N --squash --match-head-commit "$(cat f)"` (literal number; the second needs `gh pr update-branch` first). For #823, the site and roadmap Worker tests passed on the earlier head (site.test.ts 63 tests).
-2. Shut the #815 ticket by hand once merged. The #816 ticket is shut only after the dev deploy of its merge: read that deploy-dev run's "Verify the dev hostnames reach the real Workers unchanged" step green. Remove worktrees `../yawelo-idle-815`, `-816`.
-3. Then #813 itself (AC4's guard test, 2 points), still blocked by #814 (Shyden's consent below).
+1. In `../yawelo-idle-816`: unit suite green (re-run if this session's run died), then `git push`. Read PR #824's checks by name; merge with the `--match-head-commit "$(cat f)"` form.
+2. Shut the #816 ticket only after its deploy-dev run's "Verify the dev hostnames reach the real Workers unchanged" step is green. Remove `../yawelo-idle-816`.
+3. Then #813 itself (AC4 guard test, 2 points), blocked by #814 (Shyden's consent below).
 4. If a Dependabot PR fails on the missing roadmap key, tell Shyden (ruling on #814).
 
 ## Waiting on Shyden
@@ -35,7 +33,7 @@
 - Main checkout on `handover/2026-10-17-d` (handover commits only). Dead worktrees, safe to remove after a look: `../yawelo-idle-794`, `-761`, `-771`, `-782`, `-785`, `-786`, `-728b`, `-752`, `-36`. `-728-probe` has uncommitted probe files: ask before removing.
 - Scratch refs on origin (deleting them is Shyden's call): `refs/floors/tooling/771-record-rehearse-job`, `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit`.
 
-## Progress (board, measured 2026-10-31)
+## Progress (board, measured 2026-11-01)
 
-- By tickets: 35% (151 of 426), pace 1.57 a day, ETA 2027-04-24 (low confidence: 4 of 7 days moved nothing).
-- By effort: 1,191 points remaining across 275 open stories, pace 3.71 a day, ETA 2027-09-17 (low confidence). Both before outside waits (#784's login, device sign-off).
+- By tickets: 36% (154 of 426), pace 2.00 a day, ETA 2027-03-17 (low confidence: 3 of 7 days moved nothing).
+- By effort: 1,183 points remaining across 272 open stories, pace 4.86 a day, ETA 2027-07-03 (low confidence). Both before outside waits (#784's login, device sign-off).
