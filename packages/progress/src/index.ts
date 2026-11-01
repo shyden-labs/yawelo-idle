@@ -180,31 +180,43 @@ const stories = (n: number, kind: string): string =>
 
 const sumOf = (pace: number[]): number => pace.reduce((a, b) => a + b, 0);
 
-/** The ETA at the window's mean daily pace, or why there is none. */
-/** The day `remaining` work ends at the pace measured over `pace` (#828); null when nothing closed. */
+/**
+ * The day `remaining` work ends at the pace measured over `pace` (#828), or
+ * null when nothing closed in the window.
+ */
 export function etaDate(
-  _remaining: number,
-  _pace: number[],
-  _today: string,
+  remaining: number,
+  pace: number[],
+  today: string,
 ): string | null {
-  throw new Error('not yet');
-}
-
-/** How sure an ETA is, from how many of the window's days moved (#828). */
-export function confidence(_pace: number[]): 'high' | 'medium' | 'low' {
-  throw new Error('not yet');
-}
-
-function eta(remaining: number, pace: number[], today: string): string {
   const closed = sumOf(pace);
-  if (closed === 0) {
-    return `ETA at that pace: none, nothing closed in the last ${plural(pace.length, 'day')}.`;
-  }
+  if (closed === 0) return null;
   // remaining ÷ (closed ÷ days) as one division: dividing by the rounded mean
   // put a whole number of days a hair above itself, and its ceiling a day late.
   const days = Math.ceil((remaining * pace.length) / closed);
   const date = new Date(Date.parse(`${today}T00:00:00Z`) + days * DAY_MS);
-  return `ETA at that pace: ${date.toISOString().slice(0, 10)}, before outside waits.`;
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * How sure an ETA is, from how many of the window's days moved (#828): high at
+ * 6 or more of 7, medium at 4 or 5, low otherwise or over a shorter window.
+ */
+export function confidence(pace: number[]): 'high' | 'medium' | 'low' {
+  if (pace.length < WINDOW_DAYS) return 'low';
+  const moved = pace.filter((n) => n > 0).length;
+  if (moved >= 6) return 'high';
+  if (moved >= 4) return 'medium';
+  return 'low';
+}
+
+/** The ETA at the window's mean daily pace, or why there is none. */
+function eta(remaining: number, pace: number[], today: string): string {
+  const date = etaDate(remaining, pace, today);
+  if (date === null) {
+    return `ETA at that pace: none, nothing closed in the last ${plural(pace.length, 'day')}.`;
+  }
+  return `ETA at that pace: ${date}, before outside waits.`;
 }
 
 /** The two close-out lines: by tickets, then by effort. */
