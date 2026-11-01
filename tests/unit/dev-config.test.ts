@@ -124,7 +124,7 @@ describe('the dev Workers’ deploy configs', () => {
 
   it('keeps each public dev Worker’s workers.dev address, and the game and the holding page’s dev copy at none, with no preview URLs (#395, #332, #429, #768)', () => {
     // The Pages adapter sets neither key: Pages has no workers.dev address,
-    // and its own pages.dev address answers 404 (apps/dev-hosts/test).
+    // and its own pages.dev address answers 404 (scripts/verify-dev-hosts.ts, after each dev deploy).
     expect(
       configs()
         .map(({ config }) => [
@@ -153,6 +153,20 @@ describe('the dev Workers’ deploy configs', () => {
       DEV_SITE_URL: `${site}/`,
       DEV_SYNC_URL: `https://${devHost('SYNC')}`,
       DEV_GAME_URL: `${game}/`,
+    });
+  });
+
+  it('checks the dev hostnames against the real Workers straight after verify-dev, with the login and the webhook secret (#816)', () => {
+    const steps = verifySteps();
+    const at = steps.findIndex(
+      (step) => runOf(step) === 'node scripts/verify-dev.ts',
+    );
+    expect(at).toBeGreaterThanOrEqual(0);
+    const next = steps[at + 1] ?? {};
+    expect(runOf(next)).toBe('node scripts/verify-dev-hosts.ts');
+    expect(next.env).toEqual({
+      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
+      ROADMAP_WEBHOOK_SECRET: '${{ secrets.ROADMAP_WEBHOOK_SECRET }}',
     });
   });
 

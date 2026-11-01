@@ -41,6 +41,7 @@ const SCRIPTS = [
   'scripts/release-cut.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
+  'scripts/verify-dev-hosts.ts',
   'scripts/verify-dev.ts',
   'scripts/verify-prod.ts',
   'scripts/verify-roadmap.ts',

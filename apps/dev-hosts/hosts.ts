@@ -16,3 +16,27 @@ export const DEV_HOSTS: ReadonlyMap<string, DevBinding> = new Map([
   ['dev-api.yawelo-idle.shyden.co.uk', 'SYNC'],
   ['dev-holding.yawelo-idle.shyden.co.uk', 'HOLDING'],
 ]);
+
+/** Anything a service binding offers that the adapter uses. */
+export interface Forward {
+  readonly fetch: (request: Request) => Promise<Response> | Response;
+}
+
+/**
+ * The adapter's whole behaviour: the request, unchanged, to the binding its
+ * host names, or a 404 that reaches no Worker for any other host (the
+ * project's own pages.dev address and every preview deployment's, which are
+ * public).
+ */
+export function forward(
+  request: Request,
+  bindings: Readonly<Record<DevBinding, Forward>>,
+): Promise<Response> | Response {
+  const binding = DEV_HOSTS.get(new URL(request.url).hostname);
+  if (binding === undefined)
+    return new Response('not found', {
+      status: 404,
+      headers: { 'cache-control': 'no-store' },
+    });
+  return bindings[binding].fetch(request);
+}
