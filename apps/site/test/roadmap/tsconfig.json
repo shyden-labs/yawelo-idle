@@ -1,0 +1,14 @@
+{
+  // The roadmap's Node-side tests (#341). They import the site Worker's own
+  // modules, so they are typed like the Worker (../../worker/tsconfig.json),
+  // plus Node for the harness. Kept out of ../../tsconfig.json, whose DOM lib
+  // mistypes the Worker's code (#827: svelte-check diagnoses imported files).
+  "extends": "../../worker/tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node", "../../worker/worker-configuration.d.ts"]
+  },
+  "include": ["*.ts"]
+}

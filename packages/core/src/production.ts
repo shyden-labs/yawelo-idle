@@ -531,12 +531,7 @@ function edgeAfter(book: RateBook, wall: number): number | undefined {
   return edge;
 }
 
-function contextAt(
-  course: Course,
-  state: GameState,
-  book: RateBook,
-  t: SimMs,
-): RateContext {
+function contextAt(course: Course, book: RateBook, t: SimMs): RateContext {
   const wall = t + book.skew;
   const byEdge = within(
     book.contexts,
@@ -666,7 +661,7 @@ export function rateGainAt(
   t: SimMs,
 ): (i: number) => Num {
   const book = rateBook(course, state);
-  const context = contextAt(course, state, book, t);
+  const context = contextAt(course, book, t);
   const { list } = encountersOf(course);
   const counts = ownedCounts(course, state);
   return (i) => {
@@ -720,7 +715,7 @@ export function totalRate(breakdown: readonly EncounterRate[]): Num {
  */
 export function rateAt(course: Course, state: GameState, t: SimMs): Num {
   const book = rateBook(course, state);
-  const context = contextAt(course, state, book, t);
+  const context = contextAt(course, book, t);
   const { list } = encountersOf(course);
   const counts = ownedCounts(course, state);
   let from = 0;

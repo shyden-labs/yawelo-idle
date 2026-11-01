@@ -11,6 +11,7 @@
     "dist-holding",
     "dist-holding-dev",
     "worker",
-    "test/roadmap-worker"
+    "test/roadmap-worker",
+    "test/roadmap"
   ]
 }

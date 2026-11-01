@@ -252,14 +252,14 @@ describe('the fake GitHub issues tokens as GitHub does (#704)', () => {
     });
     expect(response.status).toBe(201);
     expect(
-      ((await response.json()) as { permissions: unknown }).permissions,
+      (await response.json<{ permissions: unknown }>()).permissions,
     ).toEqual(READ_ONLY);
   });
 
   it('gives the token every right of the installation when the request names none', async () => {
     const response = await mint({ repositories: [FAKE_REPO_NAME] });
     expect(
-      ((await response.json()) as { permissions: unknown }).permissions,
+      (await response.json<{ permissions: unknown }>()).permissions,
     ).toEqual(INSTALLED);
   });
 

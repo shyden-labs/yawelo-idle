@@ -6,7 +6,7 @@
   "scripts": {
     "build": "astro build",
     "build:holding": "astro build --config astro.holding.config.ts",
-    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && astro check --minimumSeverity hint && tsc --noEmit -p worker && tsc --noEmit -p test/roadmap-worker",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && astro check --minimumSeverity hint && tsc --noEmit -p worker && tsc --noEmit -p test/roadmap-worker && tsc --noEmit -p test/roadmap",
     "build:harness": "npm run build --workspace @yawelo-idle/web && astro build && astro build --config astro.holding.config.ts",
     "test": "npm run build:harness && vitest run -c vitest.harness.config.ts",
     "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
