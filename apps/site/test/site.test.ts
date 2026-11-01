@@ -29,7 +29,7 @@ import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy'
  * The GAME binding reaches the real game Worker, built from apps/web
  * (`build:harness` builds it). #332 measured every game asset answering 500
  * beside the site on wrangler 4.145.0; on 4.148.0 both serve (#815,
- * 2026-11-01), so no stand-in answers for the game.
+ * 2026-11-01), so the real game answers.
  *
  * Absolute URLs set the hostname the Worker sees.
  */
