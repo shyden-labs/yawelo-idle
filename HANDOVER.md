@@ -1,18 +1,18 @@
 # Handover: Yawelo Idle
 
 **Written:** 2026-11-01 (thirty-third session). Shyden back this afternoon.
-**Running when written:** the #816 unit run (`npm run test:unit` in `../yawelo-idle-816`), queued on the test lock behind shyden.co.uk. It dies with this session: if not reported, re-run it there before pushing.
+**Running when written:** nothing local. External: CI on PR #824 (#816), head `22aee20`.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
 - #815 merged (PR #823, squash `4aa730f`) and shut by hand.
-- #816 (PR #824): CI failed only on `tests/integration/script-loads.test.ts`, whose list must follow git's byte order (`verify-dev-hosts.ts` before `verify-dev.ts`). Fixed and committed locally with develop merged in; head `22aee20`, NOT pushed yet.
+- #816 (PR #824): CI failed only on `tests/integration/script-loads.test.ts`, whose list must follow git's byte order (`verify-dev-hosts.ts` before `verify-dev.ts`). Fixed with develop merged in; unit 12,696 green; pushed, head `22aee20`.
 - Worktree `../yawelo-idle-815` removed.
 
 ## Next
 
-1. In `../yawelo-idle-816`: unit suite green (re-run if this session's run died), then `git push`. Read PR #824's checks by name; merge with the `--match-head-commit "$(cat f)"` form.
+1. Read PR #824's checks by name (`gh pr view 824 --json statusCheckRollup`); merge with the `--match-head-commit "$(cat f)"` form.
 2. Shut the #816 ticket only after its deploy-dev run's "Verify the dev hostnames reach the real Workers unchanged" step is green. Remove `../yawelo-idle-816`.
 3. Then #813 itself (AC4 guard test, 2 points), blocked by #814 (Shyden's consent below).
 4. If a Dependabot PR fails on the missing roadmap key, tell Shyden (ruling on #814).
