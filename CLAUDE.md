@@ -50,6 +50,8 @@ It refuses while any open ticket has no Priority, and while any open blocker sit
 
 The coming-soon site (`apps/site`, epic #331, spec `docs/superpowers/specs/2026-10-04-website-design.md`) keeps advertising the game as it grows (operator, 2026-10-06, website spec W16). When a player-facing story or epic closes, file a `Website: announce <feature>` story in the same session: 1–3 points, full ACs, Estimate set, copy approved by Shyden before translation, en + id with D18 evidence. Skip it only when the closing story says why there is nothing new to show. Every story's **Website** field (`.github/ISSUE_TEMPLATE/story.yml`) says what it lets the site show, and every close-out checks that session's closed stories against this rule.
 
+Every new player-facing story gets its board `Public title` when filed, and every new epic its `Public summary`: plain words for the public roadmap, which never shows a raw ticket title (#342, #826). A story without one is counted on the roadmap as behind-the-scenes work, not named. The roadmap groups stories by their `Parent issue`, the epic (R4), so a story is filed as a sub-issue of its epic.
+
 ## Stack (decided, spec §6)
 
 npm workspaces · TypeScript · Svelte 5 · Vite · Vitest + fast-check + Stryker · Playwright · break_infinity.js · ts-fsrs · Zod · Cloudflare Workers + D1 (`wrangler`) · Electron + steamworks.js · Capacitor.

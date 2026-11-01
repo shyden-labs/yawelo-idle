@@ -31,6 +31,11 @@ export interface BoardItem {
   closedAt: string | null;
   estimate: number | null;
   labels: string[];
+  /** The issue's parent, the epic it belongs to (R4, #826): null when none. */
+  parent: number | null;
+  /** The card's plain-words fields for the public roadmap (#826): null when unset or blank. */
+  publicTitle: string | null;
+  publicSummary: string | null;
 }
 
 export interface TicketProgress {
@@ -233,16 +238,20 @@ export const BOARD_QUERY = `query($id: ID!, $endCursor: String) {
     items(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
       nodes { id updatedAt
         estimate: fieldValueByName(name: "Estimate") { ... on ProjectV2ItemFieldNumberValue { number } }
+        publicTitle: fieldValueByName(name: "Public title") { ... on ProjectV2ItemFieldTextValue { text } }
+        publicSummary: fieldValueByName(name: "Public summary") { ... on ProjectV2ItemFieldTextValue { text } }
         content { __typename
           ... on DraftIssue { title }
           ... on PullRequest { title }
           ... on Issue { number title state stateReason createdAt closedAt updatedAt
-            repository { nameWithOwner }
+            repository { nameWithOwner } parent { number }
             labels(first: ${String(LABELS_PER_ISSUE)}) { totalCount nodes { name } } }
         } } } } } }`;
 
 interface RawNode {
   estimate: { number: number } | null;
+  publicTitle?: { text?: string } | null;
+  publicSummary?: { text?: string } | null;
   content: {
     __typename: string;
     title?: string;
@@ -253,6 +262,7 @@ interface RawNode {
     closedAt?: string | null;
     labels?: { totalCount: number; nodes: { name: string }[] };
     repository?: { nameWithOwner: string };
+    parent?: { number: number } | null;
   } | null;
 }
 interface RawPage {
@@ -371,7 +381,18 @@ function classify(node: RawNode, repo: string): BoardItem | NotAnIssue {
     closedAt: c.closedAt ?? null,
     estimate: node.estimate?.number ?? null,
     labels: labels.nodes.map((l) => l.name),
+    parent: c.parent?.number ?? null,
+    publicTitle: plainWords(node.publicTitle),
+    publicSummary: plainWords(node.publicSummary),
   };
+}
+
+/** A text field's value, or null when it is unset or only spaces (#826). */
+function plainWords(
+  field: { text?: string } | null | undefined,
+): string | null {
+  const text = field?.text?.trim() ?? '';
+  return text === '' ? null : text;
 }
 
 const isIssue = (read: BoardItem | NotAnIssue): read is BoardItem =>

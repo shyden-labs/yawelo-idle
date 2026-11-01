@@ -26,6 +26,10 @@ interface Story {
   /** Days before `today` it closed; absent while open. */
   closed?: number;
   stateReason?: 'COMPLETED' | 'NOT_PLANNED';
+  /** The epic it belongs to (#826, R4). */
+  parent?: number;
+  publicTitle?: string;
+  publicSummary?: string;
 }
 
 /** A fixture card's id, as GitHub's `PVTI_` node ids look (#689). */
@@ -44,6 +48,10 @@ function node(today: string, story: Story): unknown {
     id: fixtureCardId(story.number),
     updatedAt,
     estimate: story.estimate === null ? null : { number: story.estimate },
+    publicTitle:
+      story.publicTitle === undefined ? null : { text: story.publicTitle },
+    publicSummary:
+      story.publicSummary === undefined ? null : { text: story.publicSummary },
     content: {
       __typename: 'Issue',
       number: story.number,
@@ -60,6 +68,7 @@ function node(today: string, story: Story): unknown {
         nodes: labels.map((name) => ({ name })),
       },
       repository: { nameWithOwner: FIXTURE_REPO },
+      parent: story.parent === undefined ? null : { number: story.parent },
     },
   };
 }
@@ -132,8 +141,20 @@ export function repoPages(): unknown[] {
 export function boardPages(today: string): unknown[] {
   const pages: Story[][] = [
     [
-      { number: 1, title: 'Epic M1: Core', estimate: null },
-      { number: 2, title: 'Story two', estimate: 5, closed: 1 },
+      {
+        number: 1,
+        title: 'Epic M1: Core',
+        estimate: null,
+        publicSummary: 'The heart of the game.',
+      },
+      {
+        number: 2,
+        title: 'Story two',
+        estimate: 5,
+        closed: 1,
+        parent: 1,
+        publicTitle: 'Your village grows',
+      },
       { number: 3, title: 'Story three', estimate: 3, closed: 3 },
       { number: 4, title: 'Story four', estimate: null, closed: 20 },
       { number: 5, title: 'Story five', estimate: 8 },

@@ -34,6 +34,9 @@ function item(over: Partial<BoardItem> & { number: number }): BoardItem {
     closedAt: null,
     estimate: 3,
     labels: [],
+    parent: null,
+    publicTitle: null,
+    publicSummary: null,
     ...over,
   };
 }
@@ -397,8 +400,77 @@ describe('parseItems', () => {
         closedAt: '2026-10-03T01:02:03Z',
         estimate: 5,
         labels: ['post-launch'],
+        parent: null,
+        publicTitle: null,
+        publicSummary: null,
       },
     ]);
+  });
+
+  it('reads the issue’s parent, the epic it belongs to (#826, R4)', () => {
+    const [read] = parse([
+      page([{ estimate: null, content: issue({ parent: { number: 331 } }) }]),
+    ]);
+    expect(read?.parent).toBe(331);
+  });
+
+  it('reads an issue with no parent as null (#826)', () => {
+    const [read] = parse([page([{ estimate: null, content: issue() }])]);
+    expect(read?.parent).toBeNull();
+  });
+
+  it('reads the card’s Public title (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicTitle: { text: 'Save your game in the cloud' },
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect(read?.publicTitle).toBe('Save your game in the cloud');
+  });
+
+  it('reads the card’s Public summary (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicSummary: { text: 'The first playable voyage.' },
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect(read?.publicSummary).toBe('The first playable voyage.');
+  });
+
+  it('reads unset plain-words fields as null (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicTitle: null,
+          publicSummary: null,
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect([read?.publicTitle, read?.publicSummary]).toEqual([null, null]);
+  });
+
+  it('reads blank plain-words text as unset (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicTitle: { text: '   ' },
+          publicSummary: { text: '' },
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect([read?.publicTitle, read?.publicSummary]).toEqual([null, null]);
   });
 
   it('reads an unset Estimate as null', () => {
@@ -663,6 +735,24 @@ describe('BOARD_QUERY', () => {
 
   it('asks GitHub for each issue’s last change', () => {
     expect(BOARD_QUERY).toMatch(/\.\.\. on Issue \{[^}]*\bupdatedAt\b/);
+  });
+
+  it('asks GitHub for each issue’s parent number (#826)', () => {
+    expect(BOARD_QUERY).toContain(
+      'repository { nameWithOwner } parent { number }',
+    );
+  });
+
+  it('asks GitHub for each card’s Public title as text (#826)', () => {
+    expect(BOARD_QUERY).toContain(
+      'publicTitle: fieldValueByName(name: "Public title") { ... on ProjectV2ItemFieldTextValue { text } }',
+    );
+  });
+
+  it('asks GitHub for each card’s Public summary as text (#826)', () => {
+    expect(BOARD_QUERY).toContain(
+      'publicSummary: fieldValueByName(name: "Public summary") { ... on ProjectV2ItemFieldTextValue { text } }',
+    );
   });
 
   // `totalCount` alone would match the labels' count (#703).
