@@ -9,8 +9,9 @@ import { committableFiles } from '../unit/tracked-files';
  * #813. Unit tests keep their mocks and are not judged here.
  */
 
-/** Where the non-unit suites live: integration, Playwright, Worker harnesses. */
-const NON_UNIT = /^(tests\/(integration|web|engines)\/|apps\/[^/]+\/test\/)/;
+/** Where the non-unit suites live: integration, Playwright (game and site, #827), Worker harnesses. */
+const NON_UNIT =
+  /^(tests\/(integration|web|engines|site)\/|apps\/[^/]+\/test\/)/;
 
 /**
  * The stand-ins Shyden ruled may stay (#813, 2026-11-01): the roadmap's fake
