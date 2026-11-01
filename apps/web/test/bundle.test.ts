@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
  * comparison with develop, which is where a change's byte delta is shown.
  *
  * - Ceiling: everything the first paint fetches (the HTML and the assets it
- *   loads), gzipped at zlib's default level as a stand-in for what Cloudflare
+ *   loads), gzipped at zlib's default level as an estimate of what Cloudflare
  *   sends, at most 15,000 bytes: about 1.5x the 9,682 this test measured
  *   for #123. A story that outgrows it raises it deliberately.
  * - Floor: proof the check measured the game. The shell loads at least one

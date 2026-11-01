@@ -22,7 +22,7 @@ const NEIGHBOUR_SCRIPT = 'https://static.cloudflareinsights.com/planted.js';
 /**
  * Cloudflare Web Analytics' real beacon as Cloudflare injects it, with a
  * version after `beacon.min.js/` (#451). It is fetched from Cloudflare, never
- * stubbed (#819): with no token it sets `window.__cfBeacon` and sends nothing.
+ * replaced by a copy (#819): with no token it sets `window.__cfBeacon` and sends nothing.
  * Cloudflare served this version with 200 on 2026-10-31.
  */
 const BEACON =
