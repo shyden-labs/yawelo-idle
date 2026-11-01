@@ -122,7 +122,7 @@ describe('the dev site Worker gate, through the asset router', () => {
     'refuses a real built page %s and sends none of its bytes',
     async (_case, headers) => {
       const page = await (await get(`${DEV}/roadmap`, authorised)).text();
-      expect(page).toContain(COPY.en.roadmapSoon);
+      expect(page).toContain(COPY.en.voyage.intro);
       const response = await get(`${DEV}/roadmap`, headers);
       expect(response.status).toBe(401);
       expect(response.headers.get('WWW-Authenticate')).toBe(
