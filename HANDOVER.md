@@ -1,21 +1,20 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-02 early hours (thirty-third session, overnight). Shyden asleep until about 06:00 his time; work continues by Priority.
-**Running when written:** typecheck + unit on `feat/827-voyage-map` in `../yawelo-idle-826` (dies with the session: re-run `npm run typecheck && npm run test:unit` there).
+**Written:** 2026-11-02 (thirty-third session), stopped for a computer restart (Shyden, relayed). **Phones unavailable: no device work until Shyden says.**
+**Running when written:** nothing local. External: nothing (PR #832's last CI run finished red, see below).
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. Skip #768 and #783 (wait on Shyden).
 
 ## Done this session
 
 - #815, #816, #813 merged and shut (PRs #823, #824, #825). #814 closed as not planned (Shyden). Worktrees -813, -815, -816 removed.
-- #342 split into #826–#830 (16 points, all P1, under epic #331, blockers linked); #342 closed as split.
-- #826 merged (PR #831, squash `96ffae6`) and shut: board has `Public title`/`Public summary` fields; snapshot carries `parent`, `publicTitle`, `publicSummary`; `waiting-on-shyden` label; R4 measured in the PR. Dev roadmap verify green.
+- #342 split into #826–#830 (16 points, P1, under epic #331, blockers linked); #342 closed as split.
+- #826 merged (PR #831, squash `96ffae6`) and shut: board fields `Public title`/`Public summary`; snapshot carries `parent`, `publicTitle`, `publicSummary`; `waiting-on-shyden` label; R4 measured in the PR.
 
 ## Next
 
-1. #827 (voyage map) on `feat/827-voyage-map` in `../yawelo-idle-826` (worktree name is old; branch is right), In Progress. Built: `apps/site/src/roadmap/{voyage.ts,VoyageMap.svelte,Island.svelte}` (voyage.ts 100% covered, 39 unit tests), `Roadmap.astro`, placeholder `VoyageCopy` in `copy.ts`, `playwright.site.config.ts` + `tests/site/roadmap.spec.ts`, deploy-dev job `site-smoke` (3 min first limit: re-measure after its first run), import test `apps/site/src/views/roadmap-page.test.ts`. Plan: `.superpowers/sdd/827/plan.md`.
-   Remaining: green typecheck/unit, commit (squash message from the wip commit), push, PR; the Playwright suite first runs in deploy-dev after merge, so read that job by name and set its limit from the measured run.
-   Note: two Svelte components with `<style>` made Astro's CSS plugin warn under Rolldown (the build fails on warnings); all island CSS lives in VoyageMap.svelte as `.voyage :global(...)` (measured: 1 warning with two styled components, 0 with one).
-2. Then #828 (progress, what's left, decisions) and #829 (live updates); #830 waits on Shyden's copy approval.
+1. **#827 (PR #832), worktree `../yawelo-idle-826`, branch `feat/827-voyage-map`, local head `259beb6` (committed, NOT pushed; origin has `fad360c`).** CI on `fad360c` failed in Guards: `tests/guards/erasable-syntax.test.ts` (tsconfig list) and `tests/guards/svelte-gates.test.ts` (components + workspaces). `259beb6` adds `tests/site/tsconfig.json` and the two components + `apps/site` to those lists, `noUnusedLocals`/`noUnusedParameters` to `apps/site/tsconfig.json`, `svelte-check` to the site's devDependencies and to the front of its `typecheck`. **That site typecheck now fails at svelte-check: run `cd apps/site && npx svelte-check --tsconfig ./tsconfig.json --fail-on-warnings` and read why** (likely the `.astro/types.d.ts` include or the worker files). Then lint, `npm run typecheck`, `npm run test:unit`, push, read #832's checks by name, merge. After merge read deploy-dev's `site-smoke` job (first run of `tests/site`) and set its step limit to ≥3× the measured run (#476).
+2. **#828**, branch `feat/828-roadmap-figures` (same worktree), local head `d1f3e54`, WIP, NOT pushed: failing tests for `etaDate` and `confidence` in `packages/progress` (11 red against throwing stubs). Confidence rule (mine, for Shyden to change): high at ≥6 of 7 days moved, medium at 4–5, low otherwise or a window under 7 days. Then the site's summary (what's left by epic + totals, both estimates, recently shipped, updated-ago, waiting on decisions). The branch was cut from #827's `fad360c`: merge develop in once #832 lands.
+3. Then #829 (live updates); #830 waits on Shyden's copy approval.
 
 ## Waiting on Shyden
 
