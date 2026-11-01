@@ -3,20 +3,12 @@
  * matches the root too). It forwards each request, unchanged, to the Worker
  * its host names in ../hosts.ts: the site Worker (`SITE`), whose gate, game
  * binding and pages stay as they are, the sync Worker (`SYNC`), or the
- * holding page's dev copy (`HOLDING`, #768).
- *
- * Any other host answers 404 and reaches neither Worker. That covers the
- * project's own pages.dev address and every preview deployment's, which are
- * public, so the Workers are reached only through the dev hostnames.
+ * holding page's dev copy (`HOLDING`, #768). Any other host answers 404.
+ * `forward` holds the logic, unit-tested in tests/unit/dev-hosts.test.ts;
+ * the deployed adapter in front of the real Workers is checked after every
+ * dev deploy by scripts/verify-dev-hosts.ts (#816).
  */
-import { DEV_HOSTS } from '../hosts';
+import { forward } from '../hosts';
 
-export const onRequest: PagesFunction<Env> = ({ request, env }) => {
-  const binding = DEV_HOSTS.get(new URL(request.url).hostname);
-  if (binding === undefined)
-    return new Response('not found', {
-      status: 404,
-      headers: { 'cache-control': 'no-store' },
-    });
-  return env[binding].fetch(request);
-};
+export const onRequest: PagesFunction<Env> = ({ request, env }) =>
+  forward(request, env);

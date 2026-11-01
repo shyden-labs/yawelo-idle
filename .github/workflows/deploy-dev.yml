@@ -199,6 +199,14 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
+      # The hostname adapter in front of the real Workers, once verify-dev
+      # has seen this commit served (#816): path, query, method and body
+      # reach them unchanged, and its own pages.dev address reaches none.
+      - name: Verify the dev hostnames reach the real Workers unchanged
+        env:
+          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
+        run: node scripts/verify-dev-hosts.ts
 
   # The live roadmap's health, from the first check the deployed site Worker
   # made (#708). The site reads the board every 10 minutes, so this waits up

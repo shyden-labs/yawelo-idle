@@ -5,9 +5,7 @@ dist-holding/
 dist-holding-dev/
 build/
 .vite/
-# The dev hostname adapter's compiled Function (its `test` script) and the
-# empty static directory its deploy creates (#429)
-apps/dev-hosts/.build/
+# The empty static directory the dev hostname adapter's deploy creates (#429)
 apps/dev-hosts/public/
 # Astro's generated types (`astro sync`, run by build and check)
 .astro/
