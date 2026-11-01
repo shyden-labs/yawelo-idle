@@ -18,7 +18,7 @@
     "@yawelo-idle/web": "*"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
+    "@astrojs/check": "^0.9.12",
     "@astrojs/svelte": "^9.0.1",
     "astro": "^7.3.5"
   }
