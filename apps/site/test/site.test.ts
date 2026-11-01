@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
 import {
@@ -14,6 +15,7 @@ import {
   type Page,
 } from '../src/i18n';
 import { EXEMPT_PATHS, HOLDING_HOST, ROADMAP_PATHS } from '../worker/routes';
+import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy';
 
 /**
  * The dev site Worker, served by wrangler's test harness from the real
@@ -24,8 +26,10 @@ import { EXEMPT_PATHS, HOLDING_HOST, ROADMAP_PATHS } from '../worker/routes';
  * Worker directly, below the router; measured 2026-10-01, both stayed green
  * with `run_worker_first: false`.)
  *
- * The GAME binding points at test/game-echo.ts, which reports what reached
- * it (that file says why the real game cannot run beside the site here).
+ * The GAME binding reaches the real game Worker, built from apps/web
+ * (`build:harness` builds it). #332 measured every game asset answering 500
+ * beside the site on wrangler 4.145.0; on 4.148.0 both serve (#815,
+ * 2026-11-01), so no stand-in answers for the game.
  *
  * Absolute URLs set the hostname the Worker sees.
  */
@@ -42,15 +46,10 @@ const server = createTestHarness({
     {
       configPath: './wrangler.jsonc',
       secrets: { DEV_PASSWORD: PASSWORD },
-      bindingOverrides: { GAME: 'game-echo', HOLDING: 'holding-copy' },
+      bindingOverrides: { HOLDING: 'holding-copy' },
     },
-    {
-      config: {
-        name: 'game-echo',
-        main: './test/game-echo.ts',
-        compatibility_date: '2026-09-30',
-      },
-    },
+    // The real game Worker, the service wrangler.jsonc's GAME binding names.
+    { configPath: '../web/wrangler.jsonc' },
     // The holding page's build, served as assets only, as its dev copy is
     // (apps/site/holding-dev/wrangler.jsonc, #673).
     {
@@ -74,16 +73,30 @@ afterAll(async () => {
   await server.close();
 });
 
-/** What the stand-in game reported, or undefined if the game was not reached. */
-async function reachedGame(
-  // The harness answers with miniflare's Response, not the DOM's.
-  response: Pick<Response, 'json'>,
-): Promise<object | undefined> {
-  const body: unknown = await response.json().catch(() => undefined);
-  return typeof body === 'object' && body !== null && 'game' in body
-    ? body
-    : undefined;
+/**
+ * Whether the real game Worker answered: it sets its own Content Security
+ * Policy on everything it serves, which the site's answers never carry.
+ */
+// The harness answers with miniflare's Response, not the DOM's.
+const fromGame = (response: {
+  headers: { get(name: string): string | null };
+}): boolean => response.headers.get('Content-Security-Policy') === GAME_POLICY;
+
+/** The game's built shell and the script it loads, as apps/web built them. */
+const GAME_SHELL = readFileSync(
+  new URL('../../web/dist/play/index.html', import.meta.url),
+  'utf8',
+);
+const GAME_SCRIPT_PATH = /src="(\/play\/assets\/[^"]+\.js)"/.exec(
+  GAME_SHELL,
+)?.[1];
+if (GAME_SCRIPT_PATH === undefined) {
+  throw new Error('the built game shell names no /play/assets/*.js script');
 }
+const GAME_SCRIPT = readFileSync(
+  new URL(`../../web/dist${GAME_SCRIPT_PATH}`, import.meta.url),
+  'utf8',
+);
 
 const PAGES: [Locale, Page][] = [
   ['en', 'home'],
@@ -134,7 +147,7 @@ describe('the dev site Worker gate, through the asset router', () => {
     async (path) => {
       const response = await get(`${DEV}${path}`);
       expect(response.status).toBe(401);
-      expect(await reachedGame(response)).toBeUndefined();
+      expect(fromGame(response)).toBe(false);
     },
   );
 
@@ -174,20 +187,35 @@ describe('the paths exempt from the gate (#341 signs them instead)', () => {
 });
 
 describe('the game, forwarded through the GAME binding after the gate', () => {
-  it.each(['/play', '/play/', '/play/assets/index.js', '/play/a/client/route'])(
-    'forwards %s with its path and the credentials unchanged',
-    async (path) => {
-      const response = await get(`${DEV}${path}?x=1`, authorised);
-      expect(response.status).toBe(200);
-      expect(await reachedGame(response)).toEqual({
-        game: true,
-        method: 'GET',
-        pathname: path,
-        search: '?x=1',
-        authorization: authorised.Authorization,
-      });
-    },
-  );
+  // The real game shows what reached it: the file for the path, its shell
+  // for a client route, and the query kept in its own redirect.
+  it('forwards /play, where the game redirects to /play/ keeping the query', async () => {
+    const response = await get(`${DEV}/play?x=1`, authorised);
+    expect(response.status).toBe(307);
+    expect(response.headers.get('Location')).toBe('/play/?x=1');
+    expect(fromGame(response)).toBe(true);
+  });
+
+  it('forwards /play/, answered with the game shell', async () => {
+    const response = await get(`${DEV}/play/?x=1`, authorised);
+    expect(response.status).toBe(200);
+    expect(fromGame(response)).toBe(true);
+    expect(await response.text()).toBe(GAME_SHELL);
+  });
+
+  it('forwards the game script by its path, answered with that file', async () => {
+    const response = await get(`${DEV}${GAME_SCRIPT_PATH}?x=1`, authorised);
+    expect(response.status).toBe(200);
+    expect(fromGame(response)).toBe(true);
+    expect(await response.text()).toBe(GAME_SCRIPT);
+  });
+
+  it('forwards a client route, answered with the game shell', async () => {
+    const response = await get(`${DEV}/play/a/client/route?x=1`, authorised);
+    expect(response.status).toBe(200);
+    expect(fromGame(response)).toBe(true);
+    expect(await response.text()).toBe(GAME_SHELL);
+  });
 
   it('adds noindex to what the game answers on dev', async () => {
     const response = await get(`${DEV}/play/`, authorised);
@@ -199,7 +227,7 @@ describe('the game, forwarded through the GAME binding after the gate', () => {
     async (path) => {
       const response = await get(`${DEV}${path}`, authorised);
       expect(response.status).toBe(404);
-      expect(await reachedGame(response)).toBeUndefined();
+      expect(fromGame(response)).toBe(false);
     },
   );
 });
@@ -317,7 +345,8 @@ describe('the dev front door shows the holding page production shows (#673)', ()
   it('forwards the game on the front door', async () => {
     const response = await get(`${FRONT}/play/`, authorised);
     expect(response.status).toBe(200);
-    expect(await reachedGame(response)).toMatchObject({ pathname: '/play/' });
+    expect(fromGame(response)).toBe(true);
+    expect(await response.text()).toBe(GAME_SHELL);
   });
 
   it('answers the roadmap’s health on the front door, not the holding page', async () => {
