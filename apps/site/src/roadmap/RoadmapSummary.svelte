@@ -3,6 +3,8 @@
    * The roadmap's summary (#828): both estimates, what's left by island,
    * what shipped recently, what waits on decisions, and how old the snapshot
    * is. Every figure comes from summary.ts; only plain words are rendered.
+   * Its look lives in VoyageMap's one stylesheet: a second component
+   * stylesheet makes Astro's CSS plugin warn under Rolldown (#828).
    */
   import type { BoardItem, Progress } from '@yawelo-idle/progress';
   import type { SummaryCopy } from '../copy';
@@ -29,15 +31,6 @@
   // The snapshot's own day, so the page dates the ETA as the board did.
   const both = $derived(estimates(progress, readAt.slice(0, 10)));
   const effort = $derived(both.effort);
-  // Narrowed here: the template's {:else} does not narrow for the linter.
-  const unsized = $derived(
-    effort.available
-      ? null
-      : fill(copy.effortUnavailable, {
-          scored: effort.scored,
-          open: effort.open,
-        }),
-  );
   const left = $derived(whatsLeft(map));
   const shipped = $derived(recentlyShipped(items));
   const waiting = $derived(waitingOnDecisions(items));
@@ -92,8 +85,14 @@
           })}
         </p>
       {/if}
-    {:else}
-      <p>{unsized}</p>
+    {/if}
+    {#if !effort.available}
+      <p>
+        {fill(copy.effortUnavailable, {
+          scored: effort.scored,
+          open: effort.open,
+        })}
+      </p>
     {/if}
   </div>
   <p class="measured">{copy.measured}</p>
@@ -160,36 +159,3 @@
     </ul>
   {/if}
 </section>
-
-<style>
-  .roadmap-summary {
-    margin: 0 0 2rem;
-    overflow-wrap: anywhere;
-  }
-  progress {
-    width: 100%;
-    height: 1rem;
-  }
-  .whats-left {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .whats-left th,
-  .whats-left td {
-    padding: 0.25rem 0.5rem;
-    text-align: left;
-  }
-  .whats-left td {
-    text-align: right;
-  }
-  .whats-left tfoot {
-    font-weight: 700;
-    border-top: 2px solid currentColor;
-  }
-  .measured,
-  .assumed,
-  .updated,
-  time {
-    font-size: 0.875rem;
-  }
-</style>

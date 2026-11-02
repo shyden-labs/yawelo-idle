@@ -158,4 +158,35 @@
     margin: 0;
     padding-left: 1.25rem;
   }
+  /* The summary's look (#828), here for the same reason. */
+  .voyage :global(.roadmap-summary) {
+    margin: 0 0 2rem;
+    overflow-wrap: anywhere;
+  }
+  .voyage :global(.roadmap-summary progress) {
+    width: 100%;
+    height: 1rem;
+  }
+  .voyage :global(.whats-left) {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .voyage :global(.whats-left th),
+  .voyage :global(.whats-left td) {
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+  }
+  .voyage :global(.whats-left td) {
+    text-align: right;
+  }
+  .voyage :global(.whats-left tfoot) {
+    font-weight: 700;
+    border-top: 2px solid currentColor;
+  }
+  .voyage :global(.measured),
+  .voyage :global(.assumed),
+  .voyage :global(.updated),
+  .voyage :global(.roadmap-summary time) {
+    font-size: 0.875rem;
+  }
 </style>
