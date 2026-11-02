@@ -59,6 +59,24 @@ const view = (
 const text = (root: HTMLElement, selector: string): string[] =>
   [...root.querySelectorAll(selector)].map((e) => e.textContent.trim());
 
+// The first mount in a test worker pays Svelte's and jsdom's one-time set-up:
+// 31-91 ms alone, but 1,242 ms once under the full parallel suite (PR #849's
+// unit run), past the 1 s limit, on whichever test mounted first. It runs
+// here, with the file's import, as #544 did for ESLint's first lint.
+void unmount(
+  mount(Island, {
+    target: document.createElement('div'),
+    props: {
+      item: data(),
+      ship: false,
+      open: true,
+      onToggle: () => undefined,
+      copy,
+      copyLang: 'en',
+    },
+  }),
+);
+
 afterEach(() => {
   if (mounted !== undefined) void unmount(mounted);
   mounted = undefined;

@@ -7,6 +7,7 @@ import {
   type Progress,
 } from '@yawelo-idle/progress';
 import { COPY } from '../copy';
+import IslandScreen from './Island.svelte';
 import RoadmapSummary from './RoadmapSummary.svelte';
 import type { Island, Voyage } from './voyage';
 
@@ -126,6 +127,35 @@ const text = (root: HTMLElement, selector: string): string[] =>
   [...root.querySelectorAll(selector)].map((e) =>
     e.textContent.trim().replace(/\s+/g, ' '),
   );
+
+// The first mount in a test worker pays Svelte's and jsdom's one-time set-up:
+// 31-91 ms alone, but 1,242 ms once under the full parallel suite (PR #849's
+// unit run), past the 1 s limit, on whichever test mounted first. It runs
+// here, with the file's import, as #544 did for ESLint's first lint.
+void unmount(
+  mount(IslandScreen, {
+    target: document.createElement('div'),
+    props: {
+      item: {
+        epic: 1,
+        name: 'warm',
+        milestone: null,
+        summary: null,
+        status: 'not started',
+        built: [],
+        left: [],
+        behindTheScenes: 0,
+        ticketsLeft: 0,
+        pointsLeft: 0,
+      },
+      ship: false,
+      open: false,
+      onToggle: () => undefined,
+      copy: COPY.en.voyage,
+      copyLang: 'en',
+    },
+  }),
+);
 
 beforeEach(() => {
   vi.useFakeTimers();
