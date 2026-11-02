@@ -33,6 +33,7 @@ import { committableFiles } from '../unit/tracked-files';
  */
 const COMPONENTS = [
   'apps/site/src/roadmap/Island.svelte',
+  'apps/site/src/roadmap/RoadmapSummary.svelte',
   'apps/site/src/roadmap/VoyageMap.svelte',
   'packages/ui/src/Shell.svelte',
   'packages/ui/test/fixtures/Counter.svelte',
