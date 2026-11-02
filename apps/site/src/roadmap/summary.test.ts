@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BoardItem, Progress } from '@yawelo-idle/progress';
+import { progress, type BoardItem, type Progress } from '@yawelo-idle/progress';
 import {
   estimates,
   recentlyShipped,
@@ -100,6 +100,28 @@ describe("what's left", () => {
 
   it('totals every row and the other work', () => {
     expect(left.total).toEqual({ tickets: 5, points: 16 });
+  });
+
+  it('totals what the effort line counts, post-launch stories left out (#838)', () => {
+    const board = [
+      // Every open story scored, so the effort line is available.
+      ...BOARD.map((i) => (i.number === 12 ? { ...i, estimate: 1 } : i)),
+      item({
+        number: 4,
+        title: 'Epic: Mobile stores',
+        estimate: null,
+        labels: ['post-launch'],
+      }),
+      item({ number: 16, parent: 4, estimate: 13 }),
+      item({ number: 17, parent: 2, estimate: 5, labels: ['post-launch'] }),
+      item({ number: 18, estimate: 8, labels: ['post-launch'] }),
+    ];
+    const { total } = whatsLeft(voyage(board));
+    expect(progress(board, '2026-11-02').effort).toMatchObject({
+      available: true,
+      openStories: total.tickets,
+      openPoints: total.points,
+    });
   });
 
   it('leaves the islands beyond launch out of the totals', () => {

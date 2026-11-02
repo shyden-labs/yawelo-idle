@@ -1,4 +1,8 @@
-import type { BoardItem } from '@yawelo-idle/progress';
+import {
+  inScope,
+  postLaunchEpics,
+  type BoardItem,
+} from '@yawelo-idle/progress';
 
 /**
  * The voyage map's model (#827, #342 split): the roadmap snapshot's items as
@@ -111,7 +115,14 @@ function islandOf(epic: BoardItem, stories: BoardItem[]): Island {
 export function voyage(items: BoardItem[]): Voyage {
   const epics = items.filter(isEpic).sort(byDelivery);
   const epicNumbers = new Set(epics.map((e) => e.number));
-  const stories = items.filter((i) => !isEpic(i) && !isDropped(i));
+  // Release scope, the close-out rule (#838), so the totals match the
+  // effort line; stories of post-launch epics stay for Beyond launch.
+  const after = postLaunchEpics(items);
+  const stories = items.filter(
+    (i) =>
+      inScope(i, after) ||
+      (!isEpic(i) && !isDropped(i) && i.parent !== null && after.has(i.parent)),
+  );
   const storiesOf = (epic: number) => stories.filter((s) => s.parent === epic);
 
   const all = epics.map((e) => islandOf(e, storiesOf(e.number)));
