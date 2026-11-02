@@ -380,7 +380,7 @@ describe('the reader against git on the checked-out tree (#491 AC3)', () => {
     ['typescript', ['*.ts', '*.mts', '*.cts', '*.tsx']],
     ['svelte', ['*.svelte']],
     ['tests-and-scripts', ['tests/*.ts', 'scripts/*.ts']],
-  ] as const)('narrows by the %s pathspecs as git does', (name, specs) => {
+  ] as const)('narrows by the %s pathspecs as git does', (_name, specs) => {
     const git = gitLists('.', specs).committable;
     const diff = differences(committableFiles(specs), git);
     expect(diff, diff.join('\n')).toEqual([]);

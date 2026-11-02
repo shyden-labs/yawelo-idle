@@ -156,7 +156,7 @@ describe('gateWebRequest', () => {
     ['a wrong password', basic('u:wrong')],
   ])(
     'challenges %s on a non-prod host and never serves',
-    async (name, authorization) => {
+    async (_name, authorization) => {
       const { serve, calls } = recordingServe();
       const url = `${dev}/`;
       const response = await gateWebRequest(
