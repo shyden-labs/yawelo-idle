@@ -81,7 +81,7 @@ request prove that no file's untested code grew and that every gain was recorded
   (`vitest/dist/chunks/index.DpLw24bj.js`, 5.0.3). The ruling counts tests and configs as code, so the coverage
   config uses a **custom provider** (`scripts/coverage/provider.ts`): the v8 module, with a `V8CoverageProvider`
   subclass (a supported import through the package's `"./*"` export) whose `initialize` replaces the resolved exclude
-  with exactly ours. A test pins that the run's own test file, setup and config appear in the report.
+  with exactly this repo's. A test pins that the run's own test file, setup and config appear in the report.
   **Measured with that provider (probe, same day):** all 472 tracked JS/TS files are in the report; unit alone runs
   79.3% of statements (5,290 of 25,566 untested) and 77.4% of branch arms (1,889 of 8,376). `include` is limited to
   the `v8` kinds, since `.astro` and `.svelte` only log parse errors. Vite warns on an extensionless config import

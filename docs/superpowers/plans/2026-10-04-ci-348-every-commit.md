@@ -31,7 +31,7 @@
 ## Decisions this plan makes
 
 - **A label** is `<short SHA> <subject>`, cut to 72 graphemes (a git subject line's length) with an ellipsis; `%h` keeps short SHAs unique in the repository.
-- **The matrix limit** is GitHub's own, 256 (`MATRIX_LIMIT`), not a lower number of ours.
+- **The matrix limit** is GitHub's own, 256 (`MATRIX_LIMIT`), not a lower number of the repo's own.
 - **The verdict's checkout** is the pull request's head, so the workflow and the script it runs come from one commit.
 - **The list's range** is `base.sha..head.sha` from the event, so a branch that merged `develop` lists its merge commits too.
 

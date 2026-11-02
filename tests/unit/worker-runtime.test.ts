@@ -50,7 +50,7 @@ const runtimeConsumers = (lock: PackageLock): string[] =>
     )
     .map(([path]) => path);
 
-/** Our own root, which declares wrangler, and wrangler, which starts miniflare. */
+/** This repo's root, which declares wrangler, and wrangler, which starts miniflare. */
 const THROUGH_WRANGLER = ['', 'node_modules/wrangler'];
 
 const versionsOf = (name: string) => {

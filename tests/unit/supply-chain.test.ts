@@ -14,9 +14,9 @@ import { isRecord } from './workflow-secrets';
  * 1. A MUTABLE TAG is not a version. `actions/checkout@v4` resolves to
  *    whatever the tag points at today, and a tag can be repointed by anyone
  *    who can push to that repo. A compromised or coerced maintainer moves the
- *    tag and every workflow in this repo runs their code, with our secrets,
+ *    tag and every workflow in this repo runs their code, with this repo's secrets,
  *    on the next push. Pinning to a full commit SHA is the only form of this
- *    reference that cannot be changed underneath us.
+ *    reference that cannot be changed underneath it.
  *
  * 2. A PIN THAT NOBODY BUMPS rots. shyden.co.uk sat three majors behind on
  *    both of its actions with no mechanism to notice. So the SHA is only half
@@ -146,7 +146,10 @@ describe('the CI supply chain is pinned', () => {
       .filter(({ text }) => !/@[0-9a-f]{40}(?=\s|$)/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(unpinned, 'a mutable tag can be repointed under us').toEqual([]);
+    expect(
+      unpinned,
+      'a mutable tag can be repointed underneath the repo',
+    ).toEqual([]);
   });
 
   it('every pinned action names the version its SHA resolves to', () => {
@@ -199,7 +202,7 @@ describe('the browser image is pinned and matches the test runner (#44)', () => 
     const unpinned = images
       .filter(({ image }) => !/@sha256:[0-9a-f]{64}$/.test(image))
       .map(({ where, image }) => `${where} ${image}`);
-    expect(unpinned, 'a tag can be re-pushed under us').toEqual([]);
+    expect(unpinned, 'a tag can be re-pushed underneath the repo').toEqual([]);
   });
 
   it('the Playwright image is the version of @playwright/test the lockfile installs', () => {
