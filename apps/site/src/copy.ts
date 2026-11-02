@@ -28,7 +28,6 @@ export interface VoyageCopy {
     done: string;
     partDone: string;
     notStarted: string;
-    afterLaunch: string;
   };
   ship: string;
   built: string;
@@ -36,7 +35,6 @@ export interface VoyageCopy {
   nothingYet: string;
   points: string;
   behindTheScenes: string;
-  beyond: string;
   other: string;
   /** Whether the page is kept current over the live socket (#829). */
   live: string;
@@ -78,7 +76,6 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
     done: 'Done',
     partDone: 'Part done',
     notStarted: 'Not started',
-    afterLaunch: 'After launch',
   },
   ship: 'The ship is here',
   built: 'What’s built',
@@ -86,7 +83,6 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
   nothingYet: 'Nothing yet.',
   points: '{n} points',
   behindTheScenes: 'plus {n} behind-the-scenes improvements',
-  beyond: 'Beyond launch',
   other: 'Other work, on no island: {n} stories and {points} points left',
   live: 'Live: changes on the board show here as they happen.',
   notLive: 'Not live: this is the board as it was when the page loaded.',

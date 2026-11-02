@@ -9,7 +9,7 @@ import type { Island, Voyage } from './voyage';
 /**
  * The voyage map (#827), mounted in jsdom the #806 way, with `fetch` and the
  * snapshot-to-voyage step stood in: it says it is loading, then draws the
- * islands, the ship, the islands beyond launch and the other work; it says
+ * islands, the ship and the other work, nothing after launch; it says
  * so when the snapshot cannot be read; and it opens one island at a time.
  */
 const drawn = vi.hoisted(() => ({ voyage: null as Voyage | null }));
@@ -42,7 +42,6 @@ const MAP: Voyage = {
     island(1, 'M1: Foundations', { status: 'done' }),
     island(2, 'M2: First words', { status: 'part done' }),
   ],
-  beyond: [island(9, 'Mobile stores', { status: 'after launch' })],
   shipAt: 2,
   other: { ticketsLeft: 4, pointsLeft: 13, built: 1 },
 };
@@ -184,7 +183,7 @@ describe('the voyage map', () => {
     const root = view();
     await settle();
     expect([
-      text(root, '.islands:not(.beyond) .island-name'),
+      text(root, '.islands .island-name'),
       text(root, '[data-epic="2"] .ship'),
       root.querySelectorAll('.ship').length,
       root.querySelector('.voyage')?.getAttribute('aria-busy'),
@@ -196,27 +195,14 @@ describe('the voyage map', () => {
     ]);
   });
 
-  it('draws the islands beyond launch under their own heading, never with the ship', async () => {
-    drawn.voyage = { ...MAP, shipAt: 9 };
+  it('draws one list of islands and nothing after launch', async () => {
     respond(json());
     const root = view();
     await settle();
     expect([
-      text(root, '.voyage > h2'),
-      text(root, '.beyond .island-name'),
-      root.querySelectorAll('.ship').length,
-    ]).toEqual([['Beyond launch'], ['Mobile stores'], 0]);
-  });
-
-  it('draws no beyond-launch heading when no island is beyond launch', async () => {
-    drawn.voyage = { ...MAP, beyond: [] };
-    respond(json());
-    const root = view();
-    await settle();
-    expect([
+      root.querySelectorAll('ol.islands').length,
       root.querySelector('.voyage > h2'),
-      root.querySelector('.beyond'),
-    ]).toEqual([null, null]);
+    ]).toEqual([1, null]);
   });
 
   it('counts the other work on no island', async () => {
@@ -295,8 +281,8 @@ describe('the voyage map', () => {
     const root = view();
     await settle();
     press(root, 1);
-    press(root, 9);
-    expect(expanded(root)).toEqual(['panel-9']);
+    press(root, 2);
+    expect(expanded(root)).toEqual(['panel-2']);
   });
 
   it('closes the open island when it is pressed again', async () => {
@@ -337,7 +323,7 @@ describe('the voyage map', () => {
     respond(json());
     const root = view();
     await settle();
-    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Pushed')], beyond: [] };
+    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Pushed')] };
     socket().push({ ...SNAPSHOT, version: 2 });
     expect(text(root, '.islands .island-name')).toEqual(['M5: Pushed']);
   });
@@ -346,9 +332,9 @@ describe('the voyage map', () => {
     respond(new Response(JSON.stringify({ ...SNAPSHOT, version: 3 })));
     const root = view();
     await settle();
-    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Stale')], beyond: [] };
+    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Stale')] };
     socket().push({ ...SNAPSHOT, version: 2 });
-    expect(text(root, '.islands:not(.beyond) .island-name')).toEqual([
+    expect(text(root, '.islands .island-name')).toEqual([
       'M1: Foundations',
       'M2: First words',
     ]);
@@ -375,7 +361,7 @@ describe('the voyage map', () => {
       root.querySelectorAll('.island').length,
     ]).toEqual([
       ['Not live: this is the board as it was when the page loaded.'],
-      3,
+      2,
     ]);
   });
 
@@ -387,7 +373,7 @@ describe('the voyage map', () => {
     expect([
       root.querySelector('[role="alert"]'),
       root.querySelectorAll('.island').length,
-    ]).toEqual([null, 3]);
+    ]).toEqual([null, 2]);
   });
 
   it('closes the socket when it leaves the page', () => {

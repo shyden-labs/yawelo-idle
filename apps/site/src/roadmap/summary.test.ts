@@ -124,7 +124,7 @@ describe("what's left", () => {
     });
   });
 
-  it('leaves the islands beyond launch out of the totals', () => {
+  it('leaves post-launch epics off the rows and out of the totals', () => {
     const board = [
       ...BOARD,
       item({
@@ -135,8 +135,8 @@ describe("what's left", () => {
       }),
       item({ number: 16, parent: 4, estimate: 13 }),
     ];
-    const withBeyond = whatsLeft(voyage(board));
-    expect([withBeyond.rows.length, withBeyond.total]).toEqual([
+    const left = whatsLeft(voyage(board));
+    expect([left.rows.length, left.total]).toEqual([
       3,
       { tickets: 5, points: 16 },
     ]);
@@ -284,6 +284,21 @@ describe('recently shipped', () => {
     ).toEqual([]);
   });
 
+  it('leaves out post-launch stories, labelled or under a post-launch epic', () => {
+    expect(
+      recentlyShipped([
+        item({
+          number: 4,
+          title: 'Epic: Stores',
+          labels: ['post-launch'],
+          estimate: null,
+        }),
+        done(38, '2026-10-05T00:00:00Z', { labels: ['post-launch'] }),
+        done(39, '2026-10-05T00:00:00Z', { parent: 4 }),
+      ]),
+    ).toEqual([]);
+  });
+
   it('leaves out open stories', () => {
     expect(
       recentlyShipped([item({ number: 35, publicTitle: 'Soon' })]),
@@ -322,6 +337,21 @@ describe('waiting on decisions', () => {
       named: [],
       unnamed: 2,
     });
+  });
+
+  it('leaves out post-launch decisions', () => {
+    expect(
+      waitingOnDecisions([
+        item({
+          number: 4,
+          title: 'Epic: Stores',
+          labels: ['post-launch', 'waiting-on-shyden'],
+          estimate: null,
+        }),
+        waiting(46, { labels: ['waiting-on-shyden', 'post-launch'] }),
+        waiting(47, { parent: 4 }),
+      ]),
+    ).toEqual({ named: [], unnamed: 0 });
   });
 
   it('leaves out closed issues and unlabelled ones', () => {

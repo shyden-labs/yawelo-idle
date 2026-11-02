@@ -91,12 +91,13 @@ export function postLaunchEpics(items: BoardItem[]): Set<number> {
   );
 }
 
-/** A story after launch: labelled so, or under an epic labelled so (#838). */
-const isPostLaunchStory = (
+/** After launch: labelled so, or under an epic labelled so (#838). */
+export function afterLaunch(
   item: BoardItem,
   epics: ReadonlySet<number>,
-): boolean =>
-  isPostLaunch(item) || (item.parent !== null && epics.has(item.parent));
+): boolean {
+  return isPostLaunch(item) || (item.parent !== null && epics.has(item.parent));
+}
 
 /**
  * Whether a board item counts towards release-ready. `epics` are the
@@ -106,9 +107,7 @@ export function inScope(
   item: BoardItem,
   epics: ReadonlySet<number> = new Set(),
 ): boolean {
-  return (
-    !isEpic(item) && !isPostLaunchStory(item, epics) && !isNotPlanned(item)
-  );
+  return !isEpic(item) && !afterLaunch(item, epics) && !isNotPlanned(item);
 }
 
 /** The UTC days of the window ending `today`, oldest first, none before `since`. */
@@ -156,11 +155,11 @@ export function progress(items: BoardItem[], today: string): Progress {
     total: scope.length,
     epics: items.filter(isEpic).length,
     postLaunch: items.filter(
-      (item) => !isEpic(item) && isPostLaunchStory(item, after),
+      (item) => !isEpic(item) && afterLaunch(item, after),
     ).length,
     notPlanned: items.filter(
       (item) =>
-        !isEpic(item) && !isPostLaunchStory(item, after) && isNotPlanned(item),
+        !isEpic(item) && !afterLaunch(item, after) && isNotPlanned(item),
     ).length,
     pace: perDay(closed, days, () => 1),
   };
