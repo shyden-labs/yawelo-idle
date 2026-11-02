@@ -126,9 +126,11 @@ describe(`GET ${LIVE}`, () => {
   });
 
   it('refuses POST with 405 as the spec says', async () => {
+    // No Upgrade header: undici refuses one on a POST before sending it.
+    // The old Worker answered this 426; the method is judged first now.
     const response = await call(`${DEV}${LIVE}`, {
       method: 'POST',
-      headers: { ...AUTH, Upgrade: 'websocket' },
+      headers: AUTH,
     });
     expect(response.status).toBe(405);
     expect(await judged(LIVE, 'get', response)).toEqual([]);
