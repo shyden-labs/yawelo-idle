@@ -10,7 +10,7 @@ import { COVERAGE_EXCLUDE } from './coverage-config.ts';
  * `dist/chunks/index.DpLw24bj.js`). Measured 2026-10-21: the unit suite's
  * report then left out 190 test files, `tests/unit/setup.ts` and
  * `vitest.config.ts`. The global ruling counts tests and tool configs as
- * code, so this provider replaces the resolved list with exactly this repo's.
+ * code, so this provider replaces the resolved list with exactly ours.
  */
 
 /** The members of `V8CoverageProvider` this provider touches. */

@@ -116,18 +116,18 @@ export function readStamps(pages: unknown[], repo: string): Stamps {
     for (const node of nodes) {
       const content = field(node, 'content');
       const number = field(content, 'number');
-      const onThisRepo =
+      const ours =
         field(content, '__typename') === 'Issue' &&
         field(field(content, 'repository'), 'nameWithOwner') === repo &&
         Number.isInteger(number);
       const issueAt = stamp(field(content, 'updatedAt'));
-      if (onThisRepo && issueAt !== null)
+      if (ours && issueAt !== null)
         stamps.issues.set(number as number, issueAt);
       const id = field(node, 'id');
       const updatedAt = stamp(field(node, 'updatedAt'));
       if (typeof id !== 'string' || updatedAt === null) continue;
       stamps.items.set(id, {
-        number: onThisRepo ? (number as number) : null,
+        number: ours ? (number as number) : null,
         updatedAt,
       });
     }

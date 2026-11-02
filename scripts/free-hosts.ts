@@ -2,7 +2,7 @@
  * Fails when a built page loads anything from a free shared domain (#768
  * AC5): Indonesian providers block every r2.dev name (Telkomsel and Biznet,
  * measured 2026-10-20 and 2026-10-26), and the other free names could be
- * blocked the same way, so every file the pages load comes from a
+ * blocked the same way, so every file our pages load comes from a
  * shyden.co.uk address. It reads every built file whole, so an address in any
  * attribute, stylesheet, script, CSP entry or header file is found.
  *

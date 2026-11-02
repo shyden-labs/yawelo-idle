@@ -50,7 +50,7 @@ export const PROD_MEDIA: MediaHost = {
  * The dev copy's host (#768): the bucket `yawelo-idle-media-dev` on
  * dev-media.shyden.co.uk, set up like production's. Indonesian providers
  * block every free r2.dev name (Telkomsel and Biznet, measured 2026-10-20 and
- * 2026-10-26), so dev's media sit on the project's own domain, and a zone rule scoped to
+ * 2026-10-26), so dev's media sit on our own domain, and a zone rule scoped to
  * this host adds the same two headers as production's. Both dev pages that
  * show the media are on shyden.co.uk, so CORP same-site lets them load it.
  */

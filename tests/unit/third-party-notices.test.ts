@@ -11,7 +11,7 @@ import {
  * Third-party notices for everything a shipped build bundles (#26 AC11).
  *
  * Apache-2.0 §4 requires a copy of the licence and every NOTICE text of the
- * works this repo redistributes, and MIT requires its copyright line. The six direct
+ * works we redistribute, and MIT requires its copyright line. The six direct
  * @stdlib packages pull in 152, several of whose LICENSE files append
  * upstream copyrights (Sun, the Go Authors) to the Apache text, so the listing is
  * derived from the lockfile and the installed files, never kept by hand.

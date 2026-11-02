@@ -7,7 +7,7 @@ import { scanRunners } from './workflow-runners';
 /**
  * Every job names a fixed runner image (#400): GitHub moves `ubuntu-latest`
  * to Ubuntu 26.04 from 2026-10-19 (actions/runner-images#14748), and a moving
- * label changes CI and the deploy underneath the repo with no commit saying so.
+ * label changes CI and the deploy under us with no commit saying so.
  */
 
 const workflow = (jobs: string) => `name: x\non:\n  push:\njobs:\n${jobs}`;

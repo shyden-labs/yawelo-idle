@@ -139,7 +139,7 @@ describe('every suite writes one report the measure step joins (#728)', () => {
   };
 
   for (const [name, config] of CONFIGS)
-    it(`${name}: the custom provider, its files, this repo's exclude only`, () => {
+    it(`${name}: the custom provider, its files, our exclude only`, () => {
       expect(config.test.coverage).toEqual({
         enabled: true,
         provider: 'custom',
@@ -175,7 +175,7 @@ describe('only the unit suite compiles Svelte under coverage (#798, #806)', () =
     });
 });
 
-describe('the provider excludes only what is not part of this repo (#728)', () => {
+describe('the provider excludes only what is not ours (#728)', () => {
   it('dependencies, build output and the coverage reports themselves', () => {
     expect(COVERAGE_EXCLUDE).toEqual([
       '**/node_modules/**',

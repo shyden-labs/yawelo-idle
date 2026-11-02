@@ -436,7 +436,7 @@ import { withoutYamlComments, withoutYamlQuotes } from './source-text';
  * 1. A MUTABLE TAG is not a version. `actions/checkout@v4` resolves to
  *    whatever the tag points at today, and a tag can be repointed by anyone
  *    who can push to that repo. A compromised or coerced maintainer moves the
- *    tag and every workflow in this repo runs their code, with this repo's secrets,
+ *    tag and every workflow in this repo runs their code, with our secrets,
  *    on the next push. Pinning to a full commit SHA is the only form of this
  *    reference that cannot be changed underneath us.
  *

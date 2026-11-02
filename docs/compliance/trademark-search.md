@@ -5,7 +5,7 @@ Story #157 (spec §14.3, §15, D16). The searches ran on 2026-10-04 between 23:0
 ## Summary
 
 - **Registers: clear.** No filed or registered mark reads WORDFARER, or a close spelling of it, at the USPTO, the EUIPO or the UK IPO. A TMview search across every office it covers also found none. What the registers do show is a crowded field of `-FARER` marks (SPIRITFARER, MINDFARER, WAYFARER and others) side by side in classes 9 and 41.
-- **Use without registration: not clear.** Three businesses were already using the exact name before it was chosen (2026-10-01), and two of them are games. In the UK (passing off) and the US (common-law use), a name can carry rights through use alone.
+- **Use without registration: not clear.** Three businesses were already using the exact name before we chose it (2026-10-01), and two of them are games. In the UK (passing off) and the US (common-law use), a name can carry rights through use alone.
 - **Decision (operator, 2026-10-04 23:18 UTC): rename.** The work is filed as #355 (choose and clear a new name), #356 (rename the code and documents) and #357 (rename the infrastructure). No store listing has been made and no domain bought.
 
 ## Method
@@ -90,7 +90,7 @@ The registers show many `-FARER` marks living side by side in classes 9 and 41. 
 
 ### Risk notes
 
-- Two of the three are **games, in the same classes, under the identical name**, and both started before the choice. Neither appears to hold a filed mark, and the iOS game has no ratings yet, so the goodwill behind any use-based claim may be small today. Either business can still file at any time, and an earlier user can oppose a later filing.
+- Two of the three are **games, in our classes, under the identical name**, and both started before our choice. Neither appears to hold a filed mark, and the iOS game has no ratings yet, so the goodwill behind any use-based claim may be small today. Either business can still file at any time, and an earlier user can oppose a later filing.
 - Whatever the legal position, players searching the stores for "Wordfarer" would find another game, and both the .com and the .app are taken.
 - `TRADEMARKS.md` claims "Wordfarer" as a Shyden Labs trademark. #356 replaces it with the new name.
 
@@ -105,7 +105,7 @@ The registers show many `-FARER` marks living side by side in classes 9 and 41. 
 
 **Recommendation: rename, before the website (#331) and before any store or domain step.** About 14% of the work is built (by effort, from the board on 2026-10-04), so a rename costs least now: 76 tracked files and the dev infrastructure, with no public site, store page or domain yet.
 
-**Operator decision, 2026-10-04 23:18 UTC: "Rename now"**, chosen over "get professional advice" and "keep Wordfarer and file marks of its own". Next: #355, then #356 and #357. Under §14.3, no store listing or domain purchase happens until #355 has a cleared name.
+**Operator decision, 2026-10-04 23:18 UTC: "Rename now"**, chosen over "get professional advice" and "keep Wordfarer and file our own marks". Next: #355, then #356 and #357. Under §14.3, no store listing or domain purchase happens until #355 has a cleared name.
 
 # Replacement name (#355): "Yawelo Idle"
 
@@ -174,7 +174,7 @@ Three readers were corrected on the way, each caught by its own control: rdap.or
 | dawelo                                         | USPTO                 | one edit from DWELO (US 86844509, classes 9 and 42)                                                                                                                         |
 | bowayo                                         | USPTO                 | OWAYO (US 85742616, classes 9, 28, 42) and BOWAY (US 98835000, class 28)                                                                                                    |
 | nawalo                                         | TMview                | **NAWALO** registered in the EU (016732026) and the UK (UK00916732026), classes 12, 35, 39, 42, 43, NAWALO GmbH; absent from the USPTO, which is why every register is read |
-| lowami, nolamo, wanomi, sedamo, lunado, wayolo | registers and domains | left off the shortlist: crowded one edit away in the same classes and the .com taken (lowami: LOWADI, Ubisoft's mobile-game mark in classes 28 and 41)                      |
+| lowami, nolamo, wanomi, sedamo, lunado, wayolo | registers and domains | left off the shortlist: crowded one edit away in our classes and the .com taken (lowami: LOWADI, Ubisoft's mobile-game mark in classes 28 and 41)                           |
 
 `bonalu` reached the store searches before the edit-distance screen struck it, so it has store results in the working files but no row below.
 
@@ -182,7 +182,7 @@ Three readers were corrected on the way, each caught by its own control: rdap.or
 
 Each candidate is given in its "X Idle" form. Pinyin is the agent's transliteration (Xinhua conventions); the characters are one plausible choice, not a fixed rendering. Every syllable is open (consonant plus vowel), so all three audiences can say each one: Mandarin and Indonesian have no clusters, and none of these words has one.
 
-| Name            | Derivation and voyage fit                                                                 | Meanings (EN, KBBI, Mandarin)                                                                                   | Registers (live, same classes, nearest)                                                                                                                                     | Stores and web                                                                                                             | .com         | Verdict                                   |
+| Name            | Derivation and voyage fit                                                                 | Meanings (EN, KBBI, Mandarin)                                                                                   | Registers (live, our classes, nearest)                                                                                                                                      | Stores and web                                                                                                             | .com         | Verdict                                   |
 | --------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------- |
 | **Yawelo Idle** | "ya" + "we" + "lo", a rocking, wave-like rhythm; a pure sound, no built-in voyage meaning | none bad; KBBI _yawel_ (one edit), a Sumbawa pre-wedding family meal; _yǎ wéi luò_ 雅维洛, no flagged homophone | USPTO: none exact, wildcard or within one edit; TMview: YAWENO (EM 018754179, class 9, white-med GmbH), YAWELL (CN, TH, class 9), Awelo (DE, class 9 and 42); no game marks | App Store, itch.io: nothing near; Play: "YaWel" (Revila App Lab, Shopping); web: a Ghanaian student music group, a surname | free         | **chosen**                                |
 | Sowalu Idle     | "so" + "wa" (wave) + "lu" (路, road)                                                      | English _sow_ (to plant seed; a female pig; a derogatory slang term for a woman); _suǒ wǎ lù_                   | ROWALU (EM 018013349, GB UK00918013349, class 28 among others)                                                                                                              | nothing near on any store; web: a German electrical installer (sowalu.org)                                                 | free         | second                                    |
