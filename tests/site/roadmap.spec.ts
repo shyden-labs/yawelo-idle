@@ -5,7 +5,11 @@ import {
   recentlyShipped,
   whatsLeft,
 } from '../../apps/site/src/roadmap/summary';
-import { voyage, type Voyage } from '../../apps/site/src/roadmap/voyage';
+import {
+  islandName,
+  voyage,
+  type Voyage,
+} from '../../apps/site/src/roadmap/voyage';
 
 /**
  * The voyage map on dev (#827): the deployed site Worker serving the page and
@@ -41,7 +45,7 @@ test('draws one island per epic, in delivery order', async ({ page }) => {
   const { map } = await openMap(page);
   expect(map.islands.length).toBeGreaterThan(0);
   await expect(page.locator('ol.islands .island-name')).toHaveText(
-    map.islands.map((i) => i.name),
+    map.islands.map((i) => islandName(i, COPY.en.voyage)),
   );
 });
 
@@ -64,7 +68,7 @@ test('serves only the fields the public page shows (#840)', async ({
   expect([Object.keys(served).sort(), [...keys]]).toEqual([
     ['items', 'progress', 'readAt', 'version'],
     [
-      'closedAt,epicTitle,estimate,number,parent,publicSummary,publicTitle,state,waiting',
+      'closedAt,epic,estimate,milestone,number,parent,publicSummary,publicTitle,state,waiting',
     ],
   ]);
 });

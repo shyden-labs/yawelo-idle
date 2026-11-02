@@ -204,12 +204,14 @@ describe('/api/roadmap*', () => {
       postLaunchStory: served.includes('"number":7,'),
       notPlannedStory: served.includes('"number":8,'),
       rawTitle: served.includes('Story '),
+      epicTicketTitle: served.includes('Epic'),
       labels: served.includes('labels'),
       closeOutLines: served.includes('By tickets'),
     }).toEqual({
       postLaunchStory: false,
       notPlannedStory: false,
       rawTitle: false,
+      epicTicketTitle: false,
       labels: false,
       closeOutLines: false,
     });

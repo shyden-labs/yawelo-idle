@@ -78,11 +78,11 @@ describe("what's left", () => {
     ]);
   });
 
-  it('names each epic as its island does', () => {
-    expect(left.rows.map((r) => r.name)).toEqual([
-      'M2: First words',
-      'M1: Foundations',
-      'M3: Prestige',
+  it('names each epic as its island does: Public title, else milestone', () => {
+    expect(left.rows.map((r) => [r.name, r.milestone])).toEqual([
+      [null, 2],
+      [null, 1],
+      [null, 3],
     ]);
   });
 
