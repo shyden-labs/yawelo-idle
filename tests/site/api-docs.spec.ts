@@ -37,6 +37,6 @@ test('“Try it out” reads the data file and shows its 200', async ({ page }) 
   await operation.getByRole('button', { name: 'Execute' }).click();
   expect((await answered).status()).toBe(200);
   await expect(
-    operation.locator('.live-responses-table .response-col_status'),
+    operation.locator('.live-responses-table tbody .response-col_status'),
   ).toHaveText('200');
 });
