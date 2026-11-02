@@ -65,7 +65,8 @@
   "allowScripts": {
     "esbuild": true,
     "fsevents": false,
-    "workerd": true
+    "workerd": true,
+    "@scarf/scarf": false
   },
   "overrides": {
     "sharp": "0.35.5"

@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, expect, it } from 'vitest';
 import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
+import { judged } from './openapi';
 
 /**
  * `/api/roadmap.json` before any read has succeeded (#341). A file of its
@@ -35,6 +36,17 @@ it('answers 503 with a plain sentence, never the error text, when the board has 
   expect(await response.json()).toEqual({
     error: 'The roadmap could not be read just now.',
   });
+});
+
+it('answers its 503 as the API spec says (#588)', async () => {
+  await world.resetFake();
+  await world.configureFake({ graphqlStatus: 502 });
+  const response = await world.server.fetch(
+    'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/roadmap.json',
+    { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
+  );
+  expect(response.status).toBe(503);
+  expect(await judged('/api/roadmap.json', 'get', response)).toEqual([]);
 });
 
 it('keeps the health report, error text and all, off the production host (#846)', async () => {

@@ -1,0 +1,267 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Yawelo Idle roadmap API",
+    "version": "1.0.0",
+    "summary": "The public roadmap's data, read from the project board.",
+    "description": "Read-only. The public roadmap page draws itself from these two operations: a JSON snapshot of the board, and a WebSocket that sends each new snapshot as the board changes. Both answer on the site's own address.",
+    "license": { "name": "Apache-2.0", "identifier": "Apache-2.0" }
+  },
+  "servers": [{ "url": "/", "description": "This site" }],
+  "paths": {
+    "/api/roadmap.json": {
+      "get": {
+        "operationId": "getRoadmapSnapshot",
+        "summary": "The board's latest snapshot",
+        "description": "The public part of the latest read of the board. The version goes up by one each time a read finds the board changed.",
+        "responses": {
+          "200": {
+            "description": "The latest snapshot.",
+            "headers": {
+              "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Snapshot" }
+              }
+            }
+          },
+          "503": {
+            "description": "The board has not been read successfully yet.",
+            "headers": {
+              "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Unreadable" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/PasswordNeeded" },
+          "405": { "$ref": "#/components/responses/GetOnly" }
+        }
+      }
+    },
+    "/api/roadmap/live": {
+      "get": {
+        "operationId": "openRoadmapLive",
+        "summary": "A WebSocket that sends each new snapshot",
+        "description": "Upgrades to a WebSocket. Once open, the server sends the latest snapshot at once (when the board has been read), then each new snapshot as it is read. Every message is one text frame holding a Snapshot as JSON; the server reads nothing the client sends. \"Try it out\" here sends a plain request, which is refused with 426: open the socket from a WebSocket client.",
+        "parameters": [
+          {
+            "name": "Upgrade",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "const": "websocket" }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching to the WebSocket protocol. Each message is a Snapshot as JSON.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Snapshot" }
+              }
+            }
+          },
+          "426": {
+            "description": "The request did not ask for a WebSocket upgrade.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "const": "expected a WebSocket upgrade"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/PasswordNeeded" },
+          "405": { "$ref": "#/components/responses/GetOnly" }
+        }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "NoStore": {
+        "description": "Never cached: each request reads the latest snapshot.",
+        "schema": { "type": "string", "const": "no-store" }
+      }
+    },
+    "responses": {
+      "PasswordNeeded": {
+        "description": "Only on the development site, which sits behind a password. The public site never answers 401.",
+        "headers": {
+          "WWW-Authenticate": {
+            "schema": { "type": "string", "pattern": "^Basic realm=" }
+          },
+          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+        },
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string",
+              "description": "One sentence saying this is a test environment."
+            }
+          }
+        }
+      },
+      "GetOnly": {
+        "description": "Any method but GET (or HEAD) is refused.",
+        "headers": {
+          "Allow": { "schema": { "type": "string", "const": "GET, HEAD" } }
+        }
+      }
+    },
+    "schemas": {
+      "Snapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "readAt", "items", "progress"],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Goes up by one each time a read finds the board changed."
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the read that made this version started."
+          },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Item" }
+          },
+          "progress": { "$ref": "#/components/schemas/Progress" }
+        }
+      },
+      "Item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "number",
+          "epic",
+          "milestone",
+          "state",
+          "closedAt",
+          "estimate",
+          "parent",
+          "publicTitle",
+          "publicSummary",
+          "waiting"
+        ],
+        "properties": {
+          "number": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The issue's number."
+          },
+          "epic": {
+            "type": "boolean",
+            "description": "Whether it is an epic (a group of stories)."
+          },
+          "milestone": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "An epic's milestone number; null for stories and for epics with no milestone."
+          },
+          "state": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+          "closedAt": { "type": ["string", "null"], "format": "date-time" },
+          "estimate": {
+            "type": ["number", "null"],
+            "description": "Story points, or null when not scored."
+          },
+          "parent": {
+            "type": ["integer", "null"],
+            "description": "The epic it belongs to, or null."
+          },
+          "publicTitle": {
+            "type": ["string", "null"],
+            "description": "The title the public roadmap shows, or null when none is set."
+          },
+          "publicSummary": {
+            "type": ["string", "null"],
+            "description": "The summary the public roadmap shows, or null when none is set."
+          },
+          "waiting": {
+            "type": "boolean",
+            "description": "Whether it waits on a decision."
+          }
+        }
+      },
+      "Progress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tickets", "effort"],
+        "properties": {
+          "tickets": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["closed", "total", "pace"],
+            "properties": {
+              "closed": { "type": "integer", "minimum": 0 },
+              "total": { "type": "integer", "minimum": 0 },
+              "pace": {
+                "type": "array",
+                "description": "Stories closed on each of the last 7 days, oldest first.",
+                "minItems": 7,
+                "maxItems": 7,
+                "items": { "type": "integer", "minimum": 0 }
+              }
+            }
+          },
+          "effort": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "available",
+                  "openPoints",
+                  "assumedClosed",
+                  "scoredMean",
+                  "pace"
+                ],
+                "properties": {
+                  "available": { "const": true },
+                  "openPoints": { "type": "number", "minimum": 0 },
+                  "assumedClosed": { "type": "number", "minimum": 0 },
+                  "scoredMean": { "type": "number", "minimum": 0 },
+                  "pace": {
+                    "type": "array",
+                    "description": "Points closed on each of the last 7 days, oldest first.",
+                    "minItems": 7,
+                    "maxItems": 7,
+                    "items": { "type": "number", "minimum": 0 }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["available", "scored", "open"],
+                "properties": {
+                  "available": { "const": false },
+                  "scored": { "type": "integer", "minimum": 0 },
+                  "open": { "type": "integer", "minimum": 0 }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "Unreadable": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "The roadmap could not be read just now."
+          }
+        }
+      }
+    }
+  }
+}
