@@ -182,8 +182,26 @@ test('lists the stories shipped most recently (#828)', async ({ page }) => {
 });
 
 test('goes live over the Worker’s socket (#829)', async ({ page }) => {
+  // What the socket did, named when the page does not go live: WebKit on
+  // Linux stayed "not live" on dev where Chromium and Firefox went live.
+  const seen: string[] = [];
+  page.on('websocket', (socket) => {
+    seen.push(`open ${socket.url()}`);
+    socket.on('framereceived', () => seen.push('frame'));
+    socket.on('socketerror', (error) => seen.push(`error ${error}`));
+    socket.on('close', () => seen.push('close'));
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error') seen.push(`console ${message.text()}`);
+  });
   await openMap(page);
-  await expect(page.locator('.live-state')).toHaveText(COPY.en.voyage.live);
+  try {
+    await expect(page.locator('.live-state')).toHaveText(COPY.en.voyage.live);
+  } catch (error) {
+    throw new Error(`not live; the socket saw: ${seen.join(' | ')}`, {
+      cause: error,
+    });
+  }
 });
 
 test('says it is not live when the socket is refused, keeping the snapshot read (#829)', async ({
