@@ -55,7 +55,15 @@ const respond = (response: Response): void => {
 };
 
 /** A snapshot as /api/roadmap.json serves it; its items are drawn by the stand-in. */
-const SNAPSHOT: { items: BoardItem[]; progress: Progress; readAt: string } = {
+interface Snapshot {
+  version: number;
+  items: BoardItem[];
+  progress: Progress;
+  readAt: string;
+}
+
+const SNAPSHOT: Snapshot = {
+  version: 1,
   items: [],
   progress: {
     tickets: {
@@ -103,15 +111,52 @@ const expanded = (root: HTMLElement): string[] =>
     (b) => b.getAttribute('aria-controls') ?? '',
   );
 
+/** The live socket stood in (#829): it records itself and is driven by hand. */
+class FakeSocket extends EventTarget {
+  static opened: FakeSocket[] = [];
+  closed = false;
+  readonly url: string;
+  constructor(url: string) {
+    super();
+    this.url = url;
+    FakeSocket.opened.push(this);
+  }
+  close(): void {
+    this.closed = true;
+  }
+  push(snapshot: Snapshot): void {
+    this.dispatchEvent(
+      new MessageEvent('message', { data: JSON.stringify(snapshot) }),
+    );
+    flushSync();
+  }
+  drop(kind: 'close' | 'error'): void {
+    this.dispatchEvent(new Event(kind));
+    flushSync();
+  }
+}
+
+const socket = (): FakeSocket => {
+  const [first] = FakeSocket.opened;
+  if (first === undefined) throw new Error('no socket was opened');
+  return first;
+};
+
 beforeEach(() => {
+  FakeSocket.opened = [];
+  vi.stubGlobal('WebSocket', FakeSocket);
   drawn.voyage = MAP;
   fetchStub.mockReset();
   vi.stubGlobal('fetch', fetchStub);
 });
 
-afterEach(() => {
+const leave = (): void => {
   if (mounted !== undefined) void unmount(mounted);
   mounted = undefined;
+};
+
+afterEach(() => {
+  leave();
   document.body.replaceChildren();
   vi.unstubAllGlobals();
 });
@@ -261,5 +306,94 @@ describe('the voyage map', () => {
     press(root, 1);
     press(root, 1);
     expect(expanded(root)).toEqual([]);
+  });
+
+  it('opens the live socket at the Worker’s address', () => {
+    respond(json());
+    view();
+    expect(FakeSocket.opened.map((o) => o.url)).toEqual([
+      'ws://localhost:3000/api/roadmap/live',
+    ]);
+  });
+
+  it('says nothing of being live until the socket speaks', async () => {
+    respond(json());
+    const root = view();
+    await settle();
+    expect(root.querySelector('.live-state')).toBeNull();
+  });
+
+  it('says it is live once the socket delivers a snapshot', async () => {
+    respond(json());
+    const root = view();
+    await settle();
+    socket().push(SNAPSHOT);
+    expect(text(root, '.live-state')).toEqual([
+      'Live: changes on the board show here as they happen.',
+    ]);
+  });
+
+  it('redraws from a newer pushed snapshot, without a reload', async () => {
+    respond(json());
+    const root = view();
+    await settle();
+    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Pushed')], beyond: [] };
+    socket().push({ ...SNAPSHOT, version: 2 });
+    expect(text(root, '.islands .island-name')).toEqual(['M5: Pushed']);
+  });
+
+  it('keeps what it shows over an older pushed snapshot', async () => {
+    respond(new Response(JSON.stringify({ ...SNAPSHOT, version: 3 })));
+    const root = view();
+    await settle();
+    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Stale')], beyond: [] };
+    socket().push({ ...SNAPSHOT, version: 2 });
+    expect(text(root, '.islands:not(.beyond) .island-name')).toEqual([
+      'M1: Foundations',
+      'M2: First words',
+    ]);
+  });
+
+  it('says it is not live when the socket is refused', async () => {
+    respond(json());
+    const root = view();
+    await settle();
+    socket().drop('error');
+    expect(text(root, '.live-state')).toEqual([
+      'Not live: this is the board as it was when the page loaded.',
+    ]);
+  });
+
+  it('says it is not live when the socket closes, keeping the snapshot read', async () => {
+    respond(json());
+    const root = view();
+    await settle();
+    socket().push(SNAPSHOT);
+    socket().drop('close');
+    expect([
+      text(root, '.live-state'),
+      root.querySelectorAll('.island').length,
+    ]).toEqual([
+      ['Not live: this is the board as it was when the page loaded.'],
+      3,
+    ]);
+  });
+
+  it('draws a pushed snapshot when the JSON read failed', async () => {
+    respond(new Response('down', { status: 503 }));
+    const root = view();
+    await settle();
+    socket().push(SNAPSHOT);
+    expect([
+      root.querySelector('[role="alert"]'),
+      root.querySelectorAll('.island').length,
+    ]).toEqual([null, 3]);
+  });
+
+  it('closes the socket when it leaves the page', () => {
+    respond(json());
+    view();
+    leave();
+    expect(socket().closed).toBe(true);
   });
 });

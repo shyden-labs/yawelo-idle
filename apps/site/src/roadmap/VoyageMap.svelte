@@ -1,14 +1,17 @@
 <script lang="ts">
   /**
    * The voyage map (#827, #342 split): the roadmap snapshot drawn as islands,
-   * one per epic, each opening what's built and what's left. Read once from
-   * /api/roadmap.json on load; live updates are #829. Only plain words are
-   * rendered: an epic's name and Public summary, a story's Public title.
+   * one per epic, each opening what's built and what's left. Read from
+   * /api/roadmap.json on load, then kept current over the Worker's live
+   * socket (#829); without the socket it says it is not live. Only plain
+   * words are rendered: an epic's name and Public summary, a story's Public
+   * title.
    */
   import type { BoardItem, Progress } from '@yawelo-idle/progress';
   import type { VoyageCopy } from '../copy';
   import Island from './Island.svelte';
   import RoadmapSummary from './RoadmapSummary.svelte';
+  import { liveUrl, newer } from './live';
   import { fill, voyage } from './voyage';
 
   interface Props {
@@ -19,6 +22,7 @@
   const { copy, copyLang }: Props = $props();
 
   interface Snapshot {
+    version: number;
     items: BoardItem[];
     progress: Progress;
     readAt: string;
@@ -27,16 +31,38 @@
   let snapshot = $state<Snapshot | null>(null);
   let failed = $state(false);
   let open = $state<number | null>(null);
+  /** The socket: none heard yet, delivering, or gone (refused or closed). */
+  let live = $state<'connecting' | 'live' | 'closed'>('connecting');
+
+  const show = (next: Snapshot): void => {
+    if (newer(snapshot, next)) snapshot = next;
+  };
 
   $effect(() => {
     fetch('/api/roadmap.json', { headers: { Accept: 'application/json' } })
       .then(async (response) => {
         if (!response.ok) throw new Error(String(response.status));
-        snapshot = (await response.json()) as Snapshot;
+        show((await response.json()) as Snapshot);
       })
       .catch(() => {
         failed = true;
       });
+  });
+
+  $effect(() => {
+    const socket = new WebSocket(liveUrl(location.href));
+    socket.addEventListener('message', (event: MessageEvent<string>) => {
+      show(JSON.parse(event.data) as Snapshot);
+      live = 'live';
+    });
+    const gone = (): void => {
+      live = 'closed';
+    };
+    socket.addEventListener('error', gone);
+    socket.addEventListener('close', gone);
+    return () => {
+      socket.close();
+    };
   });
 
   const toggle = (epic: number): void => {
@@ -45,11 +71,18 @@
 </script>
 
 <section class="voyage" aria-busy={snapshot === null && !failed}>
-  {#if failed}
-    <p role="alert" lang={copyLang}>{copy.failed}</p>
-  {:else if snapshot === null}
-    <p lang={copyLang}>{copy.loading}</p>
+  {#if snapshot === null}
+    {#if failed}
+      <p role="alert" lang={copyLang}>{copy.failed}</p>
+    {:else}
+      <p lang={copyLang}>{copy.loading}</p>
+    {/if}
   {:else}
+    {#if live === 'live'}
+      <p class="live-state" lang={copyLang}>{copy.live}</p>
+    {:else if live === 'closed'}
+      <p class="live-state" lang={copyLang}>{copy.notLive}</p>
+    {/if}
     {@const map = voyage(snapshot.items)}
     <RoadmapSummary
       {map}

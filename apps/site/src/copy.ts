@@ -38,6 +38,9 @@ export interface VoyageCopy {
   behindTheScenes: string;
   beyond: string;
   other: string;
+  /** Whether the page is kept current over the live socket (#829). */
+  live: string;
+  notLive: string;
   summary: SummaryCopy;
 }
 
@@ -85,6 +88,8 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
   behindTheScenes: 'plus {n} behind-the-scenes improvements',
   beyond: 'Beyond launch',
   other: 'Other work, on no island: {n} stories and {points} points left',
+  live: 'Live: changes on the board show here as they happen.',
+  notLive: 'Not live: this is the board as it was when the page loaded.',
   summary: {
     heading: 'Where the voyage stands',
     byTickets: '{percent}% of stories done ({closed} of {total})',
