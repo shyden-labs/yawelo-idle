@@ -282,7 +282,7 @@ export const COPY_EN = {
         'Nearly there: check your inbox and confirm your address.',
         'site §6.1',
       ),
-      privacy: line('How we handle your email', 'site §6.3'),
+      privacy: line('How your email is handled', 'site §6.3'),
     },
     follow: line('Follow development on GitHub', 'D17', 'site §3'),
     footer: line(
@@ -318,13 +318,13 @@ export const COPY_EN = {
 
   privacy: {
     title: line('Privacy', 'site §6.3'),
-    collected: line('What we collect', 'site §6.3'),
-    basis: line('Why we may hold it', 'site §6.3'),
+    collected: line('What is collected', 'site §6.3'),
+    basis: line('Why it may be held', 'site §6.3'),
     withdraw: line('How to withdraw your consent', 'site §6.3'),
-    logging: line('What our servers log', 'site §6.3'),
+    logging: line('What the servers log', 'site §6.3'),
     cookies: line('Cookies and analytics', 'site §6.3'),
     noCookies: line(
-      'This site sets no cookies. We count visits with Cloudflare Web Analytics, which stores nothing on your device and does not fingerprint you.',
+      'This site sets no cookies. Visits are counted with Cloudflare Web Analytics, which stores nothing on your device and does not fingerprint you.',
       'W17',
       'site §3',
       'site §6.3',
