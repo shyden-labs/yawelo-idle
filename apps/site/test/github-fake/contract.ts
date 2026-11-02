@@ -23,13 +23,12 @@ export const READ_ONLY: Permissions = {
   organization_projects: 'read',
 };
 /**
- * The installation as it stands since 2026-10-20: the three reads and
- * Administration: read for the owner-review check (#687, website spec §5.2
- * item 3). Written out, not spread from READ_ONLY, so the token's rights
- * and the installation's are each stated once.
+ * The installation as it stands since 2026-11-02: the three reads, with
+ * Administration: read removed (#797). Written out, not spread from
+ * READ_ONLY, so the token's rights and the installation's are each stated
+ * once.
  */
 export const INSTALLED: Permissions = {
-  administration: 'read',
   issues: 'read',
   metadata: 'read',
   organization_projects: 'read',
