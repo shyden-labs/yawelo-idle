@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { BoardItem } from '@yawelo-idle/progress';
+import { COPY } from '../../apps/site/src/copy';
 import {
   recentlyShipped,
   whatsLeft,
@@ -178,4 +179,20 @@ test('lists the stories shipped most recently (#828)', async ({ page }) => {
   await expect(page.locator('ul.shipped a')).toHaveText(
     shipped.map((s) => s.title),
   );
+});
+
+test('goes live over the Worker’s socket (#829)', async ({ page }) => {
+  await openMap(page);
+  await expect(page.locator('.live-state')).toHaveText(COPY.en.voyage.live);
+});
+
+test('says it is not live when the socket is refused, keeping the snapshot read (#829)', async ({
+  page,
+}) => {
+  await page.routeWebSocket(/\/api\/roadmap\/live$/, (socket) => {
+    void socket.close();
+  });
+  const { map } = await openMap(page);
+  await expect(page.locator('.live-state')).toHaveText(COPY.en.voyage.notLive);
+  await expect(islandButtons(page)).toHaveCount(map.islands.length);
 });

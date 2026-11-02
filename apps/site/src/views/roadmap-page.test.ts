@@ -30,6 +30,7 @@ describe('the roadmap page’s imports (#827)', () => {
       '../copy',
       './Island.svelte',
       './RoadmapSummary.svelte',
+      './live',
       './voyage',
     ]);
   });
