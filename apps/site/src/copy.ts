@@ -38,6 +38,32 @@ export interface VoyageCopy {
   behindTheScenes: string;
   beyond: string;
   other: string;
+  summary: SummaryCopy;
+}
+
+/** The roadmap's summary (#828): placeholders until #830's approved copy. */
+export interface SummaryCopy {
+  heading: string;
+  byTickets: string;
+  byEffort: string;
+  effortUnavailable: string;
+  eta: string;
+  noEta: string;
+  confidence: { high: string; medium: string; low: string };
+  measured: string;
+  assumedClosed: string;
+  left: string;
+  island: string;
+  stories: string;
+  points: string;
+  other: string;
+  total: string;
+  shipped: string;
+  nothingShipped: string;
+  waiting: string;
+  waitingUnnamed: string;
+  nothingWaiting: string;
+  updated: string;
 }
 
 const VOYAGE_PLACEHOLDER: VoyageCopy = {
@@ -59,6 +85,32 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
   behindTheScenes: 'plus {n} behind-the-scenes improvements',
   beyond: 'Beyond launch',
   other: 'Other work, on no island: {n} stories and {points} points left',
+  summary: {
+    heading: 'Where the voyage stands',
+    byTickets: '{percent}% of stories done ({closed} of {total})',
+    byEffort: '{points} points of work left',
+    effortUnavailable:
+      'Points left: not every story is sized yet ({scored} of {open})',
+    eta: 'At the last week’s pace, done around {date} ({confidence} confidence)',
+    noEta: 'No date yet: nothing was finished in the last week',
+    confidence: { high: 'high', medium: 'medium', low: 'low' },
+    measured:
+      'Measured: what is done, and the pace of the last 7 days. Assumed: that pace holds, before any outside waits.',
+    assumedClosed:
+      '{n} finished stories were never sized; each counts as the average, {mean} points.',
+    left: 'What’s left, by island',
+    island: 'Island',
+    stories: 'Stories',
+    points: 'Points',
+    other: 'Other work',
+    total: 'Total',
+    shipped: 'Recently shipped',
+    nothingShipped: 'Nothing shipped yet.',
+    waiting: 'Waiting on decisions',
+    waitingUnnamed: '{n} not yet described',
+    nothingWaiting: 'Nothing is waiting on a decision.',
+    updated: 'Updated {n} s ago',
+  },
 };
 
 export interface Copy {

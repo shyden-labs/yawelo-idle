@@ -5,10 +5,11 @@
    * /api/roadmap.json on load; live updates are #829. Only plain words are
    * rendered: an epic's name and Public summary, a story's Public title.
    */
-  import type { BoardItem } from '@yawelo-idle/progress';
+  import type { BoardItem, Progress } from '@yawelo-idle/progress';
   import type { VoyageCopy } from '../copy';
   import Island from './Island.svelte';
-  import { fill, voyage, type Voyage } from './voyage';
+  import RoadmapSummary from './RoadmapSummary.svelte';
+  import { fill, voyage } from './voyage';
 
   interface Props {
     copy: VoyageCopy;
@@ -17,7 +18,13 @@
   }
   const { copy, copyLang }: Props = $props();
 
-  let map = $state<Voyage | null>(null);
+  interface Snapshot {
+    items: BoardItem[];
+    progress: Progress;
+    readAt: string;
+  }
+
+  let snapshot = $state<Snapshot | null>(null);
   let failed = $state(false);
   let open = $state<number | null>(null);
 
@@ -25,8 +32,7 @@
     fetch('/api/roadmap.json', { headers: { Accept: 'application/json' } })
       .then(async (response) => {
         if (!response.ok) throw new Error(String(response.status));
-        const snapshot = (await response.json()) as { items: BoardItem[] };
-        map = voyage(snapshot.items);
+        snapshot = (await response.json()) as Snapshot;
       })
       .catch(() => {
         failed = true;
@@ -38,12 +44,21 @@
   };
 </script>
 
-<section class="voyage" aria-busy={map === null && !failed}>
+<section class="voyage" aria-busy={snapshot === null && !failed}>
   {#if failed}
     <p role="alert" lang={copyLang}>{copy.failed}</p>
-  {:else if map === null}
+  {:else if snapshot === null}
     <p lang={copyLang}>{copy.loading}</p>
   {:else}
+    {@const map = voyage(snapshot.items)}
+    <RoadmapSummary
+      {map}
+      items={snapshot.items}
+      progress={snapshot.progress}
+      readAt={snapshot.readAt}
+      copy={copy.summary}
+      {copyLang}
+    />
     <ol class="islands" aria-label={copy.islandsLabel} lang={copyLang}>
       {#each map.islands as item (item.epic)}
         <Island

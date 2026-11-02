@@ -82,6 +82,18 @@ describe("what's left", () => {
     );
   });
 
+  it('orders islands with equal points by issue number', () => {
+    const tied = whatsLeft(
+      voyage([
+        item({ number: 5, title: 'Epic M2: Later', estimate: null }),
+        item({ number: 6, title: 'Epic M1: Sooner', estimate: null }),
+        item({ number: 20, parent: 6, estimate: 3 }),
+        item({ number: 21, parent: 5, estimate: 3 }),
+      ]),
+    );
+    expect(tied.rows.map((r) => r.epic)).toEqual([5, 6]);
+  });
+
   it('counts the other work on no island', () => {
     expect(left.other).toEqual({ tickets: 2, points: 6 });
   });

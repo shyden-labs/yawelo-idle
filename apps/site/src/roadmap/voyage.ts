@@ -146,7 +146,10 @@ export const STATUS_COPY: Record<
 };
 
 /** `text` with each `{name}` replaced by `values[name]`; an unknown name stays. */
-export function fill(text: string, values: Record<string, number>): string {
+export function fill(
+  text: string,
+  values: Record<string, number | string>,
+): string {
   return text.replace(/\{(\w+)\}/g, (whole, name: string) =>
     name in values ? String(values[name]) : whole,
   );
