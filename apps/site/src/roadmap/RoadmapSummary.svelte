@@ -15,7 +15,13 @@
     waitingOnDecisions,
     whatsLeft,
   } from './summary';
-  import { fill, issueUrl, type Voyage } from './voyage';
+  import {
+    fill,
+    islandName,
+    issueUrl,
+    type UnnamedCopy,
+    type Voyage,
+  } from './voyage';
 
   interface Props {
     map: Voyage;
@@ -24,9 +30,12 @@
     /** When the Worker read the board, as an ISO time. */
     readAt: string;
     copy: SummaryCopy;
+    /** How an island with no Public title is named (#844). */
+    unnamed: UnnamedCopy;
     copyLang: string;
   }
-  const { map, items, progress, readAt, copy, copyLang }: Props = $props();
+  const { map, items, progress, readAt, copy, unnamed, copyLang }: Props =
+    $props();
 
   // The snapshot's own day, so the page dates the ETA as the board did.
   const both = $derived(estimates(progress, readAt.slice(0, 10)));
@@ -109,7 +118,7 @@
     <tbody>
       {#each left.rows as row (row.epic)}
         <tr>
-          <th scope="row">{row.name}</th>
+          <th scope="row">{islandName(row, unnamed)}</th>
           <td>{row.tickets}</td>
           <td>{row.points}</td>
         </tr>

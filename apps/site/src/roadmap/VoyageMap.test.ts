@@ -27,6 +27,7 @@ const island = (
 ): Island => ({
   epic,
   name,
+  milestone: null,
   summary: null,
   status: 'not started',
   built: [],

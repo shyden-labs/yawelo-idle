@@ -83,6 +83,7 @@
       progress={snapshot.progress}
       readAt={snapshot.readAt}
       copy={copy.summary}
+      unnamed={copy}
       {copyLang}
     />
     <ol class="islands" aria-label={copy.islandsLabel} lang={copyLang}>

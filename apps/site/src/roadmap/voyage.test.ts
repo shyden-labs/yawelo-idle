@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { publicItems, type BoardItem } from '@yawelo-idle/progress';
-import { fill, issueUrl, STATUS_COPY, voyage as draw } from './voyage';
+import {
+  fill,
+  islandName,
+  issueUrl,
+  STATUS_COPY,
+  voyage as draw,
+} from './voyage';
 
 /** A board drawn as the page draws it: through what the Worker serves (#840). */
 const voyage = (items: BoardItem[]) => draw(publicItems(items));
@@ -45,11 +51,18 @@ const closed = (
   });
 
 describe('voyage: the islands (#827)', () => {
-  it('makes one island per epic, named without the "Epic" word', () => {
-    const { islands } = voyage([epic(6, 'Epic M1: Core simulation')]);
-    expect(islands.map((i) => [i.epic, i.name])).toEqual([
-      [6, 'M1: Core simulation'],
+  it('names each island by its epic’s Public title, never its ticket title (#844)', () => {
+    const { islands } = voyage([
+      epic(6, 'Epic M1: Internal core rework', { publicTitle: 'The core' }),
     ]);
+    expect(islands.map((i) => [i.epic, i.name, i.milestone])).toEqual([
+      [6, 'The core', 1],
+    ]);
+  });
+
+  it('leaves an island unnamed while its epic has no Public title', () => {
+    const { islands } = voyage([epic(6, 'Epic M1: Internal core rework')]);
+    expect(islands.map((i) => i.name)).toEqual([null]);
   });
 
   it('orders milestone epics by their M number, not their issue number', () => {
@@ -388,6 +401,29 @@ describe('issueUrl (#827)', () => {
   it('links to the issue on GitHub', () => {
     expect(issueUrl(331)).toBe(
       'https://github.com/shyden-labs/yawelo-idle/issues/331',
+    );
+  });
+});
+
+describe('islandName (#844)', () => {
+  const copy = {
+    unnamedIsland: 'Milestone {n}',
+    unnamedNoMilestone: 'More to come',
+  };
+
+  it('is the Public title when there is one', () => {
+    expect(islandName({ name: 'The core', milestone: 1 }, copy)).toBe(
+      'The core',
+    );
+  });
+
+  it('is the milestone while there is none', () => {
+    expect(islandName({ name: null, milestone: 3 }, copy)).toBe('Milestone 3');
+  });
+
+  it('is a plain placeholder with neither', () => {
+    expect(islandName({ name: null, milestone: null }, copy)).toBe(
+      'More to come',
     );
   });
 });

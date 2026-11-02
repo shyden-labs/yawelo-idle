@@ -14,7 +14,9 @@ import type { Voyage } from './voyage';
 
 export interface LeftRow {
   epic: number;
-  name: string;
+  /** The island's Public title or null; `islandName` names it. */
+  name: string | null;
+  milestone: number | null;
   tickets: number;
   points: number;
 }
@@ -33,6 +35,7 @@ export function whatsLeft(map: Voyage): WhatsLeft {
     .map((i) => ({
       epic: i.epic,
       name: i.name,
+      milestone: i.milestone,
       tickets: i.ticketsLeft,
       points: i.pointsLeft,
     }))
@@ -119,7 +122,7 @@ export function recentlyShipped(items: PublicItem[]): Shipped[] {
   return items
     .filter(
       (i): i is PublicItem & { publicTitle: string; closedAt: string } =>
-        i.epicTitle === null &&
+        !i.epic &&
         i.state === 'CLOSED' &&
         i.closedAt !== null &&
         i.publicTitle !== null,

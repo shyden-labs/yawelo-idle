@@ -36,6 +36,9 @@ export interface VoyageCopy {
   points: string;
   behindTheScenes: string;
   other: string;
+  /** An island whose epic has no Public title yet (#844). */
+  unnamedIsland: string;
+  unnamedNoMilestone: string;
   /** Whether the page is kept current over the live socket (#829). */
   live: string;
   notLive: string;
@@ -84,6 +87,8 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
   points: '{n} points',
   behindTheScenes: 'plus {n} behind-the-scenes improvements',
   other: 'Other work, on no island: {n} stories and {points} points left',
+  unnamedIsland: 'Milestone {n}',
+  unnamedNoMilestone: 'More to come',
   live: 'Live: changes on the board show here as they happen.',
   notLive: 'Not live: this is the board as it was when the page loaded.',
   summary: {

@@ -1,11 +1,18 @@
 <script lang="ts">
   /**
    * One island of the voyage map (#827): its button, which opens and closes
-   * its panel, and the panel itself. Only plain words: the epic's name and
-   * Public summary, each story's Public title.
+   * its panel, and the panel itself. Only plain words: the epic's Public
+   * title (or a placeholder, #844) and Public summary, each story's Public
+   * title.
    */
   import type { VoyageCopy } from '../copy';
-  import { fill, issueUrl, STATUS_COPY, type Island } from './voyage';
+  import {
+    fill,
+    islandName,
+    issueUrl,
+    STATUS_COPY,
+    type Island,
+  } from './voyage';
 
   interface Props {
     item: Island;
@@ -16,6 +23,7 @@
     copyLang: string;
   }
   const { item, ship, open, onToggle, copy, copyLang }: Props = $props();
+  const name = $derived(islandName(item, copy));
 </script>
 
 <li class="island" data-status={item.status} data-epic={item.epic}>
@@ -28,7 +36,7 @@
       onToggle(item.epic);
     }}
   >
-    <span class="island-name">{item.name}</span>
+    <span class="island-name">{name}</span>
     <span class="island-status" lang={copyLang}
       >{copy.status[STATUS_COPY[item.status]]}</span
     >
@@ -40,7 +48,7 @@
     id={`panel-${String(item.epic)}`}
     class="panel"
     role="region"
-    aria-label={item.name}
+    aria-label={name}
     hidden={!open}
   >
     {#if item.summary !== null}
