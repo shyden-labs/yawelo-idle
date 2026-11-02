@@ -15,11 +15,13 @@
     "@yawelo-idle/core": "*",
     "@yawelo-idle/lockdown": "*",
     "@yawelo-idle/progress": "*",
-    "@yawelo-idle/web": "*"
+    "@yawelo-idle/web": "*",
+    "swagger-ui-dist": "^5.34.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@astrojs/svelte": "^9.0.1",
+    "ajv": "^8.20.0",
     "astro": "^7.3.5",
     "svelte-check": "^4.7.8"
   }

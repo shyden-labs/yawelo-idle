@@ -370,3 +370,76 @@ describe('the dev front door shows the holding page production shows (#673)', ()
     expect(html).toContain(' data-dev-strip>');
   });
 });
+
+describe('the roadmap API docs (#588)', () => {
+  const DOCS = '/api/docs';
+  const SPEC = readFileSync(
+    new URL('../api/roadmap.openapi.json', import.meta.url),
+    'utf8',
+  );
+
+  /** The docs page's HTML, read on `origin`. */
+  const docsPage = async (
+    origin: string,
+    headers: Record<string, string> = {},
+  ): Promise<string> => {
+    const response = await get(`${origin}${DOCS}`, headers);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(/^text\/html/);
+    return response.text();
+  };
+
+  /** Every address the page loads from: src, href and the spec's url. */
+  const addresses = (html: string): string[] => [
+    ...[...html.matchAll(/\s(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? ''),
+    ...[...html.matchAll(/"specUrl":\s*"([^"]+)"|specUrl = "([^"]+)"/g)].map(
+      (m) => m[1] ?? m[2] ?? '',
+    ),
+  ];
+
+  it('serves the page on the production host without a password', async () => {
+    expect(await docsPage(PROD)).toContain('Yawelo Idle roadmap API');
+  });
+
+  it('keeps the page behind the password on dev', async () => {
+    const response = await get(`${DEV}${DOCS}`);
+    expect(response.status).toBe(401);
+  });
+
+  it('serves the page on dev with the password', async () => {
+    expect(await docsPage(DEV, authorised)).toContain(
+      'Yawelo Idle roadmap API',
+    );
+  });
+
+  it('loads every file from the site’s own origin, never a CDN', async () => {
+    const found = addresses(await docsPage(PROD));
+    expect(found.length).toBeGreaterThanOrEqual(3);
+    expect(found.filter((a) => !a.startsWith('/'))).toEqual([]);
+  });
+
+  it('serves Swagger UI’s script and stylesheet from the site', async () => {
+    const found = addresses(await docsPage(PROD)).filter((a) =>
+      /swagger-ui/.test(a),
+    );
+    expect(
+      found.map((a) => a.replace(/^.*\//, '').replace(/\..*$/, '')).sort(),
+    ).toEqual(['swagger-ui', 'swagger-ui-bundle']);
+    const answers = await Promise.all(found.map((a) => get(`${PROD}${a}`)));
+    expect(answers.map((r) => r.status)).toEqual([200, 200]);
+  });
+
+  it('serves the hand-written spec, byte for byte', async () => {
+    const specUrl = addresses(await docsPage(PROD)).find((a) =>
+      a.endsWith('.json'),
+    );
+    expect(specUrl).toBeDefined();
+    const response = await get(`${PROD}${specUrl ?? ''}`);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(SPEC);
+  });
+
+  it('turns off the validator badge, which calls validator.swagger.io', async () => {
+    expect(await docsPage(PROD)).toMatch(/validatorUrl:\s*null/);
+  });
+});
