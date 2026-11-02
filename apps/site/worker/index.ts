@@ -78,11 +78,15 @@ async function hook(
 /** The three roadmap paths, once the gate has let the request through. */
 async function api(request: Request, env: SiteEnv): Promise<Response> {
   const { hostname, pathname } = new URL(request.url);
+  const health = pathname === ROADMAP_PATHS.health;
+  // Never hinted at on the public host, whatever the method (#846).
+  if (health && !servesHealth(hostname))
+    return new Response(null, { status: 404 });
+  // Read-only, as the API spec says (#588): any other method is refused.
+  if (request.method !== 'GET' && request.method !== 'HEAD')
+    return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } });
   if (pathname === ROADMAP_PATHS.live) return roadmap(env).fetch(request);
-  if (pathname === ROADMAP_PATHS.health) {
-    if (!servesHealth(hostname)) return new Response(null, { status: 404 });
-    return noStore(await roadmap(env).health());
-  }
+  if (health) return noStore(await roadmap(env).health());
   const snapshot = await roadmap(env).snapshot();
   if (snapshot !== null) return noStore(snapshot);
   return noStore({ error: UNREADABLE }, 503);

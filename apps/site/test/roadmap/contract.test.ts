@@ -135,6 +135,25 @@ describe(`GET ${LIVE}`, () => {
   });
 });
 
+describe('the private health path, outside the public spec', () => {
+  it('stays a bare 404 on the production host for POST too (#846 before #588)', async () => {
+    const response = await call(`${PROD}/api/roadmap/health`, {
+      method: 'POST',
+    });
+    expect(response.status).toBe(404);
+    expect(response.headers.get('Allow')).toBeNull();
+  });
+
+  it('refuses POST on dev with 405, as the public paths do', async () => {
+    const response = await call(`${DEV}/api/roadmap/health`, {
+      method: 'POST',
+      headers: AUTH,
+    });
+    expect(response.status).toBe(405);
+    expect(response.headers.get('Allow')).toBe('GET, HEAD');
+  });
+});
+
 describe('the judge', () => {
   // The judge itself, so a pass above means the answer matched, never that
   // nothing was compared.
