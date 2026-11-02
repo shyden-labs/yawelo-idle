@@ -6,7 +6,7 @@
    * Its look lives in VoyageMap's one stylesheet: a second component
    * stylesheet makes Astro's CSS plugin warn under Rolldown (#828).
    */
-  import type { BoardItem, Progress } from '@yawelo-idle/progress';
+  import type { PublicItem, PublicProgress } from '@yawelo-idle/progress';
   import type { SummaryCopy } from '../copy';
   import {
     estimates,
@@ -19,8 +19,8 @@
 
   interface Props {
     map: Voyage;
-    items: BoardItem[];
-    progress: Progress;
+    items: PublicItem[];
+    progress: PublicProgress;
     /** When the Worker read the board, as an ISO time. */
     readAt: string;
     copy: SummaryCopy;

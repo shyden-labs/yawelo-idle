@@ -193,12 +193,26 @@ describe('/api/roadmap*', () => {
     const response = await call('/api/roadmap.json', { headers: AUTH });
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    const snapshot = (await response.json()) as {
-      version: number;
-      lines: string[];
-    };
+    const snapshot = (await response.json()) as { version: number };
     expect(snapshot.version).toBeGreaterThanOrEqual(1);
-    expect(snapshot.lines).toHaveLength(2);
+  });
+
+  it('serves nothing the public page does not show (#840)', async () => {
+    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const served = await response.text();
+    expect({
+      postLaunchStory: served.includes('"number":7,'),
+      notPlannedStory: served.includes('"number":8,'),
+      rawTitle: served.includes('Story '),
+      labels: served.includes('labels'),
+      closeOutLines: served.includes('By tickets'),
+    }).toEqual({
+      postLaunchStory: false,
+      notPlannedStory: false,
+      rawTitle: false,
+      labels: false,
+      closeOutLines: false,
+    });
   });
 
   /** The snapshot's card for issue `number`, as the Worker serves it. */

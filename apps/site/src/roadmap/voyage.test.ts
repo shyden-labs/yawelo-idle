@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { BoardItem } from '@yawelo-idle/progress';
-import { fill, issueUrl, STATUS_COPY, voyage } from './voyage';
+import { publicItems, type BoardItem } from '@yawelo-idle/progress';
+import { fill, issueUrl, STATUS_COPY, voyage as draw } from './voyage';
+
+/** A board drawn as the page draws it: through what the Worker serves (#840). */
+const voyage = (items: BoardItem[]) => draw(publicItems(items));
 
 /**
  * The voyage map's model (#827): the snapshot's items as islands, one per

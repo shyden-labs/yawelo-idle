@@ -1,8 +1,4 @@
-import {
-  inScope,
-  postLaunchEpics,
-  type BoardItem,
-} from '@yawelo-idle/progress';
+import type { PublicItem } from '@yawelo-idle/progress';
 
 /**
  * The voyage map's model (#827, #342 split): the roadmap snapshot's items as
@@ -39,8 +35,9 @@ export interface Voyage {
   other: { ticketsLeft: number; pointsLeft: number; built: number };
 }
 
-/** The same rule as packages/progress: an epic's title starts with "Epic". */
-const isEpic = (item: BoardItem): boolean => /^Epic\b/.test(item.title);
+/** An epic: the public snapshot gives epics, and only epics, their title. */
+type Epic = PublicItem & { epicTitle: string };
+const isEpic = (item: PublicItem): item is Epic => item.epicTitle !== null;
 
 /** An epic's milestone number ("Epic M3: …" is 3), or null when it has none. */
 function milestone(title: string): number | null {
@@ -52,32 +49,32 @@ function milestone(title: string): number | null {
  * Delivery order: milestones by number, then epics with no milestone by
  * issue number (a default until Shyden places them).
  */
-function byDelivery(a: BoardItem, b: BoardItem): number {
-  const ma = milestone(a.title);
-  const mb = milestone(b.title);
+function byDelivery(a: Epic, b: Epic): number {
+  const ma = milestone(a.epicTitle);
+  const mb = milestone(b.epicTitle);
   if (ma !== null && mb !== null) return ma - mb || a.number - b.number;
   if (ma !== null) return -1;
   if (mb !== null) return 1;
   return a.number - b.number;
 }
 
-function statusOf(epic: BoardItem, stories: BoardItem[]): IslandStatus {
+function statusOf(epic: Epic, stories: PublicItem[]): IslandStatus {
   if (epic.state === 'CLOSED') return 'done';
   const closed = stories.filter((s) => s.state === 'CLOSED').length;
   if (closed === 0) return 'not started';
   return closed === stories.length ? 'done' : 'part done';
 }
 
-const newestFirst = (a: BoardItem, b: BoardItem): number =>
+const newestFirst = (a: PublicItem, b: PublicItem): number =>
   (b.closedAt ?? '').localeCompare(a.closedAt ?? '') || b.number - a.number;
 
-function islandOf(epic: BoardItem, stories: BoardItem[]): Island {
+function islandOf(epic: Epic, stories: PublicItem[]): Island {
   const open = stories.filter((s) => s.state === 'OPEN');
-  const named = (s: BoardItem): s is BoardItem & { publicTitle: string } =>
+  const named = (s: PublicItem): s is PublicItem & { publicTitle: string } =>
     s.publicTitle !== null;
   return {
     epic: epic.number,
-    name: epic.title.replace(/^Epic\b\s*:?\s*/, ''),
+    name: epic.epicTitle.replace(/^Epic\b\s*:?\s*/, ''),
     summary: epic.publicSummary,
     status: statusOf(epic, stories),
     built: stories
@@ -100,16 +97,12 @@ function islandOf(epic: BoardItem, stories: BoardItem[]): Island {
 }
 
 /** The voyage the snapshot's `items` draw. */
-export function voyage(items: BoardItem[]): Voyage {
-  // Only the work up to the first public release (Shyden, 2026-11-02):
-  // no post-launch epic or story is drawn, and the stories counted are the
-  // close-out's release scope, so the totals match the effort line (#838).
-  const after = postLaunchEpics(items);
-  const epics = items
-    .filter((i) => isEpic(i) && !after.has(i.number))
-    .sort(byDelivery);
+export function voyage(items: PublicItem[]): Voyage {
+  // The Worker sends only the work up to the first public release, its
+  // stories in the close-out's scope (#838, #840): all of it is drawn.
+  const epics = items.filter(isEpic).sort(byDelivery);
   const epicNumbers = new Set(epics.map((e) => e.number));
-  const stories = items.filter((i) => inScope(i, after));
+  const stories = items.filter((i) => !isEpic(i));
   const storiesOf = (epic: number) => stories.filter((s) => s.parent === epic);
 
   const islands = epics.map((e) => islandOf(e, storiesOf(e.number)));

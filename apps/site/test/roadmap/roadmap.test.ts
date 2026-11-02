@@ -1,9 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { closeOutLines } from '../../../../packages/progress/src/index';
+import {
+  progress,
+  publicSnapshot,
+  roadmapItems,
+} from '../../../../packages/progress/src/index';
 import {
   boardPages,
   FIXTURE_REPO,
-  FIXTURE_TITLE,
   fixtureCardId,
   repoPages,
 } from '../../../../packages/progress/test/board-fixture';
@@ -43,7 +46,7 @@ const GRACE_MS = 120_000;
 interface Snapshot {
   version: number;
   items: { number: number }[];
-  lines: [string, string];
+  progress: unknown;
 }
 interface Health {
   version: number;
@@ -265,10 +268,16 @@ describe('reading the board', () => {
     expect(health.readFailingSince).toBeNull();
   });
 
-  it('gives the same two lines as the close-out script, from one fixture', async () => {
+  it('gives the public part of the close-out’s figures, from one fixture (#840)', async () => {
     const snapshot = await inRoadmap((r) => r.snapshot());
-    expect(snapshot?.lines).toEqual(
-      closeOutLines(boardPages(today()), FIXTURE_TITLE, FIXTURE_REPO, today()),
+    const { items } = roadmapItems(boardPages(today()), FIXTURE_REPO);
+    expect(snapshot?.progress).toEqual(
+      publicSnapshot({
+        version: 1,
+        readAt: '',
+        items,
+        progress: progress(items, today()),
+      }).progress,
     );
   });
 
@@ -351,15 +360,15 @@ describe('reading the board', () => {
         snapshot: await r.snapshot(),
         health: await r.health(),
       }));
+      // The fixture's release items: 7 is post-launch and 8 closed as not
+      // planned, both left off what is public (#840).
       expect(snapshot?.items.map((i) => i.number)).toEqual([
-        1, 2, 3, 4, 5, 6, 7, 8, 9,
+        1, 2, 3, 4, 5, 6, 9,
       ]);
       // Exactly these fields are published: a list naming what was dropped,
       // or any other new field, fails here before it ships.
       expect(Object.keys(snapshot ?? {}).sort()).toEqual([
-        'hash',
         'items',
-        'lines',
         'progress',
         'readAt',
         'version',

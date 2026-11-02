@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import type { BoardItem, Progress } from '@yawelo-idle/progress';
+import {
+  publicItems,
+  type BoardItem,
+  type Progress,
+} from '@yawelo-idle/progress';
 import { COPY } from '../copy';
 import RoadmapSummary from './RoadmapSummary.svelte';
 import type { Island, Voyage } from './voyage';
@@ -100,7 +104,7 @@ const show = (
     target,
     props: {
       map: MAP,
-      items: over.items ?? [shipped],
+      items: publicItems(over.items ?? [shipped]),
       progress: over.progress ?? PROGRESS,
       readAt: READ_AT,
       copy,

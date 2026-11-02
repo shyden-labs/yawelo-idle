@@ -5,13 +5,10 @@
  * print, so the page and the operator's figures cannot disagree (#340).
  */
 import {
-  afterLaunch,
   confidence,
   etaDate,
-  inScope,
-  postLaunchEpics,
-  type BoardItem,
-  type Progress,
+  type PublicItem,
+  type PublicProgress,
 } from '@yawelo-idle/progress';
 import type { Voyage } from './voyage';
 
@@ -79,7 +76,7 @@ export interface Estimates {
 }
 
 /** Both estimates, each with its ETA and how sure that ETA is. */
-export function estimates(p: Progress, today: string): Estimates {
+export function estimates(p: PublicProgress, today: string): Estimates {
   const t = p.tickets;
   const tickets = {
     percent: t.total === 0 ? 0 : Math.round((100 * t.closed) / t.total),
@@ -118,12 +115,11 @@ export interface Shipped {
 }
 
 /** The last 10 stories closed as done that have a Public title. */
-export function recentlyShipped(items: BoardItem[]): Shipped[] {
-  const after = postLaunchEpics(items);
+export function recentlyShipped(items: PublicItem[]): Shipped[] {
   return items
     .filter(
-      (i): i is BoardItem & { publicTitle: string; closedAt: string } =>
-        inScope(i, after) &&
+      (i): i is PublicItem & { publicTitle: string; closedAt: string } =>
+        i.epicTitle === null &&
         i.state === 'CLOSED' &&
         i.closedAt !== null &&
         i.publicTitle !== null,
@@ -137,9 +133,6 @@ export function recentlyShipped(items: BoardItem[]): Shipped[] {
     }));
 }
 
-/** The label an issue waiting on Shyden's decision carries (#826). */
-export const WAITING_LABEL = 'waiting-on-shyden';
-
 export interface Waiting {
   named: { number: number; title: string }[];
   /** Waiting issues with no Public title: counted, never named. */
@@ -147,19 +140,13 @@ export interface Waiting {
 }
 
 /** Open issues waiting on a decision, by Public title. */
-export function waitingOnDecisions(items: BoardItem[]): Waiting {
-  const after = postLaunchEpics(items);
-  // Nothing after the first public release is shown (Shyden, 2026-11-02).
-  const waiting = items.filter(
-    (i) =>
-      i.state === 'OPEN' &&
-      i.labels.includes(WAITING_LABEL) &&
-      !afterLaunch(i, after),
-  );
+export function waitingOnDecisions(items: PublicItem[]): Waiting {
+  const waiting = items.filter((i) => i.state === 'OPEN' && i.waiting);
   return {
     named: waiting
       .filter(
-        (i): i is BoardItem & { publicTitle: string } => i.publicTitle !== null,
+        (i): i is PublicItem & { publicTitle: string } =>
+          i.publicTitle !== null,
       )
       .sort((a, b) => a.number - b.number)
       .map((i) => ({ number: i.number, title: i.publicTitle })),
