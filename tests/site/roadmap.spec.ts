@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { BoardItem } from '@yawelo-idle/progress';
+import {
+  recentlyShipped,
+  whatsLeft,
+} from '../../apps/site/src/roadmap/summary';
 import { voyage, type Voyage } from '../../apps/site/src/roadmap/voyage';
 
 /**
@@ -157,4 +161,21 @@ test('fits 320 px wide with no horizontal scroll', async ({ page }) => {
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('totals what’s left as the islands do (#828)', async ({ page }) => {
+  const { map } = await openMap(page);
+  const { total } = whatsLeft(map);
+  await expect(page.locator('.whats-left tfoot td')).toHaveText([
+    String(total.tickets),
+    String(total.points),
+  ]);
+});
+
+test('lists the stories shipped most recently (#828)', async ({ page }) => {
+  const { items } = await openMap(page);
+  const shipped = recentlyShipped(items);
+  await expect(page.locator('ul.shipped a')).toHaveText(
+    shipped.map((s) => s.title),
+  );
 });

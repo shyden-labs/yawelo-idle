@@ -29,6 +29,7 @@ describe('the roadmap page’s imports (#827)', () => {
       '@yawelo-idle/progress',
       '../copy',
       './Island.svelte',
+      './RoadmapSummary.svelte',
       './voyage',
     ]);
   });
@@ -36,6 +37,15 @@ describe('the roadmap page’s imports (#827)', () => {
   it('reach nothing of the home page from an island', () => {
     expect(importsOf('../roadmap/Island.svelte')).toEqual([
       '../copy',
+      './voyage',
+    ]);
+  });
+
+  it('reach nothing of the home page from the summary (#828)', () => {
+    expect(importsOf('../roadmap/RoadmapSummary.svelte')).toEqual([
+      '@yawelo-idle/progress',
+      '../copy',
+      './summary',
       './voyage',
     ]);
   });

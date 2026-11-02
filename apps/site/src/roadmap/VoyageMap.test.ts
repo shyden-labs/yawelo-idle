@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
+import type { BoardItem, Progress } from '@yawelo-idle/progress';
 import { COPY } from '../copy';
 import VoyageMap from './VoyageMap.svelte';
 import type { Island, Voyage } from './voyage';
@@ -53,8 +54,25 @@ const respond = (response: Response): void => {
   fetchStub.mockResolvedValue(response);
 };
 
+/** A snapshot as /api/roadmap.json serves it; its items are drawn by the stand-in. */
+const SNAPSHOT: { items: BoardItem[]; progress: Progress; readAt: string } = {
+  items: [],
+  progress: {
+    tickets: {
+      closed: 1,
+      total: 4,
+      epics: 3,
+      postLaunch: 1,
+      notPlanned: 0,
+      pace: [1, 0, 0, 0, 0, 0, 0],
+    },
+    effort: { available: false, scored: 2, open: 3 },
+  },
+  readAt: '2026-11-02T04:00:00.000Z',
+};
+
 const json = (): Response =>
-  new Response(JSON.stringify({ items: [] }), { status: 200 });
+  new Response(JSON.stringify(SNAPSHOT), { status: 200 });
 
 const view = (): HTMLElement => {
   const target = document.createElement('div');
@@ -139,7 +157,7 @@ describe('the voyage map', () => {
     const root = view();
     await settle();
     expect([
-      text(root, 'h2'),
+      text(root, '.voyage > h2'),
       text(root, '.beyond .island-name'),
       root.querySelectorAll('.ship').length,
     ]).toEqual([['Beyond launch'], ['Mobile stores'], 0]);
@@ -150,10 +168,10 @@ describe('the voyage map', () => {
     respond(json());
     const root = view();
     await settle();
-    expect([root.querySelector('h2'), root.querySelector('.beyond')]).toEqual([
-      null,
-      null,
-    ]);
+    expect([
+      root.querySelector('.voyage > h2'),
+      root.querySelector('.beyond'),
+    ]).toEqual([null, null]);
   });
 
   it('counts the other work on no island', async () => {
@@ -193,6 +211,22 @@ describe('the voyage map', () => {
     await settle();
     expect(text(root, '[role="alert"]')).toEqual([
       'The roadmap could not be read just now.',
+    ]);
+  });
+
+  it('draws the summary above the islands from the same snapshot', async () => {
+    respond(json());
+    const root = view();
+    await settle();
+    const summary = root.querySelector('.roadmap-summary');
+    expect([
+      summary?.querySelector('h2')?.textContent,
+      summary?.compareDocumentPosition(root.querySelector('.islands') as Node),
+      text(root, '.roadmap-summary .whats-left tfoot td'),
+    ]).toEqual([
+      'Where the voyage stands',
+      Node.DOCUMENT_POSITION_FOLLOWING,
+      ['4', '13'],
     ]);
   });
 
