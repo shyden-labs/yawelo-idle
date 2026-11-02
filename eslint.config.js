@@ -40,6 +40,14 @@ export default defineConfig(
       },
     },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
+    rules: {
+      // Every unused parameter, not only those after the last used one: the
+      // default let core's contextAt carry a dead `state` (#833).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { args: 'all', argsIgnorePattern: '^_' },
+      ],
+    },
   },
   {
     files: ['**/*.svelte', '**/*.svelte.ts'],
