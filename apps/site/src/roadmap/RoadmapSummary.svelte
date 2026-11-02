@@ -58,7 +58,11 @@
       : fill(copy.eta, { date, confidence: copy.confidence[sure] });
 </script>
 
-<section class="summary" aria-labelledby="summary-heading" lang={copyLang}>
+<section
+  class="roadmap-summary"
+  aria-labelledby="summary-heading"
+  lang={copyLang}
+>
   <h2 id="summary-heading">{copy.heading}</h2>
   <p class="updated">{fill(copy.updated, { n: secondsAgo(readAt, now) })}</p>
 
@@ -95,7 +99,7 @@
   <p class="measured">{copy.measured}</p>
 
   <h3>{copy.left}</h3>
-  <table class="left">
+  <table class="whats-left">
     <thead>
       <tr>
         <th scope="col">{copy.island}</th>
@@ -111,7 +115,7 @@
           <td>{row.points}</td>
         </tr>
       {/each}
-      <tr class="other">
+      <tr class="other-work">
         <th scope="row">{copy.other}</th>
         <td>{left.other.tickets}</td>
         <td>{left.other.points}</td>
@@ -158,7 +162,7 @@
 </section>
 
 <style>
-  .summary {
+  .roadmap-summary {
     margin: 0 0 2rem;
     overflow-wrap: anywhere;
   }
@@ -166,19 +170,19 @@
     width: 100%;
     height: 1rem;
   }
-  .left {
+  .whats-left {
     width: 100%;
     border-collapse: collapse;
   }
-  .left th,
-  .left td {
+  .whats-left th,
+  .whats-left td {
     padding: 0.25rem 0.5rem;
     text-align: left;
   }
-  .left td {
+  .whats-left td {
     text-align: right;
   }
-  .left tfoot {
+  .whats-left tfoot {
     font-weight: 700;
     border-top: 2px solid currentColor;
   }

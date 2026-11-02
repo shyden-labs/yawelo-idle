@@ -206,7 +206,7 @@ describe('the roadmap summary', () => {
   it("lists what's left by island, most points first, with other work and the total", () => {
     const root = view();
     expect(
-      [...root.querySelectorAll('.left tr')].map((tr) =>
+      [...root.querySelectorAll('.whats-left tr')].map((tr) =>
         [...tr.children].map((c) => c.textContent.trim()),
       ),
     ).toEqual([

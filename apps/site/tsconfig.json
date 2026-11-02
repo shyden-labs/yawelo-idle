@@ -1,7 +1,9 @@
 {
   "extends": "astro/tsconfigs/strictest",
   "compilerOptions": {
-    "erasableSyntaxOnly": true
+    "erasableSyntaxOnly": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": [
@@ -9,6 +11,7 @@
     "dist-holding",
     "dist-holding-dev",
     "worker",
-    "test/roadmap-worker"
+    "test/roadmap-worker",
+    "test/roadmap"
   ]
 }

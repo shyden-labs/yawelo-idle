@@ -94,6 +94,6 @@ export function roadmapWorld({ appKey = true }: { appKey?: boolean } = {}) {
       });
     },
     seenByFake: async (): Promise<Seen[]> =>
-      (await (await control('/seen')).json()) as Seen[],
+      (await control('/seen')).json<Seen[]>(),
   };
 }
