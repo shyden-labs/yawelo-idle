@@ -26,6 +26,7 @@ const island = (
 ): Island => ({
   epic,
   name,
+  milestone: null,
   summary: null,
   status: 'part done',
   built: [],
@@ -96,18 +97,19 @@ const shipped = item({
 let mounted: ReturnType<typeof mount> | undefined;
 
 const show = (
-  over: { items?: BoardItem[]; progress?: Progress } = {},
+  over: { items?: BoardItem[]; progress?: Progress; map?: Voyage } = {},
 ): { root: HTMLElement; app: ReturnType<typeof mount> } => {
   const target = document.createElement('div');
   document.body.append(target);
   const app = mount(RoadmapSummary, {
     target,
     props: {
-      map: MAP,
+      map: over.map ?? MAP,
       items: publicItems(over.items ?? [shipped]),
       progress: over.progress ?? PROGRESS,
       readAt: READ_AT,
       copy,
+      unnamed: COPY.en.voyage,
       copyLang: 'en',
     },
   });
@@ -116,8 +118,9 @@ const show = (
   return { root: target, app };
 };
 
-const view = (over: { items?: BoardItem[]; progress?: Progress } = {}) =>
-  show(over).root;
+const view = (
+  over: { items?: BoardItem[]; progress?: Progress; map?: Voyage } = {},
+) => show(over).root;
 
 const text = (root: HTMLElement, selector: string): string[] =>
   [...root.querySelectorAll(selector)].map((e) =>
@@ -291,5 +294,15 @@ describe('the roadmap summary', () => {
     void unmount(app);
     mounted = undefined;
     expect([running, vi.getTimerCount()]).toEqual([1, 0]);
+  });
+
+  it('names an island with no Public title by its milestone (#844)', () => {
+    const root = view({
+      map: {
+        ...MAP,
+        islands: [{ ...island(4, 'unused', 1, 3), name: null, milestone: 4 }],
+      },
+    });
+    expect(text(root, '.whats-left tbody th')[0]).toBe('Milestone 4');
   });
 });

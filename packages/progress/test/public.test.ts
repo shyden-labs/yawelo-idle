@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { progress, publicSnapshot, type BoardItem } from '../src/index';
+import {
+  progress,
+  publicItems,
+  publicSnapshot,
+  type BoardItem,
+} from '../src/index';
 
 /**
  * What the public roadmap may carry (#840; Shyden, 2026-11-02: "leave them
@@ -27,8 +32,9 @@ function item(over: Partial<BoardItem> & { number: number }): BoardItem {
 const BOARD: BoardItem[] = [
   item({
     number: 1,
-    title: 'Epic M1: Foundations',
+    title: 'Epic M1: Internal foundations rework',
     estimate: null,
+    publicTitle: 'Foundations',
     publicSummary: 'The ground the game stands on.',
   }),
   item({
@@ -92,6 +98,8 @@ describe('the public roadmap snapshot', () => {
     ['a post-launch story', 'consoles'],
     ['a story closed as not planned', 'dropped idea'],
     ['a story’s raw title', 'Internal:'],
+    ['an epic’s ticket title (#844)', 'Internal foundations'],
+    ['the word Epic', 'Epic'],
     ['a label', 'tech-debt'],
     ['the waiting label', 'waiting-on-shyden'],
     ['the post-launch label', 'post-launch'],
@@ -100,15 +108,16 @@ describe('the public roadmap snapshot', () => {
     expect(served()).not.toContain(needle);
   });
 
-  it('gives an epic its title and Public summary', () => {
+  it('gives an epic its milestone, Public title and Public summary, never its ticket title (#844)', () => {
     expect(publicSnapshot(READ).items[0]).toEqual({
       number: 1,
-      epicTitle: 'Epic M1: Foundations',
+      epic: true,
+      milestone: 1,
       state: 'OPEN',
       closedAt: null,
       estimate: null,
       parent: null,
-      publicTitle: null,
+      publicTitle: 'Foundations',
       publicSummary: 'The ground the game stands on.',
       waiting: false,
     });
@@ -117,7 +126,8 @@ describe('the public roadmap snapshot', () => {
   it('gives a story its Public title and whether it waits on a decision, never its own title', () => {
     expect(publicSnapshot(READ).items[1]).toEqual({
       number: 10,
-      epicTitle: null,
+      epic: false,
+      milestone: null,
       state: 'OPEN',
       closedAt: null,
       estimate: 3,
@@ -155,5 +165,13 @@ describe('the public roadmap snapshot', () => {
         progress: progress(board, '2026-11-02'),
       }).progress.effort,
     ).toEqual({ available: false, scored: 1, open: 2 });
+  });
+
+  it('gives an epic with no milestone none', () => {
+    expect(
+      publicItems([
+        item({ number: 3, title: 'Epic: Analytics', estimate: null }),
+      ]),
+    ).toMatchObject([{ number: 3, epic: true, milestone: null }]);
   });
 });
