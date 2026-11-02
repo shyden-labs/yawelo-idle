@@ -99,14 +99,25 @@ describe('voyage: the islands (#827)', () => {
     expect(islands.map((i) => i.epic)).toEqual([12, 331, 452]);
   });
 
-  it('puts post-launch epics in the Beyond launch cluster, not the islands', () => {
-    const { islands, beyond } = voyage([
+  it('draws no post-launch epic: only the work up to the first public release', () => {
+    const { islands } = voyage([
       epic(327, 'Epic post-launch: consoles', { labels: ['post-launch'] }),
       epic(6, 'Epic M1: Core'),
     ]);
     expect(islands.map((i) => i.epic)).toEqual([6]);
-    expect(beyond.map((i) => [i.epic, i.status])).toEqual([
-      [327, 'after launch'],
+  });
+
+  it('counts no post-launch story, on an island or in other work', () => {
+    const map = voyage([
+      epic(327, 'Epic post-launch: consoles', { labels: ['post-launch'] }),
+      epic(6, 'Epic M1: Core'),
+      item({ number: 40, parent: 327 }),
+      item({ number: 41, parent: 6, labels: ['post-launch'] }),
+      item({ number: 42, labels: ['post-launch'] }),
+      item({ number: 43, parent: 6 }),
+    ]);
+    expect([map.islands[0]?.ticketsLeft, map.other.ticketsLeft]).toEqual([
+      1, 0,
     ]);
   });
 
@@ -366,7 +377,6 @@ describe('STATUS_COPY (#827)', () => {
       done: 'done',
       'part done': 'partDone',
       'not started': 'notStarted',
-      'after launch': 'afterLaunch',
     });
   });
 });

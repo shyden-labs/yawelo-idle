@@ -35,12 +35,12 @@ async function openMap(
 }
 
 const islandButtons = (page: Page) =>
-  page.locator('ol.islands:not(.beyond) > li.island > button');
+  page.locator('ol.islands > li.island > button');
 
 test('draws one island per epic, in delivery order', async ({ page }) => {
   const { map } = await openMap(page);
   expect(map.islands.length).toBeGreaterThan(0);
-  await expect(page.locator('ol.islands:not(.beyond) .island-name')).toHaveText(
+  await expect(page.locator('ol.islands .island-name')).toHaveText(
     map.islands.map((i) => i.name),
   );
 });
@@ -48,16 +48,21 @@ test('draws one island per epic, in delivery order', async ({ page }) => {
 test('shows each island’s status', async ({ page }) => {
   const { map } = await openMap(page);
   const statuses = await page
-    .locator('ol.islands:not(.beyond) > li.island')
+    .locator('ol.islands > li.island')
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-status')));
   expect(statuses).toEqual(map.islands.map((i) => i.status));
 });
 
-test('puts post-launch epics in Beyond launch', async ({ page }) => {
-  const { map } = await openMap(page);
-  await expect(page.locator('ol.beyond .island-name')).toHaveText(
-    map.beyond.map((i) => i.name),
-  );
+test('shows nothing after the first public release', async ({ page }) => {
+  const { items } = await openMap(page);
+  const after = items
+    .filter((i) => /^Epic\b/.test(i.title) && i.labels.includes('post-launch'))
+    .map((i) => i.title.replace(/^Epic\b\s*:?\s*/, ''));
+  const names = await page.locator('.island-name').allTextContents();
+  expect([
+    await page.locator('ol.islands').count(),
+    names.filter((n) => after.includes(n)),
+  ]).toEqual([1, []]);
 });
 
 test('marks the ship at the first island not done', async ({ page }) => {

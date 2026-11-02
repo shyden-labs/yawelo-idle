@@ -84,9 +84,30 @@ const isNotPlanned = (item: BoardItem): boolean =>
   item.state === 'CLOSED' &&
   (item.stateReason === 'NOT_PLANNED' || item.stateReason === 'DUPLICATE');
 
-/** Whether a board item counts towards release-ready. */
-export function inScope(item: BoardItem): boolean {
-  return !isEpic(item) && !isPostLaunch(item) && !isNotPlanned(item);
+/** The epics labelled post-launch: their stories are after launch too (#838). */
+export function postLaunchEpics(items: BoardItem[]): Set<number> {
+  return new Set(
+    items.filter((i) => isEpic(i) && isPostLaunch(i)).map((i) => i.number),
+  );
+}
+
+/** After launch: labelled so, or under an epic labelled so (#838). */
+export function afterLaunch(
+  item: BoardItem,
+  epics: ReadonlySet<number>,
+): boolean {
+  return isPostLaunch(item) || (item.parent !== null && epics.has(item.parent));
+}
+
+/**
+ * Whether a board item counts towards release-ready. `epics` are the
+ * post-launch epics (`postLaunchEpics`), whose stories are left out too.
+ */
+export function inScope(
+  item: BoardItem,
+  epics: ReadonlySet<number> = new Set(),
+): boolean {
+  return !isEpic(item) && !afterLaunch(item, epics) && !isNotPlanned(item);
 }
 
 /** The UTC days of the window ending `today`, oldest first, none before `since`. */
@@ -110,7 +131,8 @@ function perDay(
 }
 
 export function progress(items: BoardItem[], today: string): Progress {
-  const scope = items.filter(inScope);
+  const after = postLaunchEpics(items);
+  const scope = items.filter((item) => inScope(item, after));
   if (scope.length === 0) {
     throw new Error('the board has no in-scope stories: nothing to measure');
   }
@@ -132,10 +154,12 @@ export function progress(items: BoardItem[], today: string): Progress {
     closed: closed.length,
     total: scope.length,
     epics: items.filter(isEpic).length,
-    postLaunch: items.filter((item) => !isEpic(item) && isPostLaunch(item))
-      .length,
+    postLaunch: items.filter(
+      (item) => !isEpic(item) && afterLaunch(item, after),
+    ).length,
     notPlanned: items.filter(
-      (item) => !isEpic(item) && !isPostLaunch(item) && isNotPlanned(item),
+      (item) =>
+        !isEpic(item) && !afterLaunch(item, after) && isNotPlanned(item),
     ).length,
     pace: perDay(closed, days, () => 1),
   };

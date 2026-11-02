@@ -1,4 +1,8 @@
-import type { BoardItem } from '@yawelo-idle/progress';
+import {
+  inScope,
+  postLaunchEpics,
+  type BoardItem,
+} from '@yawelo-idle/progress';
 
 /**
  * The voyage map's model (#827, #342 split): the roadmap snapshot's items as
@@ -8,8 +12,7 @@ import type { BoardItem } from '@yawelo-idle/progress';
  * story's raw title never does (Shyden, 2026-10-24).
  */
 
-export type IslandStatus =
-  'done' | 'part done' | 'not started' | 'after launch';
+export type IslandStatus = 'done' | 'part done' | 'not started';
 
 export interface Island {
   epic: number;
@@ -30,8 +33,6 @@ export interface Island {
 
 export interface Voyage {
   islands: Island[];
-  /** Post-launch epics: the "Beyond launch" cluster. */
-  beyond: Island[];
   /** The epic the ship is at: the first island not done; null when all are. */
   shipAt: number | null;
   /** Stories with no epic on the board: in the totals, on no island. */
@@ -40,14 +41,6 @@ export interface Voyage {
 
 /** The same rule as packages/progress: an epic's title starts with "Epic". */
 const isEpic = (item: BoardItem): boolean => /^Epic\b/.test(item.title);
-
-const isPostLaunch = (item: BoardItem): boolean =>
-  item.labels.includes('post-launch');
-
-/** Closed as not planned or as a duplicate: neither built nor left. */
-const isDropped = (item: BoardItem): boolean =>
-  item.state === 'CLOSED' &&
-  (item.stateReason === 'NOT_PLANNED' || item.stateReason === 'DUPLICATE');
 
 /** An epic's milestone number ("Epic M3: …" is 3), or null when it has none. */
 function milestone(title: string): number | null {
@@ -69,7 +62,6 @@ function byDelivery(a: BoardItem, b: BoardItem): number {
 }
 
 function statusOf(epic: BoardItem, stories: BoardItem[]): IslandStatus {
-  if (isPostLaunch(epic)) return 'after launch';
   if (epic.state === 'CLOSED') return 'done';
   const closed = stories.filter((s) => s.state === 'CLOSED').length;
   if (closed === 0) return 'not started';
@@ -109,14 +101,18 @@ function islandOf(epic: BoardItem, stories: BoardItem[]): Island {
 
 /** The voyage the snapshot's `items` draw. */
 export function voyage(items: BoardItem[]): Voyage {
-  const epics = items.filter(isEpic).sort(byDelivery);
+  // Only the work up to the first public release (Shyden, 2026-11-02):
+  // no post-launch epic or story is drawn, and the stories counted are the
+  // close-out's release scope, so the totals match the effort line (#838).
+  const after = postLaunchEpics(items);
+  const epics = items
+    .filter((i) => isEpic(i) && !after.has(i.number))
+    .sort(byDelivery);
   const epicNumbers = new Set(epics.map((e) => e.number));
-  const stories = items.filter((i) => !isEpic(i) && !isDropped(i));
+  const stories = items.filter((i) => inScope(i, after));
   const storiesOf = (epic: number) => stories.filter((s) => s.parent === epic);
 
-  const all = epics.map((e) => islandOf(e, storiesOf(e.number)));
-  const islands = all.filter((i) => i.status !== 'after launch');
-  const beyond = all.filter((i) => i.status === 'after launch');
+  const islands = epics.map((e) => islandOf(e, storiesOf(e.number)));
 
   const orphans = stories.filter(
     (s) => s.parent === null || !epicNumbers.has(s.parent),
@@ -124,7 +120,6 @@ export function voyage(items: BoardItem[]): Voyage {
   const orphansOpen = orphans.filter((s) => s.state === 'OPEN');
   return {
     islands,
-    beyond,
     shipAt: islands.find((i) => i.status !== 'done')?.epic ?? null,
     other: {
       ticketsLeft: orphansOpen.length,
@@ -137,12 +132,11 @@ export function voyage(items: BoardItem[]): Voyage {
 /** Which of the copy's status labels names each status. */
 export const STATUS_COPY: Record<
   IslandStatus,
-  'done' | 'partDone' | 'notStarted' | 'afterLaunch'
+  'done' | 'partDone' | 'notStarted'
 > = {
   done: 'done',
   'part done': 'partDone',
   'not started': 'notStarted',
-  'after launch': 'afterLaunch',
 };
 
 /** `text` with each `{name}` replaced by `values[name]`; an unknown name stays. */

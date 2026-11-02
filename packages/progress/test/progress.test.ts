@@ -6,6 +6,7 @@ import {
   closeOutLines,
   formatLines,
   inScope,
+  postLaunchEpics,
   confidence,
   etaDate,
   parseItems,
@@ -79,6 +80,26 @@ describe('inScope', () => {
 
   it('keeps a story closed as completed', () => {
     expect(inScope(closedOn(6, '2026-10-03'))).toBe(true);
+  });
+
+  it('leaves out a story under a post-launch epic, labelled or not (#838)', () => {
+    expect(inScope(item({ number: 7, parent: 9 }), new Set([9]))).toBe(false);
+  });
+
+  it('keeps a story under an epic before launch', () => {
+    expect(inScope(item({ number: 8, parent: 10 }), new Set([9]))).toBe(true);
+  });
+});
+
+describe('postLaunchEpics', () => {
+  it('names the epics labelled post-launch, and no story', () => {
+    expect([
+      ...postLaunchEpics([
+        item({ number: 1, title: 'Epic M1: Core' }),
+        item({ number: 2, title: 'Epic: Stores', labels: ['post-launch'] }),
+        item({ number: 3, labels: ['post-launch'] }),
+      ]),
+    ]).toEqual([2]);
   });
 });
 
