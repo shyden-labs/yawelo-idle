@@ -36,7 +36,6 @@ const MAP: Voyage = {
     island(1, 'M1: Foundations', 1, 2),
     island(2, 'M2: First words', 3, 13),
   ],
-  beyond: [],
   shipAt: 1,
   other: { ticketsLeft: 2, pointsLeft: 5, built: 0 },
 };

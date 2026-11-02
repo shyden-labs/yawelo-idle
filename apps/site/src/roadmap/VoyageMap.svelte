@@ -104,21 +104,6 @@
         />
       {/each}
     </ol>
-    {#if map.beyond.length > 0}
-      <h2 lang={copyLang}>{copy.beyond}</h2>
-      <ol class="islands beyond" aria-label={copy.beyond} lang={copyLang}>
-        {#each map.beyond as item (item.epic)}
-          <Island
-            {item}
-            ship={false}
-            open={open === item.epic}
-            onToggle={toggle}
-            {copy}
-            {copyLang}
-          />
-        {/each}
-      </ol>
-    {/if}
     {#if map.other.ticketsLeft > 0}
       <p class="other" lang={copyLang}>
         {fill(copy.other, {

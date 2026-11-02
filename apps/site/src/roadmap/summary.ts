@@ -5,8 +5,11 @@
  * print, so the page and the operator's figures cannot disagree (#340).
  */
 import {
+  afterLaunch,
   confidence,
   etaDate,
+  inScope,
+  postLaunchEpics,
   type BoardItem,
   type Progress,
 } from '@yawelo-idle/progress';
@@ -105,8 +108,6 @@ export function estimates(p: Progress, today: string): Estimates {
   };
 }
 
-const isEpic = (item: BoardItem): boolean => /^Epic\b/.test(item.title);
-
 const SHIPPED = 10;
 
 export interface Shipped {
@@ -118,14 +119,14 @@ export interface Shipped {
 
 /** The last 10 stories closed as done that have a Public title. */
 export function recentlyShipped(items: BoardItem[]): Shipped[] {
+  const after = postLaunchEpics(items);
   return items
     .filter(
       (i): i is BoardItem & { publicTitle: string; closedAt: string } =>
+        inScope(i, after) &&
         i.state === 'CLOSED' &&
-        i.stateReason === 'COMPLETED' &&
         i.closedAt !== null &&
-        i.publicTitle !== null &&
-        !isEpic(i),
+        i.publicTitle !== null,
     )
     .sort((a, b) => b.closedAt.localeCompare(a.closedAt) || b.number - a.number)
     .slice(0, SHIPPED)
@@ -147,8 +148,13 @@ export interface Waiting {
 
 /** Open issues waiting on a decision, by Public title. */
 export function waitingOnDecisions(items: BoardItem[]): Waiting {
+  const after = postLaunchEpics(items);
+  // Nothing after the first public release is shown (Shyden, 2026-11-02).
   const waiting = items.filter(
-    (i) => i.state === 'OPEN' && i.labels.includes(WAITING_LABEL),
+    (i) =>
+      i.state === 'OPEN' &&
+      i.labels.includes(WAITING_LABEL) &&
+      !afterLaunch(i, after),
   );
   return {
     named: waiting
