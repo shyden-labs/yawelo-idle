@@ -1,25 +1,24 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-02 (thirty-fourth session). **Phones unavailable: no device work until Shyden says.**
-**Running when written:** nothing local. External: PR #832 CI on `9d16cb5`.
+**Written:** 2026-11-02 (thirty-fifth session). **Phones unavailable: no device work until Shyden says.** Shyden AFK until 13:00 (relayed): keep working by Priority, park his decisions.
+**Running when written:** nothing local. External: PR #835 CI on `2898c1c`.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. Skip #768 and #783 (wait on Shyden).
 
 ## Done this session
 
-- #815, #816, #813 merged and shut (PRs #823, #824, #825). #814 closed as not planned (Shyden). Worktrees -813, -815, -816 removed.
-- #342 split into #826–#830 (16 points, P1, under epic #331, blockers linked); #342 closed as split.
-- #826 merged (PR #831, squash `96ffae6`) and shut: board fields `Public title`/`Public summary`; snapshot carries `parent`, `publicTitle`, `publicSummary`; `waiting-on-shyden` label; R4 measured in the PR.
+- #827 merged (PR #832, squash `d35415e`) after screen tests for Island/VoyageMap (#804 coverage); shut with dev evidence (site-smoke 33 passed, 39 s vs 3-min limit: no change).
+- #833 merged (PR #836, squash `be82401`) and shut: ESLint `no-unused-vars` `args: all` + `_` escape; guard `tests/guards/unused-parameters.test.ts`. Worktree -833 removed.
 
 ## Next
 
-1. **#827 (PR #832)**, worktree `../yawelo-idle-826`, branch `feat/827-voyage-map`, pushed head `9d16cb5` (svelte-check fix: `test/roadmap` got its own tsconfig; core `contextAt` lost a dead parameter). Local format, lint, typecheck and unit (12,762 passed) green. **CI was running when written: re-read with `~/.claude/scripts/pr-verdict.sh 832`, read checks by name, merge if green.** After merge read deploy-dev's `site-smoke` job (first run of `tests/site`) and set its step limit to ≥3× the measured run (#476).
-2. **#828**, branch `feat/828-roadmap-figures` (same worktree, checked out now), local head `d977c20`, NOT pushed: `etaDate` and `confidence` done in `packages/progress` (126 tests green; `eta()` reuses `etaDate`). Confidence rule (mine, for Shyden to change): high at ≥6 of 7 days moved, medium at 4–5, low otherwise or under 7 days. Next: the site's summary (what's left by epic + totals, both estimates, recently shipped, updated-ago, waiting on decisions). Cut from #827's `fad360c`: merge develop in once #832 lands.
-3. Then #829 (live updates); #830 waits on Shyden's copy approval.
-4. New: #833 (P2, 3 pts): lint lets an unused non-trailing parameter through (`args: after-used`; 20 of 22 tsconfigs leave noUnused off).
+1. **PR #835 (Refs #828)**, worktree `../yawelo-idle-826`, branch `feat/828-roadmap-figures`, pushed head `2898c1c` (svelte-gates list fix after the first CI run). Summary screen `RoadmapSummary.svelte` + `summary.ts`; local unit 12,846 green. Re-read CI with `gh pr checks 835 --watch` then `~/.claude/scripts/pr-verdict.sh 835`; merge if green on head; read deploy-dev's site-smoke (2 new summary tests); then shut the ticket by hand.
+2. **#829** (live updates): the Worker's `/api/roadmap/live` socket sends the full snapshot on connect and each new version. Plan: VoyageMap opens the socket after the JSON read, replaces `snapshot` on each message, shows "live"/"not live"; AC3 needs a real board edit timed on dev (target < 10 s). Start from develop after PR #835 merges.
+3. #830 waits on Shyden's copy approval (summary placeholders: `apps/site/src/copy.ts`, `VOYAGE_PLACEHOLDER.summary`).
 
 ## Waiting on Shyden
 
 - **Test board** (shyden-labs project 6): keep or delete, his call.
+- **ETA confidence rule** (#828, mine): high at 6–7 of 7 days moved, medium 4–5, low otherwise; his to change.
 - **Voyage order:** where the three epics with no milestone (#328 prestige, #331 website, #452 analytics) sit on the voyage; default now: after M8, by issue number (`byDelivery` in `apps/site/src/roadmap/voyage.ts`).
 - **Other work:** 46 open stories have no epic; the map counts them in one "other work" line, on no island (default, PR #831).
 - #768: old dev bucket's r2.dev address off (Shyden: in the morning, 2026-11-02). #783: a planted non-release PR into main seen refused (his to open, or the next release). #784, #788, #797, `ROADMAP_APP_KEY` as a Dependabot secret (#661 AC1).
