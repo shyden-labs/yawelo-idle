@@ -3,10 +3,10 @@
  * spec §5.2 item 3): a JWT signed with the App's key, an installation token
  * for the one repository, every page of the board, and every page of the
  * repository's issues it is checked against (#751). The installation must
- * hold exactly the three reads and Administration: read, which Shyden granted
- * on 2026-10-20 for the owner-review check (#687, spec §5.2 item 3). The token
- * asks for the three reads by name, and must hold exactly those, because a
- * token minted without naming them would carry Administration too (#704).
+ * hold exactly the three reads: Administration: read, granted 2026-10-20 for
+ * the owner-review check (#687), was removed with it (#797, Shyden,
+ * 2026-11-02). The token asks for the three reads by name and must hold
+ * exactly those (#704).
  * Otherwise nothing is read: a public-facing Worker never holds a key that
  * can write, and a right added to the App later turns dev verify red rather
  * than going unnoticed.
@@ -26,9 +26,8 @@ export const PERMISSIONS: Readonly<Record<string, string>> = {
   metadata: 'read',
   organization_projects: 'read',
 };
-/** The installation's rights: the token's, and Administration: read (#687). */
+/** The installation's rights: the token's three reads, nothing more (#797). */
 export const INSTALLATION_PERMISSIONS: Readonly<Record<string, string>> = {
-  administration: 'read',
   ...PERMISSIONS,
 };
 /** 2,000 items at 100 a page: a board that claims more is broken, not big. */

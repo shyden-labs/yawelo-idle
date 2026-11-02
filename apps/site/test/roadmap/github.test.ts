@@ -33,8 +33,7 @@ import { roadmapWorld, type RoadmapWorld } from './harness';
 
 /**
  * The roadmap's read-only GitHub App (#341, spec §5.2 item 3): a JWT signed
- * with the App's key, an installation holding the three reads and
- * Administration: read (#687), a token for the one repository asking for
+ * with the App's key, an installation holding the three reads (#797), a token for the one repository asking for
  * and holding exactly the three reads (#704), and every page of the board.
  * worker/github.ts runs here in Node with every `fetch` answered by the fake
  * GitHub (test/github-fake), which verifies the JWT with the App's public key
@@ -141,7 +140,7 @@ describe('installationToken', () => {
     );
   });
 
-  it('mints from the installation as it stands, Administration: read included (#704)', async () => {
+  it('mints from the installation as it stands, the three reads alone (#797)', async () => {
     await expect(installationToken(app(), NOW())).resolves.toBe(FAKE_TOKEN);
   });
 
@@ -150,7 +149,7 @@ describe('installationToken', () => {
       installationPermissions: { ...INSTALLED, issues: 'write' },
     });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
-      'the roadmap App’s installation has {"administration":"read","issues":"write","metadata":"read","organization_projects":"read"}, not exactly {"administration":"read","issues":"read","metadata":"read","organization_projects":"read"}',
+      'the roadmap App’s installation has {"issues":"write","metadata":"read","organization_projects":"read"}, not exactly {"issues":"read","metadata":"read","organization_projects":"read"}',
     );
   });
 
@@ -163,37 +162,40 @@ describe('installationToken', () => {
     );
   });
 
-  it('refuses an installation without Administration: read, so a change to the App is seen (#704)', async () => {
-    await configureFake({ installationPermissions: { ...READ_ONLY } });
+  it('refuses an installation that still holds Administration: read, so a change to the App is seen (#797)', async () => {
+    await configureFake({
+      installationPermissions: { ...INSTALLED, administration: 'read' },
+    });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
-      'the roadmap App’s installation has {"issues":"read","metadata":"read","organization_projects":"read"}, not exactly',
+      'the roadmap App’s installation has {"administration":"read","issues":"read","metadata":"read","organization_projects":"read"}, not exactly',
     );
   });
 
-  it('refuses an installation with a right beyond the four', async () => {
+  it('refuses an installation with a right beyond the three', async () => {
     await configureFake({
       installationPermissions: { ...INSTALLED, contents: 'read' },
     });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
-      'the roadmap App’s installation has {"administration":"read","contents":"read","issues":"read","metadata":"read","organization_projects":"read"}',
+      'the roadmap App’s installation has {"contents":"read","issues":"read","metadata":"read","organization_projects":"read"}',
     );
   });
 
   it('refuses an installation without the Projects read', async () => {
     await configureFake({
       installationPermissions: {
-        administration: 'read',
         issues: 'read',
         metadata: 'read',
       },
     });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
-      'the roadmap App’s installation has {"administration":"read","issues":"read","metadata":"read"}',
+      'the roadmap App’s installation has {"issues":"read","metadata":"read"}',
     );
   });
 
   it('refuses an issued token that carries Administration, as one minted without naming its rights would (#704)', async () => {
-    await configureFake({ tokenPermissions: { ...INSTALLED } });
+    await configureFake({
+      tokenPermissions: { ...INSTALLED, administration: 'read' },
+    });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
       'the roadmap App’s token has {"administration":"read","issues":"read","metadata":"read","organization_projects":"read"}, not exactly {"issues":"read","metadata":"read","organization_projects":"read"}',
     );
