@@ -1,5 +1,11 @@
 ---
+/**
+ * The roadmap page (#827): the voyage map on the site's own base layout. It
+ * imports none of the home page's sections (#335), so it can be released
+ * alone (Shyden, 2026-10-24).
+ */
 import Base from '../layouts/Base.astro';
+import VoyageMap from '../roadmap/VoyageMap.svelte';
 import { COPY } from '../copy';
 import type { Locale } from '../i18n';
 
@@ -8,9 +14,15 @@ interface Props {
 }
 const { locale } = Astro.props;
 const copy = COPY[locale];
+// The voyage's labels are English placeholders in both locales until #830.
+const copyLang = 'en';
 ---
 
 <Base locale={locale} page="roadmap" title={copy.titles.roadmap}>
   <h1>{copy.titles.roadmap}</h1>
-  <p>{copy.roadmapSoon}</p>
+  <p lang={copyLang}>{copy.voyage.intro}</p>
+  <VoyageMap client:load copy={copy.voyage} copyLang={copyLang} />
+  <noscript>
+    <p lang={copyLang}>{copy.voyage.failed}</p>
+  </noscript>
 </Base>

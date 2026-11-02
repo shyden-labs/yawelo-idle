@@ -32,10 +32,12 @@ import { committableFiles } from '../unit/tracked-files';
  * derives both lists from git and fails on any difference, either way.
  */
 const COMPONENTS = [
+  'apps/site/src/roadmap/Island.svelte',
+  'apps/site/src/roadmap/VoyageMap.svelte',
   'packages/ui/src/Shell.svelte',
   'packages/ui/test/fixtures/Counter.svelte',
 ] as const;
-const WORKSPACES = ['packages/ui'] as const;
+const WORKSPACES = ['apps/site', 'packages/ui'] as const;
 
 /** The workspace (`apps/x`, `packages/x`) holding a path. */
 const workspaceOf = (path: string): string =>

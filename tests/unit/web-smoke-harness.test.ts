@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { webSmokeConfig } from '../../playwright.web.config';
+import { siteSmokeConfig } from '../site/smoke-config';
 import { runOf } from './workflow-steps';
 
 /**
@@ -162,7 +163,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     );
   });
 
-  it('posts dev-verified only once the dev smoke, the holding page’s dev copy (#621) and the roadmap (#708) have passed', () => {
+  it('posts dev-verified only once the dev smoke, the site suite (#827), the holding page’s dev copy (#621) and the roadmap (#708) have passed', () => {
     const posting = Object.entries(deployDev.jobs).filter(([, job]) =>
       (job.steps ?? []).some((step) =>
         /context=dev-verified\b/.test(runOf(step)),
@@ -171,8 +172,80 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     expect(posting.map(([name]) => name)).toEqual(['dev-verified']);
     expect(needsOf(deployDev.jobs['dev-verified'])).toEqual([
       'smoke',
+      'site-smoke',
       'verify-holding',
       'verify-roadmap',
     ]);
+  });
+});
+
+const SITE_URL = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/';
+const site = () =>
+  siteSmokeConfig({
+    SITE_SMOKE_URL: SITE_URL,
+    DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+  });
+
+describe('the site suite against dev (#827)', () => {
+  it('targets the address it is given and answers its password challenge', () => {
+    expect(site().use?.baseURL).toBe(SITE_URL);
+    expect(site().use?.httpCredentials).toEqual({
+      username: 'site-smoke',
+      password: 'the dev password',
+    });
+    expect(site().webServer).toBeUndefined();
+  });
+
+  it('runs the specs in tests/site', () => {
+    expect(site().testDir).toBe('tests/site');
+  });
+
+  it('refuses to run with no address: it runs against dev only', () => {
+    expect(() => siteSmokeConfig({})).toThrow(/SITE_SMOKE_URL is not set/);
+  });
+
+  it('refuses a dev address without the dev password', () => {
+    expect(() => siteSmokeConfig({ SITE_SMOKE_URL: SITE_URL })).toThrow(
+      /SITE_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not/,
+    );
+  });
+
+  it('runs on the three engines, retrying nothing', () => {
+    const engines = (site().projects ?? []).map(
+      (p) => p.use?.defaultBrowserType,
+    );
+    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+    expect(site().retries).toBe(0);
+    expect(site().forbidOnly).toBe(true);
+  });
+
+  it('is npm run test:site:dev', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts['test:site:dev']).toBe(
+      'playwright test -c playwright.site.config.ts',
+    );
+  });
+
+  it('runs once in deploy-dev, after verify and the roadmap’s first read, in CI’s Playwright image, with the dev password', () => {
+    const running = jobsRunning('npm run test:site:dev');
+    expect(running.map(([name]) => name)).toEqual(['site-smoke']);
+    const job = deployDev.jobs['site-smoke'];
+    expect(needsOf(job)).toEqual(['verify', 'verify-roadmap']);
+    expect(job?.container?.image).toBe(
+      ci.jobs['build-and-test']?.container?.image,
+    );
+    expect(job?.environment).toMatchObject({ name: 'dev' });
+    const steps = job?.steps ?? [];
+    const suite = steps.filter((s) => runOf(s) === 'npm run test:site:dev');
+    expect(suite).toHaveLength(1);
+    expect(suite[0]?.env).toEqual({
+      SITE_SMOKE_URL: SITE_URL,
+      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
+    });
+    expect(steps.filter((s) => /playwright install/.test(runOf(s)))).toEqual(
+      [],
+    );
   });
 });

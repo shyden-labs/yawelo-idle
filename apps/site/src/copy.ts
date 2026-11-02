@@ -13,6 +13,54 @@
 import { COPY_EN } from './copy-en';
 import type { Locale, Page } from './i18n';
 
+/**
+ * The voyage map's labels (#827). Placeholder English, not yet approved by
+ * Shyden; his approval, then the Indonesian with its D18 evidence, is #830.
+ * Until then both locales carry this English: dev is password-gated and
+ * production waits for #830. `{n}` and `{points}` are filled in by the page.
+ */
+export interface VoyageCopy {
+  intro: string;
+  loading: string;
+  failed: string;
+  islandsLabel: string;
+  status: {
+    done: string;
+    partDone: string;
+    notStarted: string;
+    afterLaunch: string;
+  };
+  ship: string;
+  built: string;
+  left: string;
+  nothingYet: string;
+  points: string;
+  behindTheScenes: string;
+  beyond: string;
+  other: string;
+}
+
+const VOYAGE_PLACEHOLDER: VoyageCopy = {
+  intro: COPY_EN.roadmap.intro.text,
+  loading: 'Reading the board…',
+  failed: 'The roadmap could not be read just now.',
+  islandsLabel: 'The voyage to launch',
+  status: {
+    done: 'Done',
+    partDone: 'Part done',
+    notStarted: 'Not started',
+    afterLaunch: 'After launch',
+  },
+  ship: 'The ship is here',
+  built: 'What’s built',
+  left: 'What’s left',
+  nothingYet: 'Nothing yet.',
+  points: '{n} points',
+  behindTheScenes: 'plus {n} behind-the-scenes improvements',
+  beyond: 'Beyond launch',
+  other: 'Other work, on no island: {n} stories and {points} points left',
+};
+
 export interface Copy {
   /** The language's own name, shown on the switcher that leads to it. */
   languageName: string;
@@ -22,11 +70,11 @@ export interface Copy {
   tagline: string;
   titles: Record<Page, string>;
   launchListSoon: string;
-  roadmapSoon: string;
   privacySoon: string;
   notFoundTitle: string;
   notFoundBody: string;
   homeLink: string;
+  voyage: VoyageCopy;
 }
 
 export const COPY: Record<Locale, Copy> = {
@@ -41,12 +89,12 @@ export const COPY: Record<Locale, Copy> = {
       privacy: COPY_EN.privacy.title.text,
     },
     launchListSoon: 'The launch list opens soon.',
-    roadmapSoon: 'The live roadmap is being built.',
     privacySoon:
       'The privacy notice will be published here before the launch list opens.',
     notFoundTitle: COPY_EN.notFound.title.text,
     notFoundBody: COPY_EN.notFound.body.text,
     homeLink: COPY_EN.notFound.home.text,
+    voyage: VOYAGE_PLACEHOLDER,
   },
   id: {
     languageName: 'Bahasa Indonesia',
@@ -56,11 +104,12 @@ export const COPY: Record<Locale, Copy> = {
     tagline: 'Petualangan idle menjelajahi bahasa sungguhan.',
     titles: { home: 'Yawelo Idle', roadmap: 'Peta jalan', privacy: 'Privasi' },
     launchListSoon: 'Daftar peluncuran segera dibuka.',
-    roadmapSoon: 'Peta jalan langsung sedang dibangun.',
     privacySoon:
       'Pemberitahuan privasi akan diterbitkan di sini sebelum daftar peluncuran dibuka.',
     notFoundTitle: 'Halaman tidak ditemukan',
     notFoundBody: 'Tidak ada halaman di alamat ini.',
     homeLink: 'Kembali ke beranda',
+    // English until #830 translates it with its D18 evidence.
+    voyage: VOYAGE_PLACEHOLDER,
   },
 };

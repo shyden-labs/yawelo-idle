@@ -264,6 +264,38 @@ jobs:
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
 
+  # The site's browser suite (tests/site, #827): the roadmap page at the site
+  # Worker's own address, where the site being built is seen (#673), read
+  # from the real board. It waits for verify (this commit served) and
+  # verify-roadmap (the snapshot read), so the page has a board to draw.
+  site-smoke:
+    needs: [verify, verify-roadmap]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+      options: --user 1001
+    environment:
+      name: dev
+      url: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/roadmap
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Drive the roadmap page on dev (Chromium, Firefox and WebKit, behind the dev password)
+        # A first limit, until its first run is measured (#476): then at
+        # least 3 times its slowest run.
+        timeout-minutes: 3
+        env:
+          SITE_SMOKE_URL: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/
+          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+        run: npm run test:site:dev
+
   # The holding page's dev copy (#621 AC8), checked from outside against
   # what this commit builds: noindex on every response, crawlers blocked. It
   # needs no secret, so it names no environment.
@@ -296,7 +328,7 @@ jobs:
   # dev-verified means every check above passed: verify-dev, then the smoke,
   # the holding page's dev copy (#621), and the roadmap (#708).
   dev-verified:
-    needs: [smoke, verify-holding, verify-roadmap]
+    needs: [smoke, site-smoke, verify-holding, verify-roadmap]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions:
