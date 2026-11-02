@@ -4,6 +4,8 @@
  * startup (measured, #332).
  */
 
+import { isProdHost, PROD_HOSTNAME } from '@yawelo-idle/lockdown';
+
 /** Where GitHub's org webhooks deliver (#341). */
 export const HOOK_PATH = '/hooks/github';
 
@@ -14,9 +16,10 @@ export const HOOK_PATH = '/hooks/github';
 export const EXEMPT_PATHS: readonly string[] = [HOOK_PATH];
 
 /**
- * The roadmap's paths (#341), behind the password on dev like every page:
- * each browser engine sends its cached Basic credentials on the socket
- * upgrade too (spec §10 R6, measured 2026-10-06).
+ * The roadmap's paths (#341), behind the password on dev like every page.
+ * Not every engine sends its cached Basic credentials on the socket upgrade
+ * (WebKit on Linux answered 401, deploy-dev run 41398540143, #829); the dev
+ * login cookie carries the socket through.
  */
 export const ROADMAP_PATHS = {
   snapshot: '/api/roadmap.json',
@@ -46,3 +49,15 @@ export function showsHolding(hostname: string): boolean {
 export function isGamePath(pathname: string): boolean {
   return pathname === '/play' || pathname.startsWith('/play/');
 }
+
+/**
+ * Whether the roadmap's health report is served on `hostname` (#846): its
+ * timings, counters and raw error text are internal, so never on the public
+ * host; on dev it stays behind the password for dev verify.
+ */
+export function servesHealth(hostname: string): boolean {
+  return !isProdHost(hostname, PROD_HOSTNAME);
+}
+
+/** The data file's answer before any good read: plain, naming nothing internal (#846). */
+export const UNREADABLE = 'The roadmap could not be read just now.';

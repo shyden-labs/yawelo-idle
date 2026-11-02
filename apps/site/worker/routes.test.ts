@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOLDING_HOST, showsHolding } from './routes';
+import { HOLDING_HOST, servesHealth, showsHolding, UNREADABLE } from './routes';
 
 /**
  * Which pages a host shows (#673): the dev front door shows the holding page
@@ -33,5 +33,27 @@ describe('showsHolding (#673)', () => {
 
   it('shows the site on a host that only ends with the front door', () => {
     expect(showsHolding('evil-dev.yawelo-idle.shyden.co.uk')).toBe(false);
+  });
+});
+
+describe('servesHealth (#846)', () => {
+  it('keeps the health report off the production host', () => {
+    expect(servesHealth('yawelo-idle.shyden.co.uk')).toBe(false);
+  });
+
+  it('keeps it off the production host in any case', () => {
+    expect(servesHealth('YAWELO-IDLE.shyden.co.uk')).toBe(false);
+  });
+
+  it('serves it on dev, behind the password', () => {
+    expect(
+      servesHealth('yawelo-idle-site-dev.shyden-labs-dev.workers.dev'),
+    ).toBe(true);
+  });
+});
+
+describe('UNREADABLE (#846)', () => {
+  it('is a fixed plain sentence, naming nothing internal', () => {
+    expect(UNREADABLE).toBe('The roadmap could not be read just now.');
   });
 });
