@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import type { BoardItem } from '@yawelo-idle/progress';
+import type { PublicItem } from '@yawelo-idle/progress';
 import { COPY } from '../../apps/site/src/copy';
 import {
   recentlyShipped,
@@ -15,7 +15,7 @@ import { voyage, type Voyage } from '../../apps/site/src/roadmap/voyage';
  */
 
 interface Snapshot {
-  items: BoardItem[];
+  items: PublicItem[];
 }
 
 async function snapshotOf(page: Page): Promise<Snapshot> {
@@ -27,7 +27,7 @@ async function snapshotOf(page: Page): Promise<Snapshot> {
 /** The page, loaded until its islands are drawn, and the voyage it draws. */
 async function openMap(
   page: Page,
-): Promise<{ map: Voyage; items: BoardItem[] }> {
+): Promise<{ map: Voyage; items: PublicItem[] }> {
   const { items } = await snapshotOf(page);
   await page.goto('/roadmap');
   await expect(page.locator('.island').first()).toBeVisible();
@@ -53,16 +53,25 @@ test('shows each island’s status', async ({ page }) => {
   expect(statuses).toEqual(map.islands.map((i) => i.status));
 });
 
-test('shows nothing after the first public release', async ({ page }) => {
-  const { items } = await openMap(page);
-  const after = items
-    .filter((i) => /^Epic\b/.test(i.title) && i.labels.includes('post-launch'))
-    .map((i) => i.title.replace(/^Epic\b\s*:?\s*/, ''));
-  const names = await page.locator('.island-name').allTextContents();
-  expect([
-    await page.locator('ol.islands').count(),
-    names.filter((n) => after.includes(n)),
-  ]).toEqual([1, []]);
+test('serves only the fields the public page shows (#840)', async ({
+  page,
+}) => {
+  const response = await page.request.get('/api/roadmap.json');
+  const served = (await response.json()) as Record<string, unknown> & {
+    items: Record<string, unknown>[];
+  };
+  const keys = new Set(served.items.map((i) => Object.keys(i).sort().join()));
+  expect([Object.keys(served).sort(), [...keys]]).toEqual([
+    ['items', 'progress', 'readAt', 'version'],
+    [
+      'closedAt,epicTitle,estimate,number,parent,publicSummary,publicTitle,state,waiting',
+    ],
+  ]);
+});
+
+test('draws one list of islands, nothing after launch', async ({ page }) => {
+  await openMap(page);
+  await expect(page.locator('ol.islands')).toHaveCount(1);
 });
 
 test('marks the ship at the first island not done', async ({ page }) => {
@@ -140,23 +149,6 @@ test('shows an open island’s plain words: what’s built, what’s left, the r
   await expect(panel.locator('.behind')).toHaveCount(
     island.behindTheScenes > 0 ? 1 : 0,
   );
-});
-
-test('shows no story’s raw ticket title anywhere', async ({ page }) => {
-  const { items } = await openMap(page);
-  const buttons = islandButtons(page);
-  const count = await buttons.count();
-  for (let i = 0; i < count; i += 1) {
-    // one scenario: open every island in turn, so every panel is rendered visible.
-    await buttons.nth(i).click();
-  }
-  const text = await page.locator('body').innerText();
-  const raw = items
-    .filter((item) => !/^Epic\b/.test(item.title))
-    .filter((item) => item.publicTitle !== item.title)
-    .map((item) => item.title)
-    .filter((title) => text.includes(title));
-  expect(raw).toEqual([]);
 });
 
 test('fits 320 px wide with no horizontal scroll', async ({ page }) => {

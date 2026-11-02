@@ -1,9 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { closeOutLines } from '../../../../packages/progress/src/index';
+import {
+  progress,
+  publicSnapshot,
+  roadmapItems,
+} from '../../../../packages/progress/src/index';
 import {
   boardPages,
   FIXTURE_REPO,
-  FIXTURE_TITLE,
   fixtureCardId,
   repoPages,
 } from '../../../../packages/progress/test/board-fixture';
@@ -43,7 +46,7 @@ const GRACE_MS = 120_000;
 interface Snapshot {
   version: number;
   items: { number: number }[];
-  lines: [string, string];
+  progress: unknown;
 }
 interface Health {
   version: number;
@@ -265,10 +268,16 @@ describe('reading the board', () => {
     expect(health.readFailingSince).toBeNull();
   });
 
-  it('gives the same two lines as the close-out script, from one fixture', async () => {
+  it('gives the public part of the close-out’s figures, from one fixture (#840)', async () => {
     const snapshot = await inRoadmap((r) => r.snapshot());
-    expect(snapshot?.lines).toEqual(
-      closeOutLines(boardPages(today()), FIXTURE_TITLE, FIXTURE_REPO, today()),
+    const { items } = roadmapItems(boardPages(today()), FIXTURE_REPO);
+    expect(snapshot?.progress).toEqual(
+      publicSnapshot({
+        version: 1,
+        readAt: '',
+        items,
+        progress: progress(items, today()),
+      }).progress,
     );
   });
 

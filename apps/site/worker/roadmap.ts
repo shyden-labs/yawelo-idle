@@ -27,12 +27,13 @@ import { DurableObject } from 'cloudflare:workers';
 import {
   assertBoard,
   assertNamedByRepo,
-  formatLines,
   progress,
+  publicSnapshot,
   roadmapItems,
   type BoardItem,
   type Dropped,
   type Progress,
+  type PublicSnapshot,
 } from '@yawelo-idle/progress';
 import {
   installationToken,
@@ -65,7 +66,10 @@ export interface RoadmapEnv extends Env {
   readonly ROADMAP_APP_KEY?: string;
 }
 
-/** What `/api/roadmap.json` serves and each socket receives. */
+/**
+ * The last read, kept whole for the accounting; only its public part
+ * (`publicSnapshot`, #840) is served or sent.
+ */
 export interface Snapshot {
   version: number;
   readAt: string;
@@ -73,7 +77,6 @@ export interface Snapshot {
   hash: string;
   items: BoardItem[];
   progress: Progress;
-  lines: [string, string];
 }
 
 /**
@@ -286,9 +289,15 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     };
   }
 
-  async snapshot(): Promise<Snapshot | null> {
+  /** The public part of the last read (#840), or null before any read. */
+  async snapshot(): Promise<PublicSnapshot | null> {
     if (this.state.lastCheckAt === null) await this.check();
-    return this.state.snapshot;
+    return this.served();
+  }
+
+  private served(): PublicSnapshot | null {
+    const read = this.state.snapshot;
+    return read === null ? null : publicSnapshot(read);
   }
 
   /** `/api/roadmap/live`: a hibernating socket that gets every version. */
@@ -300,8 +309,8 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       WebSocket,
     ];
     this.ctx.acceptWebSocket(server);
-    if (this.state.snapshot !== null)
-      server.send(JSON.stringify(this.state.snapshot));
+    const served = this.served();
+    if (served !== null) server.send(JSON.stringify(served));
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -389,7 +398,6 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
           hash,
           items: sorted,
           progress: measured,
-          lines: formatLines(measured, today),
         };
         this.broadcast();
       }
@@ -423,7 +431,7 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
   }
 
   private broadcast(): void {
-    const message = JSON.stringify(this.state.snapshot);
+    const message = JSON.stringify(this.served());
     // A runtime population: the sockets open at this moment.
     for (const socket of this.ctx.getWebSockets()) socket.send(message);
   }

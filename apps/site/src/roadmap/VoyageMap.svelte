@@ -7,7 +7,7 @@
    * words are rendered: an epic's name and Public summary, a story's Public
    * title.
    */
-  import type { BoardItem, Progress } from '@yawelo-idle/progress';
+  import type { PublicSnapshot } from '@yawelo-idle/progress';
   import type { VoyageCopy } from '../copy';
   import Island from './Island.svelte';
   import RoadmapSummary from './RoadmapSummary.svelte';
@@ -21,20 +21,13 @@
   }
   const { copy, copyLang }: Props = $props();
 
-  interface Snapshot {
-    version: number;
-    items: BoardItem[];
-    progress: Progress;
-    readAt: string;
-  }
-
-  let snapshot = $state<Snapshot | null>(null);
+  let snapshot = $state<PublicSnapshot | null>(null);
   let failed = $state(false);
   let open = $state<number | null>(null);
   /** The socket: none heard yet, delivering, or gone (refused or closed). */
   let live = $state<'connecting' | 'live' | 'closed'>('connecting');
 
-  const show = (next: Snapshot): void => {
+  const show = (next: PublicSnapshot): void => {
     if (newer(snapshot, next)) snapshot = next;
   };
 
@@ -42,7 +35,7 @@
     fetch('/api/roadmap.json', { headers: { Accept: 'application/json' } })
       .then(async (response) => {
         if (!response.ok) throw new Error(String(response.status));
-        show((await response.json()) as Snapshot);
+        show((await response.json()) as PublicSnapshot);
       })
       .catch(() => {
         failed = true;
@@ -52,7 +45,7 @@
   $effect(() => {
     const socket = new WebSocket(liveUrl(location.href));
     socket.addEventListener('message', (event: MessageEvent<string>) => {
-      show(JSON.parse(event.data) as Snapshot);
+      show(JSON.parse(event.data) as PublicSnapshot);
       live = 'live';
     });
     const gone = (): void => {

@@ -1,13 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { progress, type BoardItem, type Progress } from '@yawelo-idle/progress';
+import {
+  progress,
+  publicItems,
+  type BoardItem,
+  type Progress,
+} from '@yawelo-idle/progress';
 import {
   estimates,
-  recentlyShipped,
+  recentlyShipped as shippedOf,
   secondsAgo,
-  waitingOnDecisions,
+  waitingOnDecisions as waitingOf,
   whatsLeft,
 } from './summary';
-import { voyage } from './voyage';
+import { voyage as draw } from './voyage';
+
+/** Each board read as the page reads it: through what the Worker serves (#840). */
+const voyage = (items: BoardItem[]) => draw(publicItems(items));
+const recentlyShipped = (items: BoardItem[]) => shippedOf(publicItems(items));
+const waitingOnDecisions = (items: BoardItem[]) =>
+  waitingOf(publicItems(items));
 
 /**
  * The roadmap's summary (#828): what's left by epic, both estimates, what

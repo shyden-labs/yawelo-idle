@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import type { BoardItem, Progress } from '@yawelo-idle/progress';
+import type { PublicSnapshot } from '@yawelo-idle/progress';
 import { COPY } from '../copy';
 import VoyageMap from './VoyageMap.svelte';
 import type { Island, Voyage } from './voyage';
@@ -54,12 +54,8 @@ const respond = (response: Response): void => {
 };
 
 /** A snapshot as /api/roadmap.json serves it; its items are drawn by the stand-in. */
-interface Snapshot {
-  version: number;
-  items: BoardItem[];
-  progress: Progress;
-  readAt: string;
-}
+/** What the Worker serves (#840). */
+type Snapshot = PublicSnapshot;
 
 const SNAPSHOT: Snapshot = {
   version: 1,
@@ -68,9 +64,6 @@ const SNAPSHOT: Snapshot = {
     tickets: {
       closed: 1,
       total: 4,
-      epics: 3,
-      postLaunch: 1,
-      notPlanned: 0,
       pace: [1, 0, 0, 0, 0, 0, 0],
     },
     effort: { available: false, scored: 2, open: 3 },

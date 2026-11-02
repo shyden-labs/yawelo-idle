@@ -92,10 +92,7 @@ export function postLaunchEpics(items: BoardItem[]): Set<number> {
 }
 
 /** After launch: labelled so, or under an epic labelled so (#838). */
-export function afterLaunch(
-  item: BoardItem,
-  epics: ReadonlySet<number>,
-): boolean {
+function afterLaunch(item: BoardItem, epics: ReadonlySet<number>): boolean {
   return isPostLaunch(item) || (item.parent !== null && epics.has(item.parent));
 }
 
@@ -704,4 +701,104 @@ export function closeOutLines(
 ): [string, string] {
   assertBoard(pages, title);
   return formatLines(progress(parseItems(pages, repo), today), today);
+}
+
+/** The label an issue waiting on Shyden's decision carries (#826). */
+export const WAITING_LABEL = 'waiting-on-shyden';
+
+/**
+ * A board item as the public roadmap may show it (#840): the fields the page
+ * reads and nothing else. A story's own title stays private; its Public
+ * title is the only name it is shown by.
+ */
+export interface PublicItem {
+  number: number;
+  /** An epic's title, which names its island and milestone; null for a story. */
+  epicTitle: string | null;
+  state: 'OPEN' | 'CLOSED';
+  closedAt: string | null;
+  estimate: number | null;
+  parent: number | null;
+  publicTitle: string | null;
+  publicSummary: string | null;
+  /** Whether it waits on a decision (`waiting-on-shyden`). */
+  waiting: boolean;
+}
+
+/** The progress figures the public roadmap shows (#840). */
+export interface PublicProgress {
+  tickets: { closed: number; total: number; pace: number[] };
+  effort:
+    | { available: false; scored: number; open: number }
+    | {
+        available: true;
+        openPoints: number;
+        assumedClosed: number;
+        scoredMean: number;
+        pace: number[];
+      };
+}
+
+/** What `/api/roadmap.json` serves and each live socket receives (#840). */
+export interface PublicSnapshot {
+  version: number;
+  readAt: string;
+  items: PublicItem[];
+  progress: PublicProgress;
+}
+
+/** The board's items the public roadmap may carry, as it may carry them (#840). */
+export function publicItems(items: BoardItem[]): PublicItem[] {
+  const after = postLaunchEpics(items);
+  return items
+    .filter((i) => (isEpic(i) ? !after.has(i.number) : inScope(i, after)))
+    .map((i) => ({
+      number: i.number,
+      epicTitle: isEpic(i) ? i.title : null,
+      state: i.state,
+      closedAt: i.closedAt,
+      estimate: i.estimate,
+      parent: i.parent,
+      publicTitle: i.publicTitle,
+      publicSummary: i.publicSummary,
+      waiting: i.labels.includes(WAITING_LABEL),
+    }));
+}
+
+/**
+ * The public part of a read (#840; Shyden, 2026-11-02: "i don't want any
+ * leaks in the public"): only the work up to the first public release, its
+ * epics and its in-scope stories, each with only the fields the page reads,
+ * and only the figures the page shows. Progress is still measured from the
+ * whole board on the Worker; nothing else of it leaves.
+ */
+export function publicSnapshot(read: {
+  version: number;
+  readAt: string;
+  items: BoardItem[];
+  progress: Progress;
+}): PublicSnapshot {
+  const items = publicItems(read.items);
+  const { tickets, effort } = read.progress;
+  return {
+    version: read.version,
+    readAt: read.readAt,
+    items,
+    progress: {
+      tickets: {
+        closed: tickets.closed,
+        total: tickets.total,
+        pace: tickets.pace,
+      },
+      effort: effort.available
+        ? {
+            available: true,
+            openPoints: effort.openPoints,
+            assumedClosed: effort.assumedClosed,
+            scoredMean: effort.scoredMean,
+            pace: effort.pace,
+          }
+        : { available: false, scored: effort.scored, open: effort.open },
+    },
+  };
 }
