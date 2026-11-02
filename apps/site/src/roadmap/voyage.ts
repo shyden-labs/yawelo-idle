@@ -12,8 +12,13 @@ export type IslandStatus = 'done' | 'part done' | 'not started';
 
 export interface Island {
   epic: number;
-  /** The epic's title without the word "Epic", e.g. "M1: Core simulation". */
-  name: string;
+  /**
+   * The epic's Public title, or null when unset: never its ticket title
+   * (#844). `islandName` gives what the page shows.
+   */
+  name: string | null;
+  /** The epic's milestone number, for the name shown while it has none. */
+  milestone: number | null;
   /** The epic's Public summary, or null when unset. */
   summary: string | null;
   status: IslandStatus;
@@ -35,30 +40,22 @@ export interface Voyage {
   other: { ticketsLeft: number; pointsLeft: number; built: number };
 }
 
-/** An epic: the public snapshot gives epics, and only epics, their title. */
-type Epic = PublicItem & { epicTitle: string };
-const isEpic = (item: PublicItem): item is Epic => item.epicTitle !== null;
-
-/** An epic's milestone number ("Epic M3: …" is 3), or null when it has none. */
-function milestone(title: string): number | null {
-  const match = /^Epic M(\d+)\b/.exec(title);
-  return match === null ? null : Number(match[1]);
-}
+const isEpic = (item: PublicItem): boolean => item.epic;
 
 /**
  * Delivery order: milestones by number, then epics with no milestone by
  * issue number (a default until Shyden places them).
  */
-function byDelivery(a: Epic, b: Epic): number {
-  const ma = milestone(a.epicTitle);
-  const mb = milestone(b.epicTitle);
+function byDelivery(a: PublicItem, b: PublicItem): number {
+  const ma = a.milestone;
+  const mb = b.milestone;
   if (ma !== null && mb !== null) return ma - mb || a.number - b.number;
   if (ma !== null) return -1;
   if (mb !== null) return 1;
   return a.number - b.number;
 }
 
-function statusOf(epic: Epic, stories: PublicItem[]): IslandStatus {
+function statusOf(epic: PublicItem, stories: PublicItem[]): IslandStatus {
   if (epic.state === 'CLOSED') return 'done';
   const closed = stories.filter((s) => s.state === 'CLOSED').length;
   if (closed === 0) return 'not started';
@@ -68,13 +65,14 @@ function statusOf(epic: Epic, stories: PublicItem[]): IslandStatus {
 const newestFirst = (a: PublicItem, b: PublicItem): number =>
   (b.closedAt ?? '').localeCompare(a.closedAt ?? '') || b.number - a.number;
 
-function islandOf(epic: Epic, stories: PublicItem[]): Island {
+function islandOf(epic: PublicItem, stories: PublicItem[]): Island {
   const open = stories.filter((s) => s.state === 'OPEN');
   const named = (s: PublicItem): s is PublicItem & { publicTitle: string } =>
     s.publicTitle !== null;
   return {
     epic: epic.number,
-    name: epic.epicTitle.replace(/^Epic\b\s*:?\s*/, ''),
+    name: epic.publicTitle,
+    milestone: epic.milestone,
     summary: epic.publicSummary,
     status: statusOf(epic, stories),
     built: stories
@@ -145,3 +143,22 @@ export function fill(
 /** A story's or epic's page on GitHub. */
 export const issueUrl = (number: number): string =>
   `https://github.com/shyden-labs/yawelo-idle/issues/${String(number)}`;
+
+/** How the page names an island whose epic has no Public title yet (#844). */
+export interface UnnamedCopy {
+  /** With a milestone, e.g. "Milestone {n}". */
+  unnamedIsland: string;
+  /** With none. */
+  unnamedNoMilestone: string;
+}
+
+/** The name the page shows for an island: its Public title, or a placeholder. */
+export function islandName(
+  island: { name: string | null; milestone: number | null },
+  copy: UnnamedCopy,
+): string {
+  if (island.name !== null) return island.name;
+  if (island.milestone !== null)
+    return fill(copy.unnamedIsland, { n: island.milestone });
+  return copy.unnamedNoMilestone;
+}

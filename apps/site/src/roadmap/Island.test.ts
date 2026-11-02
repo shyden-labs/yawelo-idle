@@ -15,6 +15,7 @@ const copy = COPY.en.voyage;
 const data = (over: Partial<IslandData> = {}): IslandData => ({
   epic: 7,
   name: 'Learning loop',
+  milestone: null,
   summary: 'Words come back when you are about to forget them.',
   status: 'part done',
   built: [{ number: 11, title: 'Cards return on time' }],

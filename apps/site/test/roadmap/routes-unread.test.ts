@@ -23,7 +23,7 @@ afterAll(async () => {
   if (started) await world.stop();
 });
 
-it('answers 503 with the reason when the board has never been read', async () => {
+it('answers 503 with a plain sentence, never the error text, when the board has never been read (#846)', async () => {
   await world.resetFake();
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
@@ -33,6 +33,15 @@ it('answers 503 with the reason when the board has never been read', async () =>
   expect(response.status).toBe(503);
   expect(response.headers.get('Cache-Control')).toBe('no-store');
   expect(await response.json()).toEqual({
-    error: 'GitHub refused POST /graphql: HTTP 502',
+    error: 'The roadmap could not be read just now.',
   });
+});
+
+it('keeps the health report, error text and all, off the production host (#846)', async () => {
+  await world.resetFake();
+  await world.configureFake({ graphqlStatus: 502 });
+  const response = await world.server.fetch(
+    'https://yawelo-idle.shyden.co.uk/api/roadmap/health',
+  );
+  expect([response.status, await response.text()]).toEqual([404, '']);
 });

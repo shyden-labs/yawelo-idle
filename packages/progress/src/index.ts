@@ -713,8 +713,13 @@ export const WAITING_LABEL = 'waiting-on-shyden';
  */
 export interface PublicItem {
   number: number;
-  /** An epic's title, which names its island and milestone; null for a story. */
-  epicTitle: string | null;
+  /** Whether it is an epic, which the page draws as an island. */
+  epic: boolean;
+  /**
+   * An epic's milestone ("Epic M3: …" is 3), for the islands' order; null for
+   * a story or an epic with none. Its ticket title is never served (#844).
+   */
+  milestone: number | null;
   state: 'OPEN' | 'CLOSED';
   closedAt: string | null;
   estimate: number | null;
@@ -747,6 +752,12 @@ export interface PublicSnapshot {
   progress: PublicProgress;
 }
 
+/** An epic's milestone number ("Epic M3: …" is 3), or null when it has none. */
+function milestoneOf(title: string): number | null {
+  const match = /^Epic M(\d+)\b/.exec(title);
+  return match === null ? null : Number(match[1]);
+}
+
 /** The board's items the public roadmap may carry, as it may carry them (#840). */
 export function publicItems(items: BoardItem[]): PublicItem[] {
   const after = postLaunchEpics(items);
@@ -754,7 +765,8 @@ export function publicItems(items: BoardItem[]): PublicItem[] {
     .filter((i) => (isEpic(i) ? !after.has(i.number) : inScope(i, after)))
     .map((i) => ({
       number: i.number,
-      epicTitle: isEpic(i) ? i.title : null,
+      epic: isEpic(i),
+      milestone: isEpic(i) ? milestoneOf(i.title) : null,
       state: i.state,
       closedAt: i.closedAt,
       estimate: i.estimate,

@@ -20,7 +20,9 @@ import {
   isGamePath,
   isRoadmapPath,
   ROADMAP_PATHS,
+  servesHealth,
   showsHolding,
+  UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
@@ -75,14 +77,15 @@ async function hook(
 
 /** The three roadmap paths, once the gate has let the request through. */
 async function api(request: Request, env: SiteEnv): Promise<Response> {
-  const { pathname } = new URL(request.url);
+  const { hostname, pathname } = new URL(request.url);
   if (pathname === ROADMAP_PATHS.live) return roadmap(env).fetch(request);
-  if (pathname === ROADMAP_PATHS.health)
+  if (pathname === ROADMAP_PATHS.health) {
+    if (!servesHealth(hostname)) return new Response(null, { status: 404 });
     return noStore(await roadmap(env).health());
+  }
   const snapshot = await roadmap(env).snapshot();
   if (snapshot !== null) return noStore(snapshot);
-  const { readError } = await roadmap(env).health();
-  return noStore({ error: readError }, 503);
+  return noStore({ error: UNREADABLE }, 503);
 }
 
 export default {
