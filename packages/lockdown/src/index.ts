@@ -121,6 +121,60 @@ export async function basicAuthOk(
   return sameSecret(decoded.slice(colon + 1), expected);
 }
 
+/**
+ * The dev login cookie (#829; Shyden, 2026-11-02). A browser sends the
+ * password on page loads but not every one sends it on a WebSocket
+ * handshake (WebKit on Linux answered 401 on the roadmap's live socket);
+ * every browser sends cookies there. Set after a good password, host-only
+ * (`__Host-`), Secure, HttpOnly and SameSite=Strict, for a day.
+ */
+export const DEV_LOGIN_COOKIE = '__Host-yawelo-dev-login';
+const DEV_LOGIN_MAX_AGE = 86_400;
+
+/**
+ * The cookie's value: an HMAC of a fixed label keyed by the password, so it
+ * never carries the password and stops working when the password changes.
+ */
+async function loginToken(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const mac = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode('yawelo-idle dev login v1'),
+  );
+  return [...new Uint8Array(mac)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/** The value of cookie `name` in a `Cookie` header, or null. */
+function cookieValue(header: string | null, name: string): string | null {
+  for (const part of (header ?? '').split(';')) {
+    const at = part.indexOf('=');
+    if (at >= 0 && part.slice(0, at).trim() === name)
+      return part.slice(at + 1).trim();
+  }
+  return null;
+}
+
+/** Whether the request carries a dev login cookie made from `expected`. */
+async function loginCookieOk(
+  header: string | null,
+  expected: string | undefined,
+): Promise<boolean> {
+  if (expected === undefined || expected === '') return false;
+  const given = cookieValue(header, DEV_LOGIN_COOKIE);
+  if (given === null || given === '') return false;
+  return sameSecret(given, await loginToken(expected));
+}
+
 /** The blocking robots.txt, served on non-prod hosts without credentials. */
 export function robotsResponse(): Response {
   return new Response(BLOCKING_ROBOTS_TXT, {
@@ -160,9 +214,10 @@ export function withNoIndex(response: Response): Response {
 /**
  * The web Worker's gate. On the production host the request is served
  * untouched. On any other host `/robots.txt` is public and blocking, a
- * request without the password gets the challenge (and never reaches
- * `serve`, so no asset bytes leave), and an authorised one is served with
- * the noindex header added.
+ * request without the password or the dev login cookie gets the challenge
+ * (and never reaches `serve`, so no asset bytes leave), and an authorised
+ * one is served with the noindex header added; the password also sets the
+ * cookie.
  */
 export async function gateWebRequest(
   request: Request,
@@ -172,10 +227,21 @@ export async function gateWebRequest(
   const { hostname, pathname } = new URL(request.url);
   if (isProdHost(hostname, PROD_HOSTNAME)) return serve(request);
   if (pathname === '/robots.txt') return robotsResponse();
-  if (!(await basicAuthOk(request.headers.get('Authorization'), password))) {
-    return challengeResponse();
+  // Fails closed: a deploy whose secret is missing stays locked.
+  if (password === undefined || password === '') return challengeResponse();
+  if (await basicAuthOk(request.headers.get('Authorization'), password)) {
+    const response = withNoIndex(await serve(request));
+    const token = await loginToken(password);
+    response.headers.append(
+      'Set-Cookie',
+      `${DEV_LOGIN_COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${String(DEV_LOGIN_MAX_AGE)}`,
+    );
+    return response;
   }
-  return withNoIndex(await serve(request));
+  if (await loginCookieOk(request.headers.get('Cookie'), password)) {
+    return withNoIndex(await serve(request));
+  }
+  return challengeResponse();
 }
 
 /**
