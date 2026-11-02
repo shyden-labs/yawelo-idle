@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCKING_ROBOTS_TXT,
+  DEV_LOGIN_COOKIE,
   NO_INDEX,
   PROD_API_HOSTNAME,
   PROD_HOSTNAME,
@@ -34,11 +35,15 @@ function recordingServe(): { serve: Serve; calls: string[] } {
   return { serve, calls };
 }
 
-function request(url: string, authorization?: string): Request {
-  return new Request(
-    url,
-    authorization === undefined ? {} : { headers: { authorization } },
-  );
+function request(
+  url: string,
+  authorization?: string,
+  cookie?: string,
+): Request {
+  const headers = new Headers();
+  if (authorization !== undefined) headers.set('authorization', authorization);
+  if (cookie !== undefined) headers.set('cookie', cookie);
+  return new Request(url, { headers });
 }
 
 describe('isProdHost', () => {
@@ -256,4 +261,94 @@ describe('markApiRequest', () => {
       expect(calls).toHaveLength(1);
     },
   );
+});
+
+describe('the dev login cookie (#829)', () => {
+  const dev = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+
+  /** The cookie the gate sets when `password` is given. */
+  async function loginCookie(password = PASSWORD): Promise<string> {
+    const { serve } = recordingServe();
+    const response = await gateWebRequest(
+      request(`${dev}/roadmap`, basic(`tester:${password}`)),
+      password,
+      serve,
+    );
+    return response.headers.get('Set-Cookie') ?? '';
+  }
+
+  /** The cookie's `name=value` pair, as a browser sends it back. */
+  const pair = (setCookie: string): string => setCookie.split(';')[0] ?? '';
+
+  it('is set host-only, secure, script-proof and same-site when the password is given', async () => {
+    const set = await loginCookie();
+    expect([pair(set).split('=')[0], set.split('; ').slice(1).sort()]).toEqual([
+      DEV_LOGIN_COOKIE,
+      ['HttpOnly', 'Max-Age=86400', 'Path=/', 'SameSite=Strict', 'Secure'],
+    ]);
+  });
+
+  it('never carries the password itself', async () => {
+    expect((await loginCookie()).includes(PASSWORD)).toBe(false);
+  });
+
+  it('lets a request carrying only the cookie through, without setting it again', async () => {
+    const { serve, calls } = recordingServe();
+    const url = `${dev}/api/roadmap/live`;
+    const response = await gateWebRequest(
+      request(url, undefined, `other=1; ${pair(await loginCookie())}`),
+      PASSWORD,
+      serve,
+    );
+    expect([
+      response.status,
+      calls,
+      response.headers.get('Set-Cookie'),
+    ]).toEqual([200, [url], null]);
+  });
+
+  it.each([
+    ['a wrong value', `${DEV_LOGIN_COOKIE}=0000`],
+    ['an empty value', `${DEV_LOGIN_COOKIE}=`],
+    ['a cookie whose name only ends the same', `x${DEV_LOGIN_COOKIE}=0000`],
+  ])('challenges %s and never serves', async (_name, cookie) => {
+    const { serve, calls } = recordingServe();
+    const response = await gateWebRequest(
+      request(`${dev}/`, undefined, cookie),
+      PASSWORD,
+      serve,
+    );
+    expect([response.status, calls]).toEqual([401, []]);
+  });
+
+  it('challenges a cookie set under an earlier password', async () => {
+    const { serve, calls } = recordingServe();
+    const old = pair(await loginCookie('an older password'));
+    const response = await gateWebRequest(
+      request(`${dev}/`, undefined, old),
+      PASSWORD,
+      serve,
+    );
+    expect([response.status, calls]).toEqual([401, []]);
+  });
+
+  it('challenges every cookie when the password is not configured', async () => {
+    const { serve, calls } = recordingServe();
+    const response = await gateWebRequest(
+      request(`${dev}/`, undefined, pair(await loginCookie())),
+      undefined,
+      serve,
+    );
+    expect([response.status, calls]).toEqual([401, []]);
+  });
+
+  it('sets no cookie on the production host', async () => {
+    const { serve } = recordingServe();
+    const response = await gateWebRequest(
+      request('https://yawelo-idle.shyden.co.uk/', basic(`u:${PASSWORD}`)),
+      PASSWORD,
+      serve,
+    );
+    expect(response.headers.get('Set-Cookie')).toBeNull();
+  });
 });
