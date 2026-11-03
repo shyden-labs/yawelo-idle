@@ -1,8 +1,8 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-02 14:25 UTC (thirty-sixth session). **Phones unavailable: no device work until Shyden says.**
+**Written:** 2026-11-03 (thirty-sixth session, continued). Shyden AFK until 14:30 WIB (relayed). **Phones unavailable: no device work until Shyden says.**
 **Running when written:** nothing local, nothing external.
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. board-next names #768, which waits on Shyden, as does #783: skip both.
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. #783 waits on #762; skip it.
 
 ## Done this session
 
@@ -10,6 +10,7 @@
 - Filed #854 (Indonesian API docs with a machine-translation notice, P3, 3 pts) and #855 (report-a-mistake form copied from shyden.co.uk's design, P3, 8 pts); #854 is blocked by #855.
 - Cleanup pass recorded; two remote branches of closed PRs #790/#791 deleted by Shyden.
 - repo-template's request (auto-delete merged branches): already true here, replied.
+- With Shyden at the computer (2026-11-02/03): #661 AC1 done (new roadmap App key saved as the Dependabot secret ROADMAP_APP_KEY, read back on the settings page; code ACs remain). #797 shut (App's Administration removed, PR #857 `3d767eb`, dev green; develop's Code Owners review off). #768 shut (old Shyden Labs Dev bucket emptied and deleted after checking the files live in the repo and the new bucket by MD5). #784: domains chosen, yaweloidle.com + yawelo.com (comment on #784).
 
 ## Shyden's rulings today
 
@@ -20,14 +21,16 @@
 
 ## Next
 
-1. Pick by `board-next` (after #768/#783): the unblocked P1s are #589 (private Swagger for health + webhook, the #588 pattern), #655 (SonarCloud), #830, #850. #425/#426/#457/#759 wait on #784 (Shyden's Cloudflare login).
+1. **#859 (P0, 3 pts, filed 2026-11-03):** golden-log slice 354 timed out at 1 s on the laptop (unit run before this handover's push); measure CPU vs wall first. Then pick by `board-next` (skip #783): the unblocked P1s are #589 (private Swagger for health + webhook, the #588 pattern), #655 (SonarCloud), #830, #850. #425/#426/#457/#759 wait on #784 (Shyden's Cloudflare login).
 2. Any new public text, docs included: Shyden approves it and it gets Indonesian (or his explicit ruling) before it ships.
 
 ## Waiting on Shyden
 
-- **Open PRs with no recent movement:** #602 (Stryker, waits on a runner release), #745 (#728), #767 (#762), and Dependabot #593, #594, #597, #750, #763, #764, #779, #834 (likely failing on `ROADMAP_APP_KEY`, #661 AC1).
-- **Test board** (project 6): keep or delete. **Epic Public titles**: none set. **ETA confidence rule** (#828). **Voyage order** for #328/#331/#452. **Other work** line (46 epic-less stories).
-- #768 (old dev bucket's r2.dev address off), #783 (planted non-release PR into main), #784, #788, #797.
+- **Parked questions (he declined the batch 2026-11-03; ask again on his return, one at a time):** #784 next steps (Yawelo's Gmail, Cloudflare sign-up, buy the two domains; Chrome's Cloudflare is on his shyden1988uk login now, ShyTalk needs its own back); delete test board project 6 or keep; ETA confidence rule (6-7 days high, 4-5 medium); voyage map layout (#328/#331/#452 after M8; 46 epic-less stories in one 'other work' line).
+- **ShyDesk support (Shyden 2026-11-03, via ShyTalk's session):** Yawelo uses ShyDesk (session `shydesk-b4`); no FreeScout, no Brevo, no Zoho. Asked shydesk-b4 for mail routing, contract, member lookup, staff access and its blocker story; filed as **#858** (P3, 3 pts, blocked by shyden-labs/shydesk#27); its first AC is Shyden's placement ruling. Then tell shyden-co-uk-e0 the placement and ticket (shyden.co.uk copies Yawelo/ShyTalk). Placement of the contact link is Shyden's call.
+- **Open PRs with no recent movement:** #602 (Stryker, waits on a runner release), #745 (#728), #767 (#762), and Dependabot #593, #594, #597, #750, #763, #764, #779, #834 (the `ROADMAP_APP_KEY` Dependabot secret now exists, so re-run them; #661's code ACs remain).
+- **Epic Public titles**: none set (his copy).
+- #784 (Gmail, Cloudflare login, buy domains). #788 needs its measurements first (mine), then his route.
 
 ## State
 
