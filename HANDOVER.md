@@ -1,13 +1,19 @@
 # Handover: Yawelo Idle
 
 **Written:** 2026-11-05 (thirty-eighth session, overnight while Shyden sleeps). **Phones: connected but not authorised (Android unauthorized, iPhone untrusted); no device work.**
-**Running when written:** CI on PR #861 and PR #862 (GitHub had an Actions incident; runs queue slowly). Local waiters die with the session.
+**Running when written:** CI on PR #861 (its branch was updated with develop, head `881c7c9a`) and PR #865. Local waiters die with the session.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. #783 waits on #762; skip it.
+
+## Done this session
+
+- **#850 closed:** PR #862 (squash `b6a1535f`) reads board and issue pages at once. On dev the edit-to-roadmap time went from 12.8-14.9 s to 8.1, 9.2 and 8.9 s (both tables are on #850).
+- #589's ruling recorded (dev only, dev password; Estimate 3). Filed #863 and #864.
+- deploy-dev run 41894579720 (#850's merge): `site-smoke` failed one Chromium test (no island within 5 s on `/roadmap`), cause unknown, so `dev-verified` was skipped. The same test passed in Firefox and WebKit; fresh loads probed afterwards drew in 1.5-2.9 s. #864 makes the next failure keep a screenshot.
 
 ## In flight
 
-1. **#589 private Swagger, PR #861** (branch `docs/589-private-swagger`, worktree `../yawelo-idle-589`). Shyden ruled 2026-11-04 "Dev only, dev password"; ACs 3-4 rewritten and Estimate 3. First CI run failed: one test (moved into `routes-unread.test.ts`) and coverage at 84.8% (moved the judge to `apps/site/api/judge.ts` plus unit tests, about 85.3% expected). Read the verdict: `~/.claude/scripts/pr-verdict.sh 861`. Once green on the head SHA, squash-merge into `develop`. Then verify on dev at `https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/private/docs`: with `DEV_PASSWORD` it should load; without it, 401. Then close #589.
-2. **#850 roadmap under 10 s, PR #862** (branch `feat/850-parallel-read`, worktree `../yawelo-idle-850`). AC1 is recorded on #850: 12.8-14.9 s total, of which the Worker's read is 10.9-13.7 s. The fix reads board pages and issue pages at the same time. After the merge and dev deploy, re-measure for AC3 with `node <scratchpad>/measure-850.mjs 3` (a one-off, not committed). Shyden approved real `Public title` edits on #829, reverted after each run. If any sample is still 10 s or over, the next cut is caching the installation token (2 REST calls per read).
+1. **#589 private Swagger, PR #861** (branch `docs/589-private-swagger`, worktree `../yawelo-idle-589`). The previous head `63a8e51e` was all green (coverage 85.2%). Read the verdict with `~/.claude/scripts/pr-verdict.sh 861`. Once green on the head SHA, squash-merge into `develop`. Then verify on dev at `https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/private/docs`: with `DEV_PASSWORD` it should load, without it 401. Then close #589. Its deploy's `site-smoke` is also the next reading for #864.
+2. **#864 site-smoke screenshots, PR #865** (branch `ci/864-site-smoke-traces`, worktree `../yawelo-idle-864`). No trace on purpose: it would carry the dev password into a public artifact. Merge when green; it stays open 14 days for AC3 (explain the miss if it recurs).
 
 ## Next
 
@@ -24,7 +30,7 @@
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Worktrees: `-589` (PR #861), `-850` (PR #862), plus older ones kept: `-36` (PR #602), `-728b` (PR #745), `-761` (PR #767), `-752`, `-794`, `-728-probe`. Ask before removing the older ones.
+- Worktrees: `-589` (PR #861), `-864` (PR #865), `-850` (merged; removable), plus older ones kept: `-36` (PR #602), `-728b` (PR #745), `-761` (PR #767), `-752`, `-794`, `-728-probe`. Ask before removing the older ones.
 - Local branches kept: nine `backup/*` and `tooling/785-nvmrc-exact` `-b`/`-c`/`-d`.
 - Scratch refs on origin (Shyden's call): `refs/floors/tooling/771-record-rehearse-job`, `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit`.
 
