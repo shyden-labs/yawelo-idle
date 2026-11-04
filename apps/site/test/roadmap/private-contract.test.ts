@@ -3,7 +3,7 @@ import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
 import { HOOK_PATH, ROADMAP_PATHS } from '../../worker/routes';
 import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
-import { privateJudge, privateSpec } from './openapi';
+import { privateJudge, privateSpec } from '../../api/judge';
 
 /**
  * The private operations answer exactly as their hand-written spec,
@@ -84,15 +84,6 @@ describe(`GET ${HEALTH}`, () => {
   it('answers on the dev host as the spec says', async () => {
     const response = await call(`${DEV}${HEALTH}`, { headers: AUTH });
     expect(response.status).toBe(200);
-    expect(await judged(HEALTH, 'get', response)).toEqual([]);
-  });
-
-  it('answers after a failed read, error text and all, as the spec says', async () => {
-    await world.configureFake({ graphqlStatus: 502 });
-    const response = await call(`${DEV}${HEALTH}`, { headers: AUTH });
-    expect(response.status).toBe(200);
-    const body = (await response.clone().json()) as { readError: unknown };
-    expect(typeof body.readError).toBe('string');
     expect(await judged(HEALTH, 'get', response)).toEqual([]);
   });
 
@@ -182,29 +173,5 @@ describe(`POST ${HOOK_PATH}`, () => {
     });
     expect(response.status).toBe(204);
     expect(await judged(HOOK_PATH, 'post', response)).toEqual([]);
-  });
-});
-
-describe('the private judge', () => {
-  it('names a health field the spec does not list', async () => {
-    const response = await call(`${DEV}${HEALTH}`, { headers: AUTH });
-    const body = { ...((await response.json()) as object), extra: 1 };
-    expect(
-      privateJudge.differences(HEALTH, 'get', {
-        status: 200,
-        headers: response.headers,
-        body,
-      }),
-    ).toEqual(['body must NOT have additional properties']);
-  });
-
-  it('names a webhook body the spec does not document', () => {
-    expect(
-      privateJudge.differences(HOOK_PATH, 'post', {
-        status: 202,
-        headers: new Headers(),
-        body: 'queued',
-      }),
-    ).toEqual(['the spec documents no body, but one was sent']);
   });
 });

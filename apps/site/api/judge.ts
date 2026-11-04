@@ -1,6 +1,6 @@
 import { Ajv2020 } from 'ajv/dist/2020.js';
-import spec from '../../api/roadmap.openapi.json' with { type: 'json' };
-import privateSpec from '../../api/private.openapi.json' with { type: 'json' };
+import spec from './roadmap.openapi.json' with { type: 'json' };
+import privateSpec from './private.openapi.json' with { type: 'json' };
 
 /**
  * Judges a real answer against a hand-written API spec: the public roadmap
