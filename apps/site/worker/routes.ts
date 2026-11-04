@@ -51,12 +51,43 @@ export function isGamePath(pathname: string): boolean {
 }
 
 /**
- * Whether the roadmap's health report is served on `hostname` (#846): its
- * timings, counters and raw error text are internal, so never on the public
- * host; on dev it stays behind the password for dev verify.
+ * Whether the private paths are served on `hostname`: the roadmap's health
+ * report (#846: its timings, counters and raw error text are internal) and
+ * the private API docs (#589). Never on the public host; on dev they stay
+ * behind the password, for dev verify and the operator.
  */
-export function servesHealth(hostname: string): boolean {
+export function servesPrivate(hostname: string): boolean {
   return !isProdHost(hostname, PROD_HOSTNAME);
+}
+
+/**
+ * The private API docs (#589; Shyden, 2026-11-04: "Dev only, dev
+ * password"): Swagger UI for the health report and the webhook. The page is
+ * prerendered; the spec is served by the Worker itself, so no copy of it is
+ * ever a static asset the public host could serve without the Worker.
+ */
+export const PRIVATE_PATHS = {
+  docs: '/api/private/docs',
+  spec: '/api/private/openapi.json',
+} as const;
+
+const PRIVATE_ROOT = '/api/private';
+
+/**
+ * Whether `pathname` is `/api/private` or anything under it, however it is
+ * spelt: the asset router may decode percent-escapes, ignore case or fold
+ * doubled slashes when it finds a file, so the check does all three first.
+ * A path whose escapes do not decode is refused as private, not guessed at.
+ */
+export function isPrivatePath(pathname: string): boolean {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return true;
+  }
+  const path = decoded.toLowerCase().replace(/\/{2,}/g, '/');
+  return path === PRIVATE_ROOT || path.startsWith(`${PRIVATE_ROOT}/`);
 }
 
 /** The data file's answer before any good read: plain, naming nothing internal (#846). */

@@ -1,0 +1,40 @@
+---
+/**
+ * The private API docs (#589; Shyden, 2026-11-04: "Dev only, dev
+ * password"): Swagger UI for the roadmap's health report and GitHub's
+ * webhook. The Worker answers 404 for `/api/private/*` on the public host
+ * and serves the spec itself on dev, so the spec is never a static file.
+ * Swagger UI's script and stylesheet come from the site's own origin, as on
+ * the public docs page (#588). Swagger UI's own text is English, so the
+ * page is English only; no public page links here.
+ */
+import bundle from 'swagger-ui-dist/swagger-ui-bundle.js?url';
+import styles from 'swagger-ui-dist/swagger-ui.css?url';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="yawelo-idle-commit" content="%YAWELO_IDLE_COMMIT%" />
+    <title>Yawelo Idle private operations API</title>
+    <link rel="stylesheet" href={styles} />
+  </head>
+  <body>
+    <main id="swagger"></main>
+    <script is:inline src={bundle}></script>
+    <script is:inline>
+      SwaggerUIBundle({
+        url: '/api/private/openapi.json',
+        dom_id: '#swagger',
+        // Off: the badge would ask validator.swagger.io to judge the spec.
+        validatorUrl: null,
+        // Dev only: the health report reads, and the webhook shows its 401,
+        // since no browser holds the webhook secret.
+        supportedSubmitMethods: ['get', 'post'],
+      });
+    </script>
+  </body>
+</html>

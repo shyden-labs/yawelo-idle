@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
 import {
@@ -14,7 +14,12 @@ import {
   type Locale,
   type Page,
 } from '../src/i18n';
-import { EXEMPT_PATHS, HOLDING_HOST, ROADMAP_PATHS } from '../worker/routes';
+import {
+  EXEMPT_PATHS,
+  HOLDING_HOST,
+  PRIVATE_PATHS,
+  ROADMAP_PATHS,
+} from '../worker/routes';
 import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy';
 
 /**
@@ -441,5 +446,118 @@ describe('the roadmap API docs (#588)', () => {
 
   it('turns off the validator badge, which calls validator.swagger.io', async () => {
     expect(await docsPage(PROD)).toMatch(/validatorUrl:\s*null/);
+  });
+});
+
+describe('the private API docs, dev only (#589)', () => {
+  const { docs: DOCS, spec: SPEC_PATH } = PRIVATE_PATHS;
+  const PRIVATE_SPEC: unknown = JSON.parse(
+    readFileSync(
+      new URL('../api/private.openapi.json', import.meta.url),
+      'utf8',
+    ),
+  );
+
+  /** Every address the page loads from: src, href and the spec's url. */
+  const addresses = (html: string): string[] => [
+    ...[...html.matchAll(/\s(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? ''),
+    ...[...html.matchAll(/url: '([^']+)'/g)].map((m) => m[1] ?? ''),
+  ];
+
+  const docsPage = async (): Promise<string> => {
+    const response = await get(`${DEV}${DOCS}`, authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(/^text\/html/);
+    return response.text();
+  };
+
+  it('answers 404 for the page on the production host', async () => {
+    expect((await get(`${PROD}${DOCS}`)).status).toBe(404);
+  });
+
+  it('answers 404 for the page’s file name on the production host', async () => {
+    expect((await get(`${PROD}${DOCS}.html`)).status).toBe(404);
+  });
+
+  it('answers 404 for an encoded, upper-case spelling on the production host', async () => {
+    expect((await get(`${PROD}/API/%70rivate/docs`)).status).toBe(404);
+  });
+
+  it('answers 404 for the spec on the production host', async () => {
+    expect((await get(`${PROD}${SPEC_PATH}`)).status).toBe(404);
+  });
+
+  it('answers 404 for POST on the production host', async () => {
+    const response = await server.fetch(`${PROD}${DOCS}`, { method: 'POST' });
+    expect(response.status).toBe(404);
+  });
+
+  it('keeps the page behind the password on dev', async () => {
+    expect((await get(`${DEV}${DOCS}`)).status).toBe(401);
+  });
+
+  it('keeps the spec behind the password on dev', async () => {
+    expect((await get(`${DEV}${SPEC_PATH}`)).status).toBe(401);
+  });
+
+  it('keeps the page behind the password on the dev front door', async () => {
+    expect((await get(`https://${HOLDING_HOST}${DOCS}`)).status).toBe(401);
+  });
+
+  it('refuses a wrong password on dev', async () => {
+    expect((await get(`${DEV}${DOCS}`, wrong)).status).toBe(401);
+  });
+
+  it('serves the page on dev with the password', async () => {
+    expect(await docsPage()).toContain('Yawelo Idle private operations API');
+  });
+
+  it('serves the hand-written spec on dev with the password', async () => {
+    const response = await get(`${DEV}${SPEC_PATH}`, authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(await response.json()).toEqual(PRIVATE_SPEC);
+  });
+
+  it('points Swagger UI at the Worker’s spec', async () => {
+    expect(addresses(await docsPage())).toContain(SPEC_PATH);
+  });
+
+  it('loads every file from the site’s own origin, never a CDN', async () => {
+    const found = addresses(await docsPage());
+    expect(found.length).toBeGreaterThanOrEqual(3);
+    expect(found.filter((a) => !a.startsWith('/'))).toEqual([]);
+  });
+
+  it('turns off the validator badge, which calls validator.swagger.io', async () => {
+    expect(await docsPage()).toMatch(/validatorUrl:\s*null/);
+  });
+
+  it('builds no copy of the private spec into the pages', () => {
+    const built = readdirSync(new URL('../dist', import.meta.url), {
+      recursive: true,
+      encoding: 'utf8',
+    });
+    expect(built.filter((f) => f.includes('private.openapi'))).toEqual([]);
+  });
+
+  it('is linked from no other built page, in either build', () => {
+    const roots = ['../dist/', '../dist-holding/'];
+    // runtime population: the pages the two builds wrote.
+    const linking = roots.flatMap((root) =>
+      readdirSync(new URL(root, import.meta.url), {
+        recursive: true,
+        encoding: 'utf8',
+      })
+        .filter((f) => f.endsWith('.html') && f !== 'api/private/docs.html')
+        .filter((f) =>
+          readFileSync(
+            new URL(`${root}${f}`, import.meta.url),
+            'utf8',
+          ).includes('/api/private'),
+        )
+        .map((f) => `${root}${f}`),
+    );
+    expect(linking).toEqual([]);
   });
 });

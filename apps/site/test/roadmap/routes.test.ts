@@ -1,12 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
-import {
-  PASSWORD,
-  roadmapWorld,
-  WEBHOOK_SECRET,
-  type RoadmapWorld,
-} from './harness';
+import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
 
 /**
  * The site Worker's roadmap routes (#341): the webhook's door at
@@ -43,22 +38,6 @@ afterAll(async () => {
 type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
   world.server.fetch(`${HOST}${path}`, init);
-
-async function sign(body: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(WEBHOOK_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const mac = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(body),
-  );
-  return `sha256=${[...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
-}
 
 async function deliver(event: string, payload: unknown, signature?: string) {
   const body = JSON.stringify(payload);
