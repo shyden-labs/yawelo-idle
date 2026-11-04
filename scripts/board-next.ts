@@ -6,7 +6,9 @@
  *
  * The highest `Priority` (P0 first) among open issues; within a level, what
  * is In Progress first, then what no open issue blocks, then the oldest, then
- * the lowest number. An issue with open sub-issues is passed over: an epic's
+ * the lowest number. When that ticket is blocked, the walk follows its
+ * "Blocked by" links to the open ticket on this board that can start, and
+ * names the chain it walked (#772). An issue with open sub-issues is passed over: an epic's
  * work is its stories, so an epic is named only when it has none left open
  * (it needs breaking down). It refuses while any open issue has no Priority,
  * and while any open blocker sits below an issue it blocks, because a blocker
@@ -125,28 +127,100 @@ export function offBoardBlockers(items: NextItem[]): string[] {
   );
 }
 
-/** The next ticket, or `null` when nothing is open. */
-export function nextTicket(items: NextItem[]): NextItem | null {
-  const open = items.filter((i) => i.state === 'OPEN');
-  assertScored(open);
-  assertBlockersInherit(open);
-  const rank = (i: NextItem): number[] => [
+/**
+ * The board's order within everything open: Priority, then In Progress, then
+ * unblocked, then the oldest, then the lowest number.
+ */
+function rankOf(i: NextItem): number[] {
+  return [
     LEVELS.indexOf(i.priority as string),
     i.status === 'In Progress' ? 0 : 1,
     i.blockedBy.length === 0 ? 0 : 1,
     Date.parse(i.createdAt),
     i.number,
   ];
-  const sorted = open
-    .filter((i) => i.openSubIssues === 0)
-    .sort((a, b) => {
-      const [ra, rb] = [rank(a), rank(b)];
-      for (let k = 0; k < ra.length; k++) {
-        if (ra[k] !== rb[k]) return (ra[k] as number) - (rb[k] as number);
-      }
-      return 0;
-    });
+}
+
+function byRank(a: NextItem, b: NextItem): number {
+  const [ra, rb] = [rankOf(a), rankOf(b)];
+  for (let k = 0; k < ra.length; k++) {
+    if (ra[k] !== rb[k]) return (ra[k] as number) - (rb[k] as number);
+  }
+  return 0;
+}
+
+/** The top-ranked ticket, blocked or not, or `null` when nothing is open. */
+export function nextTicket(items: NextItem[]): NextItem | null {
+  const open = items.filter((i) => i.state === 'OPEN');
+  assertScored(open);
+  assertBlockersInherit(open);
+  const sorted = open.filter((i) => i.openSubIssues === 0).sort(byRank);
   return sorted[0] ?? null;
+}
+
+/** Where work can start, and the tickets it unblocks, nearest first. */
+export interface Start {
+  ticket: NextItem;
+  chain: NextItem[];
+  /** Why no chain can start, when the ticket named is the blocked top one. */
+  waiting: string | null;
+}
+
+const ref = (i: NextItem): string => `#${String(i.number)}`;
+
+/**
+ * The work that can start for the board's top ticket (#772): the ticket
+ * itself when nothing blocks it, else the first open ticket on this board
+ * that nothing blocks at the end of its "Blocked by" links, taking blockers
+ * in the board's rank. A cycle is refused by name. When every chain ends off
+ * this board or at an epic with open sub-issues, the top ticket is named as
+ * before, with its blockers and why (`waiting`): an off-board blocker is a
+ * note, never a refusal (operator 2026-10-13).
+ */
+export function nextStart(items: NextItem[]): Start | null {
+  const top = nextTicket(items);
+  if (top === null) return null;
+  const onBoard = byKey(items.filter((i) => i.state === 'OPEN'));
+  const ends: string[] = [];
+  const walk = (current: NextItem, path: NextItem[]): NextItem[] | null => {
+    const here = [...path, current];
+    if (path.length > 0 && current.openSubIssues > 0) {
+      ends.push(
+        `${ref(current)} is an epic with open sub-issues, whose stories are the work`,
+      );
+      return null;
+    }
+    if (current.blockedBy.length === 0) return here;
+    const blockers = current.blockedBy
+      .map((b) => onBoard.get(`${b.repository}#${String(b.number)}`))
+      .filter((b): b is NextItem => b !== undefined)
+      .sort(byRank);
+    if (blockers.length === 0) {
+      const off = current.blockedBy
+        .map((b) => `${b.repository}#${String(b.number)}`)
+        .join(', ');
+      ends.push(`${ref(current)} waits only on issues off this board (${off})`);
+      return null;
+    }
+    for (const blocker of blockers) {
+      const seen = here.indexOf(blocker);
+      if (seen !== -1) {
+        const loop = [...here.slice(seen), blocker].map(ref).join(' → ');
+        throw new Error(
+          `Blocked-by links form a cycle: ${loop}. Break it on the board.`,
+        );
+      }
+      const found = walk(blocker, here);
+      if (found !== null) return found;
+    }
+    return null;
+  };
+  const path = walk(top, []);
+  if (path === null) {
+    return { ticket: top, chain: [], waiting: ends[0] ?? null };
+  }
+  const ticket = path[path.length - 1] as NextItem;
+  return { ticket, chain: path.slice(0, -1).reverse(), waiting: null };
 }
 
 export const NEXT_QUERY = `query($id: ID!, $endCursor: String) {
@@ -273,14 +347,18 @@ export function boardNext(
   const items = parseNextItems(pages, title);
   assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo);
   const notes = offBoardBlockers(items);
-  const next = nextTicket(items);
-  if (next === null) return { line: 'Next: nothing is open.', notes };
+  const start = nextStart(items);
+  if (start === null) return { line: 'Next: nothing is open.', notes };
+  const { ticket: next, chain, waiting } = start;
+  const unblocks = chain.map((i) => `, which blocks ${ref(i)}`).join('');
   const blocked =
-    next.blockedBy.length > 0
-      ? `, blocked by ${next.blockedBy.map((b) => `#${String(b.number)}`).join(', ')}`
-      : '';
+    waiting === null
+      ? ''
+      : `, blocked by ${next.blockedBy.map((b) => `#${String(b.number)}`).join(', ')}`;
+  const why =
+    waiting === null ? '' : ` Nothing it waits on can start: ${waiting}.`;
   return {
-    line: `Next: #${String(next.number)} ${next.title} (${String(next.priority)}, ${next.status ?? 'no status'}${blocked}).`,
+    line: `Next: #${String(next.number)} ${next.title} (${String(next.priority)}, ${next.status ?? 'no status'}${blocked})${unblocks}.${why}`,
     notes,
   };
 }
