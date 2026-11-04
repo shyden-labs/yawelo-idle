@@ -26,7 +26,7 @@ import { boardPages, FIXTURE_REPO, FIXTURE_TITLE } from './board-fixture';
  * and 5. The rest pin the defects #340 fixed in the port.
  */
 
-const TODAY = '2026-10-04';
+const TODAY = '2026-10-05';
 
 function item(over: Partial<BoardItem> & { number: number }): BoardItem {
   return {
@@ -117,7 +117,7 @@ describe('progress by tickets', () => {
     expect(p.tickets).toMatchObject({ closed: 1, total: 3 });
   });
 
-  it('counts closures per UTC day over the 7 days ending today, oldest first', () => {
+  it('counts closures per UTC day over the 7 finished days ending yesterday, oldest first', () => {
     const p = progress(
       [
         closedOn(1, '2026-09-28'),
@@ -142,7 +142,7 @@ describe('progress by tickets', () => {
     expect(p.tickets.pace).toEqual([0, 1, 0]);
   });
 
-  it('leaves a closure 7 days before today out of the window', () => {
+  it('leaves a closure 8 days before today, the day before the window, out of it', () => {
     const p = progress([closedOn(1, '2026-09-27')], TODAY);
     expect(p.tickets.pace).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
@@ -168,6 +168,67 @@ describe('progress by tickets', () => {
     expect(() =>
       progress([item({ number: 1, title: 'Epic M1: Core' })], TODAY),
     ).toThrow('the board has no in-scope stories: nothing to measure');
+  });
+});
+
+describe('the pace counts finished days only (#575)', () => {
+  const board = (): BoardItem[] => [
+    closedOn(1, '2026-09-28'),
+    closedOn(2, '2026-10-03'),
+    item({ number: 3 }),
+  ];
+
+  it('measures the 7 finished UTC days ending yesterday, oldest first', () => {
+    expect(progress(board(), TODAY).tickets.pace).toEqual([
+      1, 0, 0, 0, 0, 1, 0,
+    ]);
+  });
+
+  it('keeps the pace when a story closes today', () => {
+    const before = progress(board(), TODAY).tickets.pace;
+    const after = progress(
+      [...board(), closedOn(4, TODAY), closedOn(5, TODAY)],
+      TODAY,
+    ).tickets.pace;
+    expect(after).toEqual(before);
+  });
+
+  it('counts a story closed today in the closed total', () => {
+    const p = progress([...board(), closedOn(4, TODAY)], TODAY);
+    expect(p.tickets).toMatchObject({ closed: 3, total: 4 });
+  });
+
+  it('has no pace on a board less than one finished day old', () => {
+    const p = progress(
+      [item({ number: 1, createdAt: `${TODAY}T03:00:00Z` })],
+      TODAY,
+    );
+    expect(p.tickets.pace).toEqual([]);
+  });
+
+  it('says so in words on a board less than one finished day old, giving no ETA', () => {
+    const lines = formatLines(
+      progress(
+        [
+          { ...closedOn(1, TODAY), createdAt: `${TODAY}T01:00:00Z` },
+          item({ number: 2, createdAt: `${TODAY}T03:00:00Z` }),
+        ],
+        TODAY,
+      ),
+      TODAY,
+    );
+    expect(lines[0]).toContain(
+      'Measured pace: none yet, the board has no finished day. ETA at that pace: none yet.',
+    );
+    expect(lines[1]).toContain(
+      'Measured pace: none yet, the board has no finished day. ETA at that pace: none yet.',
+    );
+  });
+
+  it('names the window it measured', () => {
+    expect(formatLines(progress(board(), TODAY), TODAY)[0]).toContain(
+      'Measured pace 0.29 a day over the 7 finished days to 2026-10-04 (1, 0, 0, 0, 0, 1, 0).',
+    );
   });
 });
 
@@ -264,16 +325,16 @@ describe('formatLines', () => {
   it('states tickets complete, the measured pace and the ETA at that pace', () => {
     expect(formatLines(progress(sample(), TODAY), TODAY)[0]).toBe(
       'By tickets: 50% complete (2 of 4 in-scope stories closed; 1 epic and 1 post-launch left out). ' +
-        'Measured pace 0.29 a day over the last 7 days (0, 0, 0, 0, 0, 1, 1). ' +
-        'ETA at that pace: 2026-10-11, before outside waits.',
+        'Measured pace 0.29 a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 0, 1, 1). ' +
+        'ETA at that pace: 2026-10-12, before outside waits.',
     );
   });
 
   it('states the points remaining, the measured pace and the ETA at that pace, with no percentage (#567)', () => {
     expect(formatLines(progress(sample(), TODAY), TODAY)[1]).toBe(
       'By effort: 21 points remaining across 2 open stories (7 of 28 points closed). ' +
-        'Measured pace 1.00 points a day over the last 7 days (0, 0, 0, 0, 0, 5, 2). ' +
-        'ETA at that pace: 2026-10-25, before outside waits.',
+        'Measured pace 1.00 points a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 0, 5, 2). ' +
+        'ETA at that pace: 2026-10-26, before outside waits.',
     );
   });
 
@@ -340,7 +401,9 @@ describe('formatLines', () => {
   it('gives no date when nothing closed in the window', () => {
     expect(
       formatLines(progress([item({ number: 1 })], TODAY), TODAY)[0],
-    ).toContain('ETA at that pace: none, nothing closed in the last 7 days.');
+    ).toContain(
+      'ETA at that pace: none, nothing closed in the 7 finished days to 2026-10-04.',
+    );
   });
 
   it('names stories closed as not planned among those left out, when there are any', () => {
@@ -353,13 +416,13 @@ describe('formatLines', () => {
     );
   });
 
-  it('gives today as the ETA when nothing remains', () => {
+  it('gives today as the ETA when nothing remains, though the story closed today is not yet in the pace (#575)', () => {
     expect(
       formatLines(progress([closedOn(1, TODAY)], TODAY), TODAY)[0],
     ).toContain(
       '100% complete (1 of 1 in-scope stories closed; 0 epics and 0 post-launch left out). ' +
-        'Measured pace 0.14 a day over the last 7 days (0, 0, 0, 0, 0, 0, 1). ' +
-        'ETA at that pace: 2026-10-04, before outside waits.',
+        'Measured pace 0.00 a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 0, 0, 0). ' +
+        'ETA at that pace: 2026-10-05, before outside waits.',
     );
   });
 
@@ -373,7 +436,7 @@ describe('formatLines', () => {
     const open = Array.from({ length: 17 }, (_, i) => item({ number: i + 18 }));
     expect(
       formatLines(progress([...closed, ...open], TODAY), TODAY)[0],
-    ).toContain('ETA at that pace: 2026-10-11, before outside waits.');
+    ).toContain('ETA at that pace: 2026-10-12, before outside waits.');
   });
 });
 
@@ -916,11 +979,11 @@ describe('closeOutLines', () => {
       closeOutLines(boardPages(TODAY), FIXTURE_TITLE, FIXTURE_REPO, TODAY),
     ).toEqual([
       'By tickets: 50% complete (3 of 6 in-scope stories closed; 1 epic, 1 post-launch and 1 closed as not planned left out). ' +
-        'Measured pace 0.29 a day over the last 7 days (0, 0, 0, 1, 0, 1, 0). ' +
-        'ETA at that pace: 2026-10-15, before outside waits.',
+        'Measured pace 0.29 a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 1, 0, 1). ' +
+        'ETA at that pace: 2026-10-16, before outside waits.',
       'By effort: 24 points remaining across 3 open stories (12 of 36 points closed; 1 closed story unscored, counted at the scored mean of 4.0 points (assumed)). ' +
-        'Measured pace 1.14 points a day over the last 7 days (0, 0, 0, 3, 0, 5, 0). ' +
-        'ETA at that pace: 2026-10-25, before outside waits.',
+        'Measured pace 1.14 points a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 3, 0, 5). ' +
+        'ETA at that pace: 2026-10-26, before outside waits.',
     ]);
   });
 

@@ -1,7 +1,7 @@
 /**
  * Progress from the project board, twice: by tickets and by effort (story
  * points in the board's `Estimate` field), each with its measured pace over
- * the last 7 days and the ETA that pace gives. Every session close-out
+ * the last 7 finished days and the ETA that pace gives. Every session close-out
  * quotes these two lines, then adds what the pace cannot know: outside waits
  * (operator sign-offs, store review, devices) and any assumed change of pace.
  *
@@ -107,9 +107,13 @@ export function inScope(
   return !isEpic(item) && !afterLaunch(item, epics) && !isNotPlanned(item);
 }
 
-/** The UTC days of the window ending `today`, oldest first, none before `since`. */
+/**
+ * The finished UTC days of the window, ending the day before `today`, oldest
+ * first, none before `since` (#575): today is never a day of the pace, so the
+ * ETA does not jump when a new UTC day begins.
+ */
 function windowDays(today: string, since: string): string[] {
-  const end = Date.parse(`${today}T00:00:00Z`);
+  const end = Date.parse(`${today}T00:00:00Z`) - DAY_MS;
   return Array.from({ length: WINDOW_DAYS }, (_, i) =>
     new Date(end - (WINDOW_DAYS - 1 - i) * DAY_MS).toISOString().slice(0, 10),
   ).filter((day) => day >= since);
@@ -142,7 +146,8 @@ export function progress(items: BoardItem[], today: string): Progress {
   }
   const closed = scope.filter((item) => item.state === 'CLOSED');
   const open = scope.filter((item) => item.state === 'OPEN');
-  // `since` is never after `today`, so the window always holds today.
+  // `since` is never after `today`; a board created today has no finished
+  // day, so its window is empty and it has no pace yet (#575).
   const since = items
     .map((item) => item.createdAt.slice(0, 10))
     .reduce((a, b) => (b < a ? b : a), today);
@@ -202,14 +207,17 @@ const stories = (n: number, kind: string): string =>
 const sumOf = (pace: number[]): number => pace.reduce((a, b) => a + b, 0);
 
 /**
- * The day `remaining` work ends at the pace measured over `pace` (#828), or
- * null when nothing closed in the window.
+ * The day `remaining` work ends at the pace measured over `pace` (#828):
+ * today when nothing remains, else null when nothing closed in the window.
  */
 export function etaDate(
   remaining: number,
   pace: number[],
   today: string,
 ): string | null {
+  // Nothing left ends today, whatever the pace (#575: a board finished
+  // today has nothing in its window yet).
+  if (remaining <= 0) return today;
   const closed = sumOf(pace);
   if (closed === 0) return null;
   // remaining ÷ (closed ÷ days) as one division: dividing by the rounded mean
@@ -231,11 +239,24 @@ export function confidence(pace: number[]): 'high' | 'medium' | 'low' {
   return 'low';
 }
 
+/** The last finished day of the window: the day before `today`. */
+const yesterday = (today: string): string =>
+  new Date(Date.parse(`${today}T00:00:00Z`) - DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+
+const NO_PACE =
+  'Measured pace: none yet, the board has no finished day. ETA at that pace: none yet.';
+
+/** The finished days a pace was measured over, by name (#575). */
+const over = (pace: number[], today: string): string =>
+  `the ${plural(pace.length, 'finished day')} to ${yesterday(today)}`;
+
 /** The ETA at the window's mean daily pace, or why there is none. */
 function eta(remaining: number, pace: number[], today: string): string {
   const date = etaDate(remaining, pace, today);
   if (date === null) {
-    return `ETA at that pace: none, nothing closed in the last ${plural(pace.length, 'day')}.`;
+    return `ETA at that pace: none, nothing closed in ${over(pace, today)}.`;
   }
   return `ETA at that pace: ${date}, before outside waits.`;
 }
@@ -250,8 +271,10 @@ export function formatLines(p: Progress, today: string): [string, string] {
   const tickets =
     `By tickets: ${String(Math.round((100 * t.closed) / t.total))}% complete ` +
     `(${String(t.closed)} of ${String(t.total)} in-scope stories closed; ${leftOut} left out). ` +
-    `Measured pace ${(sumOf(t.pace) / t.pace.length).toFixed(2)} a day over the last ${plural(t.pace.length, 'day')} (${t.pace.join(', ')}). ` +
-    eta(t.total - t.closed, t.pace, today);
+    (t.pace.length === 0
+      ? NO_PACE
+      : `Measured pace ${(sumOf(t.pace) / t.pace.length).toFixed(2)} a day over ${over(t.pace, today)} (${t.pace.join(', ')}). ` +
+        eta(t.total - t.closed, t.pace, today));
   const e = p.effort;
   if (!e.available) {
     return [
@@ -268,9 +291,11 @@ export function formatLines(p: Progress, today: string): [string, string] {
   const effort =
     `By effort: ${plural(Math.round(e.openPoints), 'point')} remaining across ${stories(e.openStories, 'open')} ` +
     `(${String(Math.round(e.closedPoints))} of ${String(Math.round(total))} points closed${assumed}). ` +
-    `Measured pace ${(sumOf(e.pace) / e.pace.length).toFixed(2)} points a day over the last ${plural(e.pace.length, 'day')} ` +
-    `(${e.pace.map((n) => String(Math.round(n))).join(', ')}). ` +
-    eta(e.openPoints, e.pace, today);
+    (e.pace.length === 0
+      ? NO_PACE
+      : `Measured pace ${(sumOf(e.pace) / e.pace.length).toFixed(2)} points a day over ${over(e.pace, today)} ` +
+        `(${e.pace.map((n) => String(Math.round(n))).join(', ')}). ` +
+        eta(e.openPoints, e.pace, today));
   return [tickets, effort];
 }
 
