@@ -4,6 +4,21 @@ import { join } from 'node:path';
 import semver from 'semver';
 import { parse } from 'yaml';
 import { withoutYamlComments, withoutYamlQuotes } from './source-text';
+
+/**
+ * Whether `key`'s group comes after the `patch-updates` catch-all in one
+ * ecosystem's `block`, read with quotes removed (#778). A block missing
+ * either is not "after": the presence tests above judge that.
+ */
+function groupedAfterCatchAll(block: string, key: string): boolean {
+  // Both offsets from one text: an offset into the quoted block compared
+  // with one into the unquoted text misjudged the order (#778).
+  const text = withoutYamlQuotes(block);
+  const catchAll = text.indexOf('patch-updates:');
+  const group = text.indexOf(`${key}*`);
+  // A missing group is -1, never after the catch-all.
+  return catchAll !== -1 && catchAll < group;
+}
 import { isRecord } from './workflow-secrets';
 
 /**
@@ -278,18 +293,60 @@ describe('Dependabot keeps the pins from rotting', () => {
    * Dormant today (this repo uses no sub-path actions) and verified by
    * mutation, not by watching it pass.
    */
+  // The order check's own cases (#778): both offsets come from one text,
+  // so quotes before the catch-all cannot shift one side and not the other.
+  // 30 quoted patterns: 60 quote characters, more than the text between
+  // the catch-all and the group below it, so mixed offsets misjudge.
+  const QUOTED = `groups:\n  many:\n    patterns: [${Array.from({ length: 30 }, (_, i) => `"p${String(i)}"`).join(', ')}]\n`;
+
+  it('reads a sub-path group below the catch-all as after it', () => {
+    expect(
+      groupedAfterCatchAll(
+        'groups:\n  patch-updates:\n  cache:\n    patterns: [actions/cache*]\n',
+        'actions/cache',
+      ),
+    ).toBe(true);
+  });
+
+  it('reads it as after the catch-all when quotes come before both', () => {
+    expect(
+      groupedAfterCatchAll(
+        `${QUOTED}  patch-updates:\n  cache:\n    patterns: ["actions/cache*"]\n`,
+        'actions/cache',
+      ),
+    ).toBe(true);
+  });
+
+  it('reads a sub-path group above the catch-all as before it', () => {
+    expect(
+      groupedAfterCatchAll(
+        `${QUOTED}  cache:\n    patterns: ["actions/cache*"]\n  patch-updates:\n`,
+        'actions/cache',
+      ),
+    ).toBe(false);
+  });
+
+  it('reads a block with no catch-all as nothing to swallow it', () => {
+    expect(
+      groupedAfterCatchAll(
+        '  cache:\n    patterns: [actions/cache*]\n',
+        'actions/cache',
+      ),
+    ).toBe(false);
+  });
+
+  it('reads a block without the group as nothing after the catch-all', () => {
+    expect(groupedAfterCatchAll('  patch-updates:\n', 'actions/cache')).toBe(
+      false,
+    );
+  });
+
   it('a sub-path group is declared before the catch-all that would swallow it', () => {
     const repos = actionRepos();
     const misordered = repos.filter(isSubPath).flatMap(([key]) =>
       ecosystemBlocks()
         .filter((block) => withoutYamlQuotes(block).includes(`${key}*`))
-        .filter((block) => {
-          const catchAll = block.indexOf('patch-updates:');
-          return (
-            catchAll !== -1 &&
-            catchAll < withoutYamlQuotes(block).indexOf(`${key}*`)
-          );
-        })
+        .filter((block) => groupedAfterCatchAll(block, key))
         .map(() => `${key} grouped after patch-updates`),
     );
 
