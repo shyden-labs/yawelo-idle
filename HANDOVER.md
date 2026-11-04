@@ -1,27 +1,17 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-03 (thirty-sixth session, continued). Shyden AFK until 14:30 WIB (relayed). **Phones unavailable: no device work until Shyden says.**
+**Written:** 2026-11-04 03:10 UTC (thirty-seventh session). **Phones unavailable: no device work until Shyden says.**
 **Running when written:** nothing local, nothing external.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. #783 waits on #762; skip it.
 
 ## Done this session
 
-- Merged PR #849, #852, #853, #856. Shut #846, #848, #851, #588 (public Swagger at `/api/docs`, verified on dev in three engines; evidence on the ticket).
-- Filed #854 (Indonesian API docs with a machine-translation notice, P3, 3 pts) and #855 (report-a-mistake form copied from shyden.co.uk's design, P3, 8 pts); #854 is blocked by #855.
-- Cleanup pass recorded; two remote branches of closed PRs #790/#791 deleted by Shyden.
-- repo-template's request (auto-delete merged branches): already true here, replied.
-- With Shyden at the computer (2026-11-02/03): #661 AC1 done (new roadmap App key saved as the Dependabot secret ROADMAP_APP_KEY, read back on the settings page; code ACs remain). #797 shut (App's Administration removed, PR #857 `3d767eb`, dev green; develop's Code Owners review off). #768 shut (old Shyden Labs Dev bucket emptied and deleted after checking the files live in the repo and the new bucket by MD5). #784: domains chosen, yaweloidle.com + yawelo.com (comment on #784).
-
-## Shyden's rulings today
-
-- No website link to `/api/docs` for now.
-- Indonesian pages translated by tool carry a notice that the text is unconfirmed, and the shyden.co.uk-style report form (not GitHub).
-- The report form caps reports per visitor by IP like shyden.co.uk: short-lived counter only, privacy-page line in en + id for his approval (on #855).
-- The roadmap launches with the English API docs; Indonesian follows (#854 does not block #759).
+- #859 closed as not planned (Shyden: "Close it, watch for repeats"). Measured: slice 354 needs ~0.03 s CPU; CPU load up to 127 (36 busy loops) gave 0 of 12,915 failures twice; load average does not track the wait for a core. Cause of the 11-03 timeout unmeasured (open suspect: memory pressure during device runs). **At the next laptop unit timeout, capture memory_pressure, vm.swapusage, vm.loadavg and running sessions at once, then file a ticket.** No load wait built.
+- ShyDesk change (shyden-labs/shydesk#30, via `shydesk-42`): filed **#860** (support + ticket pages embed `/support-api/embed.js`; site Worker forwards `/support-api/*` with the forward key and client IP, 8 MB bodies; P3, 5 pts, blocked by shyden-labs/shydesk#26). #858 no longer uses the dead `/contact?product=` link and points at #860.
 
 ## Next
 
-1. **#859 (P0, 3 pts, filed 2026-11-03):** golden-log slice 354 timed out at 1 s on the laptop (unit run before this handover's push); measure CPU vs wall first. Then pick by `board-next` (skip #783): the unblocked P1s are #589 (private Swagger for health + webhook, the #588 pattern), #655 (SonarCloud), #830, #850. #425/#426/#457/#759 wait on #784 (Shyden's Cloudflare login).
+1. Pick by `board-next` (skip #783): the unblocked P1s are #589 (private Swagger for health + webhook, the #588 pattern), #655 (SonarCloud), #830, #850. #425/#426/#457/#759 wait on #784 (Shyden's Cloudflare login).
 2. Any new public text, docs included: Shyden approves it and it gets Indonesian (or his explicit ruling) before it ships.
 
 ## Waiting on Shyden
@@ -39,7 +29,7 @@
 - Local branches kept: nine `backup/*` (all newer than 30 days) and `tooling/785-nvmrc-exact` `-b`/`-c`/`-d` (earlier attempts, no PR; #789 merged `-e`).
 - Scratch refs on origin (Shyden's call): `refs/floors/tooling/771-record-rehearse-job`, `tooling/728-coverage-check`, `tooling/752-pre-push-per-commit`.
 
-## Progress (board, measured 2026-11-02 14:25 UTC)
+## Progress (board, measured 2026-11-04 03:08 UTC)
 
-- By tickets: 38% (168 of 439), pace 4.00 a day, ETA 2027-01-09 (medium confidence: 5 of 7 days moved).
-- By effort: 1,172 points remaining across 271 open stories, pace 10.71 a day, ETA 2027-02-20 (medium confidence). Both before outside waits (#784's login, device sign-off).
+- By tickets: 39% (170 of 441), pace 4.29 a day, ETA 2027-01-07 (medium confidence: 5 of 7 days moved).
+- By effort: 1,171 points remaining across 271 open stories, pace 12.00 a day, ETA 2027-02-10 (medium confidence). Both before outside waits (#784's login, device sign-off).
