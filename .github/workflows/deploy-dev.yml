@@ -288,6 +288,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Drive the roadmap page on dev (Chromium, Firefox and WebKit, behind the dev password)
+        id: suite
         # A first limit, until its first run is measured (#476): then at
         # least 3 times its slowest run.
         timeout-minutes: 3
@@ -295,6 +296,18 @@ jobs:
           SITE_SMOKE_URL: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:site:dev
+      # Each failing test's screenshot and page snapshot (#864), only when
+      # the suite itself failed: a step before it failing leaves nothing to
+      # upload. No trace is kept (tests/site/smoke-config.ts): it would
+      # carry the dev password into this public artifact.
+      - name: Upload the failing tests' screenshots and page snapshots
+        if: ${{ failure() && steps.suite.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: site-smoke-failures
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: error
 
   # The holding page's dev copy (#621 AC8), checked from outside against
   # what this commit builds: noindex on every response, crawlers blocked. It
