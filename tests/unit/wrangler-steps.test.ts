@@ -58,7 +58,7 @@ const CALLS = [
     start: 'the package root apps/site',
   },
   {
-    step: `${DEV}Deploy the hostname adapter to production on Pages`,
+    step: `${DEV}Deploy the dev hostname adapter to its Pages main branch (dev account)`,
     command: 'pages deploy',
     from: 'apps/dev-hosts',
     configArgs: [],

@@ -91,7 +91,7 @@ export const WRANGLER_STEPS: readonly (MeantConfig & { step: string })[] = [
     config: 'apps/site/wrangler.jsonc',
   },
   {
-    step: 'deploy-dev.yml / deploy / Deploy the hostname adapter to production on Pages',
+    step: 'deploy-dev.yml / deploy / Deploy the dev hostname adapter to its Pages main branch (dev account)',
     config: 'apps/dev-hosts/wrangler.jsonc',
   },
   {
