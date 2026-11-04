@@ -97,3 +97,20 @@ export function roadmapWorld({ appKey = true }: { appKey?: boolean } = {}) {
       (await control('/seen')).json<Seen[]>(),
   };
 }
+
+/** GitHub's `X-Hub-Signature-256` for `body`, made with the test secret. */
+export async function sign(body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(WEBHOOK_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const mac = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(body),
+  );
+  return `sha256=${[...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+}

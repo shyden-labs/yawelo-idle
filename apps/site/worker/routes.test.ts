@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { HOLDING_HOST, servesHealth, showsHolding, UNREADABLE } from './routes';
+import {
+  HOLDING_HOST,
+  isPrivatePath,
+  PRIVATE_PATHS,
+  servesPrivate,
+  showsHolding,
+  UNREADABLE,
+} from './routes';
 
 /**
  * Which pages a host shows (#673): the dev front door shows the holding page
@@ -36,19 +43,69 @@ describe('showsHolding (#673)', () => {
   });
 });
 
-describe('servesHealth (#846)', () => {
-  it('keeps the health report off the production host', () => {
-    expect(servesHealth('yawelo-idle.shyden.co.uk')).toBe(false);
+describe('servesPrivate (#846, #589)', () => {
+  it('keeps the health report and private docs off the production host', () => {
+    expect(servesPrivate('yawelo-idle.shyden.co.uk')).toBe(false);
   });
 
   it('keeps it off the production host in any case', () => {
-    expect(servesHealth('YAWELO-IDLE.shyden.co.uk')).toBe(false);
+    expect(servesPrivate('YAWELO-IDLE.shyden.co.uk')).toBe(false);
   });
 
   it('serves it on dev, behind the password', () => {
     expect(
-      servesHealth('yawelo-idle-site-dev.shyden-labs-dev.workers.dev'),
+      servesPrivate('yawelo-idle-site-dev.shyden-labs-dev.workers.dev'),
     ).toBe(true);
+  });
+});
+
+describe('isPrivatePath (#589)', () => {
+  it('names the private docs page', () => {
+    expect(isPrivatePath(PRIVATE_PATHS.docs)).toBe(true);
+  });
+
+  it('names the private spec', () => {
+    expect(isPrivatePath(PRIVATE_PATHS.spec)).toBe(true);
+  });
+
+  it('names any other path under /api/private/', () => {
+    expect(isPrivatePath('/api/private/anything.html')).toBe(true);
+  });
+
+  it('names /api/private itself', () => {
+    expect(isPrivatePath('/api/private')).toBe(true);
+  });
+
+  it('names a percent-encoded spelling of the path', () => {
+    expect(isPrivatePath('/api/%70rivate/docs')).toBe(true);
+  });
+
+  it('names an encoded slash inside the path', () => {
+    expect(isPrivatePath('/api/private%2Fdocs')).toBe(true);
+  });
+
+  it('names the path in any case', () => {
+    expect(isPrivatePath('/API/Private/docs')).toBe(true);
+  });
+
+  it('names the path behind doubled slashes', () => {
+    expect(isPrivatePath('//api//private/docs')).toBe(true);
+  });
+
+  it('names a path whose encoding is broken, refusing it rather than guessing', () => {
+    expect(isPrivatePath('/api/private%E0%A4%A')).toBe(true);
+  });
+
+  it('names an encoded path whose encoding is broken elsewhere', () => {
+    expect(isPrivatePath('/api/%70rivate/%')).toBe(true);
+  });
+
+  it('leaves the public docs page alone', () => {
+    expect(isPrivatePath('/api/docs')).toBe(false);
+  });
+
+  it('leaves a path that only starts with the same letters alone', () => {
+    expect(isPrivatePath('/api/privateer')).toBe(false);
   });
 });
 

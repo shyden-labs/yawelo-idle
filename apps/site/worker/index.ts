@@ -2,7 +2,8 @@
  * The site Worker, the front door (website spec §7.2): every request passes
  * the non-prod gate (#39) except `/hooks/github`, then `/play` and `/play/*`
  * go to the game Worker through the GAME service binding, `/api/roadmap*` to
- * the `Roadmap` Durable Object (#341), and everything else to the pages: on
+ * the `Roadmap` Durable Object (#341), `/api/private/*` to the private API
+ * docs on dev alone (#589), and everything else to the pages: on
  * the dev front door the holding page's dev copy, through the HOLDING
  * service binding, so dev shows what production shows (#673); on this
  * Worker's own address the site's own prerendered pages, the site being
@@ -20,12 +21,15 @@ import {
   isGamePath,
   isRoadmapPath,
   ROADMAP_PATHS,
-  servesHealth,
+  isPrivatePath,
+  PRIVATE_PATHS,
+  servesPrivate,
   showsHolding,
   UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
+import privateSpec from '../api/private.openapi.json';
 
 export { Roadmap };
 
@@ -75,12 +79,26 @@ async function hook(
   return new Response(null, { status: 202 });
 }
 
+/**
+ * `/api/private/*` (#589): a bare 404 on the public host, whatever the
+ * method; on dev, once past the password, the spec from the Worker and the
+ * docs page from the prerendered pages.
+ */
+async function privateDocs(request: Request, env: SiteEnv): Promise<Response> {
+  const { hostname, pathname } = new URL(request.url);
+  if (!servesPrivate(hostname)) return new Response(null, { status: 404 });
+  if (request.method !== 'GET' && request.method !== 'HEAD')
+    return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } });
+  if (pathname === PRIVATE_PATHS.spec) return noStore(privateSpec);
+  return env.ASSETS.fetch(request);
+}
+
 /** The three roadmap paths, once the gate has let the request through. */
 async function api(request: Request, env: SiteEnv): Promise<Response> {
   const { hostname, pathname } = new URL(request.url);
   const health = pathname === ROADMAP_PATHS.health;
   // Never hinted at on the public host, whatever the method (#846).
-  if (health && !servesHealth(hostname))
+  if (health && !servesPrivate(hostname))
     return new Response(null, { status: 404 });
   // Read-only, as the API spec says (#588): any other method is refused.
   if (request.method !== 'GET' && request.method !== 'HEAD')
@@ -100,6 +118,7 @@ export default {
       const { hostname, pathname: path } = new URL(allowed.url);
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
+      if (isPrivatePath(path)) return privateDocs(allowed, env);
       if (showsHolding(hostname)) return env.HOLDING.fetch(allowed);
       return env.ASSETS.fetch(allowed);
     });

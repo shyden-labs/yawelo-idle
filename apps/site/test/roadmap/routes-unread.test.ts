@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, expect, it } from 'vitest';
 import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
-import { judged } from './openapi';
+import { judged, privateJudge } from '../../api/judge';
 
 /**
  * `/api/roadmap.json` before any read has succeeded (#341). A file of its
@@ -56,4 +56,19 @@ it('keeps the health report, error text and all, off the production host (#846)'
     'https://yawelo-idle.shyden.co.uk/api/roadmap/health',
   );
   expect([response.status, await response.text()]).toEqual([404, '']);
+});
+
+it('reports the failed read’s error text on the dev health report, as the private spec says (#589)', async () => {
+  await world.resetFake();
+  await world.configureFake({ graphqlStatus: 502 });
+  const response = await world.server.fetch(
+    'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/roadmap/health',
+    { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
+  );
+  expect(response.status).toBe(200);
+  const body = (await response.clone().json()) as { readError: unknown };
+  expect(body.readError).toBe('GitHub refused POST /graphql: HTTP 502');
+  expect(
+    await privateJudge.judged('/api/roadmap/health', 'get', response),
+  ).toEqual([]);
 });

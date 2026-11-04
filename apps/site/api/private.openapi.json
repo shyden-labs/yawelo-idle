@@ -1,0 +1,275 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Yawelo Idle private operations API",
+    "version": "1.0.0",
+    "summary": "The roadmap's health report and the GitHub webhook, for the operator only.",
+    "description": "Private. Served on the development site only, behind its password; the public site answers 404 for the health report and serves no copy of this page or spec. The webhook is called by GitHub alone and refuses any delivery not signed with the webhook secret, so trying it here shows its 401.",
+    "license": {
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This site"
+    }
+  ],
+  "paths": {
+    "/api/roadmap/health": {
+      "get": {
+        "operationId": "getRoadmapHealth",
+        "summary": "How the roadmap is learning of board changes",
+        "description": "Timings and counters for the two ways the roadmap learns of changes (webhook deliveries and the scheduled check), and the last read's error. Reads the board first if it has never been read.",
+        "responses": {
+          "200": {
+            "description": "The health report.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/PasswordNeeded"
+          },
+          "404": {
+            "description": "Only on the public site, whatever the method: the report is internal."
+          },
+          "405": {
+            "$ref": "#/components/responses/GetOnly"
+          }
+        }
+      }
+    },
+    "/hooks/github": {
+      "post": {
+        "operationId": "postGitHubWebhook",
+        "summary": "A GitHub webhook delivery",
+        "description": "GitHub's organisation webhook. Not behind the password: the signature is checked first, then only this board's and this repository's events cause a read of the board. A delivery over 1 MiB is refused before its signature is checked.",
+        "parameters": [
+          {
+            "name": "X-Hub-Signature-256",
+            "in": "header",
+            "required": true,
+            "description": "HMAC-SHA256 of the body with the webhook secret.",
+            "schema": {
+              "type": "string",
+              "pattern": "^sha256=[0-9a-f]{64}$"
+            }
+          },
+          {
+            "name": "X-GitHub-Event",
+            "in": "header",
+            "required": false,
+            "description": "The event's name, such as projects_v2_item or issues.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "GitHub's event payload."
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Signed, and an event for this board or repository: a read of the board has started."
+          },
+          "204": {
+            "description": "Signed, but an event that changes nothing on the roadmap."
+          },
+          "400": {
+            "description": "Signed, but the body is not JSON."
+          },
+          "401": {
+            "description": "The signature is missing or wrong."
+          },
+          "405": {
+            "description": "Any method but POST is refused.",
+            "headers": {
+              "Allow": {
+                "schema": {
+                  "type": "string",
+                  "const": "POST"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is over 1 MiB (1,048,576 bytes)."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "NoStore": {
+        "description": "Never cached: each request reads the latest report.",
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
+      }
+    },
+    "responses": {
+      "PasswordNeeded": {
+        "description": "The development site sits behind a password.",
+        "headers": {
+          "WWW-Authenticate": {
+            "schema": {
+              "type": "string",
+              "pattern": "^Basic realm="
+            }
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
+        },
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string",
+              "description": "One sentence saying this is a test environment."
+            }
+          }
+        }
+      },
+      "GetOnly": {
+        "description": "Any method but GET (or HEAD) is refused.",
+        "headers": {
+          "Allow": {
+            "schema": {
+              "type": "string",
+              "const": "GET, HEAD"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lastEventAt",
+          "lastCheckAt",
+          "version",
+          "drift",
+          "driftTotal",
+          "lastDriftAt",
+          "pendingDriftSince",
+          "staleReads",
+          "lastStaleReadAt",
+          "unseenEvents",
+          "readFailingSince",
+          "readError",
+          "dropped"
+        ],
+        "properties": {
+          "lastEventAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When a signed webhook delivery last announced a board change."
+          },
+          "lastCheckAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the scheduled check last read the whole board."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The snapshot's version; 0 before any good read."
+          },
+          "drift": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unexplained differences since a webhook last delivered a change. Only a working webhook clears it."
+          },
+          "driftTotal": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every unexplained difference ever found. Never reset."
+          },
+          "lastDriftAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the last unexplained difference was found."
+          },
+          "pendingDriftSince": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "The earliest unexplained change still within its grace."
+          },
+          "staleReads": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Good reads that did not yet show a change a webhook had announced. Never reset."
+          },
+          "lastStaleReadAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the last such read happened."
+          },
+          "unseenEvents": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Announced changes no read showed within the grace of a check. Never reset."
+          },
+          "readFailingSince": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When reads of the board started failing; null while they succeed."
+          },
+          "readError": {
+            "type": ["string", "null"],
+            "description": "The last failed read's error text, which can quote GitHub; null after a good read."
+          },
+          "dropped": {
+            "$ref": "#/components/schemas/Dropped"
+          }
+        }
+      },
+      "Dropped": {
+        "type": "object",
+        "description": "What the last good read left off the roadmap.",
+        "additionalProperties": false,
+        "required": ["draft", "pullRequest", "anotherRepository"],
+        "properties": {
+          "draft": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Draft items."
+          },
+          "pullRequest": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pull requests."
+          },
+          "anotherRepository": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Issues from another repository."
+          }
+        }
+      }
+    }
+  }
+}

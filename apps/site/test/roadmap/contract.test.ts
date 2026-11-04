@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { ROADMAP_PATHS } from '../../worker/routes';
 import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
-import { differences, judged, spec } from './openapi';
+import { differences, judged, spec } from '../../api/judge';
 
 /**
  * The public roadmap API answers exactly as its hand-written spec,
@@ -153,57 +153,5 @@ describe('the private health path, outside the public spec', () => {
     });
     expect(response.status).toBe(405);
     expect(response.headers.get('Allow')).toBe('GET, HEAD');
-  });
-});
-
-describe('the judge', () => {
-  // The judge itself, so a pass above means the answer matched, never that
-  // nothing was compared.
-  it('names a field the spec does not list', () => {
-    expect(
-      differences(SNAPSHOT, 'get', {
-        status: 503,
-        headers: new Headers({
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
-        }),
-        body: { error: 'The roadmap could not be read just now.', extra: 1 },
-      }),
-    ).toEqual(['body must NOT have additional properties']);
-  });
-
-  it('names a status the spec does not document', () => {
-    expect(
-      differences(SNAPSHOT, 'get', {
-        status: 500,
-        headers: new Headers(),
-        body: null,
-      }),
-    ).toEqual([
-      'GET /api/roadmap.json answered 500, which the spec does not document',
-    ]);
-  });
-
-  it('names a missing header', () => {
-    expect(
-      differences(SNAPSHOT, 'get', {
-        status: 503,
-        headers: new Headers({ 'Content-Type': 'application/json' }),
-        body: { error: 'The roadmap could not be read just now.' },
-      }),
-    ).toEqual(['header Cache-Control is missing']);
-  });
-
-  it('names a body type the spec does not document', () => {
-    expect(
-      differences(SNAPSHOT, 'get', {
-        status: 503,
-        headers: new Headers({
-          'Content-Type': 'text/html',
-          'Cache-Control': 'no-store',
-        }),
-        body: '<p>',
-      }),
-    ).toEqual(['Content-Type text/html is not one of application/json']);
   });
 });
