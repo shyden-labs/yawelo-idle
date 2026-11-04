@@ -245,16 +245,60 @@ describe('assertNamedByRepo (#751)', () => {
     );
   });
 
-  it('names a repository whose issues changed while they were read', () => {
+  // #875: #873 and #874 were filed while PR #872's check read 530 issues.
+  // Read oldest first, a new issue lands on the last page, so the read is
+  // still whole when it holds the last page's count.
+  it('passes an issue filed while the issues were read, found on the last page', () => {
+    const pages = repo();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) {
+      second.data.repository.issues.totalCount = 12;
+      second.data.repository.issues.nodes.push({
+        number: 12,
+        projectItems: { totalCount: 0, nodes: [] },
+      });
+    }
+    expect(() => {
+      assertNamedByRepo(board(), pages, FIXTURE_BOARD_ID, FIXTURE_REPO);
+    }).not.toThrow();
+  });
+
+  it('refuses issues whose count fell while they were read', () => {
+    const pages = repo();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) {
+      second.data.repository.issues.totalCount = 10;
+      second.data.repository.issues.nodes.pop();
+    }
+    expect(() => {
+      assertNamedByRepo(board(), pages, FIXTURE_BOARD_ID, FIXTURE_REPO);
+    }).toThrow(
+      'the repository’s issues fell while they were read (its pages report 11, then 10): an issue was deleted or moved: nothing read',
+    );
+  });
+
+  it('refuses a risen count whose new issue was not read', () => {
     const pages = repo();
     const second = pages[1];
     expect(second).toBeDefined();
     if (second !== undefined) second.data.repository.issues.totalCount = 12;
     expect(() => {
       assertNamedByRepo(board(), pages, FIXTURE_BOARD_ID, FIXTURE_REPO);
-    }).toThrow(
-      'the repository’s issues changed while they were read (its pages report 11, then 12): nothing read',
-    );
+    }).toThrow('the repository has 12 issues and 11 were read: nothing read');
+  });
+
+  it('refuses an issue read twice, even when the count agrees', () => {
+    const pages = repo();
+    const second = pages[1];
+    const sixth = pages[0]?.data.repository.issues.nodes[5];
+    expect(sixth?.number).toBe(6);
+    if (second !== undefined && sixth !== undefined)
+      second.data.repository.issues.nodes[4] = sixth;
+    expect(() => {
+      assertNamedByRepo(board(), pages, FIXTURE_BOARD_ID, FIXTURE_REPO);
+    }).toThrow('#6 was read twice: nothing read');
   });
 
   it('refuses an issue on more boards than were read', () => {
@@ -277,9 +321,9 @@ describe('REPO_ISSUES_QUERY (#751)', () => {
     );
   });
 
-  it('pages the repository’s issues with their count', () => {
+  it('pages the repository’s issues with their count, oldest first (#875)', () => {
     expect(REPO_ISSUES_QUERY).toMatch(
-      /issues\(first: 100, after: \$endCursor\) \{ totalCount pageInfo \{ hasNextPage endCursor \}/,
+      /issues\(first: 100, after: \$endCursor, orderBy: \{ field: CREATED_AT, direction: ASC \}\) \{ totalCount pageInfo \{ hasNextPage endCursor \}/,
     );
   });
 });
