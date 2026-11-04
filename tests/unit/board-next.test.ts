@@ -3,6 +3,7 @@ import {
   boardNext,
   NEXT_QUERY,
   nextTicket,
+  nextStart,
   offBoardBlockers,
   type NextItem,
   parseNextItems,
@@ -446,7 +447,7 @@ describe('boardNext (#576)', () => {
     );
   });
 
-  it('says when the next ticket is itself blocked (its blocker is an epic still open)', () => {
+  it('names a ticket whose blocker is an epic still open as blocked, saying why (#772)', () => {
     const blocked = rawIssue(2, {
       blockedBy: {
         totalCount: 1,
@@ -462,7 +463,33 @@ describe('boardNext (#576)', () => {
     const epic = rawIssue(1, { subIssuesSummary: { total: 4, completed: 1 } });
     const { gh } = ghPrinting([page([blocked, epic])]);
     expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
-      'Next: #2 story 2 (P3, Todo, blocked by #1).',
+      'Next: #2 story 2 (P3, Todo, blocked by #1). Nothing it waits on can start: #1 is an epic with open sub-issues, whose stories are the work.',
+    );
+  });
+
+  it('names the start of the chain and the chain it walked (#772)', () => {
+    const blocker = (n: number) => ({
+      totalCount: 1,
+      nodes: [
+        {
+          number: n,
+          state: 'OPEN',
+          repository: { nameWithOwner: 'shyden-labs/yawelo-idle' },
+        },
+      ],
+    });
+    const { gh } = ghPrinting([
+      page([
+        {
+          ...(rawIssue(3, { blockedBy: blocker(2) }) as object),
+          status: { name: 'In Progress' },
+        },
+        rawIssue(2, { blockedBy: blocker(1) }),
+        rawIssue(1),
+      ]),
+    ]);
+    expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
+      'Next: #1 story 1 (P3, Todo), which blocks #2, which blocks #3.',
     );
   });
 
@@ -481,7 +508,7 @@ describe('boardNext (#576)', () => {
     });
     const { gh } = ghPrinting([page([blocked])]);
     expect(boardNext(['PVT_fixture', TITLE], gh)).toEqual({
-      line: 'Next: #2 story 2 (P3, Todo, blocked by #1).',
+      line: 'Next: #2 story 2 (P3, Todo, blocked by #1). Nothing it waits on can start: #2 waits only on issues off this board (shyden-labs/repo-template#1).',
       notes: [
         'note: #2 is blocked by shyden-labs/repo-template#1, which is not an open issue on this board',
       ],
@@ -564,5 +591,117 @@ describe('boardNext (#576)', () => {
       return calls;
     };
     expect(callsWith([])).toEqual([]);
+  });
+});
+
+/** `over`, blocked by each of `numbers` on this board. */
+const blockedBy = (...numbers: number[]): Partial<NextItem> => ({
+  blockedBy: numbers.map((number) => ({
+    number,
+    repository: 'shyden-labs/yawelo-idle',
+  })),
+});
+
+const startOf = (items: NextItem[]) => {
+  const found = nextStart(items);
+  return found === null
+    ? null
+    : {
+        ticket: found.ticket.number,
+        chain: found.chain.map((i) => i.number),
+        waiting: found.waiting,
+      };
+};
+
+describe('nextStart walks the Blocked-by chain to work that can start (#772)', () => {
+  it('names the top ticket itself when nothing blocks it', () => {
+    expect(startOf([item(1, { priority: 'P1' }), item(2)])).toEqual({
+      ticket: 1,
+      chain: [],
+      waiting: null,
+    });
+  });
+
+  it('names the blocker of a blocked top ticket, a chain of two', () => {
+    expect(
+      startOf([
+        item(2, { priority: 'P1', status: 'In Progress', ...blockedBy(1) }),
+        item(1, { priority: 'P1' }),
+      ]),
+    ).toEqual({ ticket: 1, chain: [2], waiting: null });
+  });
+
+  it('follows a chain of three to its unblocked end', () => {
+    expect(
+      startOf([
+        item(3, { priority: 'P0', status: 'In Progress', ...blockedBy(2) }),
+        item(2, { priority: 'P0', ...blockedBy(1) }),
+        item(1, { priority: 'P0' }),
+        item(9, { priority: 'P0' }),
+      ]),
+    ).toEqual({ ticket: 1, chain: [2, 3], waiting: null });
+  });
+
+  it('breaks a tie between two unblocked blockers by the board’s rank', () => {
+    expect(
+      startOf([
+        item(3, { priority: 'P1', status: 'In Progress', ...blockedBy(4, 5) }),
+        item(4, { priority: 'P1', createdAt: '2026-01-20T00:00:00Z' }),
+        item(5, { priority: 'P1', createdAt: '2026-01-02T00:00:00Z' }),
+      ]),
+    ).toEqual({ ticket: 5, chain: [3], waiting: null });
+  });
+
+  it('takes the blocker whose own chain can start when another one’s cannot', () => {
+    expect(
+      startOf([
+        item(3, {
+          priority: 'P1',
+          status: 'In Progress',
+          createdAt: '2026-01-01T00:00:00Z',
+          ...blockedBy(4, 5),
+        }),
+        item(4, {
+          priority: 'P1',
+          status: 'In Progress',
+          createdAt: '2026-01-02T00:00:00Z',
+          blockedBy: [{ number: 7, repository: 'shyden-labs/shydesk' }],
+        }),
+        item(5, { priority: 'P1', createdAt: '2026-01-20T00:00:00Z' }),
+      ]),
+    ).toEqual({ ticket: 5, chain: [3], waiting: null });
+  });
+
+  it('refuses a cycle, naming it', () => {
+    expect(() =>
+      startOf([
+        item(1, { priority: 'P1', status: 'In Progress', ...blockedBy(2) }),
+        item(2, { priority: 'P1', ...blockedBy(3) }),
+        item(3, { priority: 'P1', ...blockedBy(2) }),
+      ]),
+    ).toThrow(
+      'Blocked-by links form a cycle: #2 → #3 → #2. Break it on the board.',
+    );
+  });
+
+  it('names the blocked top ticket when its chain ends only off this board, saying why (operator 2026-10-13)', () => {
+    expect(
+      startOf([
+        item(1, { priority: 'P1', status: 'In Progress', ...blockedBy(2) }),
+        item(2, {
+          priority: 'P1',
+          blockedBy: [{ number: 27, repository: 'shyden-labs/shydesk' }],
+        }),
+      ]),
+    ).toEqual({
+      ticket: 1,
+      chain: [],
+      waiting:
+        '#2 waits only on issues off this board (shyden-labs/shydesk#27)',
+    });
+  });
+
+  it('gives null when nothing is open', () => {
+    expect(startOf([])).toBeNull();
   });
 });
