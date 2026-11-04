@@ -1,7 +1,7 @@
 # Handover: Yawelo Idle
 
 **Written:** 2026-11-05 (thirty-eighth session, overnight while Shyden sleeps). **Phones: connected but not authorised (Android unauthorized, iPhone untrusted); no device work.**
-**Running when written:** nothing local (laptop shutdown). CI may still be running on PR #872; its waiter is DEAD. Re-read with `~/.claude/scripts/pr-verdict.sh 872`.
+**Running when written:** CI on PR #876; its waiter dies with this session. Re-read with `~/.claude/scripts/pr-verdict.sh 876`.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`. Node: `~/.local/share/node/current/bin`. Run board scripts from a `develop` worktree: this handover branch's copies predate #575 and #772. board-next names #783 (P0): its code shipped in PR #809, and only a planted non-release PR into `main` remains, which is Shyden's (see below); then take the next ticket.
 
 ## Done this session
@@ -17,10 +17,13 @@
 - #760 shut as not planned (the git-walks guard was deleted by #795).
 - **Security, found and told to Shyden:** develop had 19 npm audit findings (2 high). #871 (P0) is in PR #872. Filed #873 (P0, deepmerge has no patched release; Shyden's route, and it blocks #720) and #874 (P2, ts-fsrs 6.0 upgrade).
 
-## In flight (both RED, fix first)
+## In flight
 
-1. **#871 audit fixes, PR #872** (branch `fix/871-audit-findings`, worktree `../yawelo-idle-871`, head `cd968102`). `board-orphans` failed at "No ticket is In Progress without a branch or open pull request" (run 41924164200). Its log names the ticket; suspects are tickets set In Progress this session. Fix that board status, then trigger a fresh run with `gh pr update-branch 872` (a re-run is not allowed). `build-and-test` had not reported when the session stopped. Merge when green, check dev-verified on the deploy, then shut the ticket by hand, noting that #873 holds the 3 lows.
-2. **#591 fresh Worker types, PR #870** (branch `tooling/591-fresh-worker-types`, worktree `../yawelo-idle-591`, head `8474d01b`). RED: Guards failed `tests/guards/erasable-syntax.test.ts` "lists every tsconfig git has, each one the typecheck reads" (run 41922738170). That guard parses the root `typecheck` script, and the new `npm run --silent types && ` prefix breaks its parse. Coverage failed too, probably for the same reason. Fix: teach the guard to skip the prefix, or move the rebuild into `pretypecheck`/`prelint` npm hooks and pin those in tests/unit/worker-types.test.ts. The guards suite runs in CI only. Then merge and shut the ticket by hand (AC2 collapses into always-rebuild; AC3's floor is dropped under the cut list).
+1. **#875 board read race, PR #876** (branch `fix/875-board-read-race`, worktree `../yawelo-idle-875`, head `ba716d4f`). A ticket filed mid-read failed board-orphans ("530, then 531"). The issues are now read oldest first, and a rising count passes when the last page holds the new issues. #875 blocks #871 and #591. Waiter: re-read with `~/.claude/scripts/pr-verdict.sh 876`. Merge when green, check dev-verified, then shut #875 by hand.
+2. **#871 audit fixes, PR #872** (worktree `../yawelo-idle-871`, head `cd968102`). build-and-test and coverage are green. board-orphans is red twice: first the race (#875), then #873's card missing from the board listing. That card was fixed by removing and re-adding it (P0, Todo, 2 restored). **After #876 merges:** `gh pr update-branch 872`, which is new code and not a re-run. **Never edit the body or re-run to restart a check** (Shyden, 2026-11-05: "stop breaking the rules ... fix the problem"). The body still carries an earlier note saying the edit "starts a fresh run"; correct it when the branch is updated.
+3. **#591 fresh Worker types, PR #870** (worktree `../yawelo-idle-591`, head `7a673f18`). The rebuild moved into `prelint`/`pretypecheck`, so the guard's parse is fixed. board-orphans went red on the stuck #873 card. **After #876 merges:** `gh pr update-branch 870`, then read all three checks by name.
+
+Filed #877 (P2): a card added between the two concurrent reads is still refused (the safe side).
 
 ## Next
 
@@ -45,5 +48,5 @@
 
 ## Progress (board, measured 2026-11-05 from develop's finished-days script)
 
-- By tickets: 40% (176 of 443), pace 4.29 a day over the 7 finished days to 2026-11-03, ETA 2027-01-06 (medium confidence: 5 of 7 days moved).
-- By effort: 1,159 points remaining across 267 open stories, pace 12.00 a day, ETA 2027-02-09 (medium confidence). Both before outside waits (#784's login, device sign-off). Today's 6 closures enter the pace tomorrow.
+- By tickets: 39% (176 of 447), pace 4.29 a day over the 7 finished days to 2026-11-03, ETA 2027-01-07 (medium confidence: 5 of 7 days moved).
+- By effort: 1,170 points remaining across 271 open stories, pace 12.00 a day, ETA 2027-02-10 (medium confidence). Both before outside waits (#784's login, device sign-off). Four tickets filed today (#873-#877 less #876) raised the totals.
