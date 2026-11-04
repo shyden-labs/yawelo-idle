@@ -12,7 +12,7 @@
 ## Done this session
 
 - **#368 closed** (13 points). PR #644 merged into `develop` as `da6f12e` from the tested head `ead29af`, after all three CI runs (39021377777, 39021377797, 39021377764) were read step by step, and the run SHA matched `headRefOid`. deploy-dev 39022034951 was green on `da6f12e` in every job by name. Every AC was read against the merged tree (all 22 removed assertions were found again, ceilings 106/98 → 84/81, 18 floor ids each in one test, `sites` still 256) and posted on #368. The board moved it to Done. No Website story: test infrastructure only.
-- Checked: deploy-dev's "Deploy the hostname adapter to production on Pages" step is the dev adapter (`apps/dev-hosts`, dev token). "Production" is Pages' own name for the main slot (#429). It is not the game's production.
+- Checked: deploy-dev's "Deploy the dev hostname adapter to its Pages main branch (dev account)" step is the dev adapter (`apps/dev-hosts`, dev token). "Production" is Pages' own name for the main slot (#429). It is not the game's production.
 
 ## Resume steps
 

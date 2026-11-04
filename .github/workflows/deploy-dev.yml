@@ -154,10 +154,14 @@ jobs:
       - name: Make the hostname adapter's empty static directory
         working-directory: apps/dev-hosts
         run: mkdir -p public
-      # The project's production branch is `main` (read 2026-10-06, #429).
-      # Wrangler otherwise takes the branch from git, `develop` here, and
-      # makes a preview deployment, which the custom domains do not serve.
-      - name: Deploy the hostname adapter to production on Pages
+      # The dev hostname adapter (apps/dev-hosts: dev.yawelo-idle and
+      # dev-api.yawelo-idle only), deployed with the dev token to the dev
+      # account (#395). `--branch main` because main is the Pages project's
+      # production branch (read 2026-10-06, #429), Pages' word for the slot
+      # its custom domains serve, not the game's production (#672). Wrangler
+      # otherwise takes the branch from git, `develop` here, and makes a
+      # preview deployment, which the custom domains do not serve.
+      - name: Deploy the dev hostname adapter to its Pages main branch (dev account)
         working-directory: apps/dev-hosts
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
