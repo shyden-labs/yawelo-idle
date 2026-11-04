@@ -23,3 +23,23 @@ it('is the deployed config but for its name and entry point', () => {
     deployed,
   );
 });
+
+/**
+ * The private docs page (#589) is a prerendered file in ./dist, kept off the
+ * public host by the Worker alone. A site config that let the asset router
+ * answer ./dist without running the Worker first would serve it to anyone,
+ * so each config serving ./dist runs the Worker first on every path.
+ */
+it('runs the deployed Worker before any asset, so private pages stay private', () => {
+  expect(config('wrangler.jsonc').assets).toMatchObject({
+    directory: './dist',
+    run_worker_first: true,
+  });
+});
+
+it('runs the tested Worker before any asset, as the deployed one does', () => {
+  expect(config('wrangler.roadmap-test.jsonc').assets).toMatchObject({
+    directory: './dist',
+    run_worker_first: true,
+  });
+});
