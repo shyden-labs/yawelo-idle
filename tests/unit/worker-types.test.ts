@@ -26,12 +26,16 @@ const WORKERS = readdirSync('apps').filter((dir) =>
 );
 
 describe('fresh Worker types (#591)', () => {
+  // npm runs a `pre<name>` script before `<name>` itself; the scripts stay
+  // plain commands, which tests/guards/erasable-syntax.test.ts parses.
   it('lint rebuilds every Worker’s types before it judges them', () => {
-    expect(root['lint']).toMatch(/^npm run --silent types && eslint /);
+    expect(root['prelint']).toBe('npm run --silent types');
+    expect(root['lint']).toMatch(/^eslint /);
   });
 
   it('typecheck rebuilds every Worker’s types before it judges them', () => {
-    expect(root['typecheck']).toMatch(/^npm run --silent types && tsc /);
+    expect(root['pretypecheck']).toBe('npm run --silent types');
+    expect(root['typecheck']).toMatch(/^tsc /);
   });
 
   it('a fresh install rebuilds them the same way', () => {
