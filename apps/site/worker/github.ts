@@ -284,3 +284,23 @@ export async function readRepoIssuePages(
     `the repository ${owner}/${name} has more than ${String(MAX_PAGES)} pages of issues`,
   );
 }
+
+/**
+ * The board's pages and the repository's issue pages, read at the same time
+ * (#850): each list pages by its own cursor, so neither waits on the other.
+ * Read one after the other they took about 11 s of the 13-15 s from an edit
+ * to the open roadmap (measured on dev, 2026-11-05). Either failing fails
+ * the read, naming why, as each does alone.
+ */
+export async function readBoardAndIssues(
+  token: string,
+  boardId: string,
+  owner: string,
+  name: string,
+): Promise<{ board: unknown[]; issues: unknown[] }> {
+  const [board, issues] = await Promise.all([
+    readBoardPages(token, boardId),
+    readRepoIssuePages(token, owner, name),
+  ]);
+  return { board, issues };
+}

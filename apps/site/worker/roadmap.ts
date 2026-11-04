@@ -35,11 +35,7 @@ import {
   type Progress,
   type PublicSnapshot,
 } from '@yawelo-idle/progress';
-import {
-  installationToken,
-  readBoardPages,
-  readRepoIssuePages,
-} from './github';
+import { installationToken, readBoardAndIssues } from './github';
 import {
   account,
   numberOf,
@@ -350,16 +346,17 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
         // GitHub judges the JWT by the wall clock, never by `now()`.
         Math.floor(Date.now() / 1000),
       );
-      const pages = await readBoardPages(token, env.ROADMAP_BOARD_ID);
+      // Both lists at once (#850); the checks run once both are in.
+      const { board: pages, issues } = await readBoardAndIssues(
+        token,
+        env.ROADMAP_BOARD_ID,
+        owner,
+        name,
+      );
       assertBoard(pages, env.ROADMAP_BOARD_TITLE);
       // The listing's own count shrinks with it, so a short read is caught
       // against the repository's issues, from a second surface (#751).
-      assertNamedByRepo(
-        pages,
-        await readRepoIssuePages(token, owner, name),
-        env.ROADMAP_BOARD_ID,
-        env.ROADMAP_REPO,
-      );
+      assertNamedByRepo(pages, issues, env.ROADMAP_BOARD_ID, env.ROADMAP_REPO);
       const { items, dropped } = roadmapItems(pages, env.ROADMAP_REPO);
       const sorted = [...items].sort((a, b) => a.number - b.number);
       const hash = await sha256(JSON.stringify(sorted));
