@@ -144,6 +144,16 @@ describe('judge', () => {
     );
   });
 
+  it('refuses an expression it cannot read: a bracket closed by a licence', () => {
+    expect(judge('(MIT ISC', 'build')).toBe('cannot read licence "(MIT ISC"');
+  });
+
+  it('refuses an expression it cannot read: an operator after an operator', () => {
+    expect(judge('MIT OR AND', 'build')).toBe(
+      'cannot read licence "MIT OR AND"',
+    );
+  });
+
   it('refuses an expression it cannot read: a stray closing bracket', () => {
     expect(judge('MIT) OR (ISC', 'build')).toBe(
       'cannot read licence "MIT) OR (ISC"',
