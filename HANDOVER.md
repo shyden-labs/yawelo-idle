@@ -7,7 +7,7 @@
 
 - **#402 was mid-flight:** commit `794b999b` on `ci/402-ubuntu-26-04` (worktree `../yawelo-idle-402`) is pushed, but **no PR was opened** and the board does not show #402 In Progress. The PR body is drafted in `../yawelo-idle-402/.superpowers/sdd/402/pr.md`. Before opening it: re-read the drafts and check the unit run evidence there.
 - **Old unpushed commits:** `tooling/728-coverage-check` (worktree `728b`, PR #745) and `tooling/762-native-coverage` (worktree `761`, PR #767) are each 10 commits ahead of origin, dated 10-24 and 10-30, from before the crash. Not pushed: pushing would restart CI on old PRs. Keep both branches when their worktrees are removed. Ask Shyden whether to push or drop them.
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`; it now has `node_modules`). Node: `~/.local/share/node/current/bin`.
+  **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`; it now has `node_modules`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session (forty-sixth)
 
