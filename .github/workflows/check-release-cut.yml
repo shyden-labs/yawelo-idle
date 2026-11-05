@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   judge-release-cut:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       # The default branch, with every branch's history: the check asks git about origin/develop and origin/main.

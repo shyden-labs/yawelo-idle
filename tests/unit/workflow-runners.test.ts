@@ -26,7 +26,7 @@ describe('scanRunners', () => {
     expect(
       scanRunners('w.yml', workflow(job('a', 'ubuntu-latest'))).findings,
     ).toEqual([
-      'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-24.04',
+      'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-26.04',
     ]);
   });
 
@@ -34,7 +34,7 @@ describe('scanRunners', () => {
     expect(
       scanRunners('w.yml', workflow(job('a', 'windows-latest'))).findings,
     ).toEqual([
-      'w.yml: jobs.a: runs-on windows-latest moves with GitHub; name a fixed image such as ubuntu-24.04',
+      'w.yml: jobs.a: runs-on windows-latest moves with GitHub; name a fixed image such as ubuntu-26.04',
     ]);
   });
 
@@ -44,7 +44,7 @@ describe('scanRunners', () => {
     ).toEqual({
       labels: ['w.yml: jobs.a: self-hosted', 'w.yml: jobs.a: ubuntu-latest'],
       findings: [
-        'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-24.04',
+        'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-26.04',
       ],
     });
   });
@@ -103,6 +103,13 @@ describe('this repo’s workflows name a fixed runner image (#400)', () => {
     const scans = scanAll();
     const findings = scans.flatMap(({ scan }) => scan.findings);
     expect(findings, findings.join('\n')).toEqual([]);
+  });
+
+  it('every job runs on ubuntu-26.04, moved there deliberately (#402)', () => {
+    const others = scanAll()
+      .flatMap(({ scan }) => scan.labels)
+      .filter((label) => !label.endsWith(': ubuntu-26.04'));
+    expect(others, others.join('\n')).toEqual([]);
   });
 
   it('reads as many runs-on lines in each workflow as its text holds', () => {

@@ -34,7 +34,7 @@ jobs:
 
   deploy:
     needs: test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # A normal deploy takes 35 s; GitHub's default would be 360 minutes (#44).
     timeout-minutes: 10
     environment:
@@ -176,7 +176,7 @@ jobs:
 
   verify:
     needs: deploy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # 8 s when the commit is already served; verify-dev waits at most 36 looks,
     # 5 s apart, for it to appear, then judges every check once (#83).
     timeout-minutes: 10
@@ -218,7 +218,7 @@ jobs:
   # endpoint). Its own job, so the wait holds back neither verify nor smoke.
   verify-roadmap:
     needs: deploy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     environment:
       name: dev
@@ -243,7 +243,7 @@ jobs:
   # build-and-test, which carries all three browsers, so nothing is installed.
   smoke:
     needs: verify
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
@@ -274,7 +274,7 @@ jobs:
   # verify-roadmap (the snapshot read), so the page has a board to draw.
   site-smoke:
     needs: [verify, verify-roadmap]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
@@ -318,7 +318,7 @@ jobs:
   # needs no secret, so it names no environment.
   verify-holding:
     needs: deploy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # verify-prod waits at most 60 looks, 10 s apart, then judges once.
     timeout-minutes: 15
     permissions:
@@ -346,7 +346,7 @@ jobs:
   # the holding page's dev copy (#621), and the roadmap (#708).
   dev-verified:
     needs: [smoke, site-smoke, verify-holding, verify-roadmap]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     permissions:
       statuses: write

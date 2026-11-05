@@ -51,7 +51,7 @@ describe('board-orphans.yml (#580)', () => {
       j['runs-on'],
       j.container,
       j['timeout-minutes'],
-    ]).toEqual(['board-read', 'ubuntu-24.04', undefined, 5]);
+    ]).toEqual(['board-read', 'ubuntu-26.04', undefined, 5]);
   });
 
   it('runs its steps in order: key check, mint, checkout, node, the check', () => {

@@ -4,8 +4,9 @@ import { isRecord } from './workflow-secrets';
 /**
  * Every job names a fixed runner image (#400).
  *
- * GitHub moves `ubuntu-latest` to Ubuntu 26.04 from 2026-10-19 and advises
- * pinning `ubuntu-24.04` to stay (actions/runner-images#14748). A `-latest`
+ * GitHub moves `ubuntu-latest` to Ubuntu 26.04 from 2026-10-19 and advised
+ * pinning `ubuntu-24.04` to stay (actions/runner-images#14748); every job
+ * moved to `ubuntu-26.04` deliberately in #402. A `-latest`
  * label changes the machine CI and the deploy run on with no commit saying
  * so; moving image is a deliberate story of its own.
  *
@@ -55,7 +56,7 @@ export function scanRunners(file: string, source: string): RunnerScan {
         );
       else if (MOVING.test(label))
         findings.push(
-          `${where}: runs-on ${label} moves with GitHub; name a fixed image such as ubuntu-24.04`,
+          `${where}: runs-on ${label} moves with GitHub; name a fixed image such as ubuntu-26.04`,
         );
     }
   }

@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # GitHub's default is 360 minutes (#44). Each test suite but the unit
     # suite holds its own step to one measured limit (#476), so the job allows
     # 20 for those and the rest.
@@ -164,7 +164,7 @@ jobs:
   # required check, so like build-and-test it reports on a docs-only change
   # without measuring.
   coverage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
