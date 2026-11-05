@@ -37,6 +37,7 @@ const SCRIPTS = [
   'scripts/develop-squash-only.ts',
   'scripts/ensure-d1.ts',
   'scripts/holding-dev.ts',
+  'scripts/licence-check.ts',
   'scripts/npm-audit.ts',
   'scripts/prod-version.ts',
   'scripts/release-cut.ts',
