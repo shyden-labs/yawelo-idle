@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { press } from '../press';
 
 /**
  * The private API docs on dev (#589; Shyden, 2026-11-04: "Dev only, dev
@@ -31,15 +32,16 @@ test('lists the health report and the webhook', async ({ page }) => {
 
 test('“Try it out” reads the health report and shows its 200', async ({
   page,
+  hasTouch,
 }) => {
   await page.goto(DOCS);
   const operation = page.locator('#operations-default-getRoadmapHealth');
-  await operation.locator('.opblock-summary-control').click();
-  await operation.getByRole('button', { name: 'Try it out' }).click();
+  await press(operation.locator('.opblock-summary-control'), hasTouch);
+  await press(operation.getByRole('button', { name: 'Try it out' }), hasTouch);
   const answered = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/roadmap/health',
   );
-  await operation.getByRole('button', { name: 'Execute' }).click();
+  await press(operation.getByRole('button', { name: 'Execute' }), hasTouch);
   expect((await answered).status()).toBe(200);
   await expect(
     operation.locator('.live-responses-table tbody .response-col_status'),
@@ -48,20 +50,21 @@ test('“Try it out” reads the health report and shows its 200', async ({
 
 test('“Try it out” on the webhook shows its 401, since no browser holds the secret', async ({
   page,
+  hasTouch,
 }) => {
   await page.goto(DOCS);
   const operation = page.locator('#operations-default-postGitHubWebhook');
-  await operation.locator('.opblock-summary-control').click();
-  await operation.getByRole('button', { name: 'Try it out' }).click();
+  await press(operation.locator('.opblock-summary-control'), hasTouch);
+  await press(operation.getByRole('button', { name: 'Try it out' }), hasTouch);
   const signature = operation.locator(
     'tr[data-param-name="X-Hub-Signature-256"] input',
   );
-  await signature.click();
+  await press(signature, hasTouch);
   await signature.pressSequentially(`sha256=${'0'.repeat(64)}`);
   const answered = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/hooks/github',
   );
-  await operation.getByRole('button', { name: 'Execute' }).click();
+  await press(operation.getByRole('button', { name: 'Execute' }), hasTouch);
   expect((await answered).status()).toBe(401);
   await expect(
     operation.locator('.live-responses-table tbody .response-col_status'),

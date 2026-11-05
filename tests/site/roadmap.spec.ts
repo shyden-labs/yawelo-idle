@@ -10,6 +10,7 @@ import {
   voyage,
   type Voyage,
 } from '../../apps/site/src/roadmap/voyage';
+import { press } from '../press';
 
 /**
  * The voyage map on dev (#827): the deployed site Worker serving the page and
@@ -89,8 +90,9 @@ test('marks the ship at the first island not done', async ({ page }) => {
   await expect(ship).toHaveAttribute('data-epic', String(map.shipAt));
 });
 
-test('opens an island’s panel with a click and closes it with another', async ({
+test('opens an island’s panel with a press and closes it with another', async ({
   page,
+  hasTouch,
 }) => {
   await openMap(page);
   const button = islandButtons(page).first();
@@ -98,19 +100,19 @@ test('opens an island’s panel with a click and closes it with another', async 
     `#${(await button.getAttribute('aria-controls')) ?? ''}`,
   );
   await expect(panel).toBeHidden();
-  await button.click();
+  await press(button, hasTouch);
   await expect(button).toHaveAttribute('aria-expanded', 'true');
   await expect(panel).toBeVisible();
-  await button.click();
+  await press(button, hasTouch);
   await expect(button).toHaveAttribute('aria-expanded', 'false');
   await expect(panel).toBeHidden();
 });
 
-test('opens one panel at a time', async ({ page }) => {
+test('opens one panel at a time', async ({ page, hasTouch }) => {
   await openMap(page);
   const buttons = islandButtons(page);
-  await buttons.nth(0).click();
-  await buttons.nth(1).click();
+  await press(buttons.nth(0), hasTouch);
+  await press(buttons.nth(1), hasTouch);
   await expect(buttons.nth(0)).toHaveAttribute('aria-expanded', 'false');
   await expect(buttons.nth(1)).toHaveAttribute('aria-expanded', 'true');
 });
@@ -138,11 +140,12 @@ test('reaches the first island with Tab', async ({ page }) => {
 
 test('shows an open island’s plain words: what’s built, what’s left, the rest counted', async ({
   page,
+  hasTouch,
 }) => {
   const { map } = await openMap(page);
   const island = map.islands[0];
   if (island === undefined) throw new Error('the board has no island');
-  await islandButtons(page).first().click();
+  await press(islandButtons(page).first(), hasTouch);
   const panel = page.locator(`#panel-${String(island.epic)}`);
   await expect(panel.locator('ul.built a')).toHaveText(
     island.built.map((b) => b.title),
@@ -155,10 +158,13 @@ test('shows an open island’s plain words: what’s built, what’s left, the r
   );
 });
 
-test('fits 320 px wide with no horizontal scroll', async ({ page }) => {
+test('fits 320 px wide with no horizontal scroll', async ({
+  page,
+  hasTouch,
+}) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openMap(page);
-  await islandButtons(page).first().click();
+  await press(islandButtons(page).first(), hasTouch);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );

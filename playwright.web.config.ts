@@ -1,8 +1,8 @@
+import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
 import {
-  defineConfig,
-  devices,
-  type PlaywrightTestConfig,
-} from '@playwright/test';
+  BROWSER_TARGETS,
+  TARGET_TOTALS_REPORTER,
+} from './tests/browser-targets';
 
 /**
  * The web app's smoke suite (#123 AC3): the BUILT game, loaded in each
@@ -42,12 +42,8 @@ export function webSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: 'list',
-    projects: [
-      { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-      { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-      { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    ],
+    reporter: [['list'], [TARGET_TOTALS_REPORTER]],
+    projects: BROWSER_TARGETS,
   };
   const target = env['WEB_SMOKE_URL'];
   if (target === undefined) {

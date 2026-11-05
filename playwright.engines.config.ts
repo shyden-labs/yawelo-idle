@@ -1,4 +1,8 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
+import {
+  BROWSER_TARGETS,
+  TARGET_TOTALS_REPORTER,
+} from './tests/browser-targets';
 
 /**
  * The cross-engine determinism check (M1 design §7): the same golden vectors
@@ -13,10 +17,6 @@ export default defineConfig({
   timeout: 0,
   forbidOnly: true,
   retries: 0,
-  reporter: 'list',
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-  ],
+  reporter: [['list'], [TARGET_TOTALS_REPORTER]],
+  projects: BROWSER_TARGETS,
 });

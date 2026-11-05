@@ -4,6 +4,7 @@ import { parse } from 'yaml';
 import { webSmokeConfig } from '../../playwright.web.config';
 import { siteSmokeConfig } from '../site/smoke-config';
 import { runOf } from './workflow-steps';
+import { BROWSER_TARGETS } from '../browser-targets';
 
 /**
  * The web smoke suite stays wired (#123 AC3), locally and against dev (#123
@@ -65,11 +66,8 @@ const jobsRunning = (run: string): [string, Job][] =>
   );
 
 describe('the web smoke suite (#123 AC3)', () => {
-  it('runs on Chromium, Firefox and WebKit', () => {
-    const engines = (local().projects ?? []).map(
-      (p) => p.use?.defaultBrowserType,
-    );
-    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+  it('runs on every supported target (#883)', () => {
+    expect(local().projects).toEqual(BROWSER_TARGETS);
   });
 
   it('loads the built game from its own Worker config, started fresh', () => {
@@ -126,11 +124,8 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     );
   });
 
-  it('runs on the same three engines, retrying nothing', () => {
-    const engines = (dev().projects ?? []).map(
-      (p) => p.use?.defaultBrowserType,
-    );
-    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+  it('runs on every supported target (#883), retrying nothing', () => {
+    expect(dev().projects).toEqual(BROWSER_TARGETS);
     expect(dev().retries).toBe(0);
     expect(dev().forbidOnly).toBe(true);
   });
@@ -214,11 +209,8 @@ describe('the site suite against dev (#827)', () => {
     );
   });
 
-  it('runs on the three engines, retrying nothing', () => {
-    const engines = (site().projects ?? []).map(
-      (p) => p.use?.defaultBrowserType,
-    );
-    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+  it('runs on every supported target (#883), retrying nothing', () => {
+    expect(site().projects).toEqual(BROWSER_TARGETS);
     expect(site().retries).toBe(0);
     expect(site().forbidOnly).toBe(true);
   });

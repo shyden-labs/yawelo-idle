@@ -414,7 +414,7 @@ TDD throughout: write the failing test first. Zero warnings policy across lint, 
    - role permissions (every endpoint × every role);
    - audit-log immutability;
    - grants and their signatures.
-5. **E2E:** Playwright on Chromium, WebKit and Firefox against the built web app and a local Worker. Journeys:
+5. **E2E:** Playwright on every supported browser target (below) against the built web app and a local Worker. Journeys:
    - the first 30 minutes of unfolding;
    - review;
    - Set Sail;
@@ -424,6 +424,16 @@ TDD throughout: write the failing test first. Zero warnings policy across lint, 
    - console moderation per role.
 
    Plus **axe** on every screen, a keyboard-only journey, computed-style contrast checks, and **visual regression** in the pinned Playwright container.
+
+   **Supported browser targets** (#883; the list is `tests/browser-targets.ts`, and every Playwright config runs exactly it). Every browser suite runs unchanged on each target, with the same files and no per-target test, filter or tag; each run prints every target's total and fails when they differ. No test is skipped: it is made useful on every target or removed. Where a target lacks an input, the test uses that target's real equivalent (a tap on a touch screen, through `tests/press.ts`) or fails naming why.
+
+   - `chromium`: Desktop Chrome.
+   - `firefox`: Desktop Firefox.
+   - `webkit`: Desktop Safari.
+   - `chromium-phone`: Pixel 7 (Chromium, touch, 412×915 screen; #323's Chromium phone).
+   - `webkit-phone`: iPhone 14 (WebKit, touch, 390×844 screen; #323's WebKit phone).
+
+   Real phones over USB are item 6 (#632).
 
 6. **Devices:** a real Android phone and a real iPhone over USB (background/resume accrual, notifications, pairing by QR), and the Electron build with a real Steam client (achievements, Steam Cloud).
 7. **Load:** scripted load tests on the **dev** Worker before public launch, e.g. 1,000 concurrent syncs, a ranked-upload burst, and leaderboard reads. Record the limits found.
