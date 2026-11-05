@@ -33,7 +33,7 @@ describe('the browser suites skip nothing (#883 AC4)', () => {
         'playwright.engines.config.ts',
         'playwright.site.config.ts',
         'playwright.web.config.ts',
-        'tests/engines/determinism.spec.ts',
+        'tests/engines/golden-log.spec.ts',
         'tests/site/smoke-config.ts',
         'tests/web/shell.spec.ts',
       ]),
