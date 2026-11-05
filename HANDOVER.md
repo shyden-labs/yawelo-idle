@@ -12,6 +12,7 @@
 
 ## Resume steps
 
+0. **New global rule (2026-11-05): one suite, run unchanged on every device and browser, nothing skipped.** Conformance is filed as P0: #883 (5 points: every browser and phone target, total printed per target, no-skip test) and #884 (2 points: re-scope #155, #176, #261, #326 and #632). #632 (real phones, 8 points) is raised from P5 to P0. Audit of develop `5d40b72e`: no skipped tests and no device-named test files; all three Playwright suites run on desktop Chrome, Firefox and Safari only. The board's Priority picks among these.
 1. #783 (P0) has nothing to do until the next release cut. Then watch `release-cut` refuse a non-cut head.
 2. #874 is in worktree `../yawelo-idle-874`, branch `deps/874-ts-fsrs-6`, based on `fb4850bd`. It is uncommitted: only `ts-fsrs` 5.4.2 → 6.0.0 in `packages/core/package.json` and the lockfile. No production code is written yet. Strict TDD: write the failing tests first.
    - With ts-fsrs 6: typecheck is clean, and lint has 9 no-deprecated errors (memory.ts 29, 101, 162, 185, 240; tests at 30, 101, 106).
