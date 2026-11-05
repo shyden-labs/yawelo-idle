@@ -118,15 +118,18 @@ describe('a review (AC5)', () => {
       expect(got.stability).toBe(want.stability);
       expect(got.stabilityFast).toBe(want.stabilityFast);
       expect(got.difficulty).toBe(want.difficulty);
-      expect(got.due).toBe(want.dueAt.getTime());
+      // Core keeps ts-fsrs's interval to the whole minute (see below).
+      expect(got.due).toBe(
+        T0 + Math.round((want.dueAt.getTime() - T0) / MINUTE_MS) * MINUTE_MS,
+      );
       expect(got.state).toBe(want.state);
       expect(got.scheduleStatus).toBe(want.scheduleStatus);
       expect(got.lastReview).toBe(T0);
     });
 
   it('follows the learning steps, then fractional-day intervals, with no fuzz', () => {
-    // Measured with ts-fsrs 6.0.0 (FSRS-7, 2026-11-05): a 10-minute step,
-    // then intervals FSRS-7 sets in fractional days, rounded to the ms.
+    // Measured with ts-fsrs 6.0.0 (FSRS-7, 2026-11-06): a 10-minute step,
+    // then FSRS-7's fractional-day intervals kept to the whole minute.
     let w = newWordMemory(T0);
     let now = T0;
     const minutesUntilDue: number[] = [];
@@ -135,10 +138,24 @@ describe('a review (AC5)', () => {
       minutesUntilDue.push((w.card.due - now) / MINUTE_MS);
       now = wallMs(w.card.due);
     }
-    expect(minutesUntilDue).toEqual([
-      10, 14502.868683333334, 61403.55201666667,
-    ]);
-    expect(w.card.stability).toBe(15.91803096);
+    expect(minutesUntilDue).toEqual([10, 14503, 61404]);
+    expect(w.card.stability).toBe(15.91807236);
+  });
+
+  it('keeps every interval to the whole minute, so no platform’s rounding reaches the state (#874)', () => {
+    // ts-fsrs solves FSRS-7's interval with Math.exp and Math.log, whose last
+    // bits differ between platforms (measured: scheduledDays 10.503390960454752
+    // on macOS arm64, …778 on Linux x64, both Node 26.12.1). A whole-minute
+    // interval and the days derived from it are the same everywhere.
+    let w = newWordMemory(T0);
+    let now = T0;
+    // one scenario: each answer reviews the card the previous one scheduled.
+    for (const correct of [true, true, false, true, true, true, true]) {
+      w = review(w, now, correct);
+      expect((w.card.due - now) % MINUTE_MS).toBe(0);
+      expect(w.card.scheduledDays).toBe((w.card.due - now) / DAY_MS);
+      now = wallMs(w.card.due + 12_345);
+    }
   });
 
   it('stores only integers for times, and survives a JSON round trip', () => {

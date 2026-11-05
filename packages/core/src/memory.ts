@@ -299,13 +299,26 @@ export function rankForStability(stabilityDays: number): Rank {
   return rankAt(index);
 }
 
-function fromCard(card: SchedulerCard): MemoryCard {
+/**
+ * ts-fsrs solves FSRS-7's interval with Math.exp and Math.log, whose last
+ * bits differ between platforms (measured on #874: scheduledDays
+ * 10.503390960454752 on macOS arm64 and 10.503390960454778 on Linux x64,
+ * both Node 26.12.1). The interval is kept to the whole minute from the
+ * review, and the days derived from it, so a review gives the same state on
+ * every engine and platform; the scheduler never reads either back.
+ */
+const INTERVAL_GRID_MS = 60_000;
+
+function fromCard(card: SchedulerCard, wall: WallMs): MemoryCard {
+  const intervalMs =
+    Math.round((card.dueAt.getTime() - wall) / INTERVAL_GRID_MS) *
+    INTERVAL_GRID_MS;
   return {
-    due: card.dueAt.getTime(),
+    due: wall + intervalMs,
     stability: card.stability,
     stabilityFast: card.stabilityFast,
     difficulty: card.difficulty,
-    scheduledDays: card.scheduledDays,
+    scheduledDays: intervalMs / DAY_MS,
     learningStep: card.learningStep,
     reps: card.reps,
     lapses: card.lapses,
@@ -380,6 +393,7 @@ export function review(
       grade: correct ? Rating.Good : Rating.Again,
       now: new Date(wall),
     }).card,
+    wall,
   );
   const before = rankIndex(word.rank);
   const after = correct
