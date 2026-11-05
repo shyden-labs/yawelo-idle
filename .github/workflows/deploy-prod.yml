@@ -35,7 +35,7 @@ jobs:
     # A dispatch from any other branch stops here; the environment admits
     # main alone as well.
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment:
       name: production
@@ -73,7 +73,7 @@ jobs:
 
   verify:
     needs: deploy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # verify-prod waits at most 60 looks, 10 s apart, for a new Custom
     # Domain's DNS and certificate, then judges every check once.
     timeout-minutes: 15
