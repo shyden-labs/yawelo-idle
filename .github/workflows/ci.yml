@@ -137,7 +137,7 @@ jobs:
         timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:engines
-      - name: Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)
+      - name: Web smoke (the built game in a local Worker, on every supported target)
         timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:web
