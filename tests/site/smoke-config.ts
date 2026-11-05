@@ -1,13 +1,10 @@
-import {
-  defineConfig,
-  devices,
-  type PlaywrightTestConfig,
-} from '@playwright/test';
+import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
+import { BROWSER_TARGETS, TARGET_TOTALS_REPORTER } from '../browser-targets';
 
 /**
  * The site's browser suite (#827): the roadmap page as deployed on dev, the
- * real site Worker reading the real board, driven with real clicks and key
- * presses in each browser engine. Nothing is stood in: deploy-dev runs it
+ * real site Worker reading the real board, driven with real presses (a tap on a
+ * phone, a click on a desktop) and key presses on every supported target. Nothing is stood in: deploy-dev runs it
  * after its verify jobs have seen this commit served (`SITE_SMOKE_URL`, the
  * site Worker's own address, where the site being built is seen, #673).
  *
@@ -37,12 +34,8 @@ export function siteSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: 'list',
-    projects: [
-      { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-      { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-      { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    ],
+    reporter: [['list'], [TARGET_TOTALS_REPORTER]],
+    projects: BROWSER_TARGETS,
   };
   return defineConfig({
     ...shared,

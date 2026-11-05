@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { press } from '../press';
 
 /**
  * The roadmap API docs on dev (#588): Swagger UI, served from the site's own
@@ -26,15 +27,18 @@ test('lists both public operations', async ({ page }) => {
   ]);
 });
 
-test('“Try it out” reads the data file and shows its 200', async ({ page }) => {
+test('“Try it out” reads the data file and shows its 200', async ({
+  page,
+  hasTouch,
+}) => {
   await page.goto('/api/docs');
   const operation = page.locator('#operations-default-getRoadmapSnapshot');
-  await operation.locator('.opblock-summary-control').click();
-  await operation.getByRole('button', { name: 'Try it out' }).click();
+  await press(operation.locator('.opblock-summary-control'), hasTouch);
+  await press(operation.getByRole('button', { name: 'Try it out' }), hasTouch);
   const answered = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/roadmap.json',
   );
-  await operation.getByRole('button', { name: 'Execute' }).click();
+  await press(operation.getByRole('button', { name: 'Execute' }), hasTouch);
   expect((await answered).status()).toBe(200);
   await expect(
     operation.locator('.live-responses-table tbody .response-col_status'),

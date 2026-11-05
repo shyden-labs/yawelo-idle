@@ -260,7 +260,7 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
       - run: npm ci
-      - name: Smoke the game on dev (Chromium, Firefox and WebKit, behind the dev password)
+      - name: Smoke the game on dev (every supported target, behind the dev password)
         # One measured limit, at least 3 times its slowest run (#476).
         timeout-minutes: 1
         env:
@@ -291,7 +291,7 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
       - run: npm ci
-      - name: Drive the roadmap page on dev (Chromium, Firefox and WebKit, behind the dev password)
+      - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
         # A first limit, until its first run is measured (#476): then at
         # least 3 times its slowest run.

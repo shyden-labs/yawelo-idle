@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import config from '../../playwright.engines.config';
 import { runOf } from './workflow-steps';
+import { BROWSER_TARGETS } from '../browser-targets';
 
 /**
  * The cross-engine check stays wired (#26 AC10). A Playwright project dropped
@@ -22,11 +23,8 @@ const ci = parse(readFileSync('.github/workflows/ci.yml', 'utf8')) as {
 };
 
 describe('the cross-engine harness', () => {
-  it('runs on Chromium, Firefox and WebKit', () => {
-    const engines = (config.projects ?? []).map(
-      (p) => p.use?.defaultBrowserType,
-    );
-    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+  it('runs on every supported target (#883)', () => {
+    expect(config.projects).toEqual(BROWSER_TARGETS);
   });
 
   it('runs in CI, in the Playwright image that carries all three browsers (#44)', () => {
