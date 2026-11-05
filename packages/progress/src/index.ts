@@ -573,11 +573,12 @@ const BOARDS_PER_ISSUE = 10;
  * The repository's issues, 100 to a page, each with the boards it is on
  * (#751): the surface a board's listing is checked against, since the
  * listing's own count shrinks with it. Archived cards are left out, as the
- * board's listing leaves them out.
+ * board's listing leaves them out. Oldest first, so an issue filed during
+ * the read lands on the last page (#875).
  */
 export const REPO_ISSUES_QUERY = `query($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
-    issues(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
+    issues(first: 100, after: $endCursor, orderBy: { field: CREATED_AT, direction: ASC }) { totalCount pageInfo { hasNextPage endCursor }
       nodes { number
         projectItems(first: ${String(BOARDS_PER_ISSUE)}, includeArchived: false) { totalCount nodes { project { id } } } } } } }`;
 
@@ -623,16 +624,26 @@ function namedOnBoard(repoPages: unknown[], boardId: string): Set<number> {
     throw new Error(
       'a page of the repository’s issues came back without their count (issues.totalCount): nothing read',
     );
-  const seen = [...new Set(counts)];
-  if (seen.length > 1)
+  // Read oldest first, an issue filed during the read lands on a later page
+  // and the count rises (#875). A fall means an issue already read was
+  // deleted or moved, which shifts the pages, so it is refused.
+  const totals = counts.map(Number);
+  if (totals.some((count, i) => i > 0 && count < Number(totals[i - 1])))
     throw new Error(
-      `the repository’s issues changed while they were read (its pages report ${seen.join(', then ')}): nothing read`,
+      `the repository’s issues fell while they were read (its pages report ${[...new Set(totals)].join(', then ')}): an issue was deleted or moved: nothing read`,
     );
+  const total = Number(totals.at(-1));
   const issues = pages.flatMap((page) => page.nodes);
-  if (issues.length !== Number(counts[0]))
+  if (issues.length !== total)
     throw new Error(
-      `the repository has ${String(counts[0])} issues and ${String(issues.length)} were read: nothing read`,
+      `the repository has ${String(total)} issues and ${String(issues.length)} were read: nothing read`,
     );
+  const read = new Set<number>();
+  for (const { number } of issues) {
+    if (read.has(number))
+      throw new Error(`#${String(number)} was read twice: nothing read`);
+    read.add(number);
+  }
   const named = new Set<number>();
   for (const issue of issues) {
     const items = issue.projectItems;
