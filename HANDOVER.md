@@ -1,7 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (forty-sixth session, overnight while Shyden slept). **Phones:** none needed by the ticket in hand.
-**Running when written:** nothing local. PR #886's CI was running on head `effc2ba6` (GitHub, external).
+**Written:** 2026-11-06 (forty-sixth session, overnight while Shyden slept). **Updated 2026-11-06 after the Mac went down unexpectedly** (forty-seventh session): all 16 worktrees clean, no locks, nothing lost. **Phones:** none needed by the ticket in hand.
+**Running when written:** nothing local. PR #886's head is now `0da61b07` ("FSRS-7 intervals kept to the whole minute", pushed after the first handover); its CI is GitHub's (external).
+
+## Found in the crash check (2026-11-06)
+
+- **#402 was mid-flight:** commit `794b999b` on `ci/402-ubuntu-26-04` (worktree `../yawelo-idle-402`) is pushed, but **no PR was opened** and the board does not show #402 In Progress. The PR body is drafted in `../yawelo-idle-402/.superpowers/sdd/402/pr.md`. Before opening it: re-read the drafts and check the unit run evidence there.
+- **Old unpushed commits:** `tooling/728-coverage-check` (worktree `728b`, PR #745) and `tooling/762-native-coverage` (worktree `761`, PR #767) are each 10 commits ahead of origin, dated 10-24 and 10-30, from before the crash. Not pushed: pushing would restart CI on old PRs. Keep both branches when their worktrees are removed. Ask Shyden whether to push or drop them.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`; it now has `node_modules`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session (forty-sixth)
@@ -11,7 +16,7 @@
 
 ## Resume steps
 
-0. **PR #886 CI:** run `~/.claude/scripts/pr-verdict.sh 886` in the background; it returns early while checks run, so re-run it after CI ends. Read every required check by name on head `effc2ba6` (`build-and-test`, `coverage`, `board-orphans`). If red, fix in the same branch. Floors may need the `record-floors` label (project CLAUDE.md).
+0. **PR #886 CI:** run `~/.claude/scripts/pr-verdict.sh 886` in the background; it returns early while checks run, so re-run it after CI ends. Read every required check by name on head `0da61b07` (`build-and-test`, `coverage`, `board-orphans`). If red, fix in the same branch. Floors may need the `record-floors` label (project CLAUDE.md).
 1. **Merge only after Shyden answers both #874 questions below** (AC 5 and AC 9 say so). Then squash-merge into develop, verify dev, and close #874 by hand.
 2. #783 (P0) has nothing to do until the next release cut.
 3. Then `board-next`.
