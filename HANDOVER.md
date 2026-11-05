@@ -1,18 +1,16 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-05 (forty-second session). **Phones:** Shyden says USB devices are available (via a peer session, 2026-11-05); no ticket in hand needs them.
+**Written:** 2026-11-05 (forty-third session). **Phones:** Shyden says USB devices are available (via a peer session, 2026-11-05); no ticket in hand needs them.
 **Running when written:** nothing.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session (forty-second)
+## Done this session (forty-third)
 
-- **PR #881 (#873) merged** as `fb4850bd`. Dev deploy run 42001324697 passed every job. #873 is shut.
-- **PR #882 (#863) merged** as `5d40b72e`, after an update-branch (develop is strict). Coverage on head `92aa8149`: statements 92.8%, branches 81.1%, quoted on #863. Dev deploy run 42003403187 passed every job. #863 is shut.
-- **#874 rewritten** after Shyden's rulings: move to FSRS-7, all in #874; old saves would restart word memory, but no save is stored yet (AC 6). It is now 13 points, P2. ACs 1–8 are on the issue.
+- **#884 shut.** All 300 open issues searched (terms on the #884 comment); 98 edited and read back identical; no three-browser wording is left on any open issue. #155, #176, #244, #261, #269, #326 and #632 were re-scoped to "every supported target (#883's list)", and #632 and #326 retitled. Estimates #171, #269 and #294 went from 3 to 5 (scope grew).
 
 ## Resume steps
 
-0. **New global rule (2026-11-05): one suite, run unchanged on every device and browser, nothing skipped.** Conformance is filed as P0: #883 (5 points: every browser and phone target, total printed per target, no-skip test) and #884 (2 points: re-scope #155, #176, #261, #326 and #632). #632 (real phones, 8 points) stays at P5 for M7 (Shyden, 2026-11-05: "Back to P5", after I had raised it to P0 unasked). Audit of develop `5d40b72e`: no skipped tests and no device-named test files; all three Playwright suites run on desktop Chrome, Firefox and Safari only. The board's Priority picks among these.
+0. **#883 (P0, 5 points) is next in work** (one suite on every browser and phone target, total printed per target, no-skip test). Every open story now says "every supported target (#883's list)", so #883's AC 1 (the list in the design spec, configs pinned to it) is what they all point at. Strict TDD: failing tests first. #632 (real phones) stays at P5 for M7.
 1. #783 (P0) has nothing to do until the next release cut. Then watch `release-cut` refuse a non-cut head.
 2. #874 is in worktree `../yawelo-idle-874`, branch `deps/874-ts-fsrs-6`, based on `fb4850bd`. It is uncommitted: only `ts-fsrs` 5.4.2 → 6.0.0 in `packages/core/package.json` and the lockfile. No production code is written yet. Strict TDD: write the failing tests first.
    - With ts-fsrs 6: typecheck is clean, and lint has 9 no-deprecated errors (memory.ts 29, 101, 162, 185, 240; tests at 30, 101, 106).
@@ -42,6 +40,6 @@
 
 ## Progress (board, measured 2026-11-05)
 
-- By tickets: 41% (182 of 447). Pace is 5.14 a day over the 7 finished days to 2026-11-04. ETA 2026-12-27, medium confidence (6 of 7 days moved).
-- By effort: 1,163 points remaining across 265 open stories. Pace is 14.00 a day. ETA 2027-01-28, medium confidence.
+- By tickets: 41% (183 of 449). Pace is 5.14 a day over the 7 finished days to 2026-11-04. ETA 2026-12-27, medium confidence (6 of 7 days moved).
+- By effort: 1,174 points remaining across 266 open stories. Pace is 14.00 a day. ETA 2027-01-28, medium confidence.
 - Both ETAs are before the outside waits: #784's login and device sign-off.
