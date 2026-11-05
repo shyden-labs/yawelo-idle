@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fsrs, generatorParameters, Rating, State } from 'ts-fsrs';
+import { DefaultScheduler, Rating, State } from 'ts-fsrs';
 import type { Rank } from '../src/balance';
 import { DAY_MS, wallMs } from '../src/clock';
 import {
@@ -11,6 +11,7 @@ import {
   retrievability,
   review,
   reviewQueue,
+  toCard,
   wordRetrievability,
   type MemoryCard,
   type WordMemory,
@@ -22,9 +23,16 @@ import { checkHistory, T0, type ReviewStep } from './review-laws';
  *
  * Cards are built here as plain data, so each test controls the stability a
  * review starts from. The stabilities were chosen from a probe of ts-fsrs
- * 5.4.2 (FSRS-6 defaults, fuzz off) so that a Good answer lands in a known
- * rank band; each test also checks the band it relies on.
+ * 6.0.0 (FSRS-7 defaults, fuzz off, model override off, #874) so that a
+ * Good answer lands in a known rank band; each test also checks the band it
+ * relies on.
  */
+
+/** ts-fsrs's own scheduler, FSRS-7 with fuzz and model override off. */
+const reference = await DefaultScheduler({
+  enableFuzz: false,
+  allowModelOverride: false,
+});
 
 const MINUTE_MS = 60_000;
 
@@ -33,12 +41,14 @@ function reviewCard(stability: number): MemoryCard {
   return {
     due: T0,
     stability,
+    stabilityFast: stability,
     difficulty: 5,
-    scheduledDays: Math.round(stability),
-    learningSteps: 0,
+    scheduledDays: stability,
+    learningStep: 0,
     reps: 3,
     lapses: 0,
     state: State.Review,
+    scheduleStatus: 'review',
     lastReview: T0 - Math.round(stability * DAY_MS),
   };
 }
@@ -98,37 +108,25 @@ describe('a picked-up word', () => {
 describe('a review (AC5)', () => {
   for (const correct of [true, false])
     it(`schedules a ${correct ? 'correct' : 'wrong'} answer as ${correct ? 'Good' : 'Again'}, fuzz off`, () => {
-      const scheduler = fsrs(generatorParameters({ enable_fuzz: false }));
       const w = word('recalled', 8);
-      // The reference gets the true elapsed_days (8); core passes 0 because
-      // ts-fsrs recomputes it, so equal results also show it is unread.
-      const trueElapsed: { elapsed_days: number } = { elapsed_days: 8 };
-      const want = scheduler.next(
-        {
-          ...trueElapsed,
-          due: w.card.due,
-          stability: w.card.stability,
-          difficulty: w.card.difficulty,
-          scheduled_days: w.card.scheduledDays,
-          learning_steps: w.card.learningSteps,
-          reps: w.card.reps,
-          lapses: w.card.lapses,
-          state: w.card.state,
-          last_review: w.card.lastReview,
-        },
-        T0,
-        correct ? Rating.Good : Rating.Again,
-      ).card;
+      const want = reference.review({
+        card: toCard(w.card),
+        grade: correct ? Rating.Good : Rating.Again,
+        now: new Date(T0),
+      }).card;
       const got = review(w, T0, correct).card;
       expect(got.stability).toBe(want.stability);
+      expect(got.stabilityFast).toBe(want.stabilityFast);
       expect(got.difficulty).toBe(want.difficulty);
-      expect(got.due).toBe(want.due.getTime());
+      expect(got.due).toBe(want.dueAt.getTime());
       expect(got.state).toBe(want.state);
+      expect(got.scheduleStatus).toBe(want.scheduleStatus);
       expect(got.lastReview).toBe(T0);
     });
 
-  it('follows the learning steps, then intervals in whole days, with no fuzz', () => {
-    // Measured with ts-fsrs 5.4.2 defaults: steps of 1 and 10 minutes.
+  it('follows the learning steps, then fractional-day intervals, with no fuzz', () => {
+    // Measured with ts-fsrs 6.0.0 (FSRS-7, 2026-11-05): a 10-minute step,
+    // then intervals FSRS-7 sets in fractional days, rounded to the ms.
     let w = newWordMemory(T0);
     let now = T0;
     const minutesUntilDue: number[] = [];
@@ -137,8 +135,10 @@ describe('a review (AC5)', () => {
       minutesUntilDue.push((w.card.due - now) / MINUTE_MS);
       now = wallMs(w.card.due);
     }
-    expect(minutesUntilDue).toEqual([10, 2 * 24 * 60, 11 * 24 * 60]);
-    expect(w.card.stability).toBe(10.97104786);
+    expect(minutesUntilDue).toEqual([
+      10, 14502.868683333334, 61403.55201666667,
+    ]);
+    expect(w.card.stability).toBe(15.91803096);
   });
 
   it('stores only integers for times, and survives a JSON round trip', () => {
@@ -160,8 +160,8 @@ describe('a review (AC5)', () => {
       ['recognised', 2.5, 'recalled', 'recalled'],
       ['recalled', 8, 'fluent', 'fluent'],
       ['fluent', 20, 'mastered', 'mastered'],
-      ['heard', 1.5, 'recalled', 'recalled'],
-      ['recognised', 5, 'fluent', 'fluent'],
+      ['heard', 1.5, 'recognised', 'recognised'],
+      ['recognised', 5, 'recalled', 'recalled'],
       ['fluent', 2.5, 'recalled', 'fluent'],
       ['mastered', 40, 'mastered', 'mastered'],
     ];
@@ -173,9 +173,9 @@ describe('a review (AC5)', () => {
       });
     }
 
-    it('heard becomes recognised on the first correct answer (S = 2.3065 d)', () => {
+    it('heard becomes recognised on the first correct answer (S = 3.9221 d)', () => {
       const next = review(newWordMemory(T0), T0, true);
-      expect(next.card.stability).toBe(2.3065);
+      expect(next.card.stability).toBe(3.9221);
       expect(next.rank).toBe('recognised');
     });
   });
@@ -312,7 +312,7 @@ describe('the review queue (AC6)', () => {
     expect(item).toEqual({
       itemId: 'x',
       rank: 'fluent',
-      retrievability: retrievability(20, 20),
+      retrievability: retrievability(reviewCard(20), 20),
     });
   });
 

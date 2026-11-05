@@ -82,7 +82,7 @@ Everyday situations in which you hear the language. Examples for `en-id`: Warung
 
 ### 3.4 Review and memory (FSRS)
 
-- Scheduling uses **ts-fsrs** (MIT), FSRS-6 default weights.
+- Scheduling uses **ts-fsrs** (MIT) 6 with the **FSRS-7** model and its default weights, fuzz off, and the short learning steps kept (model override off) (#874, 2026-11-05; FSRS-6 before). FSRS-7's forgetting curve mixes a fast and a slow power-law trace and also reads difficulty.
 - Ranks follow FSRS stability `S`: Heard (new) → Recognised `S ≥ 2 d` → Recalled `S ≥ 7 d` → Fluent `S ≥ 14 d` → **Mastered `S ≥ 30 d`**. Ranks only rise on a correct answer and drop one step on a lapse. Mastery therefore needs reviews spread over real weeks, which is what makes the leaderboard hard to cheat (§10).
 - The **review queue shows at most 10 due items**, most-forgotten first, and never shows a backlog count (DN23). Returning after a month gives the same 10.
 - Prompt types, unlocked progressively: multiple choice → type the answer (lenient on case, diacritics and whitespace; typo tolerance of Damerau distance 1 for words of 5+ letters) → build the sentence (tile order).

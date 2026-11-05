@@ -1,48 +1,93 @@
 /**
- * Memory (parent spec §3.3, §3.4; M1 design §2.2 item 4).
+ * Memory (parent spec §3.3, §3.4; M1 design §2.2 item 4; FSRS-7 since #874).
  *
- * FSRS-6 retrievability t days after a review, at stability S days, is
- * R(t) = (1 + F t / S)^(-d), where d is the scheduler's decay w[20] and
- * F = 0.9^(-1/d) - 1 puts R at 90% when t = S. Production needs each word's
+ * FSRS-7 retrievability mixes two power-law traces, fast and slow, each
+ * (1 + c t)^(-δ) at t days after a review:
+ * R = (w1 Rfast + w2 Rslow) / (w1 + w2) x 0.99998 + 0.00001.
+ * Each trace's decay δ, scale c and weight come from the state (stability,
+ * fast stability, difficulty) and FSRS-7's default weights, as ts-fsrs's
+ * `curve` computes them, with its clamps. Production needs each word's
  * mean R over an hour bucket, so this module also gives that mean in closed
- * form. Everything goes through det-math, so the bits match on every engine.
+ * form, per trace. Everything goes through det-math, so the bits match on
+ * every engine.
  *
- * Reviews are scheduled by ts-fsrs with FSRS-6's default weights and fuzz
- * off, so the same answers give the same schedule everywhere: a correct
- * answer is rated Good and a wrong one Again. A word's rank follows its
- * stability but moves only on an answer: up (possibly several steps) on a
- * correct one, exactly one step down on a wrong one, and never through
- * absence (DN16).
+ * Reviews are scheduled by ts-fsrs with fuzz off, so the same answers give
+ * the same schedule everywhere: a correct answer is rated Good and a wrong
+ * one Again. A word's rank follows its stability but moves only on an
+ * answer: up (possibly several steps) on a correct one, exactly one step
+ * down on a wrong one, and never through absence (DN16).
  */
 import {
-  fsrs,
-  generatorParameters,
+  dateChrono,
+  DEFAULT_MAXIMUM_INTERVAL,
+  defaultLearningSteps,
+  defaultRelearningSteps,
+  defineScheduler,
   Rating,
+  schedulerDesiredRetentionMiddleware,
+  schedulerFuzzingMiddleware,
+  schedulerLearningStepsMiddleware,
+  schedulerMaximumIntervalMiddleware,
+  schedulerMonotonicIntervalMiddleware,
+  schedulerScheduledDaysMiddleware,
+  schedulerStatsMiddleware,
   State,
-  type Card,
-  type CardInput,
 } from 'ts-fsrs';
+import {
+  FSRS7_DEFAULT_WEIGHTS,
+  FSRS7_MODEL_BOUNDS,
+  FSRS7Model,
+} from 'ts-fsrs/models/fsrs-7';
 import { BALANCE, type Rank } from './balance';
 import { DAY_MS, type WallMs } from './clock';
-import { exp, expm1, log1p, pow } from './det-math';
+import { exp, expm1, ln, log1p, pow } from './det-math';
 
-const PARAMETERS = generatorParameters({ enable_fuzz: false });
+/** FSRS-7's default weights, read from ts-fsrs. */
+export const WEIGHTS: readonly number[] = Object.freeze([
+  ...FSRS7_DEFAULT_WEIGHTS,
+]);
 
-const decay = PARAMETERS.w[20];
-if (decay === undefined) {
-  throw new Error('ts-fsrs parameters have no w[20], so they are not FSRS-6');
+function weight(index: number): number {
+  const value = WEIGHTS[index];
+  if (value === undefined) {
+    throw new Error(`FSRS-7 weights have no w[${String(index)}]`);
+  }
+  return value;
 }
 
-/** FSRS-6's decay, w[20], read from the scheduler's own parameters. */
-export const DECAY: number = decay;
+/** What FSRS-7's curve reads from a word's memory. */
+export interface MemoryState {
+  /** S, the slow trace's stability, in days. */
+  readonly stability: number;
+  /** The fast trace's stability, in days. */
+  readonly stabilityFast: number;
+  /** D, from 1 to 10. */
+  readonly difficulty: number;
+}
 
-/** F = 0.9^(-1/d) - 1, so that R(S) = 0.9. */
-export const FACTOR: number = pow(0.9, -1 / DECAY) - 1;
+/** R never leaves [FLOOR, KEPT + FLOOR]. */
+const KEPT = 0.99998;
+const FLOOR = 0.00001;
+/** ts-fsrs caps the fast trace's scale exponent here. */
+const FAST_EXPONENT_CAP = 60;
 
-function checkStability(stabilityDays: number): void {
-  if (!Number.isFinite(stabilityDays) || stabilityDays <= 0) {
+const clamp = (x: number, low: number, high: number): number =>
+  Math.min(Math.max(x, low), high);
+
+function checkPositive(what: string, value: number): void {
+  if (!Number.isFinite(value) || value <= 0) {
     throw new RangeError(
-      `stability must be positive and finite, got ${String(stabilityDays)}`,
+      `${what} must be positive and finite, got ${String(value)}`,
+    );
+  }
+}
+
+function checkState(state: MemoryState): void {
+  checkPositive('stability', state.stability);
+  checkPositive('fast stability', state.stabilityFast);
+  if (!Number.isFinite(state.difficulty)) {
+    throw new RangeError(
+      `difficulty must be finite, got ${String(state.difficulty)}`,
     );
   }
 }
@@ -55,50 +100,146 @@ function checkElapsed(elapsedDays: number): void {
   }
 }
 
-/** R, `elapsedDays` after a review that left stability `stabilityDays`. */
+/** One power-law trace: R = (1 + scale t)^(-decay), mixed at `weight`. */
+interface Trace {
+  readonly decay: number;
+  readonly scale: number;
+  readonly weight: number;
+}
+
+function traces(state: MemoryState): readonly [Trace, Trace] {
+  const bounds = FSRS7_MODEL_BOUNDS;
+  const s = clamp(state.stability, bounds.sMin, bounds.sMax);
+  const sFast = clamp(
+    state.stabilityFast,
+    bounds.stabilityFastMin,
+    bounds.stabilityFastMax,
+  );
+  const d = clamp(state.difficulty, bounds.dMin, bounds.dMax);
+  const fastDecay = clamp(
+    weight(23) * pow(sFast, weight(33) - 0.3),
+    0.01,
+    0.95,
+  );
+  // w25^(-1/δ) - 1, as expm1 so it keeps its digits near zero.
+  const fastScale =
+    expm1(Math.min(-ln(weight(25)) / fastDecay, FAST_EXPONENT_CAP)) / sFast;
+  const slowDecay = clamp(weight(24), 0.01, 0.95);
+  const slowScale =
+    (expm1(-ln(weight(26)) / slowDecay) * exp((d - 5) * (weight(32) - 0.3))) /
+    s;
+  return [
+    {
+      decay: fastDecay,
+      scale: fastScale,
+      weight: weight(27) * pow(sFast, -weight(29)),
+    },
+    {
+      decay: slowDecay,
+      scale: slowScale,
+      weight:
+        weight(28) * pow(s, weight(30)) * exp((d - 5) * (weight(31) - 0.5)),
+    },
+  ];
+}
+
+function mix(state: MemoryState, each: (trace: Trace) => number): number {
+  const [fast, slow] = traces(state);
+  return (
+    ((fast.weight * each(fast) + slow.weight * each(slow)) /
+      (fast.weight + slow.weight)) *
+      KEPT +
+    FLOOR
+  );
+}
+
+/** One trace's R at `days`: (1 + c t)^(-δ), exact where c t is tiny. */
+function traceR({ decay, scale }: Trace, days: number): number {
+  return exp(-decay * log1p(scale * days));
+}
+
+/** R, `elapsedDays` after the review that left `state`. */
 export function retrievability(
-  stabilityDays: number,
+  state: MemoryState,
   elapsedDays: number,
 ): number {
-  checkStability(stabilityDays);
+  checkState(state);
   checkElapsed(elapsedDays);
-  // (1 + x)^(-d) as exp(-d log1p(x)): exact where x is tiny.
-  return exp(-DECAY * log1p((FACTOR * elapsedDays) / stabilityDays));
+  return mix(state, (trace) => traceR(trace, elapsedDays));
 }
 
 /**
  * The mean of R over [fromDays, fromDays + spanDays] after a review.
  *
- * From the review (from = 0) the integral is closed:
- * mean0(S, T) = S / (F (1 - d) T) x expm1((1 - d) log1p(F T / S)).
- * The expm1/log1p form keeps full precision on short spans, where
- * ((1 + x)^(1-d) - 1) loses it. A window that starts later is the same
- * curve shifted: 1 + F(a + u)/S = (1 + F a/S)(1 + F u/S') with
- * S' = S + F a, so mean(S, a, T) = R(S, a) x mean0(S', T). Taking the
- * difference of two integrals instead loses up to 0.58% (measured
- * 2026-10-02 at a = 100 years, T = 1 ms); this form's worst is 1.2e-15.
+ * Each trace's mean from the review is closed:
+ * mean0(c, T) = expm1((1 - δ) log1p(c T)) / (c (1 - δ) T).
+ * The expm1/log1p form keeps full precision on short spans. A window that
+ * starts later is the same trace shifted: 1 + c(a + u) = (1 + c a)(1 + c' u)
+ * with c' = c / (1 + c a), so mean(a, T) = R(a) x mean0(c', T). Taking the
+ * difference of two integrals instead loses up to 0.58% (measured under
+ * FSRS-6, 2026-10-02, at a = 100 years, T = 1 ms). The traces' means mix
+ * with the same weights as R, and the floor's mean is itself.
  */
 export function meanRetrievability(
-  stabilityDays: number,
+  state: MemoryState,
   fromDays: number,
   spanDays: number,
 ): number {
-  checkStability(stabilityDays);
+  checkState(state);
   checkElapsed(fromDays);
   if (!Number.isFinite(spanDays) || spanDays <= 0) {
     throw new RangeError(
       `span must be positive and finite, got ${String(spanDays)}`,
     );
   }
-  const shifted = stabilityDays + FACTOR * fromDays;
-  const kept = 1 - DECAY;
-  const fromStart =
-    (shifted / (FACTOR * kept * spanDays)) *
-    expm1(kept * log1p((FACTOR * spanDays) / shifted));
-  return retrievability(stabilityDays, fromDays) * fromStart;
+  return mix(state, (trace) => {
+    const shifted = trace.scale / (1 + trace.scale * fromDays);
+    const kept = 1 - trace.decay;
+    const fromStart =
+      expm1(kept * log1p(shifted * spanDays)) / (shifted * kept * spanDays);
+    return traceR(trace, fromDays) * fromStart;
+  });
 }
 
-const SCHEDULER = fsrs(PARAMETERS);
+/**
+ * The scheduler: ts-fsrs's FSRS-7 model with the seven middlewares its
+ * `DefaultScheduler` uses, built synchronously. Fuzz is off, so the same
+ * answers give the same schedule everywhere, and model override is off, so
+ * the short learning steps stay (Shyden, #874). Measured equal to
+ * `await DefaultScheduler({ enableFuzz: false, allowModelOverride: false })`
+ * over 15 reviews (ts-fsrs 6.0.0, 2026-11-05); review.test.ts checks it.
+ */
+const SCHEDULER = defineScheduler({ model: FSRS7Model, chrono: dateChrono })
+  .use(
+    schedulerDesiredRetentionMiddleware,
+    schedulerFuzzingMiddleware,
+    schedulerStatsMiddleware,
+    schedulerScheduledDaysMiddleware,
+    schedulerLearningStepsMiddleware,
+    schedulerMaximumIntervalMiddleware,
+    schedulerMonotonicIntervalMiddleware,
+  )
+  .create({
+    config: {
+      fractionalDays: true,
+      weights: [...WEIGHTS],
+      enableShortTerm: true,
+      desiredRetention: 0.9,
+      learningSteps: [...defaultLearningSteps],
+      relearningSteps: [...defaultRelearningSteps],
+      allowModelOverride: false,
+      enableFuzz: false,
+      maximumInterval: DEFAULT_MAXIMUM_INTERVAL,
+    },
+  });
+
+type SchedulerCard = ReturnType<typeof SCHEDULER.newCard>;
+
+/**
+ * ts-fsrs reads a card's id only to seed fuzz, which is off, so every word
+ * shares one id rather than storing it twice.
+ */
+const CARD_ID = 'word';
 
 /** Heard (new) to Mastered (parent §3.4). The index is the rank index. */
 export const RANKS: readonly Rank[] = [
@@ -113,15 +254,14 @@ export const RANKS: readonly Rank[] = [
  * A word's FSRS card as plain data: ts-fsrs's fields, with its dates as
  * integer wall-clock milliseconds so state stays serialisable.
  */
-export interface MemoryCard {
+export interface MemoryCard extends MemoryState {
   readonly due: number;
-  readonly stability: number;
-  readonly difficulty: number;
   readonly scheduledDays: number;
-  readonly learningSteps: number;
+  readonly learningStep: number;
   readonly reps: number;
   readonly lapses: number;
   readonly state: State;
+  readonly scheduleStatus: SchedulerCard['scheduleStatus'];
   /** Wall time of the last review; null until the first. */
   readonly lastReview: number | null;
 }
@@ -159,41 +299,37 @@ export function rankForStability(stabilityDays: number): Rank {
   return rankAt(index);
 }
 
-function fromCard(card: Card): MemoryCard {
+function fromCard(card: SchedulerCard): MemoryCard {
   return {
-    due: card.due.getTime(),
+    due: card.dueAt.getTime(),
     stability: card.stability,
+    stabilityFast: card.stabilityFast,
     difficulty: card.difficulty,
-    scheduledDays: card.scheduled_days,
-    learningSteps: card.learning_steps,
+    scheduledDays: card.scheduledDays,
+    learningStep: card.learningStep,
     reps: card.reps,
     lapses: card.lapses,
     state: card.state,
-    lastReview: card.last_review?.getTime() ?? null,
+    scheduleStatus: card.scheduleStatus,
+    lastReview: card.lastReviewAt?.getTime() ?? null,
   };
 }
 
-/**
- * ts-fsrs 5's `CardInput` still requires `elapsed_days`, deprecated and
- * unread: it recomputes it from last_review and the review time, copies the
- * input only into its log, and drops it in 6.0. Spread from here, so no code
- * of ours names the deprecated field (typescript-eslint 8.72's
- * no-deprecated, #871); the 6.0 upgrade removes it.
- */
-const UNREAD_BY_TS_FSRS: { elapsed_days: number } = { elapsed_days: 0 };
-
-function toCard(card: MemoryCard): CardInput {
+/** The ts-fsrs card a word's memory stands for. */
+export function toCard(card: MemoryCard): SchedulerCard {
   return {
-    ...UNREAD_BY_TS_FSRS,
-    due: card.due,
+    cardId: CARD_ID,
+    dueAt: new Date(card.due),
     stability: card.stability,
+    stabilityFast: card.stabilityFast,
     difficulty: card.difficulty,
-    scheduled_days: card.scheduledDays,
-    learning_steps: card.learningSteps,
+    scheduledDays: card.scheduledDays,
+    learningStep: card.learningStep,
     reps: card.reps,
     lapses: card.lapses,
     state: card.state,
-    last_review: card.lastReview,
+    scheduleStatus: card.scheduleStatus,
+    lastReviewAt: card.lastReview === null ? null : new Date(card.lastReview),
   };
 }
 
@@ -207,12 +343,14 @@ export function newWordMemory(wall: WallMs, due: WallMs = wall): WordMemory {
     card: {
       due,
       stability: 0,
+      stabilityFast: 0,
       difficulty: 0,
       scheduledDays: 0,
-      learningSteps: 0,
+      learningStep: 0,
       reps: 0,
       lapses: 0,
       state: State.New,
+      scheduleStatus: 'new',
       lastReview: null,
     },
   };
@@ -220,9 +358,9 @@ export function newWordMemory(wall: WallMs, due: WallMs = wall): WordMemory {
 
 /** R at wall time `wall`; 0 for a word never reviewed, as ts-fsrs gives. */
 export function wordRetrievability(word: WordMemory, wall: WallMs): number {
-  const { lastReview, stability } = word.card;
+  const { lastReview } = word.card;
   if (lastReview === null) return 0;
-  return retrievability(stability, (wall - lastReview) / DAY_MS);
+  return retrievability(word.card, (wall - lastReview) / DAY_MS);
 }
 
 /** Whether the word may be reviewed for score at `wall`. */
@@ -237,11 +375,11 @@ export function review(
   correct: boolean,
 ): WordMemory {
   const card = fromCard(
-    SCHEDULER.next(
-      toCard(word.card),
-      wall,
-      correct ? Rating.Good : Rating.Again,
-    ).card,
+    SCHEDULER.review({
+      card: toCard(word.card),
+      grade: correct ? Rating.Good : Rating.Again,
+      now: new Date(wall),
+    }).card,
   );
   const before = rankIndex(word.rank);
   const after = correct
