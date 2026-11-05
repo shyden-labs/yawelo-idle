@@ -1,7 +1,7 @@
 # Handover: Yawelo Idle
 
 **Written:** 2026-11-05 (forty-fifth session). **Phones:** Shyden says USB devices are available (via a peer session, 2026-11-05); no ticket in hand needs them.
-**Running when written:** nothing of ours. A queued local red run of #874's memory tests (behind a shyden.co.uk heavy run on the test lock) is DEAD at /clear; re-run it (step 0).
+**Running when written:** nothing.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session (forty-fifth)
@@ -12,7 +12,7 @@
 
 ## Resume steps
 
-0. **#874** in worktree `../yawelo-idle-874` (branch `deps/874-ts-fsrs-6`, fast-forwarded to `5d40b72e`, all uncommitted, not pushed, board not yet In Progress). AC 3's tests are written but NOT yet seen red: `packages/core/test/{fsrs-reference,mean-r-reference,memory.test,memory-laws}.ts` and `packages/core/properties/memory.test.ts`. The decimal reference agrees with ts-fsrs `curve` to 6.4e-16 (`.superpowers/sdd/874/refcheck.ts`). Run red: `npx vitest run packages/core/test/memory.test.ts` (expect missing `WEIGHTS`/`MemoryState`). Then write `memory.ts`: `MemoryState {stability, stabilityFast, difficulty}`, `retrievability(state, days)` and `meanRetrievability(state, from, span)`, closed form per power-law trace, weighted, x0.99998 + 1e-5, with ts-fsrs's clamps. Then AC 2 (scheduler), 4, 6, 7, 8, 9. Strict TDD. Probes, rank/pacing measurements and the 6.0.0 changelog (for AC 1) are in `.superpowers/sdd/874/`.
+0. **#874** in worktree `../yawelo-idle-874` (branch `deps/874-ts-fsrs-6`, fast-forwarded to `5d40b72e`, all uncommitted, not pushed, board not yet In Progress). AC 3's tests are written and seen red (322 failed: no `WEIGHTS`, old stability-only API; output not kept): `packages/core/test/{fsrs-reference,mean-r-reference,memory.test,memory-laws}.ts` and `packages/core/properties/memory.test.ts`. The decimal reference agrees with ts-fsrs `curve` to 6.4e-16 (`.superpowers/sdd/874/refcheck.ts`). Next, write `memory.ts`: `MemoryState {stability, stabilityFast, difficulty}`, `retrievability(state, days)` and `meanRetrievability(state, from, span)`, closed form per power-law trace, weighted, x0.99998 + 1e-5, with ts-fsrs's clamps. Then AC 2 (scheduler), 4, 6, 7, 8, 9. Strict TDD. Probes, rank/pacing measurements and the 6.0.0 changelog (for AC 1) are in `.superpowers/sdd/874/`.
 1. #783 (P0) has nothing to do until the next release cut.
 2. Then `board-next`.
 
