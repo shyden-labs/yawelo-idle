@@ -6,8 +6,10 @@
 ## Found in the crash check (2026-11-06)
 
 - **#402 was mid-flight:** commit `794b999b` on `ci/402-ubuntu-26-04` (worktree `../yawelo-idle-402`) is pushed, but **no PR was opened** and the board does not show #402 In Progress. The PR body is drafted in `../yawelo-idle-402/.superpowers/sdd/402/pr.md`. Before opening it: re-read the drafts and check the unit run evidence there.
-- **Old unpushed commits:** `tooling/728-coverage-check` (worktree `728b`, PR #745) and `tooling/762-native-coverage` (worktree `761`, PR #767) are each 10 commits ahead of origin, dated 10-24 and 10-30, from before the crash. Not pushed: pushing would restart CI on old PRs. Keep both branches when their worktrees are removed. Ask Shyden whether to push or drop them.
-  **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`; it now has `node_modules`). Node: `~/.local/share/node/current/bin`.
+- **Old unpushed commits:** `tooling/728-coverage-check` (worktree `728b`, PR #745) and `tooling/762-native-coverage` (worktree `761`, PR #767) are each 10 commits ahead of origin, dated 10-24 and 10-30, from before the crash. Reviewed at Shyden's request: **stale**. Both tickets were closed as not planned on 10-30 (the "keep it simple" cut; the machinery was removed in #795). Not pushed. The branches are kept as backups. **Closing PRs #745 and #767 was refused by the auto-mode classifier**, so Shyden closes them (or allows it).
+- **#874 mastery re-measured on `0da61b07`** (`../yawelo-idle-874/.superpowers/sdd/874/runs/rankcore-f7-0da61b07.txt`): still the 4th Good answer on day 52.72; only trailing digits moved. The AC 9 sweep was already re-run on that head and is unchanged. A PR comment saying so was refused by the classifier; its text is in the session scratchpad and can be re-posted from the line above.
+
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`; it now has `node_modules`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session (forty-sixth)
 
@@ -23,7 +25,7 @@
 
 ## Waiting on Shyden
 
-- **#874, re-confirm the ranks ruling.** The ruling cited "Mastered after 3 answers", from a probe with model override on. With the short steps he chose, mastery takes the 4th Good answer on **day 52.7** (FSRS-6: day 13.0). Tables are in PR #886 under AC 5.
+- **#874, re-confirm the ranks ruling.** The ruling cited "Mastered after 3 answers", from a probe with model override on. With the short steps he chose, mastery takes the 4th Good answer on **day 52.7** (FSRS-6: day 13.0), re-measured on head `0da61b07`. Tables are in PR #886 under AC 5.
 - **#874 AC 9: pacing outside the tuning targets** (CI bounds still hold). The Casual Learner's gap to destination 11 is 2.866 d (target ≤ 2.8). The Clicker's share is 95.0–96.6% at destinations 6, 7, 9 and 10 (target ≥ 97%; CI floor 95%). Both sweep tables are in the PR.
 - **Old worktrees: approved, but `git worktree remove` was refused by the auto-mode classifier.** He can run it himself (none hold uncommitted work; the probe's files are stashed as `stash@{0}` "backup 2026-11-05: 728-probe…"):
   `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871; do git worktree remove ../yawelo-idle-$w; done`
