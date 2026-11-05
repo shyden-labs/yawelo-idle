@@ -1,25 +1,19 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-05 (forty-third session). **Phones:** Shyden says USB devices are available (via a peer session, 2026-11-05); no ticket in hand needs them.
-**Running when written:** nothing.
+**Written:** 2026-11-05 (forty-fourth session). **Phones:** Shyden says USB devices are available (via a peer session, 2026-11-05); no ticket in hand needs them.
+**Running when written:** CI on PR #885 (external).
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session (forty-third)
+## Done this session (forty-fourth)
 
-- **#884 shut.** All 300 open issues searched (terms on the #884 comment); 98 edited and read back identical; no three-browser wording is left on any open issue. #155, #176, #244, #261, #269, #326 and #632 were re-scoped to "every supported target (#883's list)", and #632 and #326 retitled. Estimates #171, #269 and #294 went from 3 to 5 (scope grew).
+- **#883 in PR #885** (branch `test/883-every-target`, worktree `../yawelo-idle-883`, head `0ed2f240`, pushed; board In Progress). Every Playwright config now runs `tests/browser-targets.ts`: desktop Chrome, Firefox and Safari, plus Pixel 7 and iPhone 14 (touch). The design spec §12 lists them. Also added: the `tests/target-totals-reporter.ts` totals reporter, the no-skip guard (`tests/guards/no-skipped-browser-tests.test.ts`, reader `tests/unit/left-out.ts`), and `tests/press.ts` (tap on touch, click otherwise), used by the site suite's clicks. Each test ran red first; 7 mutants were all killed. Local unit 13,071 passed, lint and typecheck clean.
 
 ## Resume steps
 
-0. **#883 (P0, 5 points) is next in work** (one suite on every browser and phone target, total printed per target, no-skip test). Every open story now says "every supported target (#883's list)", so #883's AC 1 (the list in the design spec, configs pinned to it) is what they all point at. Strict TDD: failing tests first. #632 (real phones) stays at P5 for M7.
-1. #783 (P0) has nothing to do until the next release cut. Then watch `release-cut` refuse a non-cut head.
-2. #874 is in worktree `../yawelo-idle-874`, branch `deps/874-ts-fsrs-6`, based on `fb4850bd`. It is uncommitted: only `ts-fsrs` 5.4.2 → 6.0.0 in `packages/core/package.json` and the lockfile. No production code is written yet. Strict TDD: write the failing tests first.
-   - With ts-fsrs 6: typecheck is clean, and lint has 9 no-deprecated errors (memory.ts 29, 101, 162, 185, 240; tests at 30, 101, 106).
-   - The probe at `.superpowers/sdd/874/probe.mjs` (git-ignored) showed `DefaultScheduler({version:'FSRS-6'})` equals the legacy scheduler over 12 reviews.
-   - FSRS-7's curve is in `node_modules/ts-fsrs/dist/models/fsrs-7.mjs` (`prepare_fast`, `prepare_curve`, `compute_curve`). It mixes two power-law traces, weighted, with difficulty, plus `*0.99998 + 1e-5`. So `meanRetrievability` (used by `production.ts:91`) keeps a closed form per trace.
-   - `DefaultScheduler` is async (top-level await in core); `defineScheduler` is sync. Decide which by measurement.
-   - AC 5 (rank thresholds) goes to Shyden before any change lands.
-   - Set the board to In Progress once the branch is pushed.
-3. Then a P2 with no blocker: #402, #497, #513 or #523.
+0. **Read PR #885's CI** (`~/.claude/scripts/pr-verdict.sh 885`; it can return while runs are still in progress, so re-run it). This is the first run on the phone targets. A phone failure is a real finding: fix it in the product or the test, never skip it (the global rule). Merge into develop once green, then watch deploy-dev's site suite (its first phone run) and shut the ticket by hand once it is verified on dev.
+1. #783 (P0) has nothing to do until the next release cut.
+2. #874 is in worktree `../yawelo-idle-874` (ts-fsrs 6, uncommitted, no production code yet). Notes are in the previous handover's step 2 (`git show c14cf031:HANDOVER.md`). Strict TDD.
+3. Then `board-next`.
 
 ## Waiting on Shyden
 
@@ -35,7 +29,7 @@
 ## State
 
 - The main checkout is on `handover/2026-10-17-d` (handover commits only).
-- Worktrees: `-874` (in work), `-dev-scripts`. These are merged and can be removed: `-863`, `-873`, `-591`, `-871`. Older ones are kept until Shyden says: `-36`, `-728b`, `-761`, `-752`, `-794`, `-728-probe`.
+- Worktrees: `-883` and `-874` (in work), `-dev-scripts`. These are merged and can be removed: `-863`, `-873`, `-591`, `-871`. Older ones are kept until Shyden says: `-36`, `-728b`, `-761`, `-752`, `-794`, `-728-probe`.
 - Kept local branches: nine `backup/*`, and `tooling/785-nvmrc-exact` `-b`, `-c` and `-d`.
 
 ## Progress (board, measured 2026-11-05)
