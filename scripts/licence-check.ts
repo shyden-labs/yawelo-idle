@@ -41,15 +41,54 @@ const ALLOWED: Readonly<Record<Tier, ReadonlySet<string>>> = {
   build: new Set([...PERMISSIVE, ...WEAK_COPYLEFT]),
 };
 
+const IDENTIFIER = /^[A-Za-z0-9.+-]+$/;
+const OPERATORS = new Set(['AND', 'OR', 'WITH']);
+
 /**
- * The SPDX expressions this check reads: licence identifiers joined by AND
- * and OR, with AND binding tighter. Brackets, WITH exceptions and anything
- * else are refused as unreadable rather than guessed at.
+ * Whether an SPDX expression is satisfied by the allowed licences. It reads
+ * identifiers joined by AND and OR, with brackets; AND binds tighter than OR.
+ * An OR needs one allowed branch, an AND needs every part. Anything else (a
+ * WITH exception, a slash, a lowercase operator, an unbalanced bracket)
+ * throws, so it is refused as unreadable rather than guessed at.
  */
-const IDENTIFIER = String.raw`(?!(?:AND|OR|WITH)\b)[A-Za-z0-9.+-]+`;
-const READABLE = new RegExp(
-  String.raw`^${IDENTIFIER}(?: (?:AND|OR) ${IDENTIFIER})*$`,
-);
+function satisfied(license: string, allowed: ReadonlySet<string>): boolean {
+  const tokens = license.match(/\(|\)|[^\s()]+/g) ?? [];
+  let at = 0;
+  const unreadable = (): never => {
+    throw new Error('unreadable');
+  };
+
+  const atom = (): boolean => {
+    const token = tokens[at];
+    at += 1;
+    if (token === '(') {
+      const inner = either();
+      if (tokens[at] !== ')') unreadable();
+      at += 1;
+      return inner;
+    }
+    if (token === undefined || !IDENTIFIER.test(token) || OPERATORS.has(token))
+      return unreadable();
+    return allowed.has(token);
+  };
+
+  // Every part is read, never cut short, so a malformed later part still
+  // makes the whole expression unreadable.
+  const join = (word: string, part: () => boolean, all: boolean) => {
+    const results = [part()];
+    while (tokens[at] === word) {
+      at += 1;
+      results.push(part());
+    }
+    return all ? results.every(Boolean) : results.some(Boolean);
+  };
+  const both = () => join('AND', atom, true);
+  const either = (): boolean => join('OR', both, false);
+
+  const result = either();
+  if (at !== tokens.length) unreadable();
+  return result;
+}
 
 /** Why a package's licence is refused, or undefined when it is allowed. */
 export function judge(
@@ -58,11 +97,13 @@ export function judge(
 ): string | undefined {
   if (license === undefined || license.trim() === '')
     return 'it has no licence';
-  if (!READABLE.test(license)) return `cannot read licence "${license}"`;
-  const allowed = ALLOWED[tier];
-  const branchPasses = (branch: string) =>
-    branch.split(' AND ').every((part) => allowed.has(part));
-  if (license.split(' OR ').some(branchPasses)) return undefined;
+  let passes: boolean;
+  try {
+    passes = satisfied(license, ALLOWED[tier]);
+  } catch {
+    return `cannot read licence "${license}"`;
+  }
+  if (passes) return undefined;
   return tier === 'shipped'
     ? 'it ships to players, so it must be permissive'
     : 'not permissive or weak copyleft';

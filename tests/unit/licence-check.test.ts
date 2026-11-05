@@ -116,10 +116,42 @@ describe('judge', () => {
     );
   });
 
-  it('refuses an expression it cannot read: brackets', () => {
-    expect(judge('(MIT OR ISC) AND BSD-2-Clause', 'build')).toBe(
-      'cannot read licence "(MIT OR ISC) AND BSD-2-Clause"',
+  it('passes a bracketed choice of allowed licences, as npm often writes it', () => {
+    expect(judge('(MIT OR Apache-2.0)', 'shipped')).toBeUndefined();
+  });
+
+  it('reads brackets before AND', () => {
+    expect(judge('(MIT OR GPL-3.0-only) AND BSD-2-Clause', 'shipped')).toBe(
+      undefined,
     );
+  });
+
+  it('refuses a bracket whose every branch is disallowed', () => {
+    expect(judge('(GPL-2.0-only OR SSPL-1.0) AND MIT', 'build')).toBe(
+      'not permissive or weak copyleft',
+    );
+  });
+
+  it('reads nested brackets', () => {
+    expect(
+      judge('((GPL-3.0-only OR MIT) AND (ISC OR AGPL-3.0-only))', 'shipped'),
+    ).toBeUndefined();
+  });
+
+  it('refuses an expression it cannot read: a bracket left open', () => {
+    expect(judge('(MIT OR ISC', 'build')).toBe(
+      'cannot read licence "(MIT OR ISC"',
+    );
+  });
+
+  it('refuses an expression it cannot read: a stray closing bracket', () => {
+    expect(judge('MIT) OR (ISC', 'build')).toBe(
+      'cannot read licence "MIT) OR (ISC"',
+    );
+  });
+
+  it('refuses an expression it cannot read: empty brackets', () => {
+    expect(judge('() OR MIT', 'build')).toBe('cannot read licence "() OR MIT"');
   });
 
   it('refuses an expression it cannot read: a WITH exception', () => {
