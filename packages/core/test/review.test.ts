@@ -102,12 +102,13 @@ describe('a review (AC5)', () => {
       const w = word('recalled', 8);
       // The reference gets the true elapsed_days (8); core passes 0 because
       // ts-fsrs recomputes it, so equal results also show it is unread.
+      const trueElapsed: { elapsed_days: number } = { elapsed_days: 8 };
       const want = scheduler.next(
         {
+          ...trueElapsed,
           due: w.card.due,
           stability: w.card.stability,
           difficulty: w.card.difficulty,
-          elapsed_days: 8,
           scheduled_days: w.card.scheduledDays,
           learning_steps: w.card.learningSteps,
           reps: w.card.reps,
