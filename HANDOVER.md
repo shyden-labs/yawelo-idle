@@ -6,14 +6,14 @@
 
 ## Done this session (thirty-ninth, 2026-11-05)
 
-- **#875:** PR #876 merged (squash `676e25b8`). Its dev deploy was running when this was written; once it passes, shut #875 by hand.
-- #872 and #870 were moved onto `676e25b8` with `update-branch`, and both are green on their new heads (`cf2565be`, `edbd223f`). #872's body no longer claims an edit starts a run.
+- **#875 closed:** PR #876 merged (squash `676e25b8`). Deploy run 41938848585 was green through dev-verified.
+- **#872 merged** (squash `a6861970`, #871). #870 was moved onto it with `update-branch`; its CI was running when this was written.
 - deploy-dev on `5c9db5e7` (#778's merge) was red. The cause was the stuck #873 card, which was fixed last session, so nothing new is wrong.
-- **#464 licence check, PR #878** (branch `feat/464-licence-check`, worktree `../yawelo-idle-464`, head `3690cabe`). `npm run licences` judges all 805 packages and refuses none. The shipped tier comes from npm's `dev` flag, and the notices gain `swagger-ui-dist`, `@scarf/scarf` and `zod`. The ACs were trimmed under the cut list (reasons on #464). The ticket is In Progress.
+- **#464 licence check, PR #878** (branch `feat/464-licence-check`, worktree `../yawelo-idle-464`, head `3690cabe`). `npm run licences` judges all 805 packages and refuses none. The shipped tier comes from npm's `dev` flag, and the notices gain `swagger-ui-dist`, `@scarf/scarf` and `zod`. The ACs were trimmed under the cut list (reasons on #464). The ticket is In Progress. The code was first written before its tests. After Shyden's 2026-11-05 "it matters for every ticket always", it was rebuilt red→green; the evidence is in a comment on #878, and the global TDD rule now says so.
 
 ## In flight
 
-1. Merge #872 (P0, #871) once the `676e25b8` deploy finishes, then `gh pr update-branch 870` and merge #870 when it is green (#591). Check dev-verified, and shut #871 and #591 by hand.
+1. Check the dev deploy for `a6861970` (dev-verified), then shut #871 by hand. Merge #870 when it is green on its head, check dev, and shut #591.
 2. #878: merge when green, check dev, shut #464.
 3. Then #874 (ts-fsrs 6), which builds on #872's `UNREAD_BY_TS_FSRS`.
 4. A develop worktree for board scripts: `../yawelo-idle-dev-scripts` (detached at origin/develop; `git -C ../yawelo-idle-dev-scripts checkout --detach origin/develop` after a fetch).
