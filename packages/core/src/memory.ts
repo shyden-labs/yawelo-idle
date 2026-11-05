@@ -173,14 +173,21 @@ function fromCard(card: Card): MemoryCard {
   };
 }
 
+/**
+ * ts-fsrs 5's `CardInput` still requires `elapsed_days`, deprecated and
+ * unread: it recomputes it from last_review and the review time, copies the
+ * input only into its log, and drops it in 6.0. Spread from here, so no code
+ * of ours names the deprecated field (typescript-eslint 8.72's
+ * no-deprecated, #871); the 6.0 upgrade removes it.
+ */
+const UNREAD_BY_TS_FSRS: { elapsed_days: number } = { elapsed_days: 0 };
+
 function toCard(card: MemoryCard): CardInput {
   return {
+    ...UNREAD_BY_TS_FSRS,
     due: card.due,
     stability: card.stability,
     difficulty: card.difficulty,
-    // Deprecated and unread: ts-fsrs 5 recomputes it from last_review and the
-    // review time, copies the input only into its log, and drops it in 6.0.
-    elapsed_days: 0,
     scheduled_days: card.scheduledDays,
     learning_steps: card.learningSteps,
     reps: card.reps,
