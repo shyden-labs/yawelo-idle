@@ -1,24 +1,19 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-05 (fortieth session). Shyden AFK until about 12:30 local. **Phones: not authorised; no device work.**
-**Running when written:** CI on PR #880 (head `9270463f`) and PR #881 (head `fbd6cdb6`). Read with `~/.claude/scripts/pr-verdict.sh 880` and `~/.claude/scripts/pr-verdict.sh 881`.
+**Written:** 2026-11-05 (forty-first session). Shyden AFK. **Phones: not authorised; no device work.**
+**Running when written (all outside waits; nothing local):** dev deploy run 41975689132 for `21bc77b7` (#880's merge), CI on PR #881 (head `fbd6cdb6`) and on PR #882 (head `eb8e4b31`). Read them with `gh run view 41975689132 --repo shyden-labs/yawelo-idle --json jobs`, `~/.claude/scripts/pr-verdict.sh 881` and `~/.claude/scripts/pr-verdict.sh 882`.
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session (fortieth)
+## Done this session (forty-first)
 
-- **#591 closed:** deploy run 41943602578 for `692ceb2a` (#870) was green on every job, dev-verified included.
-- **PR #880 (#464):** CI's integration suite was red: `scripts/licence-check.ts` was missing from `tests/integration/script-loads.test.ts`. The fix is commit `9270463f`, which also merges develop in. Unit suite: 13,016 passed. Pushed.
-- **Shyden's rulings (2026-11-05), recorded on each issue:**
-  - #873: route (c), an exception with a reason and an expiry date.
-  - #863: route (a), leave the harness test files out of the coverage figure.
-  - #783: check it at the next release cut, not with a test PR now.
-- **#873 is in PR #881** (branch `fix/873-audit-exception`, worktree `../yawelo-idle-873`). It adds `scripts/npm-audit.ts`, which checks `npm audit --json` against `EXCEPTIONS`. One exception is recorded: GHSA-gcqx-w48m-w2h4, expiring 2027-01-04. Built test-first with twelve unit tests; the mutation pass caught all five mutants. Unit suite: 12,993 passed. The board shows In Progress.
+- **PR #880 (#464) merged** into develop as `21bc77b7` (squash, after every check passed on `9270463f`). Its dev deploy was still running when this was written. #464 is still open.
+- **#863 is in PR #882** (branch `fix/863-harness-coverage`, worktree `../yawelo-idle-863`). `COVERAGE_EXCLUDE` gains `apps/*/test/**`. Seven new tests were seen red first (4 failed). The one-time mutation pass caught both mutants (`apps/**` and `**/test/**`). Unit suite: 13,023 passed. The board shows In Progress.
 
 ## Resume steps
 
-1. When PR #880 is green on `9270463f`, merge it into develop (squash), check that dev deploys, then close #464 by hand. After that, remove the `../yawelo-idle-464` worktree (it belongs to closed PR #878).
-2. When PR #881 is green, merge it, check dev, then close #873 by hand. That leaves #720 blocked only by #710. #720's audit step should run `node scripts/npm-audit.ts`.
-3. #863 route (a): coverage leaves out `apps/*/test/**` and `apps/sync-worker/test/**`. Write a test for each pattern, seen red first. Measure the new figure on a PR.
+1. When deploy run 41975689132 is green on every job (dev-verified included), shut issue 464 by hand. Then remove the `../yawelo-idle-464` and `../yawelo-idle-464b` worktrees (check for running jobs first). If the deploy is red, tell Shyden that turn.
+2. When PR #881 is green, merge it (squash, `--match-head-commit` from a file), check dev, then shut issue 873 by hand. That leaves #720 blocked only by #710. #720's audit step should run `node scripts/npm-audit.ts`.
+3. When PR #882 is green, read the new overall figure from its `coverage` job and quote it on #863. Then merge, check dev and shut issue 863 by hand.
 4. #783: there is nothing to do until the next release cut. Then watch `release-cut` refuse a non-cut head.
 5. Then a P2 with no blocker: #874 (ts-fsrs 6), #402, #497, #513 or #523.
 
@@ -36,7 +31,7 @@
 ## State
 
 - The main checkout is on `handover/2026-10-17-d` (handover commits only).
-- Worktrees: `-873` (PR #881), `-464b` (PR #880), `-464` (closed PR #878), `-591` and `-871` (both merged; can be removed), `-dev-scripts`. Older ones are kept until Shyden says: `-36`, `-728b`, `-761`, `-752`, `-794`, `-728-probe`.
+- Worktrees: `-863` (PR #882), `-873` (PR #881), `-464b` (PR #880, merged), `-464` (closed PR #878), `-591` and `-871` (both merged; can be removed), `-dev-scripts`. Older ones are kept until Shyden says: `-36`, `-728b`, `-761`, `-752`, `-794`, `-728-probe`.
 - Kept local branches: nine `backup/*`, and `tooling/785-nvmrc-exact` `-b`, `-c` and `-d`.
 
 ## Progress (board, measured 2026-11-05)
