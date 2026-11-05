@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
+import { matchesGlob } from 'node:path';
 import unit from '../../vitest.config.ts';
 import guards from '../../vitest.guards.config.ts';
 import pacing from '../../vitest.pacing.config.ts';
@@ -175,13 +176,52 @@ describe('only the unit suite compiles Svelte under coverage (#798, #806)', () =
     });
 });
 
-describe('the provider excludes only what is not ours (#728)', () => {
-  it('dependencies, build output and the coverage reports themselves', () => {
+describe('the provider excludes only what is not ours (#728, #863)', () => {
+  it('dependencies, build output, the coverage reports and the harness test files', () => {
     expect(COVERAGE_EXCLUDE).toEqual([
       '**/node_modules/**',
       '**/dist/**',
       '**/.build/**',
       'coverage/**',
+      'apps/*/test/**',
     ]);
+  });
+});
+
+const excluded = (file: string): boolean =>
+  COVERAGE_EXCLUDE.some((pattern) => matchesGlob(file, pattern));
+
+/**
+ * The Worker harness suites run inside workerd, which no coverage suite
+ * measures, so their test files would count as untested code (#863, route
+ * (a), Shyden 2026-11-05). The Workers' own source still counts.
+ */
+describe('harness test files leave the figure; Worker source stays (#863)', () => {
+  it('apps/site/test is left out', () => {
+    expect(excluded('apps/site/test/roadmap/harness.ts')).toBe(true);
+  });
+
+  it('apps/web/test is left out', () => {
+    expect(excluded('apps/web/test/game.test.ts')).toBe(true);
+  });
+
+  it('apps/sync-worker/test is left out', () => {
+    expect(excluded('apps/sync-worker/test/injected-worker.ts')).toBe(true);
+  });
+
+  it('apps/site/worker still counts', () => {
+    expect(excluded('apps/site/worker/index.ts')).toBe(false);
+  });
+
+  it('apps/web/worker still counts', () => {
+    expect(excluded('apps/web/worker/index.ts')).toBe(false);
+  });
+
+  it('apps/sync-worker/src still counts', () => {
+    expect(excluded('apps/sync-worker/src/index.ts')).toBe(false);
+  });
+
+  it('a package test helper still counts', () => {
+    expect(excluded('packages/core/test/clock-laws.ts')).toBe(false);
   });
 });

@@ -28,16 +28,21 @@ export const coverageConfigFile = (name: string): string =>
   `vitest.coverage.${name}.config.ts`;
 
 /**
- * What the provider leaves out: dependencies, build output and the reports
- * themselves. Nothing else, since tests and tool configs are code (global
- * ruling 2026-10-22), and Vitest's own hard-coded excludes would drop them
- * (scripts/coverage-provider.ts).
+ * What the provider leaves out: dependencies, build output, the reports
+ * themselves, and the Worker harness suites' test files. Tests and tool
+ * configs are otherwise code (global ruling 2026-10-22), and Vitest's own
+ * hard-coded excludes would drop them (scripts/coverage-provider.ts). The
+ * harness suites (`apps/*\/vitest.harness.config.ts`) run inside workerd,
+ * which no coverage suite measures, so their test files could only ever
+ * count as untested (#863, route (a), Shyden 2026-11-05). `apps/*\/test/**`
+ * covers `apps/sync-worker/test/**` too; the Workers' own source stays in.
  */
 export const COVERAGE_EXCLUDE: readonly string[] = [
   '**/node_modules/**',
   '**/dist/**',
   '**/.build/**',
   'coverage/**',
+  'apps/*/test/**',
 ];
 
 /**
