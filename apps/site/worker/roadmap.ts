@@ -346,6 +346,10 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
         // GitHub judges the JWT by the wall clock, never by `now()`.
         Math.floor(Date.now() / 1000),
       );
+      // Taken before the reads, by the wall clock GitHub stamps createdAt
+      // with, never by `now()`: an issue filed after it can show on one side
+      // only, and the cross-check leaves it out (#877).
+      const readStartedAt = new Date();
       // Both lists at once (#850); the checks run once both are in.
       const { board: pages, issues } = await readBoardAndIssues(
         token,
@@ -356,7 +360,13 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       assertBoard(pages, env.ROADMAP_BOARD_TITLE);
       // The listing's own count shrinks with it, so a short read is caught
       // against the repository's issues, from a second surface (#751).
-      assertNamedByRepo(pages, issues, env.ROADMAP_BOARD_ID, env.ROADMAP_REPO);
+      assertNamedByRepo(
+        pages,
+        issues,
+        env.ROADMAP_BOARD_ID,
+        env.ROADMAP_REPO,
+        readStartedAt,
+      );
       const { items, dropped } = roadmapItems(pages, env.ROADMAP_REPO);
       const sorted = [...items].sort((a, b) => a.number - b.number);
       const hash = await sha256(JSON.stringify(sorted));

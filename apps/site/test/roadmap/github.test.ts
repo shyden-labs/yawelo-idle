@@ -368,6 +368,7 @@ describe('readRepoIssuePages (#751)', () => {
         pages,
         FIXTURE_BOARD_ID,
         FIXTURE_REPO,
+        new Date(),
       );
     }).not.toThrow();
   });

@@ -333,6 +333,9 @@ export function boardNext(
   const [id, title, repo = REPO] = args;
   if (id === undefined || title === undefined) throw new Error(USAGE);
   ownerAndName(repo);
+  // Before the board is read: an issue filed after it is left out of the
+  // cross-check (#877).
+  const readStartedAt = new Date();
   const out = gh([
     'api',
     'graphql',
@@ -345,7 +348,7 @@ export function boardNext(
   ]);
   const pages = JSON.parse(out) as unknown[];
   const items = parseNextItems(pages, title);
-  assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo);
+  assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo, readStartedAt);
   const notes = offBoardBlockers(items);
   const start = nextStart(items);
   if (start === null) return { line: 'Next: nothing is open.', notes };
