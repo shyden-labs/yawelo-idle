@@ -1,44 +1,37 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (forty-eighth session). **Running when written:** nothing local. PR #886's CI on head `3cc252da` may still be running (GitHub's). Written before a planned laptop restart: every worktree clean; unpushed only `728b` (10), `761` (10) and `752` (3 commits, 2026-10-24, its ticket closed as not planned), all stale backups kept on purpose and in the removal list below. **Phones:** none needed.
+**Written:** 2026-11-06 (forty-ninth session). **Running when written:** possibly GitHub's deploy-dev for develop `612d4469` (#886's merge) and CI on PR #889 after develop was merged into it. The session's local waiters die with `/clear`; re-read them as below. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session (forty-eighth)
+## Done this session (forty-ninth)
 
-- **PR #886 was red** on `0da61b07` (`build-and-test` Properties step and `coverage`): the properties suite's full golden-vector pins for `meanR` and `review` were still FSRS-6's; #874 had updated only the unit prefix pins. Computed on macOS: identical to CI's values, and the six det-math pins unchanged (control). Fixed in `3cc252da`, unit 13,630 green (`../yawelo-idle-874/.superpowers/sdd/874/runs/unit-3cc252da.txt`), pushed. PR shows `merge=BEHIND` develop.
-- **#402:** PR #887 was in fact opened and merged (`5aa1a942`, 2026-11-05 18:29 UTC). **Its dev deploy failed** (run 42084808174): `smoke` failed 1 of 20, `[webkit] shell.spec.ts:91` at `page.goto('/play/')`, "Connection reset by peer"; `dev-verified` skipped. It is the first connection reset in all 24 failed deploy-dev runs and came on the first 26.04 deploy. The cause can't be measured because the job keeps no evidence. Filed **#888** (P2, 2 pts, sibling of #864). Recorded on #402; AC 3 is unmet, so #402 stays open and is back to Todo (branch deleted, no PR).
+- **PR #886 (#874, FSRS-7) merged** as `612d4469` after every step passed on `fcc35c08`. The last red was the pacing suite's #297 AC3 catch-up pin: 428 → 410 purchases (probe: branch 410 on 3 fresh courses, develop 428 as control).
+- **Shyden's #874 rulings**, recorded on #874: mastery on the 4th Good answer around day 52.7 is right, no retune; AC 9 pacing misses accepted, retune filed as **#890** (P2, 5 pts, blocked by #874).
+- **#888:** PR #889 (smoke screenshots on failure, uploaded only when the suite step fails; no trace or video). Tests seen red 4/4, mutation turned 3 red. CI green on `d77e88ce`; the merge hook then wanted develop merged in (1 behind). #888 is In Progress.
 
 ## Resume steps
 
-0. **PR #886 CI:** run `~/.claude/scripts/pr-verdict.sh 886` in the background and read `build-and-test`, `coverage` and `board-orphans` by name on head `3cc252da`. Update the branch from develop if needed (merge, no force-push).
-1. **Merge only after Shyden answers both #874 questions below.** Then squash-merge into develop, verify dev, and shut the ticket by hand (`gh issue close`).
-2. **#402 AC 3:** read the next deploy-dev on develop (26.04) job by job. When every job passes, record it on #402 and shut it by hand.
-3. #783 (P0) has nothing to do until the next release cut. Every P1 waits on Shyden (#784 chain: #425, #426, #457, #759; #655 SonarCloud; #830 copy). Next P2 Todo by age: #497 (a daily check: ask its daily cost first), #513, then the rest. #888 and #864 are small siblings.
+1. **#874 close:** read deploy-dev for `612d4469` job by job (`gh run list -R shyden-labs/yawelo-idle --workflow deploy-dev.yml --commit 612d44695a627ff2e3501225d76179947b13c328`). If every job passed, record it on #874 and close it by hand (`gh issue close 874`), then #890 is unblocked.
+2. **#402 AC 3:** the same run is a 26.04 deploy. If every job passed, record it on #402 and close it by hand. If `smoke` fails again, that is #888's evidence case.
+3. **PR #889:** if its new head (develop merged in) has CI green step by step, squash-merge it (`--match-head-commit` from a file), read the next deploy-dev, then leave #888 open for AC 3 (14-day tally or the reset explained).
+4. Next by board: #783 (P0) waits for the release cut; every P1 waits on Shyden; next P2 Todo by age: #497 (a daily check: ask its daily cost first), #513, #864, #890 once #874 closes.
 
 ## Waiting on Shyden
 
-- **#874, re-confirm the ranks ruling.** The ruling cited "Mastered after 3 answers", from a probe with model override on. With the short steps he chose, mastery takes the 4th Good answer on **day 52.7** (FSRS-6: day 13.0), re-measured on head `0da61b07`. Tables are in PR #886 under AC 5.
-- **#874 AC 9: pacing outside the tuning targets** (CI bounds still hold). The Casual Learner's gap to destination 11 is 2.866 d (target ≤ 2.8). The Clicker's share is 95.0–96.6% at destinations 6, 7, 9 and 10 (target ≥ 97%; CI floor 95%). Both sweep tables are in the PR.
-- **Old worktrees: approved, but `git worktree remove` was refused by the auto-mode classifier.** He can run it himself (none hold uncommitted work; the probe's files are stashed as `stash@{0}` "backup 2026-11-05: 728-probe…"):
-  `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871; do git worktree remove ../yawelo-idle-$w; done`
-- **Test board 6 (`PVT_kwDOEOcG584BpujW`): approved, but the gh router acts as the App only on recorded boards.** He deletes it in GitHub: project 6 → Settings → Delete project.
-- #784 next steps (Gmail, Cloudflare, domains).
-- The ETA confidence rule.
-- Voyage map layout (#328/#331/#452).
-- #655: his SonarCloud project and a `SONAR_TOKEN`.
-- #858: where it goes.
-- #830: approving its copy.
-- Open PRs with no recent movement: #602 (waits on a Stryker runner release), #745, #767, and Dependabot #593, #594, #597, #750, #763, #764, #779 and #834.
+- **Old worktrees:** he can run: `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871; do git worktree remove ../yawelo-idle-$w; done` (none hold uncommitted work; the probe's files are `stash@{0}`).
+- **Test board 6 (`PVT_kwDOEOcG584BpujW`):** he deletes it in GitHub (project 6 → Settings → Delete project).
+- #784 next steps (Gmail, Cloudflare, domains); the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud project and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
+- Open PRs with no recent movement: #602 (Stryker runner release), #745, #767, Dependabot #593, #594, #597, #750, #763, #764, #779, #834.
 
 ## State
 
-- The main checkout is on `handover/2026-10-17-d` (handover commits only).
-- Worktrees: `-874` (PR #886), `-dev-scripts`, and the eleven above, waiting for removal.
+- Main checkout on `handover/2026-10-17-d` (handover commits only).
+- Worktrees: `-874` (merged, can be removed), `-888` (PR #889), `-dev-scripts`, and the eleven above.
 - Kept local branches: nine `backup/*`, and `tooling/785-nvmrc-exact` `-b`, `-c` and `-d`.
 
 ## Progress (board, measured 2026-11-06)
 
-- By tickets: 41% (184 of 450). Pace is 5.86 a day over the 7 finished days to 2026-11-05. ETA 2026-12-22, medium confidence (6 of 7 days moved).
-- By effort: 1,171 points remaining across 266 open stories. Pace is 16.71 a day. ETA 2027-01-16, medium confidence.
-- Both ETAs are before the outside waits: #784's login and device sign-off.
+- By tickets: 41% (184 of 451). Pace 5.86 a day over 7 days to 2026-11-05. ETA 2026-12-22, medium confidence (6 of 7 days moved).
+- By effort: 1,176 points remaining across 267 open stories. Pace 16.71 a day. ETA 2027-01-16, medium confidence.
+- Both before the outside waits: #784's login and device sign-off.
