@@ -84,12 +84,12 @@ function bucketBonuses(
   const skew = state.wall - state.sim;
   const factors = rootFactors(course, state);
   return sortedWords(state.words).map(([id, word]) => {
-    const { lastReview, stability } = word.card;
+    const { lastReview } = word.card;
     const meanR =
       lastReview === null
         ? 0
         : meanRetrievability(
-            stability,
+            word.card,
             (from + skew - lastReview) / DAY_MS,
             spanDays,
           );

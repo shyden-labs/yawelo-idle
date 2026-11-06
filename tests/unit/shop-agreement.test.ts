@@ -30,18 +30,19 @@ import {
  */
 
 /**
- * Judgements measured on #35's tuned golden log (2026-10-04), each floor the
+ * Judgements measured on the FSRS-7 golden log (#874, 2026-11-06; first
+ * #35's tuned log, 2026-10-04), each floor the
  * measured figure less one, which the count must exceed. Regenerating the
  * golden log moves them, deliberately.
  */
 const FLOORS: Readonly<Record<ShopKind, ShopCount>> = {
-  encounters: { accepted: 13337, refused: 4481 },
-  pickUp: { accepted: 976, refused: 1562 },
-  upgrades: { accepted: 325, refused: 50473 },
-  grammar: { accepted: 217, refused: 30261 },
-  journeys: { accepted: 1545, refused: 11153 },
-  pemandu: { accepted: 1447, refused: 8711 },
-  practice: { accepted: 2524, refused: 14 },
+  encounters: { accepted: 13354, refused: 4584 },
+  pickUp: { accepted: 1027, refused: 1537 },
+  upgrades: { accepted: 335, refused: 50983 },
+  grammar: { accepted: 237, refused: 30553 },
+  journeys: { accepted: 1565, refused: 11263 },
+  pemandu: { accepted: 1427, refused: 8835 },
+  practice: { accepted: 2550, refused: 14 },
 };
 
 /** The kinds `judgeShopAlong` judges, listed here so collection calls nothing (#97). */
