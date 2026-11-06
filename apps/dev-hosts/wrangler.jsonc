@@ -17,7 +17,7 @@
   // Nothing static: the Function answers every path. The deploy creates the
   // directory empty, because git keeps no empty directory.
   "pages_build_output_dir": "./public",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   "services": [
     { "binding": "SITE", "service": "yawelo-idle-site-dev" },
     { "binding": "SYNC", "service": "yawelo-idle-sync-dev" },

@@ -5,7 +5,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-site-roadmap-test",
   "main": "test/roadmap-worker/test-worker.ts",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   "workers_dev": true,
   "preview_urls": false,
   "assets": {

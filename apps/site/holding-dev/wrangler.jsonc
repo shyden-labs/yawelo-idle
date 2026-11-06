@@ -10,7 +10,7 @@
   // production; it holds nothing private, since it is what goes public.
   // Deployed by deploy-dev.yml.
   "name": "yawelo-idle-holding-dev",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   "workers_dev": false,
   "preview_urls": false,
   "assets": {

@@ -60,7 +60,7 @@ const server = createTestHarness({
     {
       config: {
         name: 'holding-copy',
-        compatibility_date: '2026-09-30',
+        compatibility_date: '2026-10-20',
         assets: { directory: './dist-holding', not_found_handling: '404-page' },
       },
     },

@@ -4,7 +4,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-sync-dev",
   "main": "src/index.ts",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   // The sync API, in the "Shyden Labs Dev" account, which holds dev only
   // (#395): no dev credential may reach the production account that holds
   // the shyden.co.uk zone, so dev has no Custom Domain. It is served at
