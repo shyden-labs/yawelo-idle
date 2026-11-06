@@ -1,27 +1,20 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (forty-sixth session, overnight while Shyden slept). **Updated 2026-11-06 after the Mac went down unexpectedly** (forty-seventh session): all 16 worktrees clean, no locks, nothing lost. **Phones:** none needed by the ticket in hand.
-**Running when written:** nothing local. PR #886's head is now `0da61b07` ("FSRS-7 intervals kept to the whole minute", pushed after the first handover); its CI is GitHub's (external).
+**Written:** 2026-11-06 (forty-eighth session). **Running when written:** nothing local. PR #886's CI on head `3cc252da` is GitHub's (external). **Phones:** none needed.
 
-## Found in the crash check (2026-11-06)
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-- **#402 was mid-flight:** commit `794b999b` on `ci/402-ubuntu-26-04` (worktree `../yawelo-idle-402`) is pushed, but **no PR was opened** and the board does not show #402 In Progress. The PR body is drafted in `../yawelo-idle-402/.superpowers/sdd/402/pr.md`. Before opening it: re-read the drafts and check the unit run evidence there.
-- **Old unpushed commits:** `tooling/728-coverage-check` (worktree `728b`, PR #745) and `tooling/762-native-coverage` (worktree `761`, PR #767) are each 10 commits ahead of origin, dated 10-24 and 10-30, from before the crash. Reviewed at Shyden's request: **stale**. Both tickets were closed as not planned on 10-30 (the "keep it simple" cut; the machinery was removed in #795). Not pushed. The branches are kept as backups. PRs #745 and #767 were closed with Shyden's permission (2026-11-06).
-- **#874 mastery re-measured on `0da61b07`** (`../yawelo-idle-874/.superpowers/sdd/874/runs/rankcore-f7-0da61b07.txt`): still the 4th Good answer on day 52.72; only trailing digits moved. The AC 9 sweep was already re-run on that head and is unchanged. A PR comment saying so was refused by the classifier; its text is in the session scratchpad and can be re-posted from the line above.
+## Done this session (forty-eighth)
 
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`; it now has `node_modules`). Node: `~/.local/share/node/current/bin`.
-
-## Done this session (forty-sixth)
-
-- **#874 in PR #886** (branch `deps/874-ts-fsrs-6`, worktree `../yawelo-idle-874`, board In Progress). Its commit `e204077c` was merged with develop to make `effc2ba6`. ACs 1–8 are done, with measured evidence in the PR body: FSRS-7 curve and closed-form mean (worst 1.26e-15 against the 30-digit table), the synchronous FSRS-7 scheduler equal to `DefaultScheduler`, and the golden vectors, golden log and floors regenerated. Red first: 330 failed. Unit is 13,629 green, typecheck and lint clean. The one-time mutation pass ran. Runs and probes are in `../yawelo-idle-874/.superpowers/sdd/874/runs/`.
-- Shyden's go-ahead (asked at the start): delete the old worktrees and test board 6. **Both blocked**, see below.
+- **PR #886 was red** on `0da61b07` (`build-and-test` Properties step and `coverage`): the properties suite's full golden-vector pins for `meanR` and `review` were still FSRS-6's; #874 had updated only the unit prefix pins. Computed on macOS: identical to CI's values, and the six det-math pins unchanged (control). Fixed in `3cc252da`, unit 13,630 green (`../yawelo-idle-874/.superpowers/sdd/874/runs/unit-3cc252da.txt`), pushed. PR shows `merge=BEHIND` develop.
+- **#402:** PR #887 was in fact opened and merged (`5aa1a942`, 2026-11-05 18:29 UTC). **Its dev deploy failed** (run 42084808174): `smoke` failed 1 of 20, `[webkit] shell.spec.ts:91` at `page.goto('/play/')`, "Connection reset by peer"; `dev-verified` skipped. It is the first connection reset in all 24 failed deploy-dev runs and came on the first 26.04 deploy. The cause can't be measured because the job keeps no evidence. Filed **#888** (P2, 2 pts, sibling of #864). Recorded on #402; AC 3 is unmet, so #402 stays open and is back to Todo (branch deleted, no PR).
 
 ## Resume steps
 
-0. **PR #886 CI:** run `~/.claude/scripts/pr-verdict.sh 886` in the background; it returns early while checks run, so re-run it after CI ends. Read every required check by name on head `0da61b07` (`build-and-test`, `coverage`, `board-orphans`). If red, fix in the same branch. Floors may need the `record-floors` label (project CLAUDE.md).
-1. **Merge only after Shyden answers both #874 questions below** (AC 5 and AC 9 say so). Then squash-merge into develop, verify dev, and close #874 by hand.
-2. #783 (P0) has nothing to do until the next release cut.
-3. Then `board-next`.
+0. **PR #886 CI:** run `~/.claude/scripts/pr-verdict.sh 886` in the background and read `build-and-test`, `coverage` and `board-orphans` by name on head `3cc252da`. Update the branch from develop if needed (merge, no force-push).
+1. **Merge only after Shyden answers both #874 questions below.** Then squash-merge into develop, verify dev, and shut the ticket by hand (`gh issue close`).
+2. **#402 AC 3:** read the next deploy-dev on develop (26.04) job by job. When every job passes, record it on #402 and shut it by hand.
+3. #783 (P0) has nothing to do until the next release cut. Every P1 waits on Shyden (#784 chain: #425, #426, #457, #759; #655 SonarCloud; #830 copy). Next P2 Todo by age: #497 (a daily check: ask its daily cost first), #513, then the rest. #888 and #864 are small siblings.
 
 ## Waiting on Shyden
 
@@ -46,6 +39,6 @@
 
 ## Progress (board, measured 2026-11-06)
 
-- By tickets: 41% (184 of 449). Pace is 5.14 a day over the 7 finished days to 2026-11-04. ETA 2026-12-27, medium confidence (6 of 7 days moved).
-- By effort: 1,169 points remaining across 265 open stories. Pace is 14.00 a day. ETA 2027-01-28, medium confidence.
+- By tickets: 41% (184 of 450). Pace is 5.86 a day over the 7 finished days to 2026-11-05. ETA 2026-12-22, medium confidence (6 of 7 days moved).
+- By effort: 1,171 points remaining across 266 open stories. Pace is 16.71 a day. ETA 2027-01-16, medium confidence.
 - Both ETAs are before the outside waits: #784's login and device sign-off.
