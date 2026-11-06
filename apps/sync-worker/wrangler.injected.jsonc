@@ -6,7 +6,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-sync-injected",
   "main": "test/injected-worker.ts",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   "workers_dev": true,
   "preview_urls": false,
   "vars": {

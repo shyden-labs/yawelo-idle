@@ -14,7 +14,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-site-dev",
   "main": "worker/index.ts",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   // Deployed to the "Shyden Labs Dev" account, which holds dev only (#395),
   // with no Custom Domain: dev.yawelo-idle.shyden.co.uk reaches it through
   // the Pages adapter's SITE binding (apps/dev-hosts, #429). Its workers.dev
