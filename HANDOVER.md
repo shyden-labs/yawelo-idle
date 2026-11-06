@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (forty-ninth session). **Running when written:** possibly GitHub's deploy-dev for develop `8abd54f6` (#889's merge); this session's waiter dies with `/clear`, re-read it as below. **Phones:** none needed.
+**Written:** 2026-11-06 (forty-ninth session). **Running when written:** possibly GitHub's deploy-dev for develop `8abd54f6` (#889's merge); this session's waiter is DEAD (stopped for the laptop shutdown); re-read the run as in step 1. No Colima claim held. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
