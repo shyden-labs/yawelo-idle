@@ -82,7 +82,7 @@ export const GOLDEN = {
  * Vitest collects it (#97); the recorder refuses to write a log whose heavy
  * slices differ, and a unit test holds this list to the recorded one.
  */
-export const GOLDEN_HEAVY_SLICES: readonly number[] = [242, 265, 299, 377];
+export const GOLDEN_HEAVY_SLICES: readonly number[] = [242, 263, 295, 339, 379];
 
 /**
  * The slices that read no shop (#553): parts of an open between its
@@ -94,9 +94,9 @@ export const GOLDEN_HEAVY_SLICES: readonly number[] = [242, 265, 299, 377];
  */
 export const GOLDEN_SHOP_FREE_SLICES: readonly number[] = [
   1, 15, 25, 29, 61, 82, 93, 100, 115, 116, 156, 160, 169, 174, 211, 247, 258,
-  259, 268, 270, 277, 280, 282, 291, 293, 302, 305, 308, 313, 318, 323, 328,
-  331, 332, 333, 338, 342, 345, 346, 351, 356, 359, 360, 363, 371, 372, 373,
-  380, 381, 386, 387, 388, 389, 392, 400, 401, 408, 409, 412,
+  259, 270, 279, 282, 293, 304, 305, 312, 317, 320, 325, 328, 330, 337, 342,
+  349, 353, 354, 355, 362, 367, 368, 375, 376, 377, 380, 383, 384, 385, 390,
+  397, 400, 405,
 ];
 
 /**
@@ -131,28 +131,27 @@ export const GOLDEN_OPEN_PARTS: Readonly<Record<number, number>> = {
   110: 3,
   115: 4,
   120: 3,
-  123: 3,
+  124: 3,
   125: 3,
   130: 3,
-  134: 3,
-  135: 3,
-  136: 3,
+  135: 4,
   138: 3,
   140: 3,
-  142: 3,
-  144: 3,
-  145: 5,
-  149: 3,
-  150: 4,
-  152: 3,
-  154: 3,
-  155: 4,
-  160: 5,
-  163: 4,
-  165: 6,
-  170: 4,
-  173: 4,
-  174: 3,
+  141: 3,
+  143: 3,
+  145: 3,
+  148: 3,
+  150: 3,
+  155: 5,
+  158: 3,
+  160: 4,
+  163: 5,
+  164: 3,
+  165: 5,
+  167: 3,
+  170: 3,
+  171: 3,
+  173: 3,
 };
 
 const MINUTE_MS = 60_000;
