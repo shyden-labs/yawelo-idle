@@ -76,6 +76,11 @@ jobs:
         run: node scripts/develop-squash-only.ts "$GITHUB_REPOSITORY"
       - name: Install (a warning fails it)
         run: scripts/fail-on-warnings.sh npm ci
+      # Any advisory in the install fails the build unless scripts/npm-audit.ts
+      # records it with a reason and an expiry (#720, #873). It runs on
+      # docs-only too: an advisory can land on any day.
+      - name: Audit (an advisory without a current exception fails it)
+        run: node scripts/npm-audit.ts
       - name: Format
         run: npm run format:check
       - name: Lint (zero warnings)
