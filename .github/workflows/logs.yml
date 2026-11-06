@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   logs:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # An install and the suite's one-minute step (#44: every job stops within
     # minutes when a step hangs).
     timeout-minutes: 5
