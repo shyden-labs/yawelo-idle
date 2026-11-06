@@ -1,34 +1,39 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (fifty-first session). **Running when written:** a queued local unit run for #897 (dies with the session; re-run it). No Colima or device claim held. **Phones:** none needed.
+**Written:** 2026-11-06 (fifty-first session). **Running when written:** nothing. No Colima or device claim held. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session (fifty-first, overnight while Shyden is AFK until ~06:00)
+## Done this session (fifty-first, overnight while Shyden was AFK)
 
-- **#497 shut:** PR #892 (77df8d83). Daily `dev-behind-develop.yml`; planted failure opened #894 (shut), unplanted run green; deploy-dev dispatch runs on develop, skips everything off it. An unboarded alert does not turn board-orphans red (measured).
-- **#890 shut:** PR #893 (68c1207c). Sail goals retuned; every tuning target met; golden log regenerated; tables on PR #893.
-- **#513 shut, not planned** (Shyden). **#661 shut** (AC5 on Dependabot PR #593). **#705 shut:** PR #895 (57c57cdc).
-- **#720:** AC1 measured, AC2 merged (PR #896, 2161edb7: CI audits the install). AC3 (daily scheduled audit) waits for Shyden's yes; #720 back to Todo.
-- **#735 progress:** every open Dependabot PR merged after CI green on its updated head: #594 setup-node 7.1.0, #891 nine patch bumps, #750 vitest 5.1.0, #593 upload-artifact 7.0.2. deploy-dev green on b6744a0a.
-- **#897 filed** (P2, 1 pt): deploy-dev's concurrency comment was wrong (run 42260476673 cancelled while pending). Fix on branch `ci/897-deploy-dev-concurrency-comment` (worktree `../yawelo-idle-897`), **not committed yet**: the unit run was queued behind shyden.co.uk's test lock.
+Shut with evidence on each ticket: **#497** (PR #892: daily dev-behind-develop check, deploy-dev dispatch), **#890** (PR #893: sail goals retuned, every tuning target met), **#513** (not planned, Shyden), **#661** (proven on Dependabot PR #593), **#705** (PR #895), **#897** (filed and fixed, PR #898), **#735** (PRs #594, #891, #750, #593 and #899: yawelo-idle behind on nothing in the census), **#877** (PR #900). **#720:** AC1 and AC2 done (PR #896), AC3 waits for Shyden; back to Todo. Every dev deploy tonight passed (latest 42290788403 on 1a29dbca).
 
 ## Resume steps
 
-1. **#897:** in `../yawelo-idle-897` the comment edit is uncommitted; run the unit suite, commit, push, PR, merge when green; shut #897.
-2. **#735:** re-run the census against the other projects (skill `aligning-versions-across-projects`); its list from 2026-10-21 may be met now (setup-node, upload-artifact, vitest, prettier, @types/node done by Dependabot; check eslint, typescript-eslint, astro, @eslint/js, globals ranges).
-3. **Ask Shyden (AskUserQuestion, plain words):** #523 (shut as not planned? squash-merge lands one commit); #590 (8-point private Swagger for one `/health` route: keep, shrink or shut?); #684 (shrink to the GitHub squash-default setting + a CLAUDE.md line?); #720 AC3 (a daily scheduled `npm audit` on GitHub Actions, free on a public repo: yes?).
-4. **#888:** read later develop deploy-dev runs; shut after 2026-11-20 with the tally (one cancelled-while-pending run tonight, 42260476673, is #897's, not a reset). **#864:** watch site-smoke reds until 2026-11-19.
-5. Then by board: #783 waits for the next release cut; P1s wait on Shyden (#784, #655, #830) or on #426.
+1. **Ask Shyden (AskUserQuestion, plain words), all parked on him:**
+   - #523: shut as not planned? It guards every commit on a branch, but squash-merge lands one commit.
+   - #590: 8-point private Swagger for one `/health` route behind his sign-in: keep, shrink or shut?
+   - #684: shrink to the GitHub squash-default setting plus a CLAUDE.md line (drop the guard, hook and retired mutation file)?
+   - #720 AC3: a daily scheduled `npm audit` on GitHub Actions (free on a public repo) that opens an issue per new advisory: yes?
+   - The census skill (`~/.claude/skills/aligning-versions-across-projects/census.py`, global) flags `node-version: ${{ steps.node.outputs.version }}` as floating in all five other projects. It is exact (read from `.github/node/Dockerfile`). Fix the census?
+2. **#888:** read later develop deploy-dev runs; shut after 2026-11-20 with the tally (42260476673 was cancelled while pending, #897's cause, not a reset). **#864:** watch site-smoke reds until 2026-11-19.
+3. Then by board: #783 waits for the next release cut; P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #793 (Node pin in a Dependabot-bumped Dockerfile, the other projects' pattern), #742, #757 (waits for a cut), #788.
+
+## Waiting on Shyden
+
+- **Old worktrees:** he can run: `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871 874 888 497 890 705 720 897 735 877; do git worktree remove ../yawelo-idle-$w; done` (all merged or empty; the 728-probe's files are `stash@{0}`).
+- **Test board 6 (`PVT_kwDOEOcG584BpujW`):** he deletes it in GitHub (project 6 → Settings → Delete project).
+- #784 next steps (Gmail, Cloudflare, domains); the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud project and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
+- Open PRs: only #602 (Stryker, waits for a runner release). Dependabot has none open.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Worktrees: `-497`, `-890`, `-705`, `-720` (all merged), `-897` (uncommitted edit), `-dev-scripts`, and the thirteen above.
+- Worktrees: tonight's `-497`, `-890`, `-705`, `-720`, `-897`, `-735`, `-877` (all merged), `-dev-scripts`, and the thirteen older ones.
 - Kept local branches: nine `backup/*`, and `tooling/785-nvmrc-exact` `-b`, `-c` and `-d`.
 
-## Progress (board, measured 2026-11-06)
+## Progress (board, measured 2026-11-06 21:10 UTC)
 
-- By tickets: 41% (186 of 451). Pace 5.86 a day over 7 days to 2026-11-05. ETA 2026-12-22, medium confidence (6 of 7 days moved).
-- By effort: 1,161 points remaining across 265 open stories. Pace 16.71 a day. ETA 2027-01-15, medium confidence.
+- By tickets: 43% (193 of 451). Pace 5.86 a day over 7 days to 2026-11-05. ETA 2026-12-21, medium confidence (6 of 7 days moved).
+- By effort: 1,141 points remaining across 258 open stories. Pace 16.71 a day. ETA 2027-01-14, medium confidence.
 - Both before the outside waits: #784's login and device sign-off.
