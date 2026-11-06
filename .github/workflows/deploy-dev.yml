@@ -23,8 +23,11 @@ on:
 permissions:
   contents: read
 
-# Two merges in quick succession deploy in order; neither is cancelled, so the
-# last one to finish is always the newest commit.
+# One deploy runs at a time and is never cancelled. A merge while one runs
+# waits as the group's single pending run, and a newer merge replaces it:
+# GitHub cancels the older pending run before any job starts (run 42260476673,
+# #897). So a merge can go undeployed, but the newest commit always deploys,
+# and the daily dev-behind-develop check (#497) catches a stale dev.
 concurrency:
   group: deploy-dev
   cancel-in-progress: false
