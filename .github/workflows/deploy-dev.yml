@@ -16,6 +16,9 @@ name: deploy-dev
 on:
   push:
     branches: [develop]
+  # A push event GitHub drops (2026-10-08, #497) is recovered by dispatching
+  # this on develop; `test` runs only there, and every other job needs it.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,6 +33,7 @@ jobs:
   # A reusable-workflow call may not set timeout-minutes; ci.yml's own job
   # carries it (tests/unit/workflow-timeouts.test.ts).
   test:
+    if: github.ref == 'refs/heads/develop'
     uses: ./.github/workflows/ci.yml
 
   deploy:
