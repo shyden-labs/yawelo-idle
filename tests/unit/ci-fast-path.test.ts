@@ -189,8 +189,11 @@ describe('the classifier step (#360 AC1)', () => {
 });
 
 describe('deploy-dev always tests in full (#360 AC3)', () => {
-  it('runs only on a push, an event the classifier never makes docs-only', () => {
-    expect(Object.keys(read('deploy-dev.yml').on)).toEqual(['push']);
+  it('runs only on a push or a dispatch, events the classifier never makes docs-only', () => {
+    expect(Object.keys(read('deploy-dev.yml').on)).toEqual([
+      'push',
+      'workflow_dispatch',
+    ]);
   });
 
   it('calls build-and-test with no input', () => {
