@@ -71,6 +71,13 @@ export function webSmokeConfig(
         username: USERNAME,
         password,
       },
+      // A failing test leaves a screenshot beside Playwright's page snapshot
+      // in test-results, which deploy-dev uploads (#888). Never a trace or a
+      // video: a trace records each request's headers, the dev password's
+      // Authorization among them, and the upload is public.
+      screenshot: 'only-on-failure',
+      trace: 'off',
+      video: 'off',
     },
   });
 }
