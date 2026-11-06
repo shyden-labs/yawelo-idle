@@ -5,20 +5,6 @@ import semver from 'semver';
 import { parse } from 'yaml';
 import { withoutYamlComments, withoutYamlQuotes } from './source-text';
 
-/**
- * Whether `key`'s group comes after the `patch-updates` catch-all in one
- * ecosystem's `block`, read with quotes removed (#778). A block missing
- * either is not "after": the presence tests above judge that.
- */
-function groupedAfterCatchAll(block: string, key: string): boolean {
-  // Both offsets from one text: an offset into the quoted block compared
-  // with one into the unquoted text misjudged the order (#778).
-  const text = withoutYamlQuotes(block);
-  const catchAll = text.indexOf('patch-updates:');
-  const group = text.indexOf(`${key}*`);
-  // A missing group is -1, never after the catch-all.
-  return catchAll !== -1 && catchAll < group;
-}
 import { isRecord } from './workflow-secrets';
 
 /**
@@ -82,21 +68,9 @@ const dependabot = () =>
  * is checked for — the sub-path note spells out `patterns: ["actions/cache*"]`
  * verbatim. Matched against the raw text, that prose SATISFIES the sub-path
  * guard on its own: the repo could reference `actions/cache` at three
- * sub-paths with no group whatsoever and still go green, and the position of
- * the comment (above the groups) makes the ordering check pass too. Caught by
- * mutation while adding that ordering check.
+ * sub-paths with no group whatsoever and still go green.
  */
 const configBody = () => withoutYamlComments(dependabot());
-
-/**
- * The config split into one text block per `package-ecosystem:` entry, so a
- * group's position is judged against the catch-all of ITS OWN ecosystem
- * rather than whichever one happens to appear first in the file.
- */
-const ecosystemBlocks = () =>
-  configBody()
-    .split(/(?=^\s*-\s*package-ecosystem:)/m)
-    .filter((block) => /package-ecosystem:/.test(block));
 
 /**
  * Every external `uses` value in the PARSED workflows, job calls and steps
@@ -263,7 +237,7 @@ describe('Dependabot keeps the pins from rotting', () => {
   it('an action repo used at more than one sub-path is grouped into one PR', () => {
     const config = configBody();
     // Searched over every action repo: the sub-path ones are drawn from them,
-    // and there are none today (dormant, see below).
+    // and there are none today (dormant, see above).
     const repos = actionRepos();
     const ungrouped = repos
       .filter(isSubPath)
@@ -276,83 +250,6 @@ describe('Dependabot keeps the pins from rotting', () => {
     expect(
       ungrouped,
       'separate PRs per sub-path break the one-SHA-per-repo invariant',
-    ).toEqual([]);
-  });
-
-  /**
-   * Declaring the group is not enough — it has to WIN.
-   *
-   * Dependabot assigns a dependency to the FIRST group whose patterns match
-   * and then stops looking. `patch-updates` is a catch-all keyed on
-   * update-type, so it swallows a patch bump of `actions/cache/restore`
-   * before an `actions/cache*` group declared BELOW it is ever consulted.
-   * The group is present, the config reads correct, and the sub-paths still
-   * arrive in separate PRs — SHY-0226 all over again. Order is the control,
-   * not presence, so the presence test above cannot stand alone.
-   *
-   * Dormant today (this repo uses no sub-path actions) and verified by
-   * mutation, not by watching it pass.
-   */
-  // The order check's own cases (#778): both offsets come from one text,
-  // so quotes before the catch-all cannot shift one side and not the other.
-  // 30 quoted patterns: 60 quote characters, more than the text between
-  // the catch-all and the group below it, so mixed offsets misjudge.
-  const QUOTED = `groups:\n  many:\n    patterns: [${Array.from({ length: 30 }, (_, i) => `"p${String(i)}"`).join(', ')}]\n`;
-
-  it('reads a sub-path group below the catch-all as after it', () => {
-    expect(
-      groupedAfterCatchAll(
-        'groups:\n  patch-updates:\n  cache:\n    patterns: [actions/cache*]\n',
-        'actions/cache',
-      ),
-    ).toBe(true);
-  });
-
-  it('reads it as after the catch-all when quotes come before both', () => {
-    expect(
-      groupedAfterCatchAll(
-        `${QUOTED}  patch-updates:\n  cache:\n    patterns: ["actions/cache*"]\n`,
-        'actions/cache',
-      ),
-    ).toBe(true);
-  });
-
-  it('reads a sub-path group above the catch-all as before it', () => {
-    expect(
-      groupedAfterCatchAll(
-        `${QUOTED}  cache:\n    patterns: ["actions/cache*"]\n  patch-updates:\n`,
-        'actions/cache',
-      ),
-    ).toBe(false);
-  });
-
-  it('reads a block with no catch-all as nothing to swallow it', () => {
-    expect(
-      groupedAfterCatchAll(
-        '  cache:\n    patterns: [actions/cache*]\n',
-        'actions/cache',
-      ),
-    ).toBe(false);
-  });
-
-  it('reads a block without the group as nothing after the catch-all', () => {
-    expect(groupedAfterCatchAll('  patch-updates:\n', 'actions/cache')).toBe(
-      false,
-    );
-  });
-
-  it('a sub-path group is declared before the catch-all that would swallow it', () => {
-    const repos = actionRepos();
-    const misordered = repos.filter(isSubPath).flatMap(([key]) =>
-      ecosystemBlocks()
-        .filter((block) => withoutYamlQuotes(block).includes(`${key}*`))
-        .filter((block) => groupedAfterCatchAll(block, key))
-        .map(() => `${key} grouped after patch-updates`),
-    );
-
-    expect(
-      misordered,
-      'Dependabot assigns to the FIRST matching group and stops',
     ).toEqual([]);
   });
 
@@ -503,4 +400,60 @@ describe('the coverage tool is pinned to the test runner (#728)', () => {
       '@vitest/*',
     ]);
   });
+});
+
+/**
+ * Dependabot scores groups, and the order they are written in decides
+ * nothing (global rule 2026-10-20, #705). So every group with no `patterns`
+ * (a catch-all such as `patch-updates`) lists every pattern group's patterns
+ * under `exclude-patterns`, or it can swallow a dependency that group exists
+ * to hold together.
+ */
+const ECOSYSTEMS = ['npm', 'github-actions'] as const;
+
+const updateFor = (ecosystem: string): Record<string, unknown> => {
+  const doc: unknown = parse(dependabot());
+  const updates =
+    isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+  const found: unknown = updates.find(
+    (u) => isRecord(u) && u['package-ecosystem'] === ecosystem,
+  );
+  return isRecord(found) ? found : {};
+};
+
+describe('every catch-all group excludes every pattern group (#705)', () => {
+  it('names each ecosystem dependabot.yml carries', () => {
+    const doc: unknown = parse(dependabot());
+    const updates: unknown[] =
+      isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+    expect(
+      updates.map((u): unknown => (isRecord(u) ? u['package-ecosystem'] : u)),
+    ).toEqual([...ECOSYSTEMS]);
+  });
+
+  it.each(ECOSYSTEMS)(
+    '%s: every group with no patterns excludes every other group’s patterns',
+    (ecosystem) => {
+      const groups = updateFor(ecosystem)['groups'];
+      const entries = isRecord(groups) ? Object.entries(groups) : [];
+      const patterns = entries.flatMap(([, g]) => stringsAt(g, 'patterns'));
+      const catchAlls = entries.filter(
+        ([, g]) => stringsAt(g, 'patterns').length === 0,
+      );
+      expect(
+        catchAlls.length,
+        'positive control: a catch-all group',
+      ).toBeGreaterThan(0);
+      expect(
+        patterns.length,
+        'positive control: a pattern group',
+      ).toBeGreaterThan(0);
+      const missing = catchAlls.flatMap(([name, g]) =>
+        patterns
+          .filter((p) => !stringsAt(g, 'exclude-patterns').includes(p))
+          .map((p) => `${name} does not exclude ${String(p)}`),
+      );
+      expect(missing).toEqual([]);
+    },
+  );
 });
