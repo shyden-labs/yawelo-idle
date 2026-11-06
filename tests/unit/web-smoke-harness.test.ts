@@ -176,6 +176,50 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
       'verify-roadmap',
     ]);
   });
+
+  it('keeps a screenshot of each failing test (#888)', () => {
+    expect(dev().use?.screenshot).toBe('only-on-failure');
+  });
+
+  // A trace records each request's headers, the dev password's
+  // Authorization among them, and test-results is uploaded to a public
+  // repository's run (#888).
+  it('records no trace and no video against dev, which would carry the dev password', () => {
+    expect(dev().use?.trace).toBe('off');
+    expect(dev().use?.video).toBe('off');
+  });
+
+  it('uploads test-results when the dev smoke itself fails, and only then (#888)', () => {
+    const steps = deployDev.jobs['smoke']?.steps ?? [];
+    const suiteAt = steps.findIndex((s) => runOf(s) === 'npm run test:web:dev');
+    const suite = steps[suiteAt];
+    expect(suite?.id).toBe('suite');
+    const uploads = steps.filter((s) =>
+      (s.uses ?? '').startsWith('actions/upload-artifact@'),
+    );
+    expect(uploads).toHaveLength(1);
+    const upload = uploads[0];
+    expect(steps.indexOf(upload as Step)).toBe(suiteAt + 1);
+    expect(upload?.if).toBe(
+      "${{ failure() && steps.suite.outcome == 'failure' }}",
+    );
+    expect(upload?.with).toEqual({
+      name: 'smoke-failures',
+      path: 'test-results/',
+      'retention-days': 14,
+      'if-no-files-found': 'error',
+    });
+  });
+
+  it('pins the dev smoke upload action to the commit ci.yml pins', () => {
+    const pinned = (job: Job | undefined) =>
+      (job?.steps ?? [])
+        .map((s) => s.uses ?? '')
+        .filter((u) => u.startsWith('actions/upload-artifact@'));
+    const ciPins = Object.values(ci.jobs).flatMap(pinned);
+    expect(ciPins.length).toBeGreaterThan(0);
+    expect(pinned(deployDev.jobs['smoke'])).toEqual([ciPins[0]]);
+  });
 });
 
 const SITE_URL = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/';

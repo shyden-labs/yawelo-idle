@@ -261,12 +261,25 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Smoke the game on dev (every supported target, behind the dev password)
+        id: suite
         # One measured limit, at least 3 times its slowest run (#476).
         timeout-minutes: 1
         env:
           WEB_SMOKE_URL: https://dev.yawelo-idle.shyden.co.uk/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
+      # Each failing test's screenshot and page snapshot (#888), only when
+      # the suite itself failed: a step before it failing leaves nothing to
+      # upload. No trace is kept (playwright.web.config.ts): it would carry
+      # the dev password into this public artifact.
+      - name: Upload the failing tests' screenshots and page snapshots
+        if: ${{ failure() && steps.suite.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: smoke-failures
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: error
 
   # The site's browser suite (tests/site, #827): the roadmap page at the site
   # Worker's own address, where the site being built is seen (#673), read
