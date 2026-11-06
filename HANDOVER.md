@@ -1,32 +1,27 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (fifty-first session). **Running when written:** CI on PR #892 (GitHub, survives /clear); nothing local. No Colima or device claim held. **Phones:** none needed.
+**Written:** 2026-11-06 (fifty-first session). **Running when written:** CI on PR #895 (GitHub, survives /clear); nothing local. No Colima or device claim held. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session (fifty-first)
+## Done this session (fifty-first, overnight while Shyden is AFK until ~06:00)
 
-- **#497:** PR #892 (branch `ci/497-dev-behind-develop`, head `64f3d76c`, worktree `../yawelo-idle-497`) opened into develop. Adds `scripts/dev-behind-develop.ts` + `.github/workflows/dev-behind-develop.yml` (daily 01:17 UTC; reads dev sync `/health`, which is public, so no secret or environment) and `workflow_dispatch` on deploy-dev (`test` gated to develop). Tests written red first; 7 mutants caught. Laptop: unit 13,655 pass; lint, typecheck, Prettier pass. #497 set In Progress; AC4 reasoning commented on #497.
-- CI on #892 was still running when written (board-orphans, build-and-test, coverage).
+- **#497 shut:** PR #892 merged (77df8d83). Daily `dev-behind-develop.yml`; planted failure opened #894 (shut), unplanted run green; deploy-dev dispatch works on develop and skips everything off it. Correction recorded: an unboarded alert does not turn board-orphans red.
+- **#890 shut:** PR #893 merged (68c1207c). Sail goals retuned (5th-10th x0.9, 9th 2.75e21, last two 8.8e21 / 1.2e22); every tuning target met; golden log regenerated; deploy-dev green. Tables on PR #893.
+- **#513 shut, not planned** (Shyden's ruling; 0 of 60 deploys hit it). **#661 shut:** AC5 proven on Dependabot PR #593.
+- **#705:** PR #895 open (branch `ci/705-dependabot-exclude-patterns`, worktree `../yawelo-idle-705`), CI running when written. #705 In Progress.
 
 ## Resume steps
 
-1. **#892:** `~/.claude/scripts/pr-verdict.sh 892` (background); read each job by name on the head SHA; when green, squash-merge into develop (`--match-head-commit "$(git -C ../yawelo-idle-497 rev-parse HEAD)"`).
-2. **#497 after merge:** read deploy-dev's run on the merge commit. Then AC2 on GitHub: `gh workflow run dev-behind-develop.yml --ref develop -f stand_in_served=<an older develop sha>`, see it red and the alert issue opened assigned to ShydenMcM; check whether board-orphans goes red with the unboarded alert issue (unmeasured; PR #892 body states it as fact, correct it if wrong); shut the alert issue; dispatch once with no input and see it green. Also prove AC3: `gh workflow run deploy-dev.yml --ref develop` runs all jobs. Then shut the ticket by hand with the evidence.
-3. **#888:** read each later develop deploy-dev run; shut after 2026-11-20 with the tally.
-4. Then by board: #783 (P0) waits for the next release cut (Shyden, 2026-11-05); P2 Todo by age: #513, #864, #890.
-
-## Waiting on Shyden
-
-- **Old worktrees:** he can run: `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871 874 888; do git worktree remove ../yawelo-idle-$w; done` (none hold uncommitted work; the probe's files are `stash@{0}`).
-- **Test board 6 (`PVT_kwDOEOcG584BpujW`):** he deletes it in GitHub (project 6 → Settings → Delete project).
-- #784 next steps (Gmail, Cloudflare, domains); the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud project and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
-- Open PRs with no recent movement: #602 (Stryker runner release), #745, #767, Dependabot #593, #594, #597, #750, #763, #764, #779, #834.
+1. **#895:** read CI by step name on its head; squash-merge into develop with `--match-head-commit "$(git -C ../yawelo-idle-705 rev-parse HEAD)"`; shut #705 with the evidence.
+2. **Ask Shyden (AskUserQuestion, plain words):** #523 (guards every commit on a branch; squash-merge lands one commit and the every-commit pipeline is retired: shut as not planned?); #590 (8-point private Swagger for one `/health` route, sign-in needs his Cloudflare: keep, shrink or shut?); #684 (guard script + hook + retired mutation file: shrink to the GitHub squash-default setting + a CLAUDE.md line?).
+3. **#888:** read later develop deploy-dev runs; shut after 2026-11-20 with the tally. **#864:** watch site-smoke reds until 2026-11-19.
+4. Then by board: #783 waits for the next release cut; P1s wait on Shyden (#784, #655, #830) or on #426; next P2s by age after #705: #713, #720, #735.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Worktrees: `-497` (PR #892, node_modules installed), `-dev-scripts`, and the thirteen above.
+- Worktrees: `-497` (merged), `-890` (merged), `-705` (PR #895), `-dev-scripts`, and the thirteen above.
 - Kept local branches: nine `backup/*`, and `tooling/785-nvmrc-exact` `-b`, `-c` and `-d`.
 
 ## Progress (board, measured 2026-11-06)
