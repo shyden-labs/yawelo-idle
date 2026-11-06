@@ -66,8 +66,8 @@ import {
  */
 
 /**
- * Accepted events by type in the fixture, measured when #35's tuned balance
- * regenerated it (2026-10-04); each floor is the measured figure less one and
+ * Accepted events by type in the fixture, measured when FSRS-7 regenerated
+ * it (#874, 2026-11-06; first #35's tuned balance, 2026-10-04); each floor is the measured figure less one and
  * the count must exceed it, so it may not fall below the measurement and a
  * type measured once cannot vanish. Regenerating the log may move them,
  * deliberately. On this balance Insight comes early, so Pemandu opens with
@@ -76,13 +76,13 @@ import {
 const ACCEPTED_FLOORS: Readonly<Record<GameEvent['type'], number>> = {
   resume: 174, // 175
   listen: 114, // 115
-  buyEncounter: 1664, // 1665
-  pickUpWord: 282, // 283
-  answerReview: 2011, // 2012
-  answerPractice: 123, // 124
+  buyEncounter: 1687, // 1688
+  pickUpWord: 280, // 281
+  answerReview: 2962, // 2963
+  answerPractice: 116, // 117
   buyUpgrade: 27, // 28
-  startJourney: 315, // 316
-  collectJourney: 312, // 313
+  startJourney: 321, // 322
+  collectJourney: 318, // 319
   setSail: 7, // 8
   buyGrammarNode: 11, // 12
   setAutomation: 0, // 1
@@ -90,14 +90,14 @@ const ACCEPTED_FLOORS: Readonly<Record<GameEvent['type'], number>> = {
 
 /** Refused events by kind in the fixture, measured likewise, less one. */
 const REFUSED_FLOORS: Readonly<Record<string, number>> = {
-  staleSeq: 29, // 30
+  staleSeq: 23, // 24
   notDue: 30, // 31
   unknownWord: 34, // 35
-  unknownEncounter: 27, // 28
-  slotEmpty: 11, // 12
-  unknownSlot: 10, // 11
-  sailGoalUnmet: 28, // 29
-  unknownUpgrade: 31, // 32
+  unknownEncounter: 31, // 32
+  slotEmpty: 16, // 17
+  unknownSlot: 13, // 14
+  sailGoalUnmet: 27, // 28
+  unknownUpgrade: 26, // 27
 };
 
 /** Every slice, one per open, known before the run: one test each. */
@@ -179,7 +179,7 @@ describe('the golden log fixture (AC5)', () => {
       minParts: 2,
       workPerPart: 4000,
       heavyPurchases: 1000,
-      slices: 380,
+      slices: 414,
       measured: expect.stringContaining('#553') as unknown,
     });
   });

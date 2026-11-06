@@ -337,10 +337,13 @@ describe('the floor (AC4)', () => {
       expect(m).toBeLessThan(reviewedTeaAfter(earlier));
     });
 
-  it('a reviewed word’s bonus has fallen 90% of the way to the floor by 1e8 days', () => {
-    // A power law falls slowly: at 1e8 days R is about 0.067 (FSRS-6, S = 2.3 d).
+  it('a reviewed word’s bonus has fallen 70% of the way to the floor by 1e8 days', () => {
+    // A power law falls slowly, FSRS-7's slow trace more slowly than FSRS-6
+    // (decay w24 = 0.0801 against 0.1542, #874 AC7): at 1e8 days R is
+    // 0.245 after one Good answer, where FSRS-6 gave about 0.067, so the
+    // bonus has fallen 75% of the way (measured 2026-11-06), not FSRS-6's 90%.
     expect(reviewedTeaAfter(1e8) - reviewedFloor).toBeLessThan(
-      0.1 * (reviewedTeaAfter(0) - reviewedFloor),
+      0.3 * (reviewedTeaAfter(0) - reviewedFloor),
     );
   });
 

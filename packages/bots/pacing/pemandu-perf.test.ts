@@ -94,8 +94,9 @@ describe('a late-game catch-up with Pemandu at 1 s (#297 AC3)', () => {
       const { state } = advance(fresh, from, returnsAt(from, 1));
       const cpu = process.threadCpuUsage(cpuStart);
       const bought = units(state) - units(from);
-      // The catch-up the figures were measured on.
-      expect(bought).toBe(428);
+      // The catch-up the figures were measured on (428 purchases then).
+      // FSRS-7's schedule (#874) makes it 410, measured on 3cc252da.
+      expect(bought).toBe(410);
       costs.push((cpu.user + cpu.system) / bought);
     }
     const fastest = Math.min(...costs);
