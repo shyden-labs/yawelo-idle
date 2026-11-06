@@ -579,11 +579,12 @@ const BOARDS_PER_ISSUE = 10;
 export const REPO_ISSUES_QUERY = `query($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     issues(first: 100, after: $endCursor, orderBy: { field: CREATED_AT, direction: ASC }) { totalCount pageInfo { hasNextPage endCursor }
-      nodes { number
+      nodes { number createdAt
         projectItems(first: ${String(BOARDS_PER_ISSUE)}, includeArchived: false) { totalCount nodes { project { id } } } } } } }`;
 
 interface RepoIssue {
   number: number;
+  createdAt?: unknown;
   projectItems: {
     totalCount: number;
     nodes: { project: { id: string } | null }[];
@@ -611,9 +612,15 @@ function issuesOf(page: unknown): RepoIssues {
 
 /**
  * The issues the repository names on the board, from pages proved to hold
- * every issue, as assertWhole proves a board's pages (#703).
+ * every issue, as assertWhole proves a board's pages (#703), and the issues
+ * created after `readStartedAt`, whose card can show on one side only
+ * (#877).
  */
-function namedOnBoard(repoPages: unknown[], boardId: string): Set<number> {
+function namedOnBoard(
+  repoPages: unknown[],
+  boardId: string,
+  readStartedAt: Date,
+): { named: Set<number>; filedDuringRead: Set<number> } {
   if (repoPages.length === 0)
     throw new Error(
       'no page of the repository’s issues came back: nothing read',
@@ -645,7 +652,15 @@ function namedOnBoard(repoPages: unknown[], boardId: string): Set<number> {
     read.add(number);
   }
   const named = new Set<number>();
+  const filedDuringRead = new Set<number>();
   for (const issue of issues) {
+    const created =
+      typeof issue.createdAt === 'string' ? Date.parse(issue.createdAt) : NaN;
+    if (Number.isNaN(created))
+      throw new Error(
+        `#${String(issue.number)} came back without a readable createdAt (${String(issue.createdAt)}): nothing read`,
+      );
+    if (created > readStartedAt.getTime()) filedDuringRead.add(issue.number);
     const items = issue.projectItems;
     if (items.totalCount > items.nodes.length)
       throw new Error(
@@ -654,7 +669,7 @@ function namedOnBoard(repoPages: unknown[], boardId: string): Set<number> {
     if (items.nodes.some((item) => item.project?.id === boardId))
       named.add(issue.number);
   }
-  return named;
+  return { named, filedDuringRead };
 }
 
 const NAMED_IN_A_REFUSAL = 10;
@@ -676,14 +691,22 @@ function listed(numbers: number[]): string {
  * sets of issue numbers, so a listing short of the board is refused even
  * when its own count agrees with it. Only `repo`'s issues are compared:
  * drafts, pull requests and other repositories' issues are parseItems'.
+ * An issue created after `readStartedAt` (taken before the board is read)
+ * is left out on both sides: its card can be added between the two reads
+ * (#877). Every older issue is still compared.
  */
 export function assertNamedByRepo(
   boardPages: unknown[],
   repoPages: unknown[],
   boardId: string,
   repo: string,
+  readStartedAt: Date,
 ): void {
-  const named = namedOnBoard(repoPages, boardId);
+  const { named, filedDuringRead } = namedOnBoard(
+    repoPages,
+    boardId,
+    readStartedAt,
+  );
   if (named.size === 0)
     throw new Error(
       `the repository’s own issues (Repository.issues) name no issue on board ${boardId}: nothing read`,
@@ -701,8 +724,13 @@ export function assertNamedByRepo(
       ),
   );
   const byNumber = (a: number, b: number): number => a - b;
-  const missing = [...named].filter((n) => !carded.has(n)).sort(byNumber);
-  const extra = [...carded].filter((n) => !named.has(n)).sort(byNumber);
+  const compared = (n: number): boolean => !filedDuringRead.has(n);
+  const missing = [...named]
+    .filter((n) => compared(n) && !carded.has(n))
+    .sort(byNumber);
+  const extra = [...carded]
+    .filter((n) => compared(n) && !named.has(n))
+    .sort(byNumber);
   if (missing.length === 0 && extra.length === 0) return;
   const parts = [
     `the board lists ${String(carded.size)} of ${repo}’s issues and the repository’s own issues (Repository.issues) name ${String(named.size)} on it`,

@@ -352,6 +352,8 @@ describe('boardNext (#576)', () => {
               totalCount: numbers.length,
               nodes: numbers.map((number) => ({
                 number,
+                // Older than any read (#877).
+                createdAt: '2026-01-01T00:00:00Z',
                 projectItems: {
                   totalCount: 1,
                   nodes: [{ project: { id: 'PVT_fixture' } }],

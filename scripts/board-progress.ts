@@ -82,6 +82,9 @@ export function boardProgress(
   const [id, title, repo = REPO] = args;
   if (id === undefined || title === undefined) throw new Error(USAGE);
   ownerAndName(repo);
+  // Before the board is read: an issue filed after it is left out of the
+  // cross-check (#877).
+  const readStartedAt = new Date();
   const out = gh([
     'api',
     'graphql',
@@ -94,7 +97,7 @@ export function boardProgress(
   ]);
   const pages = JSON.parse(out) as unknown[];
   const lines = closeOutLines(pages, title, repo, today);
-  assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo);
+  assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo, readStartedAt);
   return lines;
 }
 

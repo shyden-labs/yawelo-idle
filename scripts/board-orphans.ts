@@ -179,6 +179,9 @@ export function boardOrphans(
         : "no board token: BOARD_TOKEN is empty, so the board cannot be read (the board-read environment's ROADMAP_APP_KEY, #580)",
     );
 
+  // Before the board is read: an issue filed after it is left out of the
+  // cross-check (#877).
+  const readStartedAt = new Date();
   const board = read('the board', () => {
     const pages = JSON.parse(
       gh.board([
@@ -202,7 +205,7 @@ export function boardOrphans(
     repoIssuePages(gh.board, repo),
   );
   read('the board', () => {
-    assertNamedByRepo(board.pages, issuePages, id, repo);
+    assertNamedByRepo(board.pages, issuePages, id, repo, readStartedAt);
   });
   const { names: branches, developSha } = read('the branches', () =>
     parseBranches(

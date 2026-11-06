@@ -100,6 +100,8 @@ function repoPage(issues: [number, string[]][], totalCount: number): unknown {
           totalCount,
           nodes: issues.map(([number, boards]) => ({
             number,
+            // Older than any read in the tests (#877).
+            createdAt: '2026-10-01T00:00:00Z',
             projectItems: {
               totalCount: boards.length,
               nodes: boards.map((id) => ({ project: { id } })),
