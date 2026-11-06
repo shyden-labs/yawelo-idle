@@ -19,6 +19,7 @@ import {
   longWaits,
   sailTiming,
   sanity,
+  TUNING_TARGETS,
 } from '../src/targets';
 
 /**
@@ -195,5 +196,22 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
 
   it('(h) the Idler waits hours with its goal met before an open lets it sail', async () => {
     expect(longWaits(await run('idler')).length).toBeGreaterThan(0);
+  });
+});
+
+// The tuning's own targets for the two figures FSRS-7 moved (#890, after
+// #874): CI holds them as tightly as the tuning aims, so a retune that
+// drifts out of them is seen here, not only in the sweep's report.
+describe('the tuning targets the retune holds (#890)', () => {
+  it('(b) the Casual Learner reaches each later destination 1.4 to 2.8 days after the one before', async () => {
+    const casual = await watchingSails('casual', 'day');
+    expect(gaps(casual.run, TUNING_TARGETS)).toEqual([]);
+  });
+
+  it('(g) the Clicker takes at least 97% of the Casual Learner’s time to reach each sail’s goal', async () => {
+    const clicker = await watchingSails('clicker', 'reachedDay');
+    expect(
+      clickingNeverWins(clicker.run, await run('casual'), TUNING_TARGETS),
+    ).toEqual([]);
   });
 });
