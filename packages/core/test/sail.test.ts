@@ -104,8 +104,8 @@ const LAST = 11;
  * the table is a deliberate edit here too.
  */
 const GOAL_U = [
-  2.12e9, 2.07e13, 1.42e14, 4.73e14, 4.81e17, 1.13e18, 2.49e18, 2.98e18,
-  3.18e21, 5.65e21, 8.02e21, 1.35e22,
+  2.12e9, 2.07e13, 1.42e14, 4.73e14, 4.329e17, 1.017e18, 2.241e18, 2.682e18,
+  2.75e21, 5.08e21, 8.8e21, 1.2e22,
 ] as const;
 const goalU = (i: number): number => {
   const goal = GOAL_U[i];
