@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-06 (forty-eighth session). **Running when written:** nothing local. PR #886's CI on head `3cc252da` is GitHub's (external). **Phones:** none needed.
+**Written:** 2026-11-06 (forty-eighth session). **Running when written:** nothing local. PR #886's CI on head `3cc252da` may still be running (GitHub's). Written before a planned laptop restart: every worktree clean; unpushed only `728b` (10), `761` (10) and `752` (3 commits, 2026-10-24, its ticket closed as not planned), all stale backups kept on purpose and in the removal list below. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
