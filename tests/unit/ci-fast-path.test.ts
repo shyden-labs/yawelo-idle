@@ -54,6 +54,7 @@ const ORDER = [
   'Classify the change as docs-only or full (#360)',
   'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
+  'Audit (an advisory without a current exception fails it)',
   'Format',
   'Lint (zero warnings)',
   'Typecheck (tsc, svelte-check)',
@@ -80,6 +81,7 @@ const DOCS_ONLY = [
   'Classify the change as docs-only or full (#360)',
   'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
+  'Audit (an advisory without a current exception fails it)',
   'Format',
   'Unit tests',
   'Guards (whole-repo checks)',
@@ -106,11 +108,21 @@ const SKIPPED: Record<string, string> = {
 };
 
 describe('build-and-test’s steps (#360 AC2)', () => {
+  // A new advisory can land on any day, so the audit runs on docs-only too.
+  it('audits the install with the tested judge, straight after it (#720)', () => {
+    const audit = steps().find(
+      (s) =>
+        idOf(s) === 'Audit (an advisory without a current exception fails it)',
+    );
+    expect(audit?.run).toBe('node scripts/npm-audit.ts');
+    expect(audit?.if).toBeUndefined();
+  });
+
   it('run in today’s order, the default-branch check first, the classifier after Node and before install', () => {
     expect(steps().map(idOf)).toEqual(ORDER);
   });
 
-  it('on docs-only, run exactly the default-branch check, checkout, Node, the classifier, the squash-only check, install, Format, the unit suite and the guards', () => {
+  it('on docs-only, run exactly the default-branch check, checkout, Node, the classifier, the squash-only check, install, the audit, Format, the unit suite and the guards', () => {
     expect(
       steps()
         .filter((s) => s.if === undefined)
