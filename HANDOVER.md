@@ -22,14 +22,15 @@
 
 1. **#742:** file the next real ticket (never one made up for the proof) with `node scripts/file-story.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories" <story.json>` as AC3's live proof, and shut #742.
    **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
-2. **Ask Shyden (parked, AskUserQuestion in plain words):** #788 route: (a) exact pins re-approved by hand in each esbuild/workerd bump (each bump PR goes red until then), (b) deny both scripts (~0.05 s slower start each; `wrangler dev` and a real deploy still to measure), or (c) keep bare names. And the census skill (`~/.claude/skills/aligning-versions-across-projects/census.py`, global) flags `node-version: ${{ steps.node.outputs.version }}` as floating in the five other projects, though it is exact (read from `.github/node/Dockerfile`). Yawelo uses the same form after #908. Fix the census?
+2. **#788 AC2 (Shyden ruled 2026-11-07, comment on #788): deny both install scripts (esbuild, workerd).** New branch, failing test first; then measure `wrangler dev` and a real dev deploy with both denied before closing; if either breaks, back to Shyden with the measurement.
+   (Done 2026-11-07, global: census.py now treats `${{ steps.<id>.outputs.* }}` as a pointer when that step names a file the census parses; 3 tests seen red/green, 39/39 mutants killed, live census 0 floating across all six projects, Dockerfile pins still counted at 26.12.1. Backups `*.bak-2026-11-07-788` in the skill folder.)
 3. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
 4. Then by board: #783 (P0) waits for the next release cut; P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #742, #757 (waits for a cut), #788.
 
 ## Waiting on Shyden
 
 - **#684 AC1:** Settings → General → Pull Requests → squash default "Pull request title and commit details".
-- The census question and the #788 route (above).
+- (Census and #788 route answered 2026-11-07.)
 - **Old worktrees:** `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871 874 888 497 890 705 720 897 735 877 720b 720c 684 793 742; do git worktree remove ../yawelo-idle-$w; done` (all merged or empty; the 728-probe's files are `stash@{0}`).
 - **Test board 6 (`PVT_kwDOEOcG584BpujW`):** he deletes it in GitHub.
 - #784 next steps; the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
