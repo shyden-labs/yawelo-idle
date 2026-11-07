@@ -82,7 +82,9 @@ describe('board-orphans.yml (#580)', () => {
     expect([s.if, s.id, s.uses]).toEqual([
       undefined,
       'board-token',
-      'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1',
+      // Any full SHA: supply-chain.test.ts checks the pin and its version
+      // comment, and an exact SHA here turned every Dependabot bump red (#919).
+      expect.stringMatching(/^actions\/create-github-app-token@[0-9a-f]{40}$/),
     ]);
     expect(s.with).toEqual({
       'client-id': 'Iv23liVLjRN8twjcTmN0',
