@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import semver from 'semver';
 import {
   WORKFLOWS_DIR,
@@ -11,14 +11,15 @@ import {
 /**
  * The toolchain runs on one Node line, and `engines` holds the floor (#501).
  *
- * `.nvmrc` holds the exact version, never a bare major (global rule,
- * 2026-10-29, #785: "this is flaky and cannot be allowed. fix it properly").
- * With `26`, setup-node resolved the line's newest release on every run, so
- * a new Node that warned would turn every open pull request red with no
- * change in any of them. Node now changes only in a bump pull request, one
- * per project (the aligning-versions skill; Dependabot does not bump
- * `.nvmrc`). 26.12.1 is the version every project runs; nodejs.org listed
- * 26.13.0 (2026-10-28) on 2026-10-30, a bump left to that skill.
+ * `.github/node/Dockerfile` holds the exact version, never a bare major
+ * (global rule, 2026-10-29, #785: "this is flaky and cannot be allowed. fix
+ * it properly"). With `26`, setup-node resolved the line's newest release on
+ * every run, so a new Node that warned would turn every open pull request red
+ * with no change in any of them. The version lives in a one-line Dockerfile
+ * because Dependabot's docker ecosystem bumps it and no ecosystem bumps
+ * `.nvmrc` (#793, global rule amended 2026-10-30; the shape is
+ * shyden-labs/repo-template#143's): each Node release arrives as Dependabot's
+ * own pull request. 26.12.1 is the version every project runs.
  * `engines.node` (with `.npmrc` `engine-strict=true`)
  * refuses what the line must not run: eslint-plugin-astro and
  * astro-eslint-parser need `^22.22.3 || ^24.16.0 || >=26.3.0`, so Node 26.0
@@ -37,26 +38,43 @@ const engines = (): string =>
     }
   ).engines?.node ?? '(no engines.node)';
 
-/** A version written exactly: three numbers and one newline, nothing else. */
-const EXACT = /^\d+\.\d+\.\d+\n$/;
+const DOCKERFILE = '.github/node/Dockerfile';
 
-describe('the Node version (#785)', () => {
-  it('.nvmrc holds 26.12.1 exactly, the version every project runs', () => {
-    expect(readFileSync('.nvmrc', 'utf8')).toBe('26.12.1\n');
+/** The Dockerfile written exactly: one FROM line naming three numbers. */
+const EXACT = /^FROM node:\d+\.\d+\.\d+\n$/;
+
+/** The step that reads the version, the same in every job (repo-template#143). */
+const READ_VERSION = [
+  "version=$(sed -nE 's/^FROM node:([0-9]+\\.[0-9]+\\.[0-9]+)$/\\1/p' .github/node/Dockerfile)",
+  'test -n "$version"',
+  'echo "version=$version" >> "$GITHUB_OUTPUT"',
+  '',
+].join('\n');
+
+const VERSION_OUTPUT = '${{ steps.node.outputs.version }}';
+
+describe('the Node version (#785, #793)', () => {
+  it('the Dockerfile holds node 26.12.1 exactly, the version every project runs', () => {
+    expect(readFileSync(DOCKERFILE, 'utf8')).toBe('FROM node:26.12.1\n');
   });
 
-  it('the exact form takes three numbers and one newline', () => {
-    expect(EXACT.test('26.12.1\n')).toBe(true);
+  it('.nvmrc is gone, so the version has one home', () => {
+    expect(existsSync('.nvmrc')).toBe(false);
+  });
+
+  it('the exact form takes one FROM line with three numbers', () => {
+    expect(EXACT.test('FROM node:26.12.1\n')).toBe(true);
   });
 
   it.each([
-    '26\n',
-    '26.12\n',
-    'v26.12.1\n',
-    'lts/*\n',
-    '26.12.1 \n',
-    '26.12.1',
-    '26.12.1\n\n',
+    'FROM node:26\n',
+    'FROM node:26.12\n',
+    'FROM node:v26.12.1\n',
+    'FROM node:lts\n',
+    'FROM node:26.12.1-alpine\n',
+    'FROM node:26.12.1 \n',
+    'FROM node:26.12.1',
+    'FROM node:26.12.1\n\n',
   ])(
     'the exact form refuses %j (setup-node would resolve it, or read it loosely)',
     (text) => {
@@ -80,10 +98,24 @@ const setupNodeStepsIn = (file: string, parsed: Workflow) =>
 const setupNodeSteps = () =>
   workflowFiles().flatMap((file) => setupNodeStepsIn(file, workflow(file)));
 
-/** Whether a setup-node step takes its Node from anywhere but .nvmrc. */
+/** Whether a setup-node step takes its Node from anywhere but the read step. */
 const takesItsOwnNode = (step: WorkflowStep): boolean =>
-  step.with?.['node-version-file'] !== '.nvmrc' ||
-  step.with['node-version'] !== undefined;
+  step.with?.['node-version'] !== VERSION_OUTPUT ||
+  step.with['node-version-file'] !== undefined;
+
+/** Each job with a setup-node step whose read step is missing or altered. */
+const unreadJobs = (file: string, parsed: Workflow): string[] =>
+  Object.entries({ ...parsed.jobs }).flatMap(([id, job]) => {
+    const steps = job.steps ?? [];
+    const setup = steps.findIndex((step) =>
+      (step.uses ?? '').startsWith('actions/setup-node@'),
+    );
+    if (setup === -1) return [];
+    const read = steps.findIndex((step) => step.id === 'node');
+    return read !== -1 && read < setup && steps[read]?.run === READ_VERSION
+      ? []
+      : [`${file} ${id}`];
+  });
 
 /** A file whose text names more or fewer setup-node steps than its parse holds. */
 const misreadOf = (
@@ -104,29 +136,66 @@ const misreadOf = (
 const SETUP = 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020';
 
 describe('the readers, on planted steps (#785)', () => {
-  it('pass a step that takes .nvmrc alone', () => {
+  it('pass a step that takes the read version alone', () => {
     expect(
-      takesItsOwnNode({ uses: SETUP, with: { 'node-version-file': '.nvmrc' } }),
+      takesItsOwnNode({
+        uses: SETUP,
+        with: { 'node-version': VERSION_OUTPUT },
+      }),
     ).toBe(false);
+  });
+
+  it('flag a step that names a literal version', () => {
+    expect(
+      takesItsOwnNode({ uses: SETUP, with: { 'node-version': '26.12.1' } }),
+    ).toBe(true);
   });
 
   it('flag a step with no with block', () => {
     expect(takesItsOwnNode({ uses: SETUP })).toBe(true);
   });
 
-  it('flag a step that takes another file', () => {
+  it('flag a step that takes a version file', () => {
     expect(
-      takesItsOwnNode({ uses: SETUP, with: { 'node-version-file': '.node' } }),
+      takesItsOwnNode({ uses: SETUP, with: { 'node-version-file': '.nvmrc' } }),
     ).toBe(true);
   });
 
-  it('flag a step that names a version beside .nvmrc', () => {
+  it('flag a step that names a file beside the read version', () => {
     expect(
       takesItsOwnNode({
         uses: SETUP,
-        with: { 'node-version-file': '.nvmrc', 'node-version': '26' },
+        with: { 'node-version': VERSION_OUTPUT, 'node-version-file': '.nvmrc' },
       }),
     ).toBe(true);
+  });
+
+  const job = (...steps: WorkflowStep[]): Workflow => ({
+    jobs: { j: { steps } },
+  });
+  const read: WorkflowStep = { id: 'node', run: READ_VERSION };
+  const setup: WorkflowStep = { uses: SETUP };
+
+  it('pass a job that reads the version before setting up', () => {
+    expect(unreadJobs('w.yml', job(read, setup))).toEqual([]);
+  });
+
+  it('flag a job with no read step', () => {
+    expect(unreadJobs('w.yml', job(setup))).toEqual(['w.yml j']);
+  });
+
+  it('flag a job that reads after setting up', () => {
+    expect(unreadJobs('w.yml', job(setup, read))).toEqual(['w.yml j']);
+  });
+
+  it('flag a job whose read step is altered', () => {
+    expect(
+      unreadJobs('w.yml', job({ id: 'node', run: 'echo version=26' }, setup)),
+    ).toEqual(['w.yml j']);
+  });
+
+  it('pass a job with no setup-node step', () => {
+    expect(unreadJobs('w.yml', job({ run: 'true' }))).toEqual([]);
   });
 
   it('name a file whose text holds a setup-node line its parse lacks', () => {
@@ -142,8 +211,14 @@ describe('the readers, on planted steps (#785)', () => {
   });
 });
 
-describe('every workflow takes its Node from .nvmrc (#785)', () => {
-  it('each setup-node step reads node-version-file .nvmrc and names no version', () => {
+describe('every workflow takes its Node from the Dockerfile (#785, #793)', () => {
+  it('each job reads the Dockerfile before its setup-node step', () => {
+    expect(
+      workflowFiles().flatMap((file) => unreadJobs(file, workflow(file))),
+    ).toEqual([]);
+  });
+
+  it('each setup-node step takes the read version and names no file', () => {
     const steps = setupNodeSteps();
     // Each finding is the step itself, with where it sits.
     const wrong = steps.filter(({ step }) => takesItsOwnNode(step));
@@ -184,10 +259,10 @@ describe('the Node line', () => {
     expect(semver.satisfies('24.16.0', engines())).toBe(true);
   });
 
-  it('the README names the .nvmrc line beside npm ci', () => {
+  it('the README names the Dockerfile beside npm ci', () => {
     const readme = readFileSync('README.md', 'utf8');
     expect(readme).toContain(
-      'npm ci                # Node 26.3 or later (see .nvmrc); engine-strict is on',
+      'npm ci                # Node 26.3 or later (see .github/node/Dockerfile); engine-strict is on',
     );
   });
 });

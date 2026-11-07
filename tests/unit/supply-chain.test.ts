@@ -289,7 +289,7 @@ describe('Dependabot keeps the pins from rotting', () => {
    * which types APIs the runtime lacks. Parsed, not read as text, so the
    * comment above the rule cannot satisfy it.
    */
-  it('does not offer @types/node majors above the .nvmrc line', () => {
+  it('does not offer @types/node majors above the Dockerfile line', () => {
     const doc: unknown = parse(dependabot());
     const updates =
       isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
@@ -300,8 +300,11 @@ describe('Dependabot keeps the pins from rotting', () => {
     const entry: unknown = npm[0];
     const ignore =
       isRecord(entry) && Array.isArray(entry.ignore) ? entry.ignore : [];
-    // .nvmrc holds an exact version (#785); semver throws on anything else.
-    const above = `>=${String(semver.major(readFileSync('.nvmrc', 'utf8').trim()) + 1)}.0.0`;
+    // The Dockerfile holds an exact version (#785, #793); semver throws on anything else.
+    const node = readFileSync('.github/node/Dockerfile', 'utf8')
+      .trim()
+      .replace(/^FROM node:/, '');
+    const above = `>=${String(semver.major(node) + 1)}.0.0`;
     expect(ignore).toContainEqual({
       'dependency-name': '@types/node',
       versions: [above],
@@ -428,7 +431,7 @@ describe('every catch-all group excludes every pattern group (#705)', () => {
       isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
     expect(
       updates.map((u): unknown => (isRecord(u) ? u['package-ecosystem'] : u)),
-    ).toEqual([...ECOSYSTEMS]);
+    ).toEqual([...ECOSYSTEMS, 'docker']);
   });
 
   it.each(ECOSYSTEMS)(
@@ -456,4 +459,21 @@ describe('every catch-all group excludes every pattern group (#705)', () => {
       expect(missing).toEqual([]);
     },
   );
+});
+
+describe('Dependabot bumps the Node pin (#793)', () => {
+  it('watches the Dockerfile for develop and never offers a new Node major', () => {
+    expect(updateFor('docker')).toEqual({
+      'package-ecosystem': 'docker',
+      directory: '/.github/node',
+      'target-branch': 'develop',
+      schedule: { interval: 'weekly' },
+      ignore: [
+        {
+          'dependency-name': 'node',
+          'update-types': ['version-update:semver-major'],
+        },
+      ],
+    });
+  });
 });
