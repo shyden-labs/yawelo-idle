@@ -61,6 +61,7 @@ describe('board-orphans.yml (#580)', () => {
       'The board key is set',
       'Mint the board token (read-only roadmap App)',
       'actions/checkout',
+      'Read the exact Node version (.github/node/Dockerfile)',
       'actions/setup-node',
       'No ticket is In Progress without a branch or open pull request',
     ]);

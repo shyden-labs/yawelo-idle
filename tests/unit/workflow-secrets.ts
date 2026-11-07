@@ -88,6 +88,21 @@ const ONLY_STATUSES = 'only statuses may be written';
 const hasExpression = (value: Yaml): boolean =>
   strings(value).some((text) => text.includes('${{'));
 
+/**
+ * The one expression a setup-node input may hold (#793): the version the
+ * job's own read step took from the default branch's Dockerfile. The
+ * checkout may name no ref and a shell line no expression, so no
+ * pull-request text reaches it.
+ */
+const READ_VERSION = '${{ steps.node.outputs.version }}';
+
+const withoutReadVersion = (uses: string, inputs: Yaml): Yaml =>
+  uses.startsWith('actions/setup-node@') &&
+  isRecord(inputs) &&
+  inputs['node-version'] === READ_VERSION
+    ? { ...inputs, 'node-version': '' }
+    : inputs;
+
 /** Why one step of a pull_request_target job is unsafe, or nothing. */
 function targetStepProblems(id: string, step: Yaml): string[] {
   if (!isRecord(step)) return [];
@@ -111,7 +126,7 @@ function targetStepProblems(id: string, step: Yaml): string[] {
       `jobs.${id} uses ${uses}; only actions/checkout and actions/setup-node may run here`,
     );
   }
-  if (hasExpression(step.with)) {
+  if (hasExpression(withoutReadVersion(uses, step.with))) {
     problems.push(
       `jobs.${id} puts an expression in a with: input of ${uses}, where pull-request text could reach code; pass constants only`,
     );

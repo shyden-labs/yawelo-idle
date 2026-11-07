@@ -50,6 +50,7 @@ const SKIP = "steps.classify.outputs.scope != 'docs-only'";
 const ORDER = [
   'The default branch is develop',
   'actions/checkout',
+  'Read the exact Node version (.github/node/Dockerfile)',
   'actions/setup-node',
   'Classify the change as docs-only or full (#360)',
   'Develop merges by squash only (#679)',
@@ -77,6 +78,7 @@ const ORDER = [
 const DOCS_ONLY = [
   'The default branch is develop',
   'actions/checkout',
+  'Read the exact Node version (.github/node/Dockerfile)',
   'actions/setup-node',
   'Classify the change as docs-only or full (#360)',
   'Develop merges by squash only (#679)',

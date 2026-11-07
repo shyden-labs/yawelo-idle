@@ -709,10 +709,10 @@ describe('check-release-cut.yml', () => {
 
   it('runs four steps: checkout, the Node version, Node, then the check', () => {
     expect(
-      steps().map((step) => step.name ?? step.id ?? step.uses?.split('@')[0]),
+      steps().map((step) => step.name ?? step.uses?.split('@')[0]),
     ).toEqual([
       'actions/checkout',
-      'node',
+      'Read the exact Node version (.github/node/Dockerfile)',
       'actions/setup-node',
       'Judge the release cut and post its status',
     ]);

@@ -192,6 +192,28 @@ describe('scanWorkflow', () => {
     ]);
   });
 
+  // #793: the version comes from the default branch's own Dockerfile (the
+  // checkout may name no ref), read by a step whose shell line holds no
+  // expression, so no pull-request text reaches it.
+  it('lets setup-node take the version the job read from its own checkout', () => {
+    const steps = `${checkout()}      - id: node\n        run: echo "version=1" >> "$GITHUB_OUTPUT"\n      - uses: actions/setup-node@x\n        with:\n          node-version: \${{ steps.node.outputs.version }}\n`;
+    expect(problems(target(steps))).toEqual([]);
+  });
+
+  it('still refuses another step output in a setup-node input', () => {
+    const steps = `${checkout()}      - uses: actions/setup-node@x\n        with:\n          node-version: \${{ steps.other.outputs.version }}\n`;
+    expect(problems(target(steps))).toEqual([
+      'pull_request_target: jobs.t puts an expression in a with: input of actions/setup-node@x, where pull-request text could reach code; pass constants only',
+    ]);
+  });
+
+  it('still refuses the read version beside another expression', () => {
+    const steps = `${checkout()}      - uses: actions/setup-node@x\n        with:\n          node-version: \${{ steps.node.outputs.version }}\n          cache: \${{ github.head_ref }}\n`;
+    expect(problems(target(steps))).toEqual([
+      'pull_request_target: jobs.t puts an expression in a with: input of actions/setup-node@x, where pull-request text could reach code; pass constants only',
+    ]);
+  });
+
   it.each([
     ['git fetch origin refs/pull/1/head && git checkout FETCH_HEAD'],
     ['gh pr checkout 1'],
