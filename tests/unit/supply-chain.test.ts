@@ -355,6 +355,68 @@ describe('the install is reproducible', () => {
 });
 
 /**
+ * No dependency runs an install script (#788, Shyden's route (b), 2026-11-07).
+ *
+ * npm 11 reads `allowScripts`: `true` lets a package's install script run,
+ * and a bare name approves every future version, so a new esbuild or workerd
+ * release would run its script on an approval given to an older one. Denying
+ * every script removes that reach at a measured cost of about 0.05 s per
+ * start (the JavaScript launcher instead of the native binary; table on
+ * #788). A key with a version, range or dist-tag would leave every other
+ * version unnamed, so each key is a bare name, and each is denied.
+ */
+const allowScripts = (): Record<string, unknown> => {
+  const doc: unknown = JSON.parse(readFileSync('package.json', 'utf8'));
+  return isRecord(doc) && isRecord(doc.allowScripts) ? doc.allowScripts : {};
+};
+
+const BARE_PACKAGE_NAME = /^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/;
+
+const lockedInstallScripts = (): string[] => {
+  const lock: unknown = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  const packages =
+    isRecord(lock) && isRecord(lock.packages) ? lock.packages : {};
+  return Object.entries(packages)
+    .filter(
+      ([path, entry]) =>
+        // The root and the workspaces are this repo's own scripts, not a
+        // dependency's.
+        path.includes('node_modules/') &&
+        isRecord(entry) &&
+        entry.hasInstallScript === true,
+    )
+    .map(([path]) =>
+      path.slice(path.lastIndexOf('node_modules/') + 'node_modules/'.length),
+    );
+};
+
+describe('no dependency runs an install script (#788)', () => {
+  it('the lockfile holds packages with install scripts to check', () => {
+    expect(lockedInstallScripts().length).toBeGreaterThan(0);
+  });
+
+  it.each(Object.keys(allowScripts()))(
+    'allowScripts names %s bare, never with a version, range or dist-tag',
+    (key) => {
+      expect(key).toMatch(BARE_PACKAGE_NAME);
+    },
+  );
+
+  it.each(Object.keys(allowScripts()))('allowScripts denies %s', (key) => {
+    expect(allowScripts()[key], `${key} must be false, not approved`).toBe(
+      false,
+    );
+  });
+
+  it.each(lockedInstallScripts())(
+    'allowScripts names %s, which the lockfile says has an install script',
+    (name) => {
+      expect(Object.keys(allowScripts())).toContain(name);
+    },
+  );
+});
+
+/**
  * The coverage tool is pinned to the test runner (#728). `@vitest/coverage-v8`
  * peers on one exact Vitest version, and Vitest warns that "running mixed
  * versions is not supported" when they differ. So a Vitest bump that leaves
