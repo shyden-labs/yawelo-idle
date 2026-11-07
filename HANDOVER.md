@@ -1,33 +1,26 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-07 (fifty-second session). No Colima or device claim held. **Phones:** none needed. Shyden is AFK most of 2026-11-07 (relayed by repo-template-be): keep going by Priority, park his decisions here.
+**Written:** 2026-11-08 (fifty-third session). No Colima or device claim held. **Phones:** none needed. Shyden is AFK most of 2026-11-07 (relayed by repo-template-be): keep going by Priority, park his decisions here.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
-- 2026-11-07 evening, at Shyden's request in Chrome: **#684 shut** (squash default set, API read back `PR_TITLE / COMMIT_MESSAGES`); test board 6 deleted (its page is 404; board 4 intact, 537 items); 25 old worktrees removed.
-
-- Shyden answered four parked questions, each recorded on its ticket: **#523** shut (not planned); **#590** parked at P4, blocked by #8; **#684** shrunk (Estimate 1); **#720 AC3** approved.
-- **#720 shut:** PR #901 (daily `npm-audit-daily.yml`) and PR #907 (gh buffer fix after the first planted run hit `ENOBUFS`). Planted runs 42321896533 opened #909 to #912, 42321965252 commented on them; all planted issues closed.
-- **#684:** PR #902 merged (ccc53c2f), AC2 met. Back to Todo: AC1 is Shyden's setting.
-- **#793:** PR #908 merged (092c5e3c): `.github/node/Dockerfile` + Dependabot docker entry, `.nvmrc` gone; CI installs v26.12.1 from it. Back to Todo: AC6 waits on Dependabot's first docker PR.
-- **#742:** PR #916 merged (cb0082de) after every check passed on head c00afaff: template's story form (Website kept) and `scripts/file-story.ts`. Field table on #742. Open only for the DoD's live proof (resume step 1).
-- **Power-loss recovery (2026-11-07 ~22:00 +07):** nothing lost. Object store fsck clean; the commit-graph (written 11-05) named 12 pruned commits and was rebuilt with `git commit-graph write --reachable`. No locks or Colima claims were held; no worktree had stray edits.
-- **#788:** AC1 measured (table on #788). AC2 is Shyden's route choice (below).
+- 2026-11-08 (fifty-third session): **#742 shut**: `file-story.ts` filed #917 live, every field read back (comment on #742).
+- **#917 filed (P0, 3 pts):** the whole unit suite on the laptop had 4 timeouts at 1 s (dev-config x2, golden-vectors, golden-log slice 99) with swap at 4,362 of 5,120 MB and load 31; the same files alone passed 4,579/4,579. A repeat of #859, measured as its ruling asks.
+- **#788 AC2/AC3:** branch `788-deny-install-scripts` (worktree `../yawelo-idle-788`), commit a4c322d9, **PR #918** into develop. `allowScripts` denies esbuild and workerd; unit tests (bare names, all false, every locked script package named) seen red, 4 mutants killed. Measured with both denied: `npm ci` no warning; `wrangler dev` sync `/health` 200 `db: ok`, web `/play/` 200. #788 In Progress.
 
 ## Running (each dies with this session)
 
-- Nothing.
+- Nothing. PR #918 CI was in progress at handover (head a4c322d9).
 
 ## Resume steps
 
-1. **#742:** file the next real ticket (never one made up for the proof) with `node scripts/file-story.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories" <story.json>` as AC3's live proof, and shut #742.
-   **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
-2. **#788 AC2 (Shyden ruled 2026-11-07, comment on #788): deny both install scripts (esbuild, workerd).** New branch, failing test first; then measure `wrangler dev` and a real dev deploy with both denied before closing; if either breaks, back to Shyden with the measurement.
-   (Done 2026-11-07, global: census.py now treats `${{ steps.<id>.outputs.* }}` as a pointer when that step names a file the census parses; 3 tests seen red/green, 39/39 mutants killed, live census 0 floating across all six projects, Dockerfile pins still counted at 26.12.1. Backups `*.bak-2026-11-07-788` in the skill folder.)
-3. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
-4. Then by board: #783 (P0) waits for the next release cut; P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #742, #757 (waits for a cut), #788.
+1. **PR #918:** `~/.claude/scripts/pr-verdict.sh 918` (it can return while in progress: re-read the jobs by name). When every required check passes on the head SHA (read `headRefOid` to a file), squash-merge into develop. Then measure the real dev deploy (deploy-dev run green, `dev.yawelo-idle.shyden.co.uk` and the sync Worker `/health` answer) and shut #788 with the evidence; if the deploy breaks, back to Shyden with the measurement.
+2. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
+3. **#917 (P0):** reproduce under induced memory pressure per its AC1.
+4. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
+5. Then by board: #783 (P0) waits for the next release cut; P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #757 (waits for a cut).
 
 ## Waiting on Shyden
 
@@ -37,5 +30,5 @@
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Live worktrees: `-dev-scripts`, `-402`, `-875` (the 25 old ones were removed 2026-11-07).
-- Open PRs: #602 (Stryker, waits for a runner release).
+- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-788` (the 25 old ones were removed 2026-11-07).
+- Open PRs: #918 (#788, CI running), #602 (Stryker, waits for a runner release).
