@@ -1,0 +1,44 @@
+# A new advisory on develop is never found by accident (#720 AC3, Shyden
+# 2026-11-07: "Yes, daily"). CI's audit step judges each pull request; this
+# judges develop once a day, because an advisory can be published after the
+# merge. Each problem scripts/npm-audit.ts finds opens its own issue for
+# ShydenMcM (or comments on the open one) and the run goes red.
+#
+# npm audit reads the lockfile alone, so nothing is installed. A dispatch may
+# plant a real vulnerable package@version in the run's own lockfile: the
+# planted failure that proves the issue path on GitHub itself.
+name: npm-audit-daily
+on:
+  schedule:
+    - cron: '41 1 * * *'
+  workflow_dispatch:
+    inputs:
+      plant_package:
+        description: 'Planted failure (#720 AC3): add this package@version to the lockfile before the audit'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Plant a vulnerable package (dispatch only)
+        if: inputs.plant_package != ''
+        env:
+          PLANT: ${{ inputs.plant_package }}
+        run: npm install --package-lock-only --ignore-scripts -- "$PLANT"
+      - name: Audit develop and report each problem to Shyden
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/npm-audit.ts --daily
