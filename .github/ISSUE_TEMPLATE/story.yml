@@ -3,13 +3,19 @@ description: One story, fully defined before any work starts.
 labels: []
 body:
   - type: markdown
-    id: estimate-note
+    id: filing-steps
     attributes:
       value: |
-        After filing, add the issue to the "Yawelo Idle Stories" board and set its **Estimate** field: 1, 2, 3, 5, 8 or 13 story points. Anything larger is an epic: split it into stories.
-        Score from the acceptance criteria against similar closed stories, never from felt hours. Progress by effort reads the board field and nothing else.
-        Set its **Priority** too: P0 (now) to P5 (someday), as the board’s option descriptions define them. A blocker takes at least the level of what waits on it. The next ticket comes from `node scripts/board-next.ts`, never from the handover.
-        Set each issue this one waits on as a **Blocked by** link on the issue, and its epic as its parent (sub-issue). A `## Depends on` section is context, not the record.
+        Every project files a ticket the same way (shyden-labs/repo-template#20):
+        1. **Search the open board first.** On a duplicate, add what is new to the original instead.
+        2. **Add the issue to the "Yawelo Idle Stories" board**, checking the board’s title before you write.
+        3. Set the board’s **Estimate** field: 1, 2, 3, 5, 8 or 13 story points. It is scored from the acceptance criteria against similar closed stories, never from felt hours. Anything larger is an epic: split it into stories. Progress by effort reads the board field and nothing else.
+        4. Set its **Priority** too: P0 (now) to P5 (someday), as the board’s option descriptions define them. A blocker takes at least the level of what waits on it. The next ticket comes from `node scripts/board-next.ts`, never from the handover.
+        5. Add a **Blocked by** link for each issue it waits on: a “Depends on” section is context, not the record.
+        6. Set its epic as its **parent**.
+        7. Write `Refs #N` in commits and pull requests, never a closing keyword; close it by hand once every criterion is verified.
+
+        `node scripts/file-story.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories" <story.json>` does steps 1 to 6.
   - type: textarea
     id: story
     attributes:
@@ -21,7 +27,7 @@ body:
     id: context
     attributes:
       label: Context
-      description: The spec sections, decisions and research it rests on, and what it depends on.
+      description: The spec sections, decisions and research it rests on, and what it waits on.
     validations:
       required: true
   - type: textarea
@@ -53,3 +59,5 @@ body:
         - Every new or changed Svelte screen's behaviour tested in full: every statement, branch and handler run by a test (the coverage job fails otherwise, #804), driven in jsdom with clicks as packages/ui/test/Counter.test.ts does (#806).
         - Lint, typecheck, formatting and the zero-warnings gate pass; no retries; one test per case.
         - CI green on the PR head SHA, read step by step by name; merged into `develop` and deployed to dev, verified.
+    validations:
+      required: true
