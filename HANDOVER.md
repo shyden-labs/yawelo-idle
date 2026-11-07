@@ -16,11 +16,11 @@
 
 ## Running (each dies with this session)
 
-- A background waiter for Dependabot #913, #914, #915 (each asked to `@dependabot rebase` onto 30bf6e15).
+- A background waiter for Dependabot #913, #914, #915 (#913 brought up to date with `gh pr update-branch`; Dependabot refuses `@dependabot rebase` from the App).
 
 ## Resume steps
 
-1. **Dependabot #913, #914, #915:** merge one at a time: when a PR's head contains develop's tip and every job passed on it (SHA read to a file), squash-merge with `--match-head-commit`, then `@dependabot rebase` the rest. After #913 lands, shut #919 with its run.
+1. **Dependabot #913, #914, #915:** merge one at a time: when a PR's head contains develop's tip and every job passed on it (SHA read to a file), squash-merge with `--match-head-commit`, then `gh pr update-branch` the next (never `@dependabot rebase`: Dependabot answers "only users with push access" to the App). After #913 lands, shut #919 with its run.
 2. **#917 (P0):** AC1 needs induced memory pressure on a shared 8 GB laptop; do it only when no peer session holds a heavy run (`test-lock` shows the holder).
 3. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
 4. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
