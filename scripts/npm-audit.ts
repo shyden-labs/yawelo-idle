@@ -91,6 +91,16 @@ export function judgeAudit(
   return problems;
 }
 
+/**
+ * Room for gh's answer: the open-issue listing outgrew execFileSync's 1 MiB
+ * default on the first planted run (ENOBUFS, run 42318914120).
+ */
+export const GH_BUFFER = 64 * 1024 * 1024;
+
+/** Runs `gh` with these arguments and returns what it prints. */
+export const runGh: Gh = (args) =>
+  execFileSync('gh', args, { encoding: 'utf8', maxBuffer: GH_BUFFER });
+
 /** The issue title the daily audit gives `problem`, unique to it. */
 export const auditIssueTitle = (problem: string): string =>
   `npm audit on develop: ${problem}`;
@@ -127,8 +137,7 @@ if (import.meta.main) {
   for (const problem of problems) console.error(`npm-audit: ${problem}`);
   if (process.argv.includes('--daily')) {
     const repo = process.env.GITHUB_REPOSITORY ?? '';
-    const gh: Gh = (args) => execFileSync('gh', args, { encoding: 'utf8' });
-    for (const line of reportDaily(problems, repo, gh))
+    for (const line of reportDaily(problems, repo, runGh))
       console.error(`npm-audit: ${line}`);
   }
   if (problems.length > 0) process.exit(1);
