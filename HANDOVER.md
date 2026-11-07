@@ -6,6 +6,8 @@
 
 ## Done this session
 
+- 2026-11-07 evening, at Shyden's request in Chrome: **#684 shut** (squash default set, API read back `PR_TITLE / COMMIT_MESSAGES`); test board 6 deleted (its page is 404; board 4 intact, 537 items); 25 old worktrees removed.
+
 - Shyden answered four parked questions, each recorded on its ticket: **#523** shut (not planned); **#590** parked at P4, blocked by #8; **#684** shrunk (Estimate 1); **#720 AC3** approved.
 - **#720 shut:** PR #901 (daily `npm-audit-daily.yml`) and PR #907 (gh buffer fix after the first planted run hit `ENOBUFS`). Planted runs 42321896533 opened #909 to #912, 42321965252 commented on them; all planted issues closed.
 - **#684:** PR #902 merged (ccc53c2f), AC2 met. Back to Todo: AC1 is Shyden's setting.
@@ -29,14 +31,11 @@
 
 ## Waiting on Shyden
 
-- **#684 AC1:** Settings → General → Pull Requests → squash default "Pull request title and commit details".
 - (Census and #788 route answered 2026-11-07.)
-- **Old worktrees:** `cd ~/Developer/Repos/yawelo-idle && for w in 36 728b 761 752 794 728-probe 883 863 873 591 871 874 888 497 890 705 720 897 735 877 720b 720c 684 793 742; do git worktree remove ../yawelo-idle-$w; done` (all merged or empty; the 728-probe's files are `stash@{0}`).
-- **Test board 6 (`PVT_kwDOEOcG584BpujW`):** he deletes it in GitHub.
 - #784 next steps; the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Live worktrees: `-dev-scripts`; `-742`, `-720c`, `-793` merged (add 742 to the removal list).
+- Live worktrees: `-dev-scripts`, `-402`, `-875` (the 25 old ones were removed 2026-11-07).
 - Open PRs: #602 (Stryker, waits for a runner release).
