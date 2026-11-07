@@ -3,8 +3,12 @@
  * unless it is recorded below with a reason and an expiry date (#873).
  *
  * Usage: `node scripts/npm-audit.ts` (runs `npm audit --json` itself).
+ * With `--daily` (the daily audit of develop, #720 AC3) each problem is also
+ * reported to Shyden, one issue per problem.
  */
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import type { Gh } from './board-progress.ts';
+import { report } from './issue-report.ts';
 
 export interface AuditException {
   /** The advisory's GHSA id, as the last segment of its advisory URL. */
@@ -87,6 +91,32 @@ export function judgeAudit(
   return problems;
 }
 
+/** The issue title the daily audit gives `problem`, unique to it. */
+export const auditIssueTitle = (problem: string): string =>
+  `npm audit on develop: ${problem}`;
+
+/**
+ * Reports each problem on its own issue for Shyden (#720 AC3): a new one
+ * opens an issue, one already open is commented on. Says what it did.
+ */
+export function reportDaily(
+  problems: readonly string[],
+  repo: string,
+  gh: Gh,
+): string[] {
+  return problems.flatMap((problem) =>
+    report(repo, gh, {
+      title: auditIssueTitle(problem),
+      lead: 'The daily audit of develop (npm-audit-daily.yml, #720) found:',
+      problems: [problem],
+      footer:
+        'Upgrade the package, or record an exception with its reason and an ' +
+        'expiry in scripts/npm-audit.ts; any vulnerability is P0. Add this ' +
+        'issue to the board.',
+    }),
+  );
+}
+
 if (import.meta.main) {
   const run = spawnSync('npm', ['audit', '--json'], { encoding: 'utf8' });
   const problems = judgeAudit(
@@ -95,6 +125,12 @@ if (import.meta.main) {
     new Date().toISOString().slice(0, 10),
   );
   for (const problem of problems) console.error(`npm-audit: ${problem}`);
+  if (process.argv.includes('--daily')) {
+    const repo = process.env.GITHUB_REPOSITORY ?? '';
+    const gh: Gh = (args) => execFileSync('gh', args, { encoding: 'utf8' });
+    for (const line of reportDaily(problems, repo, gh))
+      console.error(`npm-audit: ${line}`);
+  }
   if (problems.length > 0) process.exit(1);
   console.log('npm-audit: no advisory without a current exception');
 }
