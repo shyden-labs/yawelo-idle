@@ -682,17 +682,18 @@ describe('check-release-cut.yml', () => {
     ]);
   });
 
-  it('sets up the Node .nvmrc names and installs nothing, since the check imports only node and its own script', () => {
-    const [, node] = steps();
+  it('sets up the Node the Dockerfile names and installs nothing, since the check imports only node and its own script', () => {
+    const [, read, node] = steps();
+    expect(read?.id).toBe('node');
     expect([node?.uses?.split('@')[0], node?.with]).toEqual([
       'actions/setup-node',
-      { 'node-version-file': '.nvmrc' },
+      { 'node-version': '${{ steps.node.outputs.version }}' },
     ]);
   });
 
   // The head ref is text the pull request's author chose: it reaches the shell through env, never through an expression.
   it('hands the head repository, head ref, head SHA, pull request number and token to the check through env', () => {
-    const [, , judge] = steps();
+    const [, , , judge] = steps();
     expect([judge?.name, judge?.env, runOf(judge ?? {})]).toEqual([
       'Judge the release cut and post its status',
       {
@@ -706,11 +707,12 @@ describe('check-release-cut.yml', () => {
     ]);
   });
 
-  it('runs three steps: checkout, Node, then the check', () => {
+  it('runs four steps: checkout, the Node version, Node, then the check', () => {
     expect(
-      steps().map((step) => step.name ?? step.uses?.split('@')[0]),
+      steps().map((step) => step.name ?? step.id ?? step.uses?.split('@')[0]),
     ).toEqual([
       'actions/checkout',
+      'node',
       'actions/setup-node',
       'Judge the release cut and post its status',
     ]);
