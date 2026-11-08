@@ -10,10 +10,13 @@ import { jobIn } from './workflow-file.ts';
  * passes (#782, found by ShyTalk's review, 2026-10-29). Each required job
  * holds exactly the keys below, in order.
  *
- * The required checks (#795): develop requires build-and-test,
- * board-orphans and coverage, and main requires build-and-test, each pinned to app 15368 (GitHub Actions). Each is the id
- * of a job with no `name:`. No test reads that list from GitHub, so it is
- * held here as written there.
+ * The required checks (#795, #655): develop requires build-and-test,
+ * board-orphans, coverage, sonar-coverage and sonarcloud, and main requires
+ * build-and-test, sonar-coverage and sonarcloud, each pinned to app 15368
+ * (GitHub Actions). Each is the id of a job with no `name:`. No test reads
+ * that list from GitHub, so it is held here as written there. Both SonarCloud
+ * jobs are required together: a failed sonar-coverage skips sonarcloud, and a
+ * skipped required check counts as passed.
  */
 const REQUIRED: readonly (readonly [string, string, readonly string[]])[] = [
   [
@@ -27,6 +30,16 @@ const REQUIRED: readonly (readonly [string, string, readonly string[]])[] = [
     ['runs-on', 'timeout-minutes', 'environment', 'steps'],
   ],
   ['ci.yml', 'coverage', ['runs-on', 'timeout-minutes', 'container', 'steps']],
+  [
+    'sonarcloud.yml',
+    'sonar-coverage',
+    ['runs-on', 'timeout-minutes', 'container', 'outputs', 'steps'],
+  ],
+  [
+    'sonarcloud.yml',
+    'sonarcloud',
+    ['needs', 'runs-on', 'timeout-minutes', 'environment', 'steps'],
+  ],
 ];
 
 describe('each required check is a job that always runs under its own id (#782)', () => {
