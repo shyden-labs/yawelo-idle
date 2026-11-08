@@ -3,31 +3,23 @@
 # are checked, failing the workflow when the gate fails; every project adopts
 # it, blocking).
 #
-# Called by ci.yml after its coverage job. It fails when the token is missing,
-# scans with the coverage report that job uploaded in this run (no second run
-# of the suites), then reads the gate of THAT scan's analysis and is green only
-# on OK. A docs-only change measures nothing, so it scans without a report; the
-# scan and its verdict still run. Nothing swallows a failure
-# (tests/unit/workflow-honesty.test.ts). Settings: sonar-project.properties.
+# Its own pull-request workflow (Shyden, 2026-11-08): it measures coverage
+# itself, so the deploys that call ci.yml are untouched and no job-level
+# condition can skip the check (#782). It fails when the token is missing,
+# measures every suite pull-request CI runs, scans, then reads the gate of THAT
+# scan's analysis and is green only on OK. A docs-only change measures nothing
+# (#360), so it scans without a report; the scan and its verdict still run.
+# Nothing swallows a failure (tests/unit/workflow-honesty.test.ts). Settings:
+# sonar-project.properties.
+#
+# The token lives in the `sonarcloud` environment (spec §12.9: secrets live in
+# environments). Dependabot's runs get no environment secrets, so theirs read
+# the repository's Dependabot secret of the same name.
 #
 # Every third-party `uses:` is a full commit SHA with its `# vX.Y.Z` comment.
 name: sonarcloud
 on:
-  workflow_call:
-    inputs:
-      organization:
-        required: true
-        type: string
-      project-key:
-        required: true
-        type: string
-      coverage:
-        description: Whether the coverage job measured and uploaded a report.
-        required: true
-        type: boolean
-    secrets:
-      SONAR_TOKEN:
-        required: false
+  pull_request:
 
 permissions:
   contents: read
@@ -35,7 +27,12 @@ permissions:
 jobs:
   sonarcloud:
     runs-on: ubuntu-26.04
-    timeout-minutes: 20
+    timeout-minutes: 25
+    # The image the coverage job in ci.yml measures in, so the suites run alike.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
+      options: --user 1001
+    environment: sonarcloud
     steps:
       - name: The SonarCloud token is set
         env:
@@ -58,20 +55,27 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-      - name: Fetch the coverage report this run measured
-        if: ${{ inputs.coverage }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: coverage
-          path: coverage/
+          cache: 'npm'
+      - name: Classify the change as docs-only or full (#360)
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: node scripts/ci-scope.ts
+      - name: Install (a warning fails it)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: scripts/fail-on-warnings.sh npm ci
+      - name: Measure coverage (every suite pull-request CI runs)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        timeout-minutes: 12
+        run: npm run test:coverage
       - name: Scan
         uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=${{ inputs.organization }}
-            -Dsonar.projectKey=${{ inputs.project-key }}
+            -Dsonar.organization=shyden-labs
+            -Dsonar.projectKey=shyden-labs_yawelo-idle
       - name: Read the quality gate of this scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

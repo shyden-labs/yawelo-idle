@@ -21,14 +21,6 @@ const files = readdirSync(WORKFLOWS)
   .sort();
 const read = (f: string) => readFileSync(`${WORKFLOWS}/${f}`, 'utf8');
 
-interface Job {
-  if?: string;
-  needs?: string | string[];
-  uses?: string;
-  with?: Record<string, unknown>;
-  secrets?: unknown;
-}
-
 describe('every workflow', () => {
   it('is judged', () => {
     expect(files).toEqual([
@@ -57,8 +49,7 @@ describe('every workflow', () => {
 });
 
 describe('sonarcloud.yml', () => {
-  // Every caller of ci.yml grants contents: read alone; a called workflow
-  // asking for more would stop the deploys from starting.
+  // Reading the repository is all it needs: the scan and its verdict use the token.
   it('asks for nothing beyond reading the repository', () => {
     expect(
       (parse(read('sonarcloud.yml')) as { permissions: unknown }).permissions,
@@ -89,47 +80,49 @@ describe('sonarcloud.yml', () => {
     }).toEqual({ scans: true, problems: [] });
   });
 
-  // The coverage job already measured every suite; the scan reads its report
-  // rather than running the suites a second time.
-  it("scans with the coverage job's report, from this run, whenever that job measured", () => {
-    expect(read('sonarcloud.yml')).toContain(
-      [
-        '      - name: Fetch the coverage report this run measured',
-        '        if: ${{ inputs.coverage }}',
-        '        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2',
-        '        with:',
-        '          name: coverage',
-        '          path: coverage/',
-      ].join('\n'),
-    );
-  });
-
-  // A docs-only change measures nothing, so its scan runs without a report:
-  // the scan and its verdict still run, and no step is skipped and passed.
-  it('scans and reads the verdict on a docs-only change too', () => {
-    const text = read('sonarcloud.yml');
-    const conditioned = text.split('\n').filter((l) => /^\s+if:/.test(l));
-    expect(conditioned).toEqual(['        if: ${{ inputs.coverage }}']);
-  });
-});
-
-describe('ci.yml', () => {
-  const jobs = (parse(read('ci.yml')) as { jobs: Record<string, Job> }).jobs;
-
-  // Pull requests only: the deploys call ci.yml too, and they hold neither the
-  // token nor anything a scan could add once the pull request passed its gate.
-  it('runs the SonarCloud scan on pull requests, after coverage, for this repository, with the token', () => {
-    expect(jobs['sonarcloud']).toEqual({
-      if: "github.event_name == 'pull_request'",
-      needs: 'coverage',
-      uses: './.github/workflows/sonarcloud.yml',
-      with: {
-        organization: 'shyden-labs',
-        'project-key': 'shyden-labs_yawelo-idle',
-        coverage: "${{ needs.coverage.outputs.scope != 'docs-only' }}",
-      },
-      secrets: 'inherit',
+  // Shyden, 2026-11-08: its own pull-request workflow, measuring coverage
+  // itself, so the deploys that call ci.yml are untouched and no job-level
+  // condition can skip the check (#782).
+  it('runs on pull requests, as one job with exactly its keys, in the sonarcloud environment', () => {
+    const doc = parse(read('sonarcloud.yml')) as {
+      on: unknown;
+      jobs: Record<string, Record<string, unknown>>;
+    };
+    expect({
+      on: doc.on,
+      jobs: Object.keys(doc.jobs),
+      keys: Object.keys(doc.jobs['sonarcloud'] ?? {}),
+      environment: doc.jobs['sonarcloud']?.['environment'],
+    }).toEqual({
+      on: { pull_request: null },
+      jobs: ['sonarcloud'],
+      keys: ['runs-on', 'timeout-minutes', 'container', 'environment', 'steps'],
+      environment: 'sonarcloud',
     });
+  });
+
+  it('measures coverage before it scans', () => {
+    const text = read('sonarcloud.yml');
+    const measure = text.indexOf('run: npm run test:coverage');
+    expect({
+      measures: measure > -1,
+      beforeScan: measure < text.indexOf('SonarSource/sonarqube-scan-action@'),
+    }).toEqual({
+      measures: true,
+      beforeScan: true,
+    });
+  });
+
+  // A docs-only change measures nothing (#360), so its scan runs without a
+  // report: the scan and its verdict still run, and no step is skipped and passed.
+  it('skips only the install and the measure on a docs-only change', () => {
+    const conditioned = read('sonarcloud.yml')
+      .split('\n')
+      .filter((l) => /^\s+if:/.test(l));
+    expect(conditioned).toEqual([
+      "        if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
+      "        if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
+    ]);
   });
 });
 
