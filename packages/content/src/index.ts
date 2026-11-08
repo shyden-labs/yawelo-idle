@@ -50,7 +50,7 @@ const review = z.strictObject({
   status: z.enum(REVIEW_STATUSES),
   reviewer: z.string().min(1).nullable(),
   reviewedAt: z.iso.datetime({ offset: true }).nullable(),
-  notes: z.string(),
+  notes: z.string().nullable(),
   sources: z.array(visible),
   backTranslation: z.string().nullable(),
   labelAudit: z.string().nullable(),
@@ -229,17 +229,25 @@ export function loadCourse(json: unknown): LoadResult {
 function itemName(json: unknown, kind: string, index: number): string {
   const items = isRecord(json) ? json[kind] : undefined;
   const item: unknown = Array.isArray(items) ? items[index] : undefined;
-  return isRecord(item) && typeof item.id === 'string'
+  return isRecord(item) && typeof item.id === 'string' && VISIBLE.test(item.id)
     ? item.id
     : `#${String(index)}`;
 }
 
+/** Which item of the pack a path sits in, and the path inside that item. */
+function located(
+  json: unknown,
+  path: readonly PropertyKey[],
+): { kind: string; item: string; within: readonly PropertyKey[] } {
+  const [head, index, ...rest] = path;
+  if (typeof head === 'string' && typeof index === 'number')
+    return { kind: head, item: itemName(json, head, index), within: rest };
+  return { kind: 'course', item: 'course', within: path };
+}
+
 function errorsOf(json: unknown, issue: z.core.$ZodIssue): LoadError[] {
-  const [head, index, ...rest] = issue.path;
-  const inItem = typeof head === 'string' && typeof index === 'number';
-  const kind = inItem ? head : 'course';
-  const item = inItem ? itemName(json, head, index) : 'course';
-  const within = (inItem ? rest : issue.path).map(String);
+  const { kind, item, within: path } = located(json, issue.path);
+  const within = path.map(String);
   // An unknown key is reported at the object holding it, naming the keys.
   const fields =
     issue.code === 'unrecognized_keys'
@@ -255,4 +263,84 @@ function errorsOf(json: unknown, issue: z.core.$ZodIssue): LoadError[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** One structural check's verdict: what it judged, and what it refused. */
+export interface StructureCheck {
+  readonly name: string;
+  readonly judged: number;
+  readonly errors: readonly LoadError[];
+  readonly message: string;
+}
+
+const verdict = (
+  name: string,
+  judged: number,
+  errors: readonly LoadError[],
+): StructureCheck => ({
+  name,
+  judged,
+  errors,
+  message: `${name}: ${String(judged)} judged, ${String(errors.length)} refused`,
+});
+
+/** Every lexicon `id` is unique within a course (#103 AC1). */
+function uniqueIds(course: CoursePack): StructureCheck {
+  const byId = new Map<string, string[]>();
+  course.lexicon.forEach((item, index) => {
+    const named = `#${String(index)} (${item.target})`;
+    byId.set(item.id, [...(byId.get(item.id) ?? []), named]);
+  });
+  const errors = [...byId]
+    .filter(([, items]) => items.length > 1)
+    .map(([id, items]) => ({
+      kind: 'lexicon',
+      item: id,
+      field: 'id',
+      message: `lexicon ${id}: id is shared by ${items.join(' and ')}`,
+    }));
+  return verdict('unique lexicon ids', course.lexicon.length, errors);
+}
+
+/** Every string leaf under `value`, with the path that reaches it. */
+function stringLeaves(
+  value: unknown,
+  path: readonly (string | number)[] = [],
+): readonly (readonly [readonly (string | number)[], string])[] {
+  if (typeof value === 'string') return [[path, value]];
+  if (Array.isArray(value))
+    return value.flatMap((each, index) => stringLeaves(each, [...path, index]));
+  if (isRecord(value))
+    return Object.entries(value).flatMap(([key, each]) =>
+      stringLeaves(each, [...path, key]),
+    );
+  return [];
+}
+
+/** No empty or whitespace-only string anywhere in a pack (#103 AC2). */
+function noEmptyStrings(course: CoursePack): StructureCheck {
+  const leaves = stringLeaves(course);
+  const errors = leaves
+    .filter(([, text]) => !VISIBLE.test(text))
+    .map(([path]) => {
+      const { kind, item, within } = located(course, path);
+      const field = within.map(String).join('.');
+      return {
+        kind,
+        item,
+        field,
+        message: `${kind} ${item}: ${field} is empty or whitespace only`,
+      };
+    });
+  return verdict('no empty strings', leaves.length, errors);
+}
+
+/**
+ * The structural mistakes that must never ship (#103; spec §5.5). Each check
+ * says how many units it judged, so one that read nothing cannot pass for a
+ * clean result. Separate from `loadCourse`, which the review tool uses on
+ * drafts, and for the build to run alongside `shipErrors` (#106).
+ */
+export function structureChecks(course: CoursePack): readonly StructureCheck[] {
+  return [uniqueIds(course), noEmptyStrings(course)];
 }

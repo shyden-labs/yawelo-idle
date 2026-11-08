@@ -45,7 +45,7 @@ const checkedReview = (): Json => ({
   status: 'claude-checked',
   reviewer: 'claude',
   reviewedAt: '2026-11-08T03:00:00Z',
-  notes: '',
+  notes: null,
   sources: ['kbbi:rumah', 'wiktionary:rumah'],
   backTranslation: 'house',
   labelAudit: 'the building a family lives in, not a household',
@@ -436,5 +436,13 @@ describe('loadCourse: every review block keeps its history (#51 AC3)', () => {
     const pack = copy(enId);
     delete (firstItem(pack).review as Json).history;
     expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.history')]);
+  });
+});
+
+describe('loadCourse: review notes with nothing to say are null (#103)', () => {
+  it('loads a null note', () => {
+    const pack = copy(enId);
+    (firstItem(pack).review as Json).notes = null;
+    expect(loadCourse(pack).ok).toBe(true);
   });
 });
