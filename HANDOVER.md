@@ -6,29 +6,29 @@
 
 ## Done this session
 
-- 2026-11-08 (fifty-seventh session; Shyden back, relayed by repo-template-27). **Every parked question asked and answered**, each recorded on its ticket: #858 support link in the site footer + game settings, opens in the browser, optional player ID (a random code the game assigns) with a privacy line, shyden.co.uk told; #828 ETA confidence rule kept; #452 voyage order kept after M8; #103 split (#103 keeps unique ids + no empty strings + counts; Encounter tags, review blocks, cross-references moved to **#922**, P3, 3 pts, blocked by #102/#110/#462; AC6 floor dropped by the 2026-10-30 rule).
-- **#784:** Google refused the Yawelo Gmail ("device ... used too many times for verification"); Shyden: scan with his other Android phone once another session frees it.
-- **#655 SonarCloud:** project `shyden-labs_yawelo-idle` created (new code = previous version, automatic analysis off, read back). Shyden set `SONAR_TOKEN` (Actions + Dependabot). On his request the App got read-only **Secrets** and **Dependabot secrets** (names only); the local pin `~/.claude/scripts/github-app/app_manifest.py` updated test-first (ShyDesk keeps its old set; backups `*.bak-yawelo-secrets-read-2026-11-08`); App read back both secret names. Shyden chose a **separate pull-request workflow** (measures coverage itself; deploys untouched; no job-level `if`). After the security review, two jobs: `sonar-coverage` (installs, measures, uploads; no secret) and `sonarcloud` (token; downloads, scans, verdict; runs no project code). **Both** become required at AC1. **PR #923** on `655-sonarcloud`, head `7b71a9b7ca3777f7eabf72f3313d9bac8edbdfc3` (worktree `../yawelo-idle-655`); laptop: format, lint, typecheck clean, unit 13,788/13,788; mutation pass 8/8 caught. Board In Progress.
+- 2026-11-08 (fifty-seventh session, continued). Parked questions answered earlier today: #858 (support link; shyden.co.uk ruled it Yawelo Idle's only, nothing filed there), #828, #452, #103 split to #922.
+- **#655 SonarCloud:** PR #923 merged into develop as `f8f8d0af` (the integration list now has `scripts/sonar-verdict.ts`; first scan's S4624 fixed; **S9382 accepted by Shyden**, recorded on #655). CI was green on the head, every step run: `sonar-coverage`, `sonarcloud` (gate OK, so the `sonarcloud` environment's token works), build-and-test, coverage, board-orphans. **PR #924** (`655-sonar-required`, head `9808c1e80074b052275d83f931c5242472846759`, worktree `../yawelo-idle-655`): pins both Sonar jobs in `tests/unit/required-checks.test.ts`; watched red; unit 13,792/13,792.
 
 ## Running
 
-- Nothing.
+- A local waiter on PR #924's CI (dies with `/clear`; re-run `~/.claude/scripts/pr-verdict.sh 924`, which can return early while runs are queued).
 
 ## Resume steps
 
 0. `ListAgents`, then board-next. #655 (P1) is in hand.
-1. **PR #923:** `~/.claude/scripts/pr-verdict.sh 923`. The `sonarcloud` check fails at its first step ("SONAR_TOKEN is missing") until Shyden makes the `sonarcloud` environment with the token (commands given in chat: `gh api -X PUT repos/shyden-labs/yawelo-idle/environments/sonarcloud`, `gh secret set SONAR_TOKEN --repo shyden-labs/yawelo-idle --env sonarcloud`, then delete the repo-wide Actions copy; keep the Dependabot one). Then: first scan's findings (AC4) fixed or accepted by him, merge, make **both** `sonar-coverage` and `sonarcloud` required on develop + main and add **both** to `tests/unit/required-checks.test.ts` in the same rollout, then read protection back (AC1; a failed `sonar-coverage` skips `sonarcloud`, and a skipped required check counts as passed, so requiring only `sonarcloud` would fail open), prove one Dependabot PR (AC5).
-2. Then #103 (unique ids, no empty strings), M2.
-3. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure`, busy sessions; file a ticket.
-4. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
-5. By board: #783 (P0) waits for the next release cut; #784 waits for the phone.
+1. **PR #924:** green on head (steps by name) → squash-merge. Then make **both** `sonar-coverage` and `sonarcloud` required (app 15368) on develop (adds to build-and-test, board-orphans, coverage; strict) and main (adds to build-and-test), and read protection back (AC1).
+2. **AC5:** prove one real Dependabot PR is scanned and its verdict read (Dependabot gets the Dependabot copy of `SONAR_TOKEN`). **AC6** and the DoD's "one planted ERROR watched red": check what the ticket's comments already prove; fill any gap. Then shut #655.
+3. Then #103 (unique ids, no empty strings), M2. #830: draft the roadmap page text and park the approval question here.
+4. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure`, busy sessions; file a ticket.
+5. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
+6. By board: #783 (P0) waits for the next release cut; #784 waits for the phone.
 
 ## Waiting on Shyden
 
-- The `sonarcloud` environment + token (#655). The second Android phone for the Yawelo Gmail (#784). #830 copy approval.
+- Delete the repo-wide Actions `SONAR_TOKEN` (`gh secret delete SONAR_TOKEN --repo shyden-labs/yawelo-idle`; keep the Dependabot copy). Optional: mark S9382 Accepted in SonarCloud. The second Android phone for the Yawelo Gmail (#784). #830 copy approval.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
 - Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655`.
-- Open PRs: #602 (Stryker, waits for a runner release), #923 (#655).
+- Open PRs: #602 (Stryker, waits for a runner release), #924 (#655).
