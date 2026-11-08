@@ -27,7 +27,7 @@ const NEIGHBOUR_SCRIPT = 'https://static.cloudflareinsights.com/planted.js';
  */
 const BEACON =
   'https://static.cloudflareinsights.com/beacon.min.js/v8b253dfea2ab4077af8c6f58422dfbfd1689876627854';
-/** Every address the CSP test plants; each must be refused. */
+/** Every address the journey plants; each must be refused. */
 const PLANTED = [FOREIGN_IMAGE, FOREIGN_SCRIPT, NEIGHBOUR_SCRIPT] as const;
 /** The axe rule an image with no text alternative breaks. */
 const PLANTED_AXE_RULE = 'image-alt';
@@ -40,7 +40,7 @@ interface Event {
   readonly text: string;
 }
 
-test('the shell renders with no console errors or page errors', async ({
+test("the shell: no console or page errors, no axe violations, its Content Security Policy refusing what it should, and Cloudflare's real beacon running (#123, #451, #819)", async ({
   page,
 }) => {
   const events: Event[] = [];
@@ -54,12 +54,26 @@ test('the shell renders with no console errors or page errors', async ({
   page.on('pageerror', (error) => {
     events.push({ kind: 'pageerror', type: 'error', text: error.message });
   });
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    Object.defineProperty(window, '__violations', { value: seen });
+    document.addEventListener('securitypolicyviolation', (event) => {
+      seen.push(`${event.effectiveDirective} ${event.blockedURI}`);
+    });
+  });
 
-  await page.goto('/play/');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Yawelo Idle' }),
-  ).toBeVisible();
+  const response = await page.goto('/play/');
+  expect
+    .soft(response?.headers()['content-security-policy'])
+    .toContain("default-src 'self'");
+  const heading = page.getByRole('heading', {
+    level: 1,
+    name: 'Yawelo Idle',
+  });
+  await expect(heading).toBeVisible();
 
+  // No console or page errors. This comes first: the planted address and
+  // scripts below make the browser log errors of their own.
   await page.evaluate(
     ([consoleText, errorText]) => {
       console.error(consoleText);
@@ -85,27 +99,34 @@ test('the shell renders with no console errors or page errors', async ({
     ({ text }) =>
       !text.includes(CONSOLE_SENTINEL) && !text.includes(ERROR_SENTINEL),
   );
-  expect(unplanned).toEqual([]);
-});
+  expect.soft(unplanned).toEqual([]);
+  await expect.soft(heading).toBeVisible();
 
-test('the shell runs under its Content Security Policy with no violation', async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    const seen: string[] = [];
-    Object.defineProperty(window, '__violations', { value: seen });
-    document.addEventListener('securitypolicyviolation', (event) => {
-      seen.push(`${event.effectiveDirective} ${event.blockedURI}`);
-    });
-  });
-  const response = await page.goto('/play/');
-  expect(response?.headers()['content-security-policy']).toContain(
-    "default-src 'self'",
+  // No axe violations. A planted violation proves axe ran and reports: an
+  // image with no text alternative, inside the page's main landmark. Findings
+  // are counted per element, not per rule, so a real image breaking the same
+  // rule is still seen; the count is that one planted element whatever axe's
+  // version, and any other element is a real finding.
+  await page.evaluate((id) => {
+    const image = document.createElement('img');
+    image.id = id;
+    image.src = '/play/';
+    document.querySelector('main')?.append(image);
+  }, PLANTED_AXE_ID);
+  const { violations: axeViolations } = await new AxeBuilder({
+    page,
+  }).analyze();
+  const found = axeViolations.flatMap(({ id, nodes }) =>
+    nodes.map(({ target }) => `${id} ${target.join(' ')}`),
   );
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Yawelo Idle' }),
-  ).toBeVisible();
+  const plantedFinding = `${PLANTED_AXE_RULE} #${PLANTED_AXE_ID}`;
+  expect.soft(found).toContain(plantedFinding);
+  expect
+    .soft(found.filter((finding) => finding !== plantedFinding))
+    .toEqual([]);
+  await expect.soft(heading).toBeVisible();
 
+  // The Content Security Policy refuses every planted address and nothing else.
   await page.evaluate(
     ([image, scripts]) => {
       const planted = document.createElement('img');
@@ -130,28 +151,21 @@ test('the shell runs under its Content Security Policy with no violation', async
       return PLANTED.filter((url) => !seen.some((v) => v.includes(url)));
     })
     .toEqual([]);
-
   const seen = await violations();
-  const unplanned = seen.filter((v) => !PLANTED.some((url) => v.includes(url)));
-  expect(unplanned).toEqual([]);
-});
+  expect
+    .soft(seen.filter((v) => !PLANTED.some((url) => v.includes(url))))
+    .toEqual([]);
 
-test("the shell runs Cloudflare Web Analytics' real beacon (#451, #819)", async ({
-  page,
-}) => {
+  // Cloudflare Web Analytics' real beacon.
   const fetched = page.waitForResponse(BEACON);
-  await page.goto('/play/');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Yawelo Idle' }),
-  ).toBeVisible();
   await page.evaluate((src) => {
     document.body.append(
       Object.assign(document.createElement('script'), { src }),
     );
   }, BEACON);
   // No fallback: if Cloudflare cannot be reached, the test fails here naming it.
-  const response = await fetched;
-  expect(response.status(), `Cloudflare served ${BEACON}`).toBe(200);
+  const beacon = await fetched;
+  expect.soft(beacon.status(), `Cloudflare served ${BEACON}`).toBe(200);
   await expect
     .poll(() =>
       page.evaluate(
@@ -161,30 +175,5 @@ test("the shell runs Cloudflare Web Analytics' real beacon (#451, #819)", async 
       ),
     )
     .toBe('single');
-});
-
-test('the shell has no axe violations', async ({ page }) => {
-  await page.goto('/play/');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Yawelo Idle' }),
-  ).toBeVisible();
-  // A planted violation proves axe ran and reports: an image with no text
-  // alternative, inside the page's main landmark. Findings are counted per
-  // element, not per rule, so a real image breaking the same rule is still
-  // seen; the count is that one planted element whatever axe's version, and
-  // any other element is a real finding.
-  await page.evaluate((id) => {
-    const image = document.createElement('img');
-    image.id = id;
-    image.src = '/play/';
-    document.querySelector('main')?.append(image);
-  }, PLANTED_AXE_ID);
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  const found = violations.flatMap(({ id, nodes }) =>
-    nodes.map(({ target }) => `${id} ${target.join(' ')}`),
-  );
-  const planted = `${PLANTED_AXE_RULE} #${PLANTED_AXE_ID}`;
-  expect(found).toContain(planted);
-  const unplanned = found.filter((finding) => finding !== planted);
-  expect(unplanned).toEqual([]);
+  await expect.soft(heading).toBeVisible();
 });

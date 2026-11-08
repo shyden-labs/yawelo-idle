@@ -242,72 +242,73 @@ describe('the reader against git on a planted repository (#491 AC3)', () => {
     expect(committableFiles([], repo)).toEqual(['first.txt']);
   });
 
-  it('plants every shape, as git itself lists them (the known positives)', () => {
+  it('plants every shape, and the reader answers as git does for the repository and its worktree', () => {
     const { repo, worktree } = planted();
     const lists = gitLists(repo);
-    expect(lists.committable).toEqual(
-      expect.arrayContaining([
-        'f.txt',
-        'gone.txt',
-        'new.txt',
-        'sub/keep.log',
-        'nested/inner/',
-        TRACKED_NON_ASCII,
-        UNTRACKED_NON_ASCII,
-        'from-include.txt',
-        'never.txt',
-      ]),
+    const worktreeLists = gitLists(worktree);
+
+    // The known positives: every shape planted, as git itself lists them.
+    expect
+      .soft(lists.committable)
+      .toEqual(
+        expect.arrayContaining([
+          'f.txt',
+          'gone.txt',
+          'new.txt',
+          'sub/keep.log',
+          'nested/inner/',
+          TRACKED_NON_ASCII,
+          UNTRACKED_NON_ASCII,
+          'from-include.txt',
+          'never.txt',
+        ]),
+      );
+    expect.soft(existsSync(join(repo, 'gone.txt'))).toBe(false);
+    expect
+      .soft(lists.ignored)
+      .toEqual(
+        expect.arrayContaining([
+          'x.log',
+          'sub/local-only',
+          'build/',
+          'excluded.txt',
+          'only-ignored/',
+          'only-ignored/a.log',
+          'from-includeif.txt',
+        ]),
+      );
+    expect
+      .soft(worktreeLists.committable)
+      .toEqual(expect.arrayContaining(['wt-new.txt', 'f.txt']));
+    expect.soft(worktreeLists.ignored).toEqual(['excluded.txt']);
+
+    // Every path git would commit, and no other.
+    const committable = differences(
+      committableFiles([], repo),
+      lists.committable,
     );
-    expect(existsSync(join(repo, 'gone.txt'))).toBe(false);
-    expect(lists.ignored).toEqual(
-      expect.arrayContaining([
-        'x.log',
-        'sub/local-only',
-        'build/',
-        'excluded.txt',
-        'only-ignored/',
-        'only-ignored/a.log',
-        'from-includeif.txt',
-      ]),
+    expect.soft(committable, committable.join('\n')).toEqual([]);
+
+    // Every path git ignores, and no other.
+    const ignoredDiff = differences([...ignoredPaths(repo)], lists.ignored);
+    expect.soft(ignoredDiff, ignoredDiff.join('\n')).toEqual([]);
+
+    // A worktree's paths, read through its .git file.
+    const inWorktree = differences(
+      committableFiles([], worktree),
+      worktreeLists.committable,
     );
-    expect(gitLists(worktree).committable).toEqual(
-      expect.arrayContaining(['wt-new.txt', 'f.txt']),
+    expect.soft(inWorktree, inWorktree.join('\n')).toEqual([]);
+
+    // What the shared info/exclude names is ignored in a worktree.
+    const excluded = differences(
+      [...ignoredPaths(worktree)],
+      worktreeLists.ignored,
     );
-    expect(gitLists(worktree).ignored).toEqual(['excluded.txt']);
-  });
+    expect.soft(excluded, excluded.join('\n')).toEqual([]);
 
-  it('lists every path git would commit, and no other', () => {
-    const { repo } = planted();
-    const git = gitLists(repo).committable;
-    const diff = differences(committableFiles([], repo), git);
-    expect(diff, diff.join('\n')).toEqual([]);
-  });
-
-  it('lists every path git ignores, and no other', () => {
-    const { repo } = planted();
-    const git = gitLists(repo).ignored;
-    const diff = differences([...ignoredPaths(repo)], git);
-    expect(diff, diff.join('\n')).toEqual([]);
-  });
-
-  it("lists a worktree's paths through its .git file, as git does", () => {
-    const { worktree } = planted();
-    const git = gitLists(worktree).committable;
-    const diff = differences(committableFiles([], worktree), git);
-    expect(diff, diff.join('\n')).toEqual([]);
-  });
-
-  it('ignores in a worktree what the shared info/exclude names, as git does', () => {
-    const { worktree } = planted();
-    const git = gitLists(worktree).ignored;
-    const diff = differences([...ignoredPaths(worktree)], git);
-    expect(diff, diff.join('\n')).toEqual([]);
-  });
-
-  it('answers whether each path is ignored as git check-ignore does', () => {
-    const { repo } = planted();
-    const lists = gitLists(repo);
-    // Every listed path, and paths on no disk under an ignored directory and not.
+    // Whether each path is ignored, as git check-ignore answers: every listed
+    // path, and paths on no disk under an ignored directory and not.
     const asked = [
       ...lists.committable.filter((path) => !path.endsWith('/')),
       ...lists.ignored.filter((path) => !path.endsWith('/')),
@@ -320,36 +321,34 @@ describe('the reader against git on a planted repository (#491 AC3)', () => {
       { input: asked.join('\0'), encoding: 'utf8' },
     );
     // 0: some are ignored, 1: none; anything else is a failure.
-    expect(check.status, check.stderr).toBe(0);
+    expect.soft(check.status, check.stderr).toBe(0);
     const ignored = new Set(paths(check.stdout));
     const diff = asked
       .filter((path) => isIgnored(path, repo) !== ignored.has(path))
       .map(
         (path) => `${path}: git says ${ignored.has(path) ? '' : 'not '}ignored`,
       );
-    expect(diff, diff.join('\n')).toEqual([]);
+    expect.soft(diff, diff.join('\n')).toEqual([]);
   });
 });
 
 describe('the reader against git on the checked-out tree (#491 AC3)', () => {
-  it('lists every path git would commit, and no other', () => {
-    const git = gitLists('.').committable;
-    const diff = differences(committableFiles(), git);
-    expect(diff, diff.join('\n')).toEqual([]);
-  });
+  it('lists what git would commit and what it ignores, and answers each path as git check-ignore does', () => {
+    const lists = gitLists('.');
 
-  it('lists every path git ignores, as git does', () => {
+    // Every path git would commit, and no other.
+    const diff = differences(committableFiles(), lists.committable);
+    expect.soft(diff, diff.join('\n')).toEqual([]);
+
     // What is ignored holds whatever this machine or CI's earlier steps
     // wrote, so its length carries no recorded floor (a machine-dependent
     // population, shyden.co.uk #631). The equality is proved live by
     // node_modules/, which every install writes.
-    const git = gitLists('.').ignored;
-    expect(git).toContain('node_modules/');
-    expect([...ignoredPaths('.')].sort()).toEqual([...git].sort());
-  });
+    expect.soft(lists.ignored).toContain('node_modules/');
+    expect
+      .soft([...ignoredPaths('.')].sort())
+      .toEqual([...lists.ignored].sort());
 
-  it('answers whether each path is ignored as git check-ignore does', () => {
-    const lists = gitLists('.');
     // Every listed path, and the generated deploy config dev-config.test.ts
     // asks about, which a fresh checkout does not hold. The ignored half is
     // machine-dependent, so the table carries no floor; it is proved live by
@@ -363,16 +362,16 @@ describe('the reader against git on the checked-out tree (#491 AC3)', () => {
       input: asked.join('\0'),
       encoding: 'utf8',
     });
-    expect(check.status, check.stderr).toBe(0);
+    expect.soft(check.status, check.stderr).toBe(0);
     const ignored = new Set(paths(check.stdout));
     const git = Object.fromEntries(
       asked.map((path) => [path, ignored.has(path)]),
     );
-    expect(git['apps/sync-worker/wrangler.deploy.jsonc']).toBe(true);
-    expect(git['package.json']).toBe(false);
-    expect(
-      Object.fromEntries(asked.map((path) => [path, isIgnored(path)])),
-    ).toEqual(git);
+    expect.soft(git['apps/sync-worker/wrangler.deploy.jsonc']).toBe(true);
+    expect.soft(git['package.json']).toBe(false);
+    expect
+      .soft(Object.fromEntries(asked.map((path) => [path, isIgnored(path)])))
+      .toEqual(git);
   });
 
   // Each set of pathspecs a caller passes.
