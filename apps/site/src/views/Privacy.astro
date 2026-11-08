@@ -1,8 +1,9 @@
 ---
 /**
- * The privacy page, in English and Indonesian only (Shyden, 2026-11-08,
- * global rule; #928). The English page carries the one translated note for
- * readers of each language without legal text; today every language has it.
+ * The privacy page, in English and Indonesian (Shyden, 2026-11-08, global
+ * rule; #928). Each copy says which text governs for whom. The English copy
+ * also carries the one translated note for readers of any language that has
+ * no legal text (none today).
  */
 import Base from '../layouts/Base.astro';
 import { COPY, LEGAL } from '../copy';
@@ -12,20 +13,20 @@ interface Props {
   locale: LegalLocale;
 }
 const { locale } = Astro.props;
-const text = LEGAL[locale].privacy;
-const noted =
+const legal = LEGAL[locale].privacy;
+const withoutLegalText =
   locale === 'en'
-    ? LOCALES.filter((other) => !localesOf('privacy').includes(other))
+    ? LOCALES.filter((reader) => !localesOf('privacy').includes(reader))
     : [];
 ---
 
-<Base locale={locale} page="privacy" title={text.title}>
-  {noted.map((other) => (
-    <p lang={other} data-english-only-note>
-      {COPY[other].englishOnlyNote}
+<Base locale={locale} page="privacy" title={legal.title}>
+  {withoutLegalText.map((reader) => (
+    <p lang={reader} data-english-only-note>
+      {COPY[reader].englishOnlyNote}
     </p>
   ))}
-  <h1>{text.title}</h1>
-  <p data-governing-language>{text.governs}</p>
-  <p>{text.soon}</p>
+  <h1>{legal.title}</h1>
+  <p data-governing-language>{legal.governs}</p>
+  <p>{legal.soon}</p>
 </Base>

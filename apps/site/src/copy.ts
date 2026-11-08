@@ -129,8 +129,8 @@ export interface Copy {
   titles: Record<LocalisedPage, string>;
   launchListSoon: string;
   /**
-   * The one translated line an English legal page carries for readers of a
-   * language without legal text (Shyden, 2026-11-08; #925, #928).
+   * The one translated line the English legal page carries for readers of
+   * this language when it has no legal text of its own (#925, #928).
    */
   englishOnlyNote: string;
   notFoundTitle: string;
@@ -174,20 +174,20 @@ export const COPY: Record<Locale, Copy> = {
   },
 };
 
-/** A legal page's text in one language. */
+/** One legal page's text in one language. */
 export interface LegalText {
   title: string;
   soon: string;
-  /** Which text governs for whom, said in this text's language (#928 AC2). */
+  /** Says, in this text's own language, which text governs for whom (#928 AC2). */
   governs: string;
 }
 
 /**
- * The legal pages' text, in English and Indonesian only (Shyden, 2026-11-08,
- * global rule; #928). It sits outside `COPY`, so no general copy holds legal
- * text and no other language's legal text is written. The Indonesian is
- * written from the approved English, read back by Google Cloud Translation
- * (table on #928) and read by Shyden before it ships.
+ * The legal pages' text, written in English and Indonesian alone (Shyden,
+ * 2026-11-08, global rule; #928). It sits outside `COPY`, so no general copy
+ * holds legal text. Each Indonesian line is written from the approved English,
+ * read back by Google Cloud Translation (table on #928), and read by Shyden
+ * before it ships.
  */
 export const LEGAL: Record<LegalLocale, Record<LegalPage, LegalText>> = {
   en: {

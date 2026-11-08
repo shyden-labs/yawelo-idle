@@ -1,24 +1,33 @@
 import { readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { COPY, LEGAL } from './copy';
-import { LEGAL_PAGES, LOCALES } from './i18n';
+import { LEGAL_LOCALES, LEGAL_PAGES, LOCALES, type Locale } from './i18n';
 
 /**
- * Legal pages are English only (Shyden, 2026-11-08: "legal pages can only be
- * in English. any translated pages need to be removed"; #925). A legal page
- * has no file under a language folder, and no language's copy holds its text:
- * that text lives in `LEGAL`, which is English and is never translated.
+ * Legal pages exist in English and Indonesian only (Shyden, 2026-11-08,
+ * global rule; #928). Their text lives in `LEGAL`, apart from every
+ * language's general copy; no other language's legal text is written, and
+ * a page file exists only in a legal language's folder.
  */
-const LANGUAGE_FOLDERS = LOCALES.filter((locale) => locale !== 'en');
+const folderOf = (locale: Locale): URL =>
+  new URL(locale === 'en' ? './pages/' : `./pages/${locale}/`, import.meta.url);
 
-describe('no translated copy of a legal page exists (#925)', () => {
+const isLegalLocale = (locale: Locale): boolean =>
+  (LEGAL_LOCALES as readonly Locale[]).includes(locale);
+
+describe('legal pages exist in English and Indonesian only (#928)', () => {
   it.each(
-    LANGUAGE_FOLDERS.flatMap((locale) =>
+    LOCALES.flatMap((locale) =>
       LEGAL_PAGES.map((page) => [locale, page] as const),
     ),
-  )('pages/%s has no %s page', (locale, page) => {
-    const folder = new URL(`./pages/${locale}/`, import.meta.url);
-    expect(readdirSync(folder)).not.toContain(`${page}.astro`);
+  )('pages for %s hold a %s page only in a legal language', (locale, page) => {
+    expect(readdirSync(folderOf(locale)).includes(`${page}.astro`)).toBe(
+      isLegalLocale(locale),
+    );
+  });
+
+  it('writes legal text in English and Indonesian alone', () => {
+    expect(Object.keys(LEGAL)).toEqual(['en', 'id']);
   });
 
   it.each(LOCALES)('%s copy has no title for a legal page', (locale) => {
@@ -29,19 +38,32 @@ describe('no translated copy of a legal page exists (#925)', () => {
   it.each(LOCALES)('%s copy holds no legal text', (locale) => {
     expect(Object.keys(COPY[locale])).not.toContain('privacySoon');
   });
+});
 
-  it('keeps the privacy page’s own text, in English', () => {
-    expect(LEGAL.privacy.title).toBe('Privacy');
-    expect(LEGAL.privacy.soon).toBe(
-      'The privacy notice will be published here before the launch list opens.',
-    );
+describe('the privacy page’s text (#928)', () => {
+  it('keeps the English text', () => {
+    expect(LEGAL.en.privacy).toEqual({
+      title: 'Privacy',
+      soon: 'The privacy notice will be published here before the launch list opens.',
+      governs:
+        'For residents of Indonesia, the Indonesian text of this page governs. For everyone else, the English text governs.',
+    });
+  });
+
+  it('keeps the Indonesian text', () => {
+    expect(LEGAL.id.privacy).toEqual({
+      title: 'Privasi',
+      soon: 'Pemberitahuan privasi akan diterbitkan di sini sebelum daftar peluncuran dibuka.',
+      governs:
+        'Bagi penduduk Indonesia, yang berlaku adalah teks halaman ini dalam bahasa Indonesia. Bagi semua orang lainnya, yang berlaku adalah teks dalam bahasa Inggris.',
+    });
   });
 
   it.each([
     ['en', 'This page is available in English only.'],
     ['id', 'Halaman ini hanya tersedia dalam bahasa Inggris.'],
   ] as const)(
-    'gives %s readers the one translated note a legal page may carry',
+    'keeps the %s note a legal page carries for a language without its text',
     (locale, note) => {
       expect(COPY[locale].englishOnlyNote).toBe(note);
     },

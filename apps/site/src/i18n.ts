@@ -17,29 +17,30 @@ export const PAGES = ['home', 'roadmap', 'privacy'] as const;
 export type Page = (typeof PAGES)[number];
 
 /**
- * Legal pages exist in English and Indonesian only (Shyden, 2026-11-08,
- * global rule; #928): Indonesian governs for Indonesian residents, English
- * for everyone else. A language outside the two links to the English page.
- * Their text lives in `LEGAL` (copy.ts), apart from every language's copy.
+ * Legal pages are written in English and Indonesian alone (Shyden,
+ * 2026-11-08, global rule; #928). For Indonesian residents the Indonesian
+ * text governs, for everyone else the English. Any other language links to
+ * the English address. The text lives in `LEGAL` (copy.ts), apart from the
+ * general copy.
  */
 export const LEGAL_PAGES = ['privacy'] as const satisfies readonly Page[];
 export type LegalPage = (typeof LEGAL_PAGES)[number];
 export const LEGAL_LOCALES = ['en', 'id'] as const satisfies readonly Locale[];
 export type LegalLocale = (typeof LEGAL_LOCALES)[number];
-/** The pages each language has a general copy of. */
+/** The pages whose text sits in each language's general copy. */
 export type LocalisedPage = Exclude<Page, LegalPage>;
 
 export function isLegal(page: Page): page is LegalPage {
   return (LEGAL_PAGES as readonly Page[]).includes(page);
 }
 
-/** The languages a page exists in: the legal languages alone for a legal page. */
+function hasLegalText(locale: Locale): boolean {
+  return (LEGAL_LOCALES as readonly Locale[]).includes(locale);
+}
+
+/** The languages a page exists in: a legal page only in a legal language. */
 export function localesOf(page: Page): readonly Locale[] {
-  return isLegal(page)
-    ? LOCALES.filter((locale) =>
-        (LEGAL_LOCALES as readonly Locale[]).includes(locale),
-      )
-    : LOCALES;
+  return isLegal(page) ? LOCALES.filter(hasLegalText) : LOCALES;
 }
 
 const SLUGS: Record<Page, string> = {
