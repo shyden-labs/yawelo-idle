@@ -17,22 +17,30 @@ export const PAGES = ['home', 'roadmap', 'privacy'] as const;
 export type Page = (typeof PAGES)[number];
 
 /**
- * Legal pages exist in English only (Shyden, 2026-11-08, global rule; #925):
- * no translated copy is written, and every language links to the English
- * address. Their text lives in `LEGAL` (copy.ts), outside every language's copy.
+ * Legal pages are written in English and Indonesian alone (Shyden,
+ * 2026-11-08, global rule; #928). For Indonesian residents the Indonesian
+ * text governs, for everyone else the English. Any other language links to
+ * the English address. The text lives in `LEGAL` (copy.ts), apart from the
+ * general copy.
  */
 export const LEGAL_PAGES = ['privacy'] as const satisfies readonly Page[];
 export type LegalPage = (typeof LEGAL_PAGES)[number];
-/** The pages each language has a copy of. */
+export const LEGAL_LOCALES = ['en', 'id'] as const satisfies readonly Locale[];
+export type LegalLocale = (typeof LEGAL_LOCALES)[number];
+/** The pages whose text sits in each language's general copy. */
 export type LocalisedPage = Exclude<Page, LegalPage>;
 
 export function isLegal(page: Page): page is LegalPage {
   return (LEGAL_PAGES as readonly Page[]).includes(page);
 }
 
-/** The languages a page exists in: English alone for a legal page. */
+function hasLegalText(locale: Locale): boolean {
+  return (LEGAL_LOCALES as readonly Locale[]).includes(locale);
+}
+
+/** The languages a page exists in: a legal page only in a legal language. */
 export function localesOf(page: Page): readonly Locale[] {
-  return isLegal(page) ? [DEFAULT_LOCALE] : LOCALES;
+  return isLegal(page) ? LOCALES.filter(hasLegalText) : LOCALES;
 }
 
 const SLUGS: Record<Page, string> = {
@@ -49,8 +57,8 @@ const SLUGS: Record<Page, string> = {
 export const SITE = `https://${PROD_HOSTNAME}`;
 
 /**
- * A page's path in a language; a legal page has its English path in every
- * language. The home page ends in a slash (`/`, `/id/`)
+ * A page's path in a language; a legal page has its English path in a
+ * language without legal text. The home page ends in a slash (`/`, `/id/`)
  * because it is a directory index; the others do not (`/roadmap`,
  * `/id/roadmap`), which is how Cloudflare serves `roadmap.html` without a
  * redirect (measured in the asset router, #332).

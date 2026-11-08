@@ -24,7 +24,7 @@ interface Props {
 const { locale, page, title } = Astro.props;
 const other = otherLocale(locale);
 const switchTo = pagePath(other, page ?? 'home');
-/** A legal page exists in English alone, so it offers no other language (#925). */
+/** The switch appears only where the page exists in the other language (#925, #928). */
 const switchable = page === undefined || localesOf(page).includes(other);
 ---
 
