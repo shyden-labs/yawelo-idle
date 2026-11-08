@@ -15,25 +15,24 @@
 
 ## Running
 
-- Nothing. Draft PR #927 (`655-planted-sonar-error`, never merged) is open.
+- Nothing.
 
 ## Resume steps
 
-0. `ListAgents`, then board-next. Browser: Yawelo work uses the **Yawelo Chrome profile** (memory `feedback-yawelo-chrome-profile`); select it with `list_connected_browsers` (the one signed in to Cloudflare as yaweloidle@gmail.com).
-1. **#655, all PRs blocked:** the `sonarcloud` environment has no `SONAR_TOKEN` (the green runs had read the repo-wide copy, since deleted; correction on #655). Shyden runs `gh secret set SONAR_TOKEN --repo shyden-labs/yawelo-idle --env sonarcloud`. Then re-run PR #927's sonarcloud workflow: expect the scan to run and the gate to return `ERROR` (planted untested code + `Math.random`), PR blocked. Record it, close #927 and delete its branch. Protection already read back: develop requires build-and-test, board-orphans, coverage, sonar-coverage, sonarcloud (strict); main build-and-test, sonar-coverage, sonarcloud.
-2. **#655 AC5:** one real Dependabot PR scanned and its verdict read (Dependabot secret `SONAR_TOKEN` exists). Then shut #655.
-3. **#784 mail:** Sparked Host Starter for yaweloidle.com (Sydney, annual; invoice 842085 £15.25 paid 2026-11-08) was **Pending** setup. When Active: open its Athena (Enhance) panel, create the mailbox, read its MX/SPF/DKIM values, add them plus DMARC in Cloudflare DNS for yaweloidle.com (show Shyden each record first), test send and receive with headers showing SPF/DKIM/DMARC pass. The extension had no permission on `billing.sparkedhost.com` for screenshots (text reads worked). Then ask Shyden whether "domain at Cloudflare + mailbox at Sparked Host" becomes a rule for every project (he asked to hold that question until it works). Both domains (yaweloidle.com, yawelo.com) are bought at Cloudflare, Active to 2027-11-08.
-4. **#928** (P2): legal pages English **and** Indonesian (Shyden widened the rule 2026-11-08; reverses #925's English-only flag; the Indonesian privacy text needs Google read-back then Shyden's reading). **#929** (P4, blocked by #635): PSE registration finding. Then #103 (unique ids, no empty strings), M2. #830: draft the roadmap page text and park the approval question here.
-5. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure`, busy sessions; file a ticket.
-6. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
-7. By board: #783 (P0) waits for the next release cut.
+0. `ListAgents`, then board-next. Browser: Yawelo work uses the **Yawelo Chrome profile** (memory `feedback-yawelo-chrome-profile`); select it with `list_connected_browsers` (signed in to Cloudflare as yaweloidle@gmail.com, SonarCloud and GitHub as ShydenMcM, Sparked Host as Shyden).
+1. **#655 AC5 only:** when Dependabot next opens a PR, read its `sonarcloud` job by step name and the `sonar-verdict:` lines (Dependabot uses the Dependabot copy of `SONAR_TOKEN`). Then shut #655. Everything else is proven and recorded on #655 (required on develop + main; env token `yawelo-idle-ci` to 2027-11-08; planted ERROR blocked PR #927, closed).
+2. **#784 mail:** Sparked Host Starter for yaweloidle.com (service 633542, invoice 842085 paid 2026-11-08) was still **Pending, no IP**, hours later; Shyden chose to wait rather than open a ticket. When Active: open its Athena panel, create the mailbox, read its MX/SPF/DKIM values, add them plus DMARC in Cloudflare DNS for yaweloidle.com (show Shyden each record first), test send and receive with headers showing SPF/DKIM/DMARC pass. Then ask whether "domain at Cloudflare + mailbox at Sparked Host" becomes a rule for every project. If still Pending next session, ask Shyden again about a support ticket.
+3. **#928** (P2): legal pages English **and** Indonesian (reverses #925's English-only flag; Indonesian privacy text: Google read-back, then Shyden's reading). **#929** (P4, blocked by #635): PSE finding. Then #103, M2. #830: draft the roadmap page text and park the approval question here.
+4. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure`, busy sessions; file a ticket.
+5. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
+6. By board: #783 (P0) waits for the next release cut.
 
 ## Waiting on Shyden
 
-- `SONAR_TOKEN` in the `sonarcloud` environment (blocks every PR). #830 copy approval. Optional: mark S9382 Accepted in SonarCloud.
+- #830 copy approval. Optional: mark S9382 Accepted in SonarCloud.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655` (on `655-planted-sonar-error`), `-925` (merged; removable).
-- Open PRs: #602 (Stryker, waits for a runner release), #927 (planted Sonar ERROR, never merge).
+- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655` (detached at develop), `-925` (merged; removable).
+- Open PRs: #602 (Stryker, waits for a runner release).
