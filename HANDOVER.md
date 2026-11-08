@@ -38,5 +38,7 @@
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
+- `origin/develop` at `76e52fa2ea6f3749ee123664998a953fbc72e461` when this was written. Everything is committed and pushed, and no CI is awaited.
+- Written for a laptop shutdown: no local job, Colima claim, device or test lock held.
 - Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655` (detached at develop).
 - Open PRs: #602 (Stryker, waits for a runner release).
