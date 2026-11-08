@@ -6,13 +6,14 @@ import {
   challengeResponse,
   NO_INDEX,
 } from '@yawelo-idle/lockdown';
-import { COPY } from '../src/copy';
+import { COPY, LEGAL } from '../src/copy';
 import {
+  LEGAL_PAGES,
   otherLocale,
   pagePath,
   SITE,
   type Locale,
-  type Page,
+  type LocalisedPage,
 } from '../src/i18n';
 import {
   EXEMPT_PATHS,
@@ -103,13 +104,12 @@ const GAME_SCRIPT = readFileSync(
   'utf8',
 );
 
-const PAGES: [Locale, Page][] = [
+/** The pages each language has: legal pages are English only (#925). */
+const PAGES: [Locale, LocalisedPage][] = [
   ['en', 'home'],
   ['en', 'roadmap'],
-  ['en', 'privacy'],
   ['id', 'home'],
   ['id', 'roadmap'],
-  ['id', 'privacy'],
 ];
 
 describe('the dev site Worker gate, through the asset router', () => {
@@ -300,6 +300,65 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
       expect(html).toContain(`<html lang="${locale}"`);
       expect(html).toContain(COPY[locale].notFoundTitle);
       expect(html).toContain(COPY[locale].devStrip);
+    },
+  );
+});
+
+describe('legal pages are English only (#925)', () => {
+  it.each(LEGAL_PAGES)('%s is served in English', async (page) => {
+    const response = await get(`${DEV}${pagePath('en', page)}`, authorised);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('<html lang="en"');
+    expect(html).toContain(`<title>${LEGAL[page].title}</title>`);
+    expect(html).toContain(
+      `<p class="dev-strip" data-dev-strip>${COPY.en.devStrip}</p>`,
+    );
+  });
+
+  it.each(LEGAL_PAGES)(
+    '%s has no Indonesian address: /id/%s is the Indonesian 404',
+    async (page) => {
+      const response = await get(`${DEV}/id/${page}`, authorised);
+      expect(response.status).toBe(404);
+      const html = await response.text();
+      expect(html).toContain('<html lang="id"');
+      expect(html).toContain(COPY.id.notFoundTitle);
+    },
+  );
+
+  it.each(LEGAL_PAGES)(
+    '%s carries the Indonesian note, marked as Indonesian',
+    async (page) => {
+      const html = await (
+        await get(`${DEV}${pagePath('en', page)}`, authorised)
+      ).text();
+      expect(html).toContain(
+        `<p lang="id" data-english-only-note>${COPY.id.englishOnlyNote}</p>`,
+      );
+    },
+  );
+
+  it.each(LEGAL_PAGES)('%s offers no language switch', async (page) => {
+    const html = await (
+      await get(`${DEV}${pagePath('en', page)}`, authorised)
+    ).text();
+    expect(html).not.toContain('data-language-switch');
+  });
+
+  it.each(LEGAL_PAGES)(
+    '%s lists English and x-default as its only hreflang alternates',
+    async (page) => {
+      const html = await (
+        await get(`${DEV}${pagePath('en', page)}`, authorised)
+      ).text();
+      const links = [...html.matchAll(/<link rel="alternate"[^>]*>/g)].map(
+        ([link]) => link,
+      );
+      expect(links).toEqual([
+        `<link rel="alternate" hreflang="en" href="${SITE}${pagePath('en', page)}">`,
+        `<link rel="alternate" hreflang="x-default" href="${SITE}${pagePath('en', page)}">`,
+      ]);
     },
   );
 });

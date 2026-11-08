@@ -7,6 +7,7 @@
 import { COPY } from '../copy';
 import {
   alternates,
+  localesOf,
   otherLocale,
   pagePath,
   type Locale,
@@ -23,6 +24,8 @@ interface Props {
 const { locale, page, title } = Astro.props;
 const other = otherLocale(locale);
 const switchTo = pagePath(other, page ?? 'home');
+/** A legal page exists in English alone, so it offers no other language (#925). */
+const switchable = page === undefined || localesOf(page).includes(other);
 ---
 
 <!doctype html>
@@ -43,9 +46,11 @@ const switchTo = pagePath(other, page ?? 'home');
     </p>
     <nav>
       <a href={pagePath(locale, 'home')}>Yawelo Idle</a>
-      <a href={switchTo} hreflang={other} lang={other} data-language-switch>
-        {COPY[other].languageName}
-      </a>
+      {switchable && (
+        <a href={switchTo} hreflang={other} lang={other} data-language-switch>
+          {COPY[other].languageName}
+        </a>
+      )}
     </nav>
     <main>
       <slot />
