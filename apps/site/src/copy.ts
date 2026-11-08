@@ -11,7 +11,7 @@
  * (docs/translations/2026-10-16-holding-page-id.md).
  */
 import { COPY_EN } from './copy-en';
-import type { Locale, Page } from './i18n';
+import type { LegalPage, Locale, LocalisedPage } from './i18n';
 
 /**
  * The voyage map's labels (#827). Placeholder English, not yet approved by
@@ -126,9 +126,13 @@ export interface Copy {
   comingSoon: string;
   /** The hero tagline (#334), shown on the holding page (#621). */
   tagline: string;
-  titles: Record<Page, string>;
+  titles: Record<LocalisedPage, string>;
   launchListSoon: string;
-  privacySoon: string;
+  /**
+   * The one translated line a legal page may carry for this language's
+   * readers (Shyden, 2026-11-08; #925); the legal text stays in `LEGAL`.
+   */
+  englishOnlyNote: string;
   notFoundTitle: string;
   notFoundBody: string;
   homeLink: string;
@@ -144,11 +148,9 @@ export const COPY: Record<Locale, Copy> = {
     titles: {
       home: 'Yawelo Idle',
       roadmap: COPY_EN.roadmap.title.text,
-      privacy: COPY_EN.privacy.title.text,
     },
     launchListSoon: 'The launch list opens soon.',
-    privacySoon:
-      'The privacy notice will be published here before the launch list opens.',
+    englishOnlyNote: 'This page is available in English only.',
     notFoundTitle: COPY_EN.notFound.title.text,
     notFoundBody: COPY_EN.notFound.body.text,
     homeLink: COPY_EN.notFound.home.text,
@@ -160,14 +162,26 @@ export const COPY: Record<Locale, Copy> = {
       'Dalam pengembangan: yang Anda lihat bisa berubah, dan game yang dirilis bisa sangat berbeda.',
     comingSoon: 'Segera hadir',
     tagline: 'Petualangan idle menjelajahi bahasa sungguhan.',
-    titles: { home: 'Yawelo Idle', roadmap: 'Peta jalan', privacy: 'Privasi' },
+    titles: { home: 'Yawelo Idle', roadmap: 'Peta jalan' },
     launchListSoon: 'Daftar peluncuran segera dibuka.',
-    privacySoon:
-      'Pemberitahuan privasi akan diterbitkan di sini sebelum daftar peluncuran dibuka.',
+    // Google read-back 2026-11-08: "This page is available in English only."
+    englishOnlyNote: 'Halaman ini hanya tersedia dalam bahasa Inggris.',
     notFoundTitle: 'Halaman tidak ditemukan',
     notFoundBody: 'Tidak ada halaman di alamat ini.',
     homeLink: 'Kembali ke beranda',
     // English until #830 translates it with its D18 evidence.
     voyage: VOYAGE_PLACEHOLDER,
+  },
+};
+
+/**
+ * The legal pages' text, in English only (Shyden, 2026-11-08: "legal pages
+ * can only be in English"; #925). It sits outside `COPY` so no language's
+ * copy, and nothing that translates it, ever holds legal text.
+ */
+export const LEGAL: Record<LegalPage, { title: string; soon: string }> = {
+  privacy: {
+    title: COPY_EN.privacy.title.text,
+    soon: 'The privacy notice will be published here before the launch list opens.',
   },
 };
