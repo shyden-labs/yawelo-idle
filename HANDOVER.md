@@ -7,16 +7,16 @@
 ## Done this session
 
 - 2026-11-08 (fifty-seventh session, continued). Parked questions answered earlier today: #858 (support link; shyden.co.uk ruled it Yawelo Idle's only, nothing filed there), #828, #452, #103 split to #922.
-- **#655 SonarCloud:** PR #923 merged into develop as `f8f8d0af` (the integration list now has `scripts/sonar-verdict.ts`; first scan's S4624 fixed; **S9382 accepted by Shyden**, recorded on #655). CI was green on the head, every step run: `sonar-coverage`, `sonarcloud` (gate OK, so the `sonarcloud` environment's token works), build-and-test, coverage, board-orphans. **PR #924** (`655-sonar-required`, head `9808c1e80074b052275d83f931c5242472846759`, worktree `../yawelo-idle-655`): pins both Sonar jobs in `tests/unit/required-checks.test.ts`; watched red; unit 13,792/13,792.
+- **#655 SonarCloud:** PR #923 merged into develop as `f8f8d0af` (the integration list now has `scripts/sonar-verdict.ts`; first scan's S4624 fixed; **S9382 accepted by Shyden**, recorded on #655). CI was green on the head, every step run: `sonar-coverage`, `sonarcloud` (gate OK, so the `sonarcloud` environment's token works), build-and-test, coverage, board-orphans. **PR #924** merged as `620616c4` (pins both Sonar jobs in `tests/unit/required-checks.test.ts`; watched red). Making them required: the App gets HTTP 403 on branch protection, so it is **Shyden's step** (commands in Waiting on Shyden).
 
 ## Running
 
-- A local waiter on PR #924's CI (dies with `/clear`; re-run `~/.claude/scripts/pr-verdict.sh 924`, which can return early while runs are queued).
+- Nothing.
 
 ## Resume steps
 
 0. `ListAgents`, then board-next. #655 (P1) is in hand.
-1. **PR #924:** green on head (steps by name) → squash-merge. Then make **both** `sonar-coverage` and `sonarcloud` required (app 15368) on develop (adds to build-and-test, board-orphans, coverage; strict) and main (adds to build-and-test), and read protection back (AC1).
+1. **AC1:** once Shyden has run the protection commands, read both branches back (`gh api repos/shyden-labs/yawelo-idle/branches/<b>/protection/required_status_checks`). Then open a throwaway draft PR with untested new code: SonarCloud's gate should return `ERROR`, `sonarcloud` goes red naming it, and the PR shows as blocked (DoD "planted ERROR watched red"); close it and delete its branch.
 2. **AC5:** prove one real Dependabot PR is scanned and its verdict read (Dependabot gets the Dependabot copy of `SONAR_TOKEN`). **AC6** and the DoD's "one planted ERROR watched red": check what the ticket's comments already prove; fill any gap. Then shut #655.
 3. Then #103 (unique ids, no empty strings), M2. #830: draft the roadmap page text and park the approval question here.
 4. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure`, busy sessions; file a ticket.
@@ -25,10 +25,19 @@
 
 ## Waiting on Shyden
 
+- **#655 AC1, make both Sonar checks required** (the App cannot edit protection):
+  ```
+  gh api -X PATCH repos/shyden-labs/yawelo-idle/branches/develop/protection/required_status_checks --input - <<'JSON'
+  {"strict": true, "checks": [{"context": "build-and-test", "app_id": 15368}, {"context": "board-orphans", "app_id": 15368}, {"context": "coverage", "app_id": 15368}, {"context": "sonar-coverage", "app_id": 15368}, {"context": "sonarcloud", "app_id": 15368}]}
+  JSON
+  gh api -X PATCH repos/shyden-labs/yawelo-idle/branches/main/protection/required_status_checks --input - <<'JSON'
+  {"strict": false, "checks": [{"context": "build-and-test", "app_id": 15368}, {"context": "sonar-coverage", "app_id": 15368}, {"context": "sonarcloud", "app_id": 15368}]}
+  JSON
+  ```
 - Delete the repo-wide Actions `SONAR_TOKEN` (`gh secret delete SONAR_TOKEN --repo shyden-labs/yawelo-idle`; keep the Dependabot copy). Optional: mark S9382 Accepted in SonarCloud. The second Android phone for the Yawelo Gmail (#784). #830 copy approval.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
 - Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655`.
-- Open PRs: #602 (Stryker, waits for a runner release), #924 (#655).
+- Open PRs: #602 (Stryker, waits for a runner release).
