@@ -21,17 +21,75 @@ const REVIEW_STATUSES = [
 /** Holds at least one character that is not whitespace. */
 const VISIBLE = /\S/;
 
+/** A string holding at least one character that is not whitespace. */
+const visible = z.string().regex(VISIBLE, { message: 'is empty' });
+
+/**
+ * Who changed an item (#51 AC3): Claude, the operator, or the player report
+ * a correction came from, by that report's id.
+ */
+const historyBy = z.union(
+  [z.enum(['claude', 'operator']), z.string().regex(/^player-report:\S+$/)],
+  { error: 'must be claude, operator or player-report:<id>' },
+);
+
+/** One change to an item: when (UTC), by whom, and what changed. */
+const historyEntry = z.strictObject({
+  at: z.iso.datetime(),
+  by: historyBy,
+  change: visible,
+});
+
 /**
  * Spec §5.2's review block. Every key is required, so a draft writes `null`
- * rather than leaving a key out, and an omission or a typo is an error.
- * Evidence and history are #51's.
+ * or `[]` rather than leaving a key out, and an omission or a typo is an
+ * error. A `claude-checked` block's evidence (#51 AC2) is checked on the
+ * item, which knows the text a label audit depends on.
  */
 const review = z.strictObject({
   status: z.enum(REVIEW_STATUSES),
   reviewer: z.string().min(1).nullable(),
   reviewedAt: z.iso.datetime({ offset: true }).nullable(),
   notes: z.string(),
+  sources: z.array(visible),
+  backTranslation: z.string().nullable(),
+  labelAudit: z.string().nullable(),
+  history: z.array(historyEntry),
 });
+
+type Review = z.output<typeof review>;
+
+/** Text this short needs a label audit: a bare label gives no context. */
+const LABEL_AUDIT_MAX_WORDS = 3;
+
+const wordCount = (text: string): number =>
+  text.split(/\s+/).filter((word) => word !== '').length;
+
+const isVisible = (text: string | null): boolean =>
+  text !== null && VISIBLE.test(text);
+
+/**
+ * The evidence a `claude-checked` block is missing (#51 AC2, spec D18): two
+ * distinct sources, a back-translation, and a label audit when the text is
+ * three words or fewer. Each entry is the field and why.
+ */
+function missingEvidence(
+  block: Review,
+  text: string,
+): readonly (readonly [field: string, message: string])[] {
+  if (block.status !== 'claude-checked') return [];
+  const missing: (readonly [string, string])[] = [];
+  if (new Set(block.sources).size < 2)
+    missing.push(['sources', 'needs at least two distinct source ids']);
+  if (!isVisible(block.backTranslation))
+    missing.push(['backTranslation', 'is required on a claude-checked item']);
+  if (wordCount(text) <= LABEL_AUDIT_MAX_WORDS && !isVisible(block.labelAudit))
+    missing.push([
+      'labelAudit',
+      `is required on a claude-checked item of ${String(LABEL_AUDIT_MAX_WORDS)} words or fewer`,
+    ]);
+  return missing;
+}
 
 const lexiconItem = z.strictObject({
   id: z.string(),
@@ -82,6 +140,14 @@ export const courseSchema = z
         path: ['targetLang'],
         message: `is the same as sourceLang (${course.sourceLang})`,
       });
+    course.lexicon.forEach((item, index) => {
+      for (const [field, message] of missingEvidence(item.review, item.target))
+        context.addIssue({
+          code: 'custom',
+          path: ['lexicon', index, 'review', field],
+          message,
+        });
+    });
     if (course.targetLang !== 'en') return;
     course.lexicon.forEach((item, index) => {
       if (item.pronunciation === undefined)
@@ -95,6 +161,45 @@ export const courseSchema = z
 
 export type CoursePack = z.output<typeof courseSchema>;
 export type LexiconEntry = CoursePack['lexicon'][number];
+
+/** The statuses every build ships (spec D18, §5.5); the rest are refused. */
+const SHIPPED: ReadonlySet<Review['status']> = new Set([
+  'claude-checked',
+  'native-reviewed',
+]);
+
+/**
+ * Why a loaded course may not ship (#51 AC4): every `draft` or `rejected`
+ * item, named. Empty means every item ships. The review tool loads drafts,
+ * so this is a separate gate from `loadCourse`.
+ */
+export function shipErrors(course: CoursePack): readonly LoadError[] {
+  return course.lexicon.flatMap((item) =>
+    SHIPPED.has(item.review.status)
+      ? []
+      : [
+          {
+            kind: 'lexicon',
+            item: item.id,
+            field: 'review.status',
+            message: `lexicon ${item.id}: review.status is ${item.review.status}, which never ships`,
+          },
+        ],
+  );
+}
+
+/**
+ * Whether the course must carry the disclosure line (#51 AC5): true while
+ * any item that ships is below `native-reviewed`. Derived from the content
+ * and never stored, so the line goes by itself once a course is reviewed.
+ */
+export function needsDisclosure(course: CoursePack): boolean {
+  return course.lexicon.some(
+    (item) =>
+      SHIPPED.has(item.review.status) &&
+      item.review.status !== 'native-reviewed',
+  );
+}
 
 /** One reason a pack was refused, naming the item and the field. */
 export interface LoadError {

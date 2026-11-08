@@ -37,6 +37,28 @@ const lexiconError = (item: string, field: string) => ({
   ) as unknown,
 });
 
+/**
+ * A `claude-checked` review block holding all of #51's evidence: two
+ * distinct sources, a back-translation, a label audit and one history line.
+ */
+const checkedReview = (): Json => ({
+  status: 'claude-checked',
+  reviewer: 'claude',
+  reviewedAt: '2026-11-08T03:00:00Z',
+  notes: '',
+  sources: ['kbbi:rumah', 'wiktionary:rumah'],
+  backTranslation: 'house',
+  labelAudit: 'the building a family lives in, not a household',
+  history: [{ at: '2026-11-08T03:00:00Z', by: 'claude', change: 'checked' }],
+});
+
+/** The pack with its first item's review block set to `review`. */
+const withReview = (review: Json): Json => {
+  const pack = copy(enId);
+  firstItem(pack).review = review;
+  return pack;
+};
+
 describe('loadCourse: both minimal fixtures load (AC6)', () => {
   it('loads the minimal en-id pack, unchanged', () => {
     expect(loadCourse(copy(enId))).toEqual({ ok: true, course: enId });
@@ -191,22 +213,15 @@ describe('loadCourse: the review block (spec §5.2)', () => {
 
   it('refuses a reviewedAt that is a date without a time', () => {
     const pack = copy(enId);
-    firstItem(pack).review = {
-      status: 'claude-checked',
-      reviewer: 'claude',
-      reviewedAt: '2026-10-07',
-      notes: '',
-    };
+    firstItem(pack).review = { ...checkedReview(), reviewedAt: '2026-10-07' };
     expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.reviewedAt')]);
   });
 
   it('loads a reviewedAt with an offset', () => {
     const pack = copy(enId);
     firstItem(pack).review = {
-      status: 'claude-checked',
-      reviewer: 'claude',
+      ...checkedReview(),
       reviewedAt: '2026-10-07T12:40:00+07:00',
-      notes: 'two sources',
     };
     expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
   });
@@ -228,5 +243,198 @@ describe('loadCourse: input that is not a pack', () => {
         message: expect.any(String) as unknown,
       },
     ]);
+  });
+});
+
+describe('loadCourse: a claude-checked block holds its evidence (#51 AC2)', () => {
+  it('loads a claude-checked block with all of its evidence', () => {
+    const pack = withReview(checkedReview());
+    expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
+  });
+
+  it('refuses a claude-checked block with no sources', () => {
+    const pack = withReview({ ...checkedReview(), sources: [] });
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.sources')]);
+  });
+
+  it('refuses a claude-checked block with one source', () => {
+    const pack = withReview({ ...checkedReview(), sources: ['kbbi:rumah'] });
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.sources')]);
+  });
+
+  it('refuses a claude-checked block whose two sources are the same id', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      sources: ['kbbi:rumah', 'kbbi:rumah'],
+    });
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.sources')]);
+  });
+
+  it('refuses a source id that is whitespace only', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      sources: ['kbbi:rumah', ' '],
+    });
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.sources.1')]);
+  });
+
+  it('refuses a claude-checked block with a null back-translation', () => {
+    const pack = withReview({ ...checkedReview(), backTranslation: null });
+    expect(refusal(pack)).toEqual([
+      lexiconError('rumah', 'review.backTranslation'),
+    ]);
+  });
+
+  it('refuses a claude-checked block with a whitespace-only back-translation', () => {
+    const pack = withReview({ ...checkedReview(), backTranslation: '  ' });
+    expect(refusal(pack)).toEqual([
+      lexiconError('rumah', 'review.backTranslation'),
+    ]);
+  });
+
+  it('refuses a claude-checked one-word item with no label audit', () => {
+    const pack = withReview({ ...checkedReview(), labelAudit: null });
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.labelAudit')]);
+  });
+
+  it('refuses a claude-checked one-word item with an empty label audit', () => {
+    const pack = withReview({ ...checkedReview(), labelAudit: '' });
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.labelAudit')]);
+  });
+
+  it('refuses a claude-checked three-word item with no label audit', () => {
+    const pack = withReview({ ...checkedReview(), labelAudit: null });
+    firstItem(pack).target = 'rumah  saya besar';
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.labelAudit')]);
+  });
+
+  it('loads a claude-checked four-word item with no label audit', () => {
+    const pack = withReview({ ...checkedReview(), labelAudit: null });
+    firstItem(pack).target = 'rumah saya besar sekali';
+    expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
+  });
+
+  it('names every missing piece of evidence at once', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      sources: [],
+      backTranslation: null,
+      labelAudit: null,
+    });
+    expect(refusal(pack)).toEqual([
+      lexiconError('rumah', 'review.sources'),
+      lexiconError('rumah', 'review.backTranslation'),
+      lexiconError('rumah', 'review.labelAudit'),
+    ]);
+  });
+
+  it('loads a draft with no evidence, as the fixtures do', () => {
+    const pack = copy(enId);
+    expect((firstItem(pack).review as Json).status).toBe('draft');
+    expect(loadCourse(pack).ok).toBe(true);
+  });
+
+  it('loads a native-reviewed block with no evidence', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      status: 'native-reviewed',
+      sources: [],
+      backTranslation: null,
+      labelAudit: null,
+    });
+    expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
+  });
+
+  it('refuses a review block missing its sources key, even on a draft', () => {
+    const pack = copy(enId);
+    delete (firstItem(pack).review as Json).sources;
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.sources')]);
+  });
+});
+
+describe('loadCourse: every review block keeps its history (#51 AC3)', () => {
+  const withHistoryBy = (by: string): Json =>
+    withReview({
+      ...checkedReview(),
+      history: [{ at: '2026-11-08T03:00:00Z', by, change: 'edited' }],
+    });
+
+  it('loads a history line by claude', () => {
+    const pack = withHistoryBy('claude');
+    expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
+  });
+
+  it('loads a history line by operator', () => {
+    const pack = withHistoryBy('operator');
+    expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
+  });
+
+  it('loads a history line by player-report:<id>', () => {
+    const pack = withHistoryBy('player-report:01JC8Q2R4M');
+    expect(loadCourse(pack)).toEqual({ ok: true, course: pack });
+  });
+
+  it('refuses a history line by anyone else', () => {
+    expect(refusal(withHistoryBy('shyden'))).toEqual([
+      lexiconError('rumah', 'review.history.0.by'),
+    ]);
+  });
+
+  it('refuses player-report: with no id', () => {
+    expect(refusal(withHistoryBy('player-report:'))).toEqual([
+      lexiconError('rumah', 'review.history.0.by'),
+    ]);
+  });
+
+  it('refuses a player-report id holding whitespace', () => {
+    expect(refusal(withHistoryBy('player-report:a b'))).toEqual([
+      lexiconError('rumah', 'review.history.0.by'),
+    ]);
+  });
+
+  it('refuses a by that only starts with claude', () => {
+    expect(refusal(withHistoryBy('claude-2'))).toEqual([
+      lexiconError('rumah', 'review.history.0.by'),
+    ]);
+  });
+
+  it('refuses a history time with an offset, as it must be UTC', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      history: [
+        { at: '2026-11-08T10:00:00+07:00', by: 'claude', change: 'checked' },
+      ],
+    });
+    expect(refusal(pack)).toEqual([
+      lexiconError('rumah', 'review.history.0.at'),
+    ]);
+  });
+
+  it('refuses a history line with an empty change', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      history: [{ at: '2026-11-08T03:00:00Z', by: 'claude', change: ' ' }],
+    });
+    expect(refusal(pack)).toEqual([
+      lexiconError('rumah', 'review.history.0.change'),
+    ]);
+  });
+
+  it('refuses an unknown key on a history line', () => {
+    const pack = withReview({
+      ...checkedReview(),
+      history: [
+        { at: '2026-11-08T03:00:00Z', by: 'claude', change: 'x', why: 'y' },
+      ],
+    });
+    expect(refusal(pack)).toEqual([
+      lexiconError('rumah', 'review.history.0.why'),
+    ]);
+  });
+
+  it('refuses a review block missing its history key, even on a draft', () => {
+    const pack = copy(enId);
+    delete (firstItem(pack).review as Json).history;
+    expect(refusal(pack)).toEqual([lexiconError('rumah', 'review.history')]);
   });
 });
