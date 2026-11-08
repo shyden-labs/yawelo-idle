@@ -23,6 +23,7 @@ export const PROTECTED_ENVIRONMENTS = [
   'dev',
   'production',
   'board-read',
+  'sonarcloud',
 ] as const;
 
 /** The token GitHub mints per run. It is not a stored secret. */

@@ -43,6 +43,7 @@ const SCRIPTS = [
   'scripts/npm-audit.ts',
   'scripts/prod-version.ts',
   'scripts/release-cut.ts',
+  'scripts/sonar-verdict.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
   'scripts/verify-dev-hosts.ts',
