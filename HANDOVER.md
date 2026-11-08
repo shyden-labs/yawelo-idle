@@ -22,7 +22,7 @@
 
 1. **#783 (P0)** is what board-next names, but it waits for the release cut. Then P1: #425, #426, #457 and #759 chain on #784.
 2. **#784's remaining ACs** are the P1 route to work: read them, and check what needs Shyden's accounts first.
-3. **#104** (M2, P3) is blocked by #467; #102 by #104. Read #467 next.
+3. **M2 chain:** #102 waits on #104, #104 on #467, #467 on #638 (Google read-back under the shared lock and ledger). Start at #638. #467's title still names LibreTranslate though the global rule is now Google, so re-read its ACs; its other blocked tickets (#109, #338) depend on the answer.
 4. **#655 AC5:** on the next Dependabot PR, read its `sonarcloud` steps and `sonar-verdict:` lines, then shut #655. None was open at this close.
 5. **#793 AC6** on Dependabot's docker PR. **#888:** shut after 2026-11-20. **#864:** watch site-smoke until 2026-11-19. **#930** when the board picks it; its reproduction needs induced swap, which slows peers, so ask first.
 6. **Epic #6 (M1)** has 18 of 18 sub-issues closed and is still open. Closing it triggers the milestone re-score, and moving ticket levels is Shyden's: ask.
