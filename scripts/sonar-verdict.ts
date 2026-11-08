@@ -155,8 +155,9 @@ async function judge(
     await sleep(STEP_MS);
   }
   if (task.status !== 'SUCCESS') {
+    const reason = task.errorMessage ? ` (${task.errorMessage})` : '';
     fail(
-      `task ${report.ceTaskId} ended ${task.status}${task.errorMessage ? ` (${task.errorMessage})` : ''}; no verdict to read`,
+      `task ${report.ceTaskId} ended ${task.status}${reason}; no verdict to read`,
     );
   }
   if (task.analysisId === undefined)
