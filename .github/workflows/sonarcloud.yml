@@ -12,6 +12,12 @@
 # Nothing swallows a failure (tests/unit/workflow-honesty.test.ts). Settings:
 # sonar-project.properties.
 #
+# Two jobs, both required checks: `sonar-coverage` runs the project's code
+# (its dependencies and every suite) and holds no secret; `sonarcloud` holds
+# the token and runs none of that code, scanning the report handed over as an
+# artifact, so a hostile dependency cannot read the token. A failed measure is
+# a red check of its own, never a skipped one.
+#
 # The token lives in the `sonarcloud` environment (spec §12.9: secrets live in
 # environments). Dependabot's runs get no environment secrets, so theirs read
 # the repository's Dependabot secret of the same name.
@@ -25,26 +31,19 @@ permissions:
   contents: read
 
 jobs:
-  sonarcloud:
+  sonar-coverage:
     runs-on: ubuntu-26.04
-    timeout-minutes: 25
+    timeout-minutes: 20
     # The image the coverage job in ci.yml measures in, so the suites run alike.
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
       options: --user 1001
-    environment: sonarcloud
+    outputs:
+      scope: ${{ steps.classify.outputs.scope }}
     steps:
-      - name: The SonarCloud token is set
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error title=SONAR_TOKEN is missing::Set SONAR_TOKEN as an Actions secret, and as a Dependabot secret for Dependabot pull requests (#655)."
-            exit 1
-          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 2
       # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
       - name: Read the exact Node version (.github/node/Dockerfile)
         id: node
@@ -68,6 +67,47 @@ jobs:
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         timeout-minutes: 12
         run: npm run test:coverage
+      - name: Hand the report to the scan
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sonar-coverage
+          path: coverage/
+          if-no-files-found: error
+
+  sonarcloud:
+    needs: sonar-coverage
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    environment: sonarcloud
+    steps:
+      - name: The SonarCloud token is set
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error title=SONAR_TOKEN is missing::Set SONAR_TOKEN as an Actions secret, and as a Dependabot secret for Dependabot pull requests (#655)."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (.github/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' .github/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+      - name: Fetch the coverage report
+        if: ${{ needs.sonar-coverage.outputs.scope != 'docs-only' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sonar-coverage
+          path: coverage/
       - name: Scan
         uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
         env:
@@ -76,6 +116,7 @@ jobs:
           args: >
             -Dsonar.organization=shyden-labs
             -Dsonar.projectKey=shyden-labs_yawelo-idle
+      # Node's own modules only: no install runs where the token is.
       - name: Read the quality gate of this scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -82,46 +82,92 @@ describe('sonarcloud.yml', () => {
 
   // Shyden, 2026-11-08: its own pull-request workflow, measuring coverage
   // itself, so the deploys that call ci.yml are untouched and no job-level
-  // condition can skip the check (#782).
-  it('runs on pull requests, as one job with exactly its keys, in the sonarcloud environment', () => {
-    const doc = parse(read('sonarcloud.yml')) as {
+  // condition can skip the check (#782). Two jobs: the one that runs the
+  // project's code (dependencies, tests) holds no secret, and the one that
+  // holds the token runs none of it, so a hostile dependency cannot read it.
+  // Both are required checks, so a failed measure is red, never skipped.
+  const doc = () =>
+    parse(read('sonarcloud.yml')) as {
       on: unknown;
-      jobs: Record<string, Record<string, unknown>>;
+      jobs: Record<
+        string,
+        Record<string, unknown> & { steps: Record<string, unknown>[] }
+      >;
     };
+
+  it('runs on pull requests as two jobs, each with exactly its keys', () => {
+    const { on, jobs } = doc();
     expect({
-      on: doc.on,
-      jobs: Object.keys(doc.jobs),
-      keys: Object.keys(doc.jobs['sonarcloud'] ?? {}),
-      environment: doc.jobs['sonarcloud']?.['environment'],
+      on,
+      jobs: Object.fromEntries(
+        Object.entries(jobs).map(([id, job]) => [id, Object.keys(job)]),
+      ),
     }).toEqual({
       on: { pull_request: null },
-      jobs: ['sonarcloud'],
-      keys: ['runs-on', 'timeout-minutes', 'container', 'environment', 'steps'],
-      environment: 'sonarcloud',
+      jobs: {
+        'sonar-coverage': [
+          'runs-on',
+          'timeout-minutes',
+          'container',
+          'outputs',
+          'steps',
+        ],
+        sonarcloud: [
+          'needs',
+          'runs-on',
+          'timeout-minutes',
+          'environment',
+          'steps',
+        ],
+      },
     });
   });
 
-  it('measures coverage before it scans', () => {
-    const text = read('sonarcloud.yml');
-    const measure = text.indexOf('run: npm run test:coverage');
+  it('measures in a job that reads no secret, and scans in the sonarcloud environment after it', () => {
+    const { jobs } = doc();
     expect({
-      measures: measure > -1,
-      beforeScan: measure < text.indexOf('SonarSource/sonarqube-scan-action@'),
+      measureReadsSecrets: JSON.stringify(jobs['sonar-coverage']).includes(
+        'secrets.',
+      ),
+      scanNeeds: jobs['sonarcloud']?.['needs'],
+      scanEnvironment: jobs['sonarcloud']?.['environment'],
     }).toEqual({
-      measures: true,
-      beforeScan: true,
+      measureReadsSecrets: false,
+      scanNeeds: 'sonar-coverage',
+      scanEnvironment: 'sonarcloud',
     });
+  });
+
+  it('runs none of the dependencies or tests where the token is', () => {
+    const runs = (doc().jobs['sonarcloud']?.steps ?? []).flatMap((step) =>
+      typeof step['run'] === 'string' ? [step['run']] : [],
+    );
+    expect(runs.filter((run) => /\bnpm\b|\bnpx\b|vitest/.test(run))).toEqual(
+      [],
+    );
+  });
+
+  it('measures coverage and hands the report over as an artifact', () => {
+    const text = read('sonarcloud.yml');
+    expect({
+      measures: text.includes('run: npm run test:coverage'),
+      uploads: text.includes('uses: actions/upload-artifact@'),
+      downloads: text.includes('uses: actions/download-artifact@'),
+    }).toEqual({ measures: true, uploads: true, downloads: true });
   });
 
   // A docs-only change measures nothing (#360), so its scan runs without a
   // report: the scan and its verdict still run, and no step is skipped and passed.
-  it('skips only the install and the measure on a docs-only change', () => {
+  it('skips only the install, the measure and the hand-over on a docs-only change', () => {
     const conditioned = read('sonarcloud.yml')
       .split('\n')
-      .filter((l) => /^\s+if:/.test(l));
+      .filter((l) => /^\s+if:/.test(l))
+      .map((l) => l.trim());
     expect(conditioned).toEqual([
-      "        if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
-      "        if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
+      "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
+      "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
+      "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
+      "if: ${{ needs.sonar-coverage.outputs.scope != 'docs-only' }}",
     ]);
   });
 });
