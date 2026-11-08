@@ -1,23 +1,14 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-08 (fifty-sixth session). No Colima or device claim held. **Phones:** none needed. Shyden is AFK most of 2026-11-07 (relayed by repo-template-be): keep going by Priority, park his decisions here.
+**Written:** 2026-11-08 (fifty-seventh session). No Colima or device claim held. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
-- 2026-11-08 (fifty-third session; Shyden asleep until ~11:00 +07, relayed by repo-template-27: keep going by Priority, park his decisions here). The progress page is now required at every close-out (Stop hook `progress-page-at-close-out.py`; registry URL correct).
-- **#742 shut** (`file-story.ts` filed #917 live, every field read back).
-- **#917 filed (P0, 3 pts):** 4 unit timeouts at 1 s on the laptop with swap at 4,362 MB and load 31; the files alone passed. A later full run passed 13,694/13,694 at swap 4,017 MB, load 6 (comment on #917).
-- **#788 shut:** PR #918 merged (ec3460f0); deploy-dev run 42407592960 all green with both scripts denied (verify saw ec3460f0 on every page, D1 answered; smoke 20 passed).
-- **#919 shut:** PR #920 merged (30bf6e15), then Dependabot #913 (create-github-app-token 3.3.0) green and merged (526403a3).
-- My slip: #788 stayed In Progress after its branch was deleted, turning board-orphans red on three PRs; fixed (Todo) and recorded in memory.
-- Dependabot #913 and #914 (eslint-plugin-svelte 3.24.0) merged after update-branch.
-- **#793 AC6:** Dependabot's docker run on 2026-11-07 found Node 26.12.1 current: no PR yet.
-- 2026-11-08 09:40 +07 (fifty-fourth session): Dependabot #915 (globals 17.14.0) squash-merged (cfd3189a) once rebased and green. #917 AC1 measured and posted on #917: not reproduced (4 whole unit runs, 2 with a 3 GB hog and swap up to 6.7 GB: 0 failures, slowest test 421 ms). Shyden chose "Close, watch": #917 shut. Progress page republished (version 1794105825-97ce).
-
-- 2026-11-08 (fifty-sixth session): **#51 shut.** PR #921 squash-merged (dd1f58ec) on green CI (run 42442198188; Properties ran disclosure.test.ts, 3 passed); deploy-dev run 42447384582 all green, verify served dd1f58ec. Shyden chose "Close #51": AC4's per-target tests live in #106 AC4. Board Done; worktree `-51` removed. Progress page republished (version 1794113776-7c90).
-- 2026-11-08 10:30 +07 (fifty-fifth session): every P0–P2 ticket waits on Shyden, a release cut or the phones, so work moved to M2's first unblocked ticket. **#51** is on branch `51-claude-checked-evidence` (worktree `../yawelo-idle-51`, commit 31537fb5) as **PR #921**. Measured on the laptop: content unit tests 70/70, whole unit suite 13,732/13,732, lint, format and typecheck clean, and a one-time mutation pass where all 11 mutations went red as predicted (log in `.superpowers/sdd/51/mutation.log`). AC1 was already in the spec. Board status: In Progress.
+- 2026-11-08 (fifty-seventh session; Shyden back, relayed by repo-template-27). **Every parked question asked and answered**, each recorded on its ticket: #858 support link in the site footer + game settings, opens in the browser, optional player ID (a random code the game assigns) with a privacy line, shyden.co.uk told; #828 ETA confidence rule kept; #452 voyage order kept after M8; #103 split (#103 keeps unique ids + no empty strings + counts; Encounter tags, review blocks, cross-references moved to **#922**, P3, 3 pts, blocked by #102/#110/#462; AC6 floor dropped by the 2026-10-30 rule).
+- **#784:** Google refused the Yawelo Gmail ("device ... used too many times for verification"); Shyden: scan with his other Android phone once another session frees it.
+- **#655 SonarCloud:** project `shyden-labs_yawelo-idle` created (new code = previous version, automatic analysis off, read back). Shyden set `SONAR_TOKEN` (Actions + Dependabot). On his request the App got read-only **Secrets** and **Dependabot secrets** (names only); the local pin `~/.claude/scripts/github-app/app_manifest.py` updated test-first (ShyDesk keeps its old set; backups `*.bak-yawelo-secrets-read-2026-11-08`); App read back both secret names. Shyden chose a **separate pull-request workflow** (measures coverage itself; deploys untouched; no job-level `if`). **PR #923** on `655-sonarcloud`, head `a254a876ea9e0ef16420c0891d1ff5d467418645` (worktree `../yawelo-idle-655`); laptop: format, lint, typecheck clean, unit 13,788/13,788; mutation pass 8/8 caught. Board In Progress.
 
 ## Running
 
@@ -25,19 +16,19 @@
 
 ## Resume steps
 
-0. Run board-next. #783 (P0) waits for a release cut; find the first P2/P3 ticket not waiting on Shyden, a cut or the phones (M2 after #51: check #101, #103, #106 order).
-1. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure` and busy sessions at that moment; file a new ticket.
-2. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
-3. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
-4. Then by board: #783 (P0) waits for the next release cut (Shyden 2026-11-05); P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #757 (waits for a cut).
+0. `ListAgents`, then board-next. #655 (P1) is in hand.
+1. **PR #923:** `~/.claude/scripts/pr-verdict.sh 923`. The `sonarcloud` check fails at its first step ("SONAR_TOKEN is missing") until Shyden makes the `sonarcloud` environment with the token (commands given in chat: `gh api -X PUT repos/shyden-labs/yawelo-idle/environments/sonarcloud`, `gh secret set SONAR_TOKEN --repo shyden-labs/yawelo-idle --env sonarcloud`, then delete the repo-wide Actions copy; keep the Dependabot one). Then: first scan's findings (AC4) fixed or accepted by him, merge, make `sonarcloud` required on develop + main and add it to `tests/unit/required-checks.test.ts` (AC1), prove one Dependabot PR (AC5).
+2. Then #103 (unique ids, no empty strings), M2.
+3. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure`, busy sessions; file a ticket.
+4. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
+5. By board: #783 (P0) waits for the next release cut; #784 waits for the phone.
 
 ## Waiting on Shyden
 
-- (Census and #788 route answered 2026-11-07.)
-- #784 next steps; the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
+- The `sonarcloud` environment + token (#655). The second Android phone for the Yawelo Gmail (#784). #830 copy approval.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Live worktrees: `-dev-scripts`, `-402`, `-875`, (`-788` and `-919` removed after merge) (the 25 old ones were removed 2026-11-07).
-- Open PRs: #602 (Stryker, waits for a runner release).
+- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655`.
+- Open PRs: #602 (Stryker, waits for a runner release), #923 (#655).
