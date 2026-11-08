@@ -1,35 +1,42 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-08 (fifty-eighth session). No Colima or device claim held. **Phones:** none needed.
+**Written:** 2026-11-09 (fifty-ninth session). No Colima or device claim held. **Phones:** none needed. Shyden asked for work to go on by Priority while he sleeps; anything needing him is parked below.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
-- 2026-11-08 (fifty-eighth session). **#928** (P2, In Progress): PR **#931**, head `a1df22ad` (read from git), branch `928-legal-en-id`, worktree `../yawelo-idle-928`. `/id/privacy` is back, `LEGAL` is keyed en/id, each copy has a governing-language line, and `legal.test.ts` refuses legal text outside en and id. Shyden approved the English and read the Indonesian (writer/reader table on #928). TDD slip: the code was first written before the red run. Shyden chose discard and redo, so the code was set aside in commit `fb724d64`, the tests ran red against develop (10 of 30), and the code was written again. AC5 tickets already said en + id.
-- **#930 filed** (P2, 3 points): the rate-memo "the words held" 1 s timeout repeated, with swap at 7.4 of 8 GB (the #917 watch).
-- Told shyden.co.uk the verified Yawelo URLs (yaweloidle.com is not live; no test host). Its session says Shyden ruled its prod link moves to yaweloidle.com at its next release, before that domain resolves. **Tell that session when #784 lands.**
-- Progress page republished (version 13).
+- **#928 shut:** PR #931 merged; `/privacy` and `/id/privacy` read on the dev site Worker's own address (the dev front door shows the holding page).
+- **#103 shut:** PR #935 (`76e52fa2`). `structureChecks` in `packages/content`: unique lexicon ids, no empty strings. `review.notes` is now nullable. Nothing runs it on a real pack until #106 (noted there).
+- **#933 shut:** PR #934 (`b3f77eaa`), Shyden's "One journey, all its assertions" rule. 39 tests became 14, lines naming `expect` unchanged. site-smoke 181 s to 132 s; integration moved 209 to 257 s on the deploy run (175 s on the PR), so no integration saving is claimed.
+- **#784, mail part done:** `support@yaweloidle.com` on Sparked Host (Paris). Inbound seen in the inbox; outbound reached Gmail's inbox with SPF, DKIM and DMARC PASS. Five DNS records at Cloudflare, DNS only. Nameservers stay at Cloudflare. Not read: the receiving side's verdict on inbound (Chrome refused that raw page). Evidence on #784. The rest of #784 (accounts, doors, environments) is open.
+- **#932 filed** (P3, 2 points, blocked by #784): the privacy page names `support@`, Sparked Host and France.
+- **#830:** AC1 draft posted on the ticket for approval.
+- **#622:** noted that shyden.co.uk must be told when the promo is re-cut (its #1084). It has been told the mail works and that yaweloidle.com has no website yet.
 
 ## Running
 
-- Nothing local. CI on PR #931 was in progress at the close (board-orphans passed).
+- Nothing local, and no CI awaited.
 
 ## Resume steps
 
-0. `ListAgents`, then board-next. Yawelo browser work uses the **Yawelo Chrome profile**.
-1. **PR #931:** `~/.claude/scripts/pr-verdict.sh 931`. Read every step by name on the head SHA (`gh pr view 931 --json headRefOid`). If green, squash-merge into develop, check `/id/privacy` on dev, then shut #928 and remove `../yawelo-idle-928` (and `-925`).
-2. **#655 AC5:** on the next Dependabot PR, read its `sonarcloud` job steps and `sonar-verdict:` lines, then shut #655.
-3. **#784 mail:** Sparked Host service 633542 was Pending. When it is Active: create the mailbox, add MX/SPF/DKIM/DMARC in Cloudflare (show Shyden each record first), test send and receive. If it is still Pending, ask Shyden about a support ticket. When it lands, message the shyden.co.uk session.
-4. Then #929 (P4, blocked by #635), #103, M2. #830: draft the roadmap text and ask for approval. #930 when the board picks it.
-5. **#793 AC6** on Dependabot's docker PR. **#888:** shut after 2026-11-20. **#864:** watch site-smoke until 2026-11-19. #783 (P0) waits for the release cut.
+1. **#783 (P0)** is what board-next names, but it waits for the release cut. Then P1: #425, #426, #457 and #759 chain on #784.
+2. **#784's remaining ACs** are the P1 route to work: read them, and check what needs Shyden's accounts first.
+3. **#104** (M2, P3) is blocked by #467; #102 by #104. Read #467 next.
+4. **#655 AC5:** on the next Dependabot PR, read its `sonarcloud` steps and `sonar-verdict:` lines, then shut #655. None was open at this close.
+5. **#793 AC6** on Dependabot's docker PR. **#888:** shut after 2026-11-20. **#864:** watch site-smoke until 2026-11-19. **#930** when the board picks it; its reproduction needs induced swap, which slows peers, so ask first.
+6. **Epic #6 (M1)** has 18 of 18 sub-issues closed and is still open. Closing it triggers the milestone re-score, and moving ticket levels is Shyden's: ask.
+7. When #784 lands, message the shyden.co.uk session.
 
 ## Waiting on Shyden
 
-- #830 copy approval. Optional: mark S9382 Accepted in SonarCloud.
+- **#830:** approve the roadmap text on the ticket, and whether "launch" means the first public opening.
+- **#784:** Sparked Host ticket #073955 can be closed; it asked only for activation. The order said Sydney, but the panel offered no Sydney, so he picked Paris.
+- **Epic #6 and the milestone re-score** (step 6).
+- Optional: mark S9382 Accepted in SonarCloud.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655` (detached at develop), `-925` (merged; removable), `-928` (PR #931).
+- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-655` (detached at develop).
 - Open PRs: #602 (Stryker, waits for a runner release).
