@@ -42,92 +42,127 @@ async function openMap(
 const islandButtons = (page: Page) =>
   page.locator('ol.islands > li.island > button');
 
-test('draws one island per epic, in delivery order', async ({ page }) => {
-  const { map } = await openMap(page);
-  expect(map.islands.length).toBeGreaterThan(0);
-  await expect(page.locator('ol.islands .island-name')).toHaveText(
-    map.islands.map((i) => islandName(i, COPY.en.voyage)),
-  );
-});
+test('the map as it loads: the served fields, the islands, the ship, the totals, the shipped stories, live over the socket (#827, #828, #829, #840)', async ({
+  page,
+}) => {
+  // What the socket did, named when the page does not go live: WebKit on
+  // Linux stayed "not live" on dev where Chromium and Firefox went live.
+  const seen: string[] = [];
+  page.on('websocket', (socket) => {
+    seen.push(`open ${socket.url()}`);
+    socket.on('framereceived', () => seen.push('frame'));
+    socket.on('socketerror', (error) => seen.push(`error ${error}`));
+    socket.on('close', () => seen.push('close'));
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error') seen.push(`console ${message.text()}`);
+  });
+  const { map, items } = await openMap(page);
 
-test('shows each island’s status', async ({ page }) => {
-  const { map } = await openMap(page);
+  // One island per epic, in delivery order.
+  expect.soft(map.islands.length).toBeGreaterThan(0);
+  await expect
+    .soft(page.locator('ol.islands .island-name'))
+    .toHaveText(map.islands.map((i) => islandName(i, COPY.en.voyage)));
+
+  // Each island's status.
   const statuses = await page
     .locator('ol.islands > li.island')
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-status')));
-  expect(statuses).toEqual(map.islands.map((i) => i.status));
-});
+  expect.soft(statuses).toEqual(map.islands.map((i) => i.status));
 
-test('serves only the fields the public page shows (#840)', async ({
-  page,
-}) => {
+  // Only the fields the public page shows.
   const response = await page.request.get('/api/roadmap.json');
   const served = (await response.json()) as Record<string, unknown> & {
     items: Record<string, unknown>[];
   };
   const keys = new Set(served.items.map((i) => Object.keys(i).sort().join()));
-  expect([Object.keys(served).sort(), [...keys]]).toEqual([
-    ['items', 'progress', 'readAt', 'version'],
-    [
-      'closedAt,epic,estimate,milestone,number,parent,publicSummary,publicTitle,state,waiting',
-    ],
-  ]);
-});
+  expect
+    .soft([Object.keys(served).sort(), [...keys]])
+    .toEqual([
+      ['items', 'progress', 'readAt', 'version'],
+      [
+        'closedAt,epic,estimate,milestone,number,parent,publicSummary,publicTitle,state,waiting',
+      ],
+    ]);
 
-test('draws one list of islands, nothing after launch', async ({ page }) => {
-  await openMap(page);
-  await expect(page.locator('ol.islands')).toHaveCount(1);
-});
+  // One list of islands, nothing after launch.
+  await expect.soft(page.locator('ol.islands')).toHaveCount(1);
 
-test('marks the ship at the first island not done', async ({ page }) => {
-  const { map } = await openMap(page);
+  // The ship at the first island not done.
   const ship = page.locator('li.island:has(.ship)');
   if (map.shipAt === null) {
-    await expect(ship).toHaveCount(0);
-    return;
+    await expect.soft(ship).toHaveCount(0);
+  } else {
+    await expect.soft(ship).toHaveCount(1);
+    await expect.soft(ship).toHaveAttribute('data-epic', String(map.shipAt));
   }
-  await expect(ship).toHaveCount(1);
-  await expect(ship).toHaveAttribute('data-epic', String(map.shipAt));
+
+  // What's left totals as the islands do.
+  const { total } = whatsLeft(map);
+  await expect
+    .soft(page.locator('.whats-left tfoot td'))
+    .toHaveText([String(total.tickets), String(total.points)]);
+
+  // The stories shipped most recently.
+  await expect
+    .soft(page.locator('ul.shipped a'))
+    .toHaveText(recentlyShipped(items).map((s) => s.title));
+
+  // Live over the Worker's socket; a failure names what the socket saw.
+  try {
+    await expect(page.locator('.live-state')).toHaveText(COPY.en.voyage.live);
+  } catch (error) {
+    throw new Error(`not live; the socket saw: ${seen.join(' | ')}`, {
+      cause: error,
+    });
+  }
 });
 
-test('opens an island’s panel with a press and closes it with another', async ({
+test('pressing islands: a panel opens with its plain words, closes, and only one is open at a time', async ({
   page,
   hasTouch,
 }) => {
-  await openMap(page);
-  const button = islandButtons(page).first();
+  const { map } = await openMap(page);
+  const island = map.islands[0];
+  if (island === undefined) throw new Error('the board has no island');
+  const buttons = islandButtons(page);
+  const button = buttons.first();
   const panel = page.locator(
     `#${(await button.getAttribute('aria-controls')) ?? ''}`,
   );
-  await expect(panel).toBeHidden();
-  await press(button, hasTouch);
-  await expect(button).toHaveAttribute('aria-expanded', 'true');
-  await expect(panel).toBeVisible();
-  await press(button, hasTouch);
-  await expect(button).toHaveAttribute('aria-expanded', 'false');
-  await expect(panel).toBeHidden();
-});
+  await expect.soft(panel).toBeHidden();
 
-test('opens one panel at a time', async ({ page, hasTouch }) => {
-  await openMap(page);
-  const buttons = islandButtons(page);
+  await press(button, hasTouch);
+  await expect.soft(button).toHaveAttribute('aria-expanded', 'true');
+  await expect.soft(panel).toBeVisible();
+
+  // An open island's plain words: what's built, what's left, the rest counted.
+  const words = page.locator(`#panel-${String(island.epic)}`);
+  await expect
+    .soft(words.locator('ul.built a'))
+    .toHaveText(island.built.map((b) => b.title));
+  await expect
+    .soft(words.locator('ul.left a'))
+    .toHaveText(island.left.map((l) => l.title));
+  await expect
+    .soft(words.locator('.behind'))
+    .toHaveCount(island.behindTheScenes > 0 ? 1 : 0);
+
+  await press(button, hasTouch);
+  await expect.soft(button).toHaveAttribute('aria-expanded', 'false');
+  await expect.soft(panel).toBeHidden();
+
+  // One panel at a time.
   await press(buttons.nth(0), hasTouch);
   await press(buttons.nth(1), hasTouch);
-  await expect(buttons.nth(0)).toHaveAttribute('aria-expanded', 'false');
-  await expect(buttons.nth(1)).toHaveAttribute('aria-expanded', 'true');
+  await expect.soft(buttons.nth(0)).toHaveAttribute('aria-expanded', 'false');
+  await expect.soft(buttons.nth(1)).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('opens and closes an island from the keyboard', async ({ page }) => {
-  await openMap(page);
-  const button = islandButtons(page).first();
-  await button.focus();
-  await page.keyboard.press('Enter');
-  await expect(button).toHaveAttribute('aria-expanded', 'true');
-  await page.keyboard.press('Space');
-  await expect(button).toHaveAttribute('aria-expanded', 'false');
-});
-
-test('reaches the first island with Tab', async ({ page }) => {
+test('the keyboard: Tab reaches the first island, Enter opens it, Space closes it', async ({
+  page,
+}) => {
   await openMap(page);
   const first = islandButtons(page).first();
   for (let presses = 0; presses < 50; presses += 1) {
@@ -136,26 +171,10 @@ test('reaches the first island with Tab', async ({ page }) => {
     await page.keyboard.press('Tab');
   }
   await expect(first).toBeFocused();
-});
-
-test('shows an open island’s plain words: what’s built, what’s left, the rest counted', async ({
-  page,
-  hasTouch,
-}) => {
-  const { map } = await openMap(page);
-  const island = map.islands[0];
-  if (island === undefined) throw new Error('the board has no island');
-  await press(islandButtons(page).first(), hasTouch);
-  const panel = page.locator(`#panel-${String(island.epic)}`);
-  await expect(panel.locator('ul.built a')).toHaveText(
-    island.built.map((b) => b.title),
-  );
-  await expect(panel.locator('ul.left a')).toHaveText(
-    island.left.map((l) => l.title),
-  );
-  await expect(panel.locator('.behind')).toHaveCount(
-    island.behindTheScenes > 0 ? 1 : 0,
-  );
+  await page.keyboard.press('Enter');
+  await expect.soft(first).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Space');
+  await expect.soft(first).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('fits 320 px wide with no horizontal scroll', async ({
@@ -169,46 +188,6 @@ test('fits 320 px wide with no horizontal scroll', async ({
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-});
-
-test('totals what’s left as the islands do (#828)', async ({ page }) => {
-  const { map } = await openMap(page);
-  const { total } = whatsLeft(map);
-  await expect(page.locator('.whats-left tfoot td')).toHaveText([
-    String(total.tickets),
-    String(total.points),
-  ]);
-});
-
-test('lists the stories shipped most recently (#828)', async ({ page }) => {
-  const { items } = await openMap(page);
-  const shipped = recentlyShipped(items);
-  await expect(page.locator('ul.shipped a')).toHaveText(
-    shipped.map((s) => s.title),
-  );
-});
-
-test('goes live over the Worker’s socket (#829)', async ({ page }) => {
-  // What the socket did, named when the page does not go live: WebKit on
-  // Linux stayed "not live" on dev where Chromium and Firefox went live.
-  const seen: string[] = [];
-  page.on('websocket', (socket) => {
-    seen.push(`open ${socket.url()}`);
-    socket.on('framereceived', () => seen.push('frame'));
-    socket.on('socketerror', (error) => seen.push(`error ${error}`));
-    socket.on('close', () => seen.push('close'));
-  });
-  page.on('console', (message) => {
-    if (message.type() === 'error') seen.push(`console ${message.text()}`);
-  });
-  await openMap(page);
-  try {
-    await expect(page.locator('.live-state')).toHaveText(COPY.en.voyage.live);
-  } catch (error) {
-    throw new Error(`not live; the socket saw: ${seen.join(' | ')}`, {
-      cause: error,
-    });
-  }
 });
 
 test('says it is not live when the socket is refused, keeping the snapshot read (#829)', async ({

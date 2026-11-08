@@ -7,7 +7,10 @@ import { press } from '../press';
  * data file on the same origin. Real clicks only (global real-tests rule).
  */
 
-test('loads every request from the site’s own origin', async ({ page }) => {
+test('the docs load from the site’s own origin, list both public operations, and “Try it out” shows the data file’s 200', async ({
+  page,
+  hasTouch,
+}) => {
   const requested: string[] = [];
   page.on('request', (request) => requested.push(request.url()));
   await page.goto('/api/docs');
@@ -15,23 +18,15 @@ test('loads every request from the site’s own origin', async ({ page }) => {
     page.getByRole('heading', { name: /Yawelo Idle roadmap API/ }),
   ).toBeVisible();
   const origin = new URL(page.url()).origin;
-  expect(requested.length).toBeGreaterThan(0);
-  expect(requested.filter((url) => new URL(url).origin !== origin)).toEqual([]);
-});
+  expect.soft(requested.length).toBeGreaterThan(0);
+  expect
+    .soft(requested.filter((url) => new URL(url).origin !== origin))
+    .toEqual([]);
 
-test('lists both public operations', async ({ page }) => {
-  await page.goto('/api/docs');
-  await expect(page.locator('.opblock-summary-path')).toHaveText([
-    '/api/roadmap.json',
-    '/api/roadmap/live',
-  ]);
-});
+  await expect
+    .soft(page.locator('.opblock-summary-path'))
+    .toHaveText(['/api/roadmap.json', '/api/roadmap/live']);
 
-test('“Try it out” reads the data file and shows its 200', async ({
-  page,
-  hasTouch,
-}) => {
-  await page.goto('/api/docs');
   const operation = page.locator('#operations-default-getRoadmapSnapshot');
   await press(operation.locator('.opblock-summary-control'), hasTouch);
   await press(operation.getByRole('button', { name: 'Try it out' }), hasTouch);
@@ -39,8 +34,8 @@ test('“Try it out” reads the data file and shows its 200', async ({
     (response) => new URL(response.url()).pathname === '/api/roadmap.json',
   );
   await press(operation.getByRole('button', { name: 'Execute' }), hasTouch);
-  expect((await answered).status()).toBe(200);
-  await expect(
-    operation.locator('.live-responses-table tbody .response-col_status'),
-  ).toHaveText('200');
+  expect.soft((await answered).status()).toBe(200);
+  await expect
+    .soft(operation.locator('.live-responses-table tbody .response-col_status'))
+    .toHaveText('200');
 });
