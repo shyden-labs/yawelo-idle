@@ -17,6 +17,7 @@
 - 2026-11-08 09:40 +07 (fifty-fourth session): Dependabot #915 (globals 17.14.0) squash-merged (cfd3189a) once rebased and green. #917 AC1 measured and posted on #917: not reproduced (4 whole unit runs, 2 with a 3 GB hog and swap up to 6.7 GB: 0 failures, slowest test 421 ms). Shyden chose "Close, watch": #917 shut. Progress page republished (version 1794105825-97ce).
 
 - 2026-11-08 10:30 +07 (fifty-fifth session): every P0–P2 ticket waits on Shyden, a release cut or the phones, so work moved to M2's first unblocked ticket. **#51** is on branch `51-claude-checked-evidence` (worktree `../yawelo-idle-51`, commit 31537fb5) as **PR #921**. Measured on the laptop: content unit tests 70/70, whole unit suite 13,732/13,732, lint, format and typecheck clean, and a one-time mutation pass where all 11 mutations went red as predicted (log in `.superpowers/sdd/51/mutation.log`). AC1 was already in the spec. Board status: In Progress.
+
 ## Running (each dies with this session)
 
 - `pr-verdict.sh 921` (CI on PR #921): DEAD at /clear; re-run `~/.claude/scripts/pr-verdict.sh 921`.
