@@ -11,7 +11,7 @@
  * (docs/translations/2026-10-16-holding-page-id.md).
  */
 import { COPY_EN } from './copy-en';
-import type { LegalPage, Locale, LocalisedPage } from './i18n';
+import type { LegalLocale, LegalPage, Locale, LocalisedPage } from './i18n';
 
 /**
  * The voyage map's labels (#827). Placeholder English, not yet approved by
@@ -129,8 +129,8 @@ export interface Copy {
   titles: Record<LocalisedPage, string>;
   launchListSoon: string;
   /**
-   * The one translated line a legal page may carry for this language's
-   * readers (Shyden, 2026-11-08; #925); the legal text stays in `LEGAL`.
+   * The one translated line an English legal page carries for readers of a
+   * language without legal text (Shyden, 2026-11-08; #925, #928).
    */
   englishOnlyNote: string;
   notFoundTitle: string;
@@ -174,14 +174,39 @@ export const COPY: Record<Locale, Copy> = {
   },
 };
 
+/** A legal page's text in one language. */
+export interface LegalText {
+  title: string;
+  soon: string;
+  /** Which text governs for whom, said in this text's language (#928 AC2). */
+  governs: string;
+}
+
 /**
- * The legal pages' text, in English only (Shyden, 2026-11-08: "legal pages
- * can only be in English"; #925). It sits outside `COPY` so no language's
- * copy, and nothing that translates it, ever holds legal text.
+ * The legal pages' text, in English and Indonesian only (Shyden, 2026-11-08,
+ * global rule; #928). It sits outside `COPY`, so no general copy holds legal
+ * text and no other language's legal text is written. The Indonesian is
+ * written from the approved English, read back by Google Cloud Translation
+ * (table on #928) and read by Shyden before it ships.
  */
-export const LEGAL: Record<LegalPage, { title: string; soon: string }> = {
-  privacy: {
-    title: COPY_EN.privacy.title.text,
-    soon: 'The privacy notice will be published here before the launch list opens.',
+export const LEGAL: Record<LegalLocale, Record<LegalPage, LegalText>> = {
+  en: {
+    privacy: {
+      title: COPY_EN.privacy.title.text,
+      soon: 'The privacy notice will be published here before the launch list opens.',
+      governs:
+        'For residents of Indonesia, the Indonesian text of this page governs. For everyone else, the English text governs.',
+    },
+  },
+  id: {
+    privacy: {
+      // Google read-back 2026-11-08: "Privacy"
+      title: 'Privasi',
+      // Google read-back 2026-11-08: "A privacy notice will be published here before the launch listing opens."
+      soon: 'Pemberitahuan privasi akan diterbitkan di sini sebelum daftar peluncuran dibuka.',
+      // Google read-back 2026-11-08: "For Indonesian residents, the Indonesian text on this page applies. For everyone else, the English text applies."
+      governs:
+        'Bagi penduduk Indonesia, yang berlaku adalah teks halaman ini dalam bahasa Indonesia. Bagi semua orang lainnya, yang berlaku adalah teks dalam bahasa Inggris.',
+    },
   },
 };

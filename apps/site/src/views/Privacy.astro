@@ -1,22 +1,31 @@
 ---
 /**
- * The privacy page, in English only (Shyden, 2026-11-08, global rule; #925).
- * Every language links here; each other language's readers get the one
- * translated note a legal page may carry, marked with that language.
+ * The privacy page, in English and Indonesian only (Shyden, 2026-11-08,
+ * global rule; #928). The English page carries the one translated note for
+ * readers of each language without legal text; today every language has it.
  */
 import Base from '../layouts/Base.astro';
 import { COPY, LEGAL } from '../copy';
-import { LOCALES } from '../i18n';
+import { LOCALES, localesOf, type LegalLocale } from '../i18n';
 
-const others = LOCALES.filter((locale) => locale !== 'en');
+interface Props {
+  locale: LegalLocale;
+}
+const { locale } = Astro.props;
+const text = LEGAL[locale].privacy;
+const noted =
+  locale === 'en'
+    ? LOCALES.filter((other) => !localesOf('privacy').includes(other))
+    : [];
 ---
 
-<Base locale="en" page="privacy" title={LEGAL.privacy.title}>
-  {others.map((locale) => (
-    <p lang={locale} data-english-only-note>
-      {COPY[locale].englishOnlyNote}
+<Base locale={locale} page="privacy" title={text.title}>
+  {noted.map((other) => (
+    <p lang={other} data-english-only-note>
+      {COPY[other].englishOnlyNote}
     </p>
   ))}
-  <h1>{LEGAL.privacy.title}</h1>
-  <p>{LEGAL.privacy.soon}</p>
+  <h1>{text.title}</h1>
+  <p data-governing-language>{text.governs}</p>
+  <p>{text.soon}</p>
 </Base>
