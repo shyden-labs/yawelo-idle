@@ -14,18 +14,18 @@
 - My slip: #788 stayed In Progress after its branch was deleted, turning board-orphans red on three PRs; fixed (Todo) and recorded in memory.
 - Dependabot #913 and #914 (eslint-plugin-svelte 3.24.0) merged after update-branch.
 - **#793 AC6:** Dependabot's docker run on 2026-11-07 found Node 26.12.1 current: no PR yet.
+- 2026-11-08 09:40 +07 (fifty-fourth session): Dependabot #915 (globals 17.14.0) squash-merged (cfd3189a) once rebased and green. #917 AC1 measurement started.
 
 ## Running (each dies with this session)
 
-- Nothing.
+- **#917 AC1 runs** (local, DEAD if this session is gone): four whole unit suites in `-dev-scripts` (base, 3 GB incompressible hog, base, hog), results in `.superpowers/sdd/917/results.txt` and `snaps.txt`. Re-run: `.superpowers/sdd/917/run.zsh > .superpowers/sdd/917/run.out 2>&1` (run_in_background).
 
 ## Resume steps
 
-1. **Dependabot #915 (globals 17.14.0):** conflicts with develop after #914 (cc12418b) merged; wait for Dependabot to rebase it itself (never `@dependabot rebase`: it refuses the App). When its head contains develop's tip and every job passed (SHA read to a file), squash-merge with `--match-head-commit`.
-2. **#917 (P0):** AC1 needs induced memory pressure on a shared 8 GB laptop; do it only when no peer session holds a heavy run (`test-lock` shows the holder).
-3. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
-4. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
-5. Then by board: #783 (P0) waits for the next release cut (Shyden 2026-11-05); P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #757 (waits for a cut).
+1. **#917 (P0):** read `.superpowers/sdd/917/results.txt`; post the table on #917 (AC1); then AC2 or AC3 (AskUserQuestion).
+2. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
+3. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
+4. Then by board: #783 (P0) waits for the next release cut (Shyden 2026-11-05); P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #757 (waits for a cut).
 
 ## Waiting on Shyden
 
@@ -36,4 +36,4 @@
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
 - Live worktrees: `-dev-scripts`, `-402`, `-875`, (`-788` and `-919` removed after merge) (the 25 old ones were removed 2026-11-07).
-- Open PRs: Dependabot #915 (conflicts, waits for Dependabot); #602 (Stryker, waits for a runner release).
+- Open PRs: #602 (Stryker, waits for a runner release).
