@@ -14,7 +14,7 @@
 - My slip: #788 stayed In Progress after its branch was deleted, turning board-orphans red on three PRs; fixed (Todo) and recorded in memory.
 - Dependabot #913 and #914 (eslint-plugin-svelte 3.24.0) merged after update-branch.
 - **#793 AC6:** Dependabot's docker run on 2026-11-07 found Node 26.12.1 current: no PR yet.
-- 2026-11-08 09:40 +07 (fifty-fourth session): Dependabot #915 (globals 17.14.0) squash-merged (cfd3189a) once rebased and green. #917 AC1 measured and posted on #917: not reproduced (4 whole unit runs, 2 with a 3 GB hog and swap up to 6.7 GB: 0 failures, slowest test 421 ms). AC3 question asked of Shyden. Progress page republished (version 1794105825-97ce).
+- 2026-11-08 09:40 +07 (fifty-fourth session): Dependabot #915 (globals 17.14.0) squash-merged (cfd3189a) once rebased and green. #917 AC1 measured and posted on #917: not reproduced (4 whole unit runs, 2 with a 3 GB hog and swap up to 6.7 GB: 0 failures, slowest test 421 ms). Shyden chose "Close, watch": #917 shut. Progress page republished (version 1794105825-97ce).
 
 ## Running (each dies with this session)
 
@@ -22,7 +22,7 @@
 
 ## Resume steps
 
-1. **#917 (P0):** AC1 table is on #917 (comment 6716304848); AC3: Shyden's route pending (asked 2026-11-08). Act on his answer.
+1. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure` and busy sessions at that moment; file a new ticket.
 2. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
 3. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
 4. Then by board: #783 (P0) waits for the next release cut (Shyden 2026-11-05); P1s wait on Shyden (#784, #655, #830) or on #426; next P2s: #757 (waits for a cut).
@@ -30,7 +30,6 @@
 ## Waiting on Shyden
 
 - (Census and #788 route answered 2026-11-07.)
-- #917 route (watch, lower workers, or close);
 - #784 next steps; the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
 
 ## State
