@@ -10,7 +10,10 @@ import { press } from '../press';
  */
 const DOCS = '/api/private/docs';
 
-test('loads every request from the site’s own origin', async ({ page }) => {
+test('the docs load from the site’s own origin, list the health report and the webhook, and “Try it out” shows the report’s 200 and the webhook’s 401', async ({
+  page,
+  hasTouch,
+}) => {
   const requested: string[] = [];
   page.on('request', (request) => requested.push(request.url()));
   await page.goto(DOCS);
@@ -18,55 +21,42 @@ test('loads every request from the site’s own origin', async ({ page }) => {
     page.getByRole('heading', { name: /Yawelo Idle private operations API/ }),
   ).toBeVisible();
   const origin = new URL(page.url()).origin;
-  expect(requested.length).toBeGreaterThan(0);
-  expect(requested.filter((url) => new URL(url).origin !== origin)).toEqual([]);
-});
+  expect.soft(requested.length).toBeGreaterThan(0);
+  expect
+    .soft(requested.filter((url) => new URL(url).origin !== origin))
+    .toEqual([]);
 
-test('lists the health report and the webhook', async ({ page }) => {
-  await page.goto(DOCS);
-  await expect(page.locator('.opblock-summary-path')).toHaveText([
-    '/api/roadmap/health',
-    '/hooks/github',
-  ]);
-});
+  await expect
+    .soft(page.locator('.opblock-summary-path'))
+    .toHaveText(['/api/roadmap/health', '/hooks/github']);
 
-test('“Try it out” reads the health report and shows its 200', async ({
-  page,
-  hasTouch,
-}) => {
-  await page.goto(DOCS);
-  const operation = page.locator('#operations-default-getRoadmapHealth');
-  await press(operation.locator('.opblock-summary-control'), hasTouch);
-  await press(operation.getByRole('button', { name: 'Try it out' }), hasTouch);
-  const answered = page.waitForResponse(
+  const health = page.locator('#operations-default-getRoadmapHealth');
+  await press(health.locator('.opblock-summary-control'), hasTouch);
+  await press(health.getByRole('button', { name: 'Try it out' }), hasTouch);
+  const report = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/roadmap/health',
   );
-  await press(operation.getByRole('button', { name: 'Execute' }), hasTouch);
-  expect((await answered).status()).toBe(200);
-  await expect(
-    operation.locator('.live-responses-table tbody .response-col_status'),
-  ).toHaveText('200');
-});
+  await press(health.getByRole('button', { name: 'Execute' }), hasTouch);
+  expect.soft((await report).status()).toBe(200);
+  await expect
+    .soft(health.locator('.live-responses-table tbody .response-col_status'))
+    .toHaveText('200');
 
-test('“Try it out” on the webhook shows its 401, since no browser holds the secret', async ({
-  page,
-  hasTouch,
-}) => {
-  await page.goto(DOCS);
-  const operation = page.locator('#operations-default-postGitHubWebhook');
-  await press(operation.locator('.opblock-summary-control'), hasTouch);
-  await press(operation.getByRole('button', { name: 'Try it out' }), hasTouch);
-  const signature = operation.locator(
+  // The webhook answers 401, since no browser holds the secret.
+  const webhook = page.locator('#operations-default-postGitHubWebhook');
+  await press(webhook.locator('.opblock-summary-control'), hasTouch);
+  await press(webhook.getByRole('button', { name: 'Try it out' }), hasTouch);
+  const signature = webhook.locator(
     'tr[data-param-name="X-Hub-Signature-256"] input',
   );
   await press(signature, hasTouch);
   await signature.pressSequentially(`sha256=${'0'.repeat(64)}`);
-  const answered = page.waitForResponse(
+  const refused = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/hooks/github',
   );
-  await press(operation.getByRole('button', { name: 'Execute' }), hasTouch);
-  expect((await answered).status()).toBe(401);
-  await expect(
-    operation.locator('.live-responses-table tbody .response-col_status'),
-  ).toHaveText('401');
+  await press(webhook.getByRole('button', { name: 'Execute' }), hasTouch);
+  expect.soft((await refused).status()).toBe(401);
+  await expect
+    .soft(webhook.locator('.live-responses-table tbody .response-col_status'))
+    .toHaveText('401');
 });
