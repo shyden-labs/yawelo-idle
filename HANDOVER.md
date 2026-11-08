@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-08 (fifty-fifth session). No Colima or device claim held. **Phones:** none needed. Shyden is AFK most of 2026-11-07 (relayed by repo-template-be): keep going by Priority, park his decisions here.
+**Written:** 2026-11-08 (fifty-sixth session). No Colima or device claim held. **Phones:** none needed. Shyden is AFK most of 2026-11-07 (relayed by repo-template-be): keep going by Priority, park his decisions here.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
@@ -16,15 +16,16 @@
 - **#793 AC6:** Dependabot's docker run on 2026-11-07 found Node 26.12.1 current: no PR yet.
 - 2026-11-08 09:40 +07 (fifty-fourth session): Dependabot #915 (globals 17.14.0) squash-merged (cfd3189a) once rebased and green. #917 AC1 measured and posted on #917: not reproduced (4 whole unit runs, 2 with a 3 GB hog and swap up to 6.7 GB: 0 failures, slowest test 421 ms). Shyden chose "Close, watch": #917 shut. Progress page republished (version 1794105825-97ce).
 
+- 2026-11-08 (fifty-sixth session): **#51 shut.** PR #921 squash-merged (dd1f58ec) on green CI (run 42442198188; Properties ran disclosure.test.ts, 3 passed); deploy-dev run 42447384582 all green, verify served dd1f58ec. Shyden chose "Close #51": AC4's per-target tests live in #106 AC4. Board Done; worktree `-51` removed. Progress page republished (version 1794113776-7c90).
 - 2026-11-08 10:30 +07 (fifty-fifth session): every P0–P2 ticket waits on Shyden, a release cut or the phones, so work moved to M2's first unblocked ticket. **#51** is on branch `51-claude-checked-evidence` (worktree `../yawelo-idle-51`, commit 31537fb5) as **PR #921**. Measured on the laptop: content unit tests 70/70, whole unit suite 13,732/13,732, lint, format and typecheck clean, and a one-time mutation pass where all 11 mutations went red as predicted (log in `.superpowers/sdd/51/mutation.log`). AC1 was already in the spec. Board status: In Progress.
 
-## Running (each dies with this session)
+## Running
 
-- `pr-verdict.sh 921` (CI on PR #921): DEAD at /clear; re-run `~/.claude/scripts/pr-verdict.sh 921`.
+- Nothing.
 
 ## Resume steps
 
-0. **PR #921 (#51):** read CI by job name (properties suite runs `packages/content/properties/disclosure.test.ts` for the first time). Green → squash-merge into develop, verify the dev deploy, then put the AC4 question to Shyden (below). Red → fix in the same branch.
+0. Run board-next. #783 (P0) waits for a release cut; find the first P2/P3 ticket not waiting on Shyden, a cut or the phones (M2 after #51: check #101, #103, #106 order).
 1. **On a repeat of the 1 s unit timeouts** (#859, #917): measure swap, load, `memory_pressure` and busy sessions at that moment; file a new ticket.
 2. **#793 AC6:** when Dependabot opens its docker PR for `.github/node`, read its setup-node log line, then shut #793.
 3. **#888:** shut after 2026-11-20 with the deploy-dev tally. **#864:** watch site-smoke reds until 2026-11-19.
@@ -33,11 +34,10 @@
 ## Waiting on Shyden
 
 - (Census and #788 route answered 2026-11-07.)
-- **#51 AC4:** it asks for one test per build target, but no target reads content until #106 (content build output). Should that part move to #106's ACs so #51 can close on the gate function, or should #51 stay open until #106 wires it in?
 - #784 next steps; the ETA confidence rule; voyage map layout (#328/#331/#452); #655 SonarCloud and `SONAR_TOKEN`; #858 where it goes; #830 copy approval.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only).
-- Live worktrees: `-dev-scripts`, `-402`, `-875`, `-51`, (`-788` and `-919` removed after merge) (the 25 old ones were removed 2026-11-07).
-- Open PRs: #921 (#51), #602 (Stryker, waits for a runner release).
+- Live worktrees: `-dev-scripts`, `-402`, `-875`, (`-788` and `-919` removed after merge) (the 25 old ones were removed 2026-11-07).
+- Open PRs: #602 (Stryker, waits for a runner release).
