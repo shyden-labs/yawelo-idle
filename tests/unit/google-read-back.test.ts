@@ -5,6 +5,7 @@ import {
   decode,
   encode,
   ENDPOINT,
+  machineDeps,
   parseKeyFile,
   readBack,
   type Fetch,
@@ -259,5 +260,20 @@ describe('a read-back (#638 AC1)', () => {
     await expect(
       readBack(['a'], 'id', 'en', { key: KEY, fetch, paths: PATHS, deps }),
     ).rejects.toThrow('Google read-back: 0 texts answered for 1 sent');
+  });
+});
+
+/**
+ * The lock holder is named by the directory the read-back runs from, read
+ * from the process itself: no `git` is started and nothing is looked up on
+ * PATH (SonarCloud S4036 on PR #939).
+ */
+describe('machineDeps (#638)', () => {
+  it('names the holder by the directory it runs from', () => {
+    expect(machineDeps().worktree).toBe(process.cwd());
+  });
+
+  it('keeps a worktree it is given', () => {
+    expect(machineDeps('/given').worktree).toBe('/given');
   });
 });

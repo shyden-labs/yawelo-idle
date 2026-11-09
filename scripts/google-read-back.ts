@@ -14,7 +14,6 @@
  * where texts.json is a JSON array of strings; prints the read-back as a JSON
  * array in the same order.
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -165,8 +164,11 @@ export const MACHINE_PATHS: LedgerPaths = {
 const isCode = (error: unknown, code: string): boolean =>
   error instanceof Error && 'code' in error && error.code === code;
 
-/** The real files, clock and process table. */
-export function machineDeps(worktree: string): LedgerDeps {
+/**
+ * The real files, clock and process table. The lock holder is named by
+ * `worktree`, by default the directory this runs from.
+ */
+export function machineDeps(worktree: string = process.cwd()): LedgerDeps {
   return {
     pid: process.pid,
     worktree,
@@ -218,10 +220,7 @@ if (import.meta.main) {
   const key = parseKeyFile(
     await readFile(join(SHARED, 'google-translate.env'), 'utf8'),
   );
-  const worktree = execFileSync('git', ['rev-parse', '--show-toplevel'], {
-    encoding: 'utf8',
-  }).trim();
-  const deps = machineDeps(worktree);
+  const deps = machineDeps();
   const answer = await withLock(MACHINE_PATHS, deps, () =>
     readBack(texts, source, target, {
       key,
