@@ -4,7 +4,7 @@ import {
   DOOR_SECRET_HEADER,
   DOORS,
 } from '../../apps/door/worker/door';
-import { doorOf, type Equal } from '../../apps/door/worker/origin';
+import { doorOf, refusal, type Equal } from '../../apps/door/worker/origin';
 
 /**
  * How an origin knows a request came through its door (#784 AC4): the door
@@ -89,5 +89,86 @@ describe('a request not believed (#784 AC4)', () => {
         sameBytes,
       ),
     ).toBeUndefined();
+  });
+});
+
+/**
+ * Each origin answers only through its door once the doors are live (#784
+ * AC4; Shyden, 2026-11-09: TEST and DEV refuse a request without the secret,
+ * 403). Until the go-live on 2026-11-15 the deploy sets DOOR_REQUIRED to
+ * "false", so today's dev addresses keep working; any other value, or none,
+ * requires the door, so a forgotten setting fails closed.
+ */
+describe('refusal (#784 AC4)', () => {
+  const live = { DOOR_REQUIRED: 'true', DOOR_SECRET: SECRET };
+
+  it('admits a request through the door, its secret matching', async () => {
+    expect(await refusal(through(SECRET), live, sameBytes)).toBeUndefined();
+  });
+
+  it('admits a request with the secret that names no door, as CI sends', async () => {
+    expect(
+      await refusal(request({ [DOOR_SECRET_HEADER]: SECRET }), live, sameBytes),
+    ).toBeUndefined();
+  });
+
+  it('refuses a request with no secret, 403, never stored', async () => {
+    const refused = await refusal(request({}), live, sameBytes);
+    expect(refused?.status).toBe(403);
+    expect(refused?.headers.get('cache-control')).toBe('no-store');
+    expect(await refused?.text()).toBe('forbidden');
+  });
+
+  it('refuses a request with the wrong secret, 403', async () => {
+    expect((await refusal(through('not-it'), live, sameBytes))?.status).toBe(
+      403,
+    );
+  });
+
+  it('requires the door when DOOR_REQUIRED is unset', async () => {
+    expect(
+      (await refusal(request({}), { DOOR_SECRET: SECRET }, sameBytes))?.status,
+    ).toBe(403);
+  });
+
+  it('requires the door for any value but exactly "false"', async () => {
+    expect(
+      (
+        await refusal(
+          request({}),
+          { DOOR_REQUIRED: 'FALSE', DOOR_SECRET: SECRET },
+          sameBytes,
+        )
+      )?.status,
+    ).toBe(403);
+  });
+
+  it('admits every request while DOOR_REQUIRED is "false", before the go-live', async () => {
+    expect(
+      await refusal(request({}), { DOOR_REQUIRED: 'false' }, sameBytes),
+    ).toBeUndefined();
+  });
+
+  it('answers 500 naming DOOR_SECRET when the door is required and the origin has none', async () => {
+    const refused = await refusal(
+      through(SECRET),
+      { DOOR_REQUIRED: 'true' },
+      sameBytes,
+    );
+    expect(refused?.status).toBe(500);
+    expect(refused?.headers.get('cache-control')).toBe('no-store');
+    expect(await refused?.text()).toBe('origin not configured: DOOR_SECRET');
+  });
+
+  it('answers 500 when the origin’s secret is empty, even sent empty', async () => {
+    expect(
+      (
+        await refusal(
+          through(''),
+          { DOOR_REQUIRED: 'true', DOOR_SECRET: '' },
+          sameBytes,
+        )
+      )?.status,
+    ).toBe(500);
   });
 });

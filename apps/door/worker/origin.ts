@@ -19,6 +19,25 @@ const digest = (text: string): Promise<ArrayBuffer> =>
   crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
 
 /**
+ * Whether `request` carries the origin's own door secret. Never when the
+ * origin has none: an empty one would let anyone in.
+ */
+async function carriesSecret(
+  request: Request,
+  secret: string | undefined,
+  equal: Equal,
+): Promise<boolean> {
+  if (secret === undefined || secret.length === 0) return false;
+  const given = request.headers.get(DOOR_SECRET_HEADER);
+  if (given === null) return false;
+  const [givenDigest, ownDigest] = await Promise.all([
+    digest(given),
+    digest(secret),
+  ]);
+  return equal(givenDigest, ownDigest);
+}
+
+/**
  * The door `request` came through, or undefined when it is not believed: the
  * origin has no secret (an empty one would let anyone in), the request
  * carries none or the wrong one, or it names no door.
@@ -28,13 +47,35 @@ export async function doorOf(
   secret: string | undefined,
   equal: Equal,
 ): Promise<string | undefined> {
-  if (secret === undefined || secret.length === 0) return undefined;
-  const given = request.headers.get(DOOR_SECRET_HEADER);
-  if (given === null) return undefined;
-  const [givenDigest, ownDigest] = await Promise.all([
-    digest(given),
-    digest(secret),
-  ]);
-  if (!equal(givenDigest, ownDigest)) return undefined;
+  if (!(await carriesSecret(request, secret, equal))) return undefined;
   return request.headers.get(DOOR_HOST_HEADER) ?? undefined;
+}
+
+/** What an origin behind a door is given by its deploy (#784 AC4). */
+export interface OriginEnv {
+  /** "false" until the doors go live; any other value, or none, requires the door. */
+  readonly DOOR_REQUIRED?: string;
+  /** This environment's door secret, which the door adds to every request. */
+  readonly DOOR_SECRET?: string;
+}
+
+const answer = (status: number, body: string): Response =>
+  new Response(body, { status, headers: { 'cache-control': 'no-store' } });
+
+/**
+ * The answer an origin gives instead of its own, or undefined to serve the
+ * request: 403 for a request without the origin's door secret, 500 naming
+ * DOOR_SECRET when the door is required and the deploy left it unset. Only
+ * DOOR_REQUIRED of exactly "false" admits every request (before the go-live).
+ */
+export async function refusal(
+  request: Request,
+  env: OriginEnv,
+  equal: Equal,
+): Promise<Response | undefined> {
+  if (env.DOOR_REQUIRED === 'false') return undefined;
+  if (env.DOOR_SECRET === undefined || env.DOOR_SECRET.length === 0)
+    return answer(500, 'origin not configured: DOOR_SECRET');
+  if (await carriesSecret(request, env.DOOR_SECRET, equal)) return undefined;
+  return answer(403, 'forbidden');
 }
