@@ -1,23 +1,24 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-10 00:22 WIB (sixty-second session, working overnight while Shyden sleeps; a peer session relayed his request to keep going by Priority and park anything needing him). No Colima or device claim held. **Phones:** none needed.
+**Written:** 2026-11-10 01:40 WIB (sixty-second session, working overnight while Shyden sleeps; a peer session relayed his request to keep going by Priority and park anything needing him). No Colima or device claim held. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. It names #783, which cannot close before the release cut (Shyden, 2026-11-05), so go to step 1.
 
 ## Done this session
 
 - **PR #937** (`feat/784-door-worker`, head `0f05e0825ecaf6789bb1d30884543a701e1632e6`, worktree `../yawelo-idle-784`): the door Worker `apps/door` (`yawelo-idle-door`, bindingless, Custom Domains on `dev.`, `dev-api.`, `dev-holding.`, `test.` yaweloidle.com) and the AC1(c) config pin `tests/unit/door-config.test.ts`. Red first; 15 one-off mutations each broke a test; full unit suite 13,906/13,906 locally; every required check green on the head, all 30 build-and-test steps succeeded. **Merged** into `develop` as `c35bb583dcb8d6d19669e59aa667d873401faf59`.
+- **PR #938** (`feat/784-site-knows-its-door`, head `2944a64928fb815b82b403754abf7d5b42602763`, worktree `../yawelo-idle-784`): `doorOf` in `apps/door/worker/origin.ts` (door named only with the origin's own secret, SHA-256 digests compared in constant time) and the dev site's holding choice by door (`HOLDING_DOOR`). Nothing refused before the cutover. Unit 13,919 green; 10 mutations killed. CI running when written.
 - **Correction on #784:** Yawelo DOES use WebSockets (the live roadmap: `VoyageMap.svelte:46` → `roadmap.ts:301`). The previous handover's "none found" was wrong; the door passes upgrades through, and the `wrangler dev` door check must prove it.
 
 ## Running
 
-- Nothing local, and no CI awaited. (Note: `pr-verdict.sh` returned three times while checks were still running; `gh pr checks <n> --watch --required` waited correctly.)
+- `gh pr checks 938 --watch --required` in the background (dies with the session; re-run it). Merge on green head. (Note: `pr-verdict.sh` returned three times while checks were still running; `gh pr checks <n> --watch --required` waited correctly.)
 
 ## Resume steps
 
 1. Confirm the dev deploy of `c35bb583` went green (deploy-dev on push to `develop`; the door itself is not deployed by it).
 2. **#784 remaining, door side (failing tests first):**
-   - Origins accept only their door secret (`x-yawelo-door-secret`, constants in `apps/door/worker/door.ts`), and the dev site picks the holding page from `x-yawelo-door` only with a valid secret, replacing `HOLDING_HOST` in `apps/site/worker/routes.ts`. The refusal turns on only at the 2026-11-15 cutover.
+   - Origins refuse a request without their door secret (use `doorOf`, PR #938). Turns on only at the 2026-11-15 cutover, with `DOOR_SECRET` set by the deploy; `HOLDING_HOST` retires then.
    - CI job: the real door in front of the real Workers under `wrangler dev`, WebSocket upgrade included (Shyden: same as ShyTalk).
    - Move CI to `workers.dev` (`deploy-dev.yml`, `dev-behind-develop.yml`, tests naming a door address), retire `scripts/verify-dev-hosts.ts`, then add the door-host guard over `tests/`, `scripts/`, `.github/` (AC1b).
    - Door deploy step (production environment only) and the daily request/error check (AC6). Reword AC2–AC5 to Shyden's rulings.
