@@ -14,12 +14,11 @@
 ## Running
 
 - Nothing local, and no CI awaited.
-- A message to session `shytalk-8e` asks what ShyTalk built for doors and CI. No answer had arrived at this close. If `/clear` loses it, ask again: door form and who pays, door secret, the guard on door addresses and any door check after a deploy, WebSocket and WAF results, account layout, amendments after decision 197.
 
 ## Resume steps
 
-1. **#784 AC1(b), (c), AC4:** read ShyTalk's answer, reword AC2 and AC3 to the account ruling, then build the door guard test-first. Yawelo's doors today are `apps/dev-hosts`, a Pages project with service bindings; `scripts/verify-dev-hosts.ts` and `deploy-dev.yml` touch door addresses, and 7 test files name one. If ShyTalk's answer leaves a choice about those, ask Shyden.
-2. **From 2026-11-15:** Shyden creates the non-PROD account, then AC1(d) keys and AC2. Then P1 #425, #426, #457 and #759 follow.
+1. **#784 doors, AC1(b), (c), AC4:** ShyTalk's answer is on the ticket: Worker doors with no bindings in the live account, a door secret on TEST and DEV origins, and a test refusing door hosts under `tests/`, `scripts/` and `.github/`. Reword AC2 and AC3 to the account ruling. `apps/dev-hosts` is replaced and CI moves to `workers.dev`, which `verify-dev-hosts.ts` cannot survive as it stands: how AC4 proves forwarding is open, so ask Shyden if the code does not settle it.
+2. **From 2026-11-15:** Cloudflare refused the non-PROD account on 2026-11-09 ("must be at least 7 days old"; member since 2026-11-08). The Yawelo profile is Browser 3 today (device ids can change, so read the profile page first). Open the account picker, Create Account, fill in `Yawelo Idle Non-Prod`; Shyden clicks the button. Then AC1(d) keys and AC2. P1 #425, #426, #457 and #759 follow.
 3. **Meanwhile, the M2 chain:** #102 waits on #104, #104 on #467, #467 on #638 (Google read-back under the shared lock and ledger). Start at #638 (5 points, ACs complete). Its AC6 re-scopes #467 away from LibreTranslate; #109 and #338 depend on that.
 4. **#655 AC5:** on the next Dependabot PR, read its `sonarcloud` steps and `sonar-verdict:` lines, then shut #655.
 5. **#793 AC6** on Dependabot's docker PR. **#888:** shut after 2026-11-20. **#864:** watch site-smoke until 2026-11-19. **#930** when the board picks it; its reproduction needs induced swap, which slows peers, so ask first.
@@ -29,7 +28,7 @@
 ## Waiting on Shyden
 
 - **#830:** approve the roadmap text on the ticket, and whether "launch" means the first public opening.
-- **#784:** Sparked Host ticket #073955 can be closed. Create the non-PROD account from 2026-11-15.
+- **#784:** Sparked Host ticket #073955 can be closed. Click Create Account from 2026-11-15.
 - **Epic #6 and the milestone re-score** (step 6).
 - Optional: mark S9382 Accepted in SonarCloud.
 
