@@ -6,8 +6,10 @@ import {
 } from '../../door/worker/door';
 import type { Equal } from '../../door/worker/origin';
 import {
+  doorTo as siteDoorTo,
   HOLDING_DOOR,
   pagesFor,
+  servePages,
   HOLDING_HOST,
   isPrivatePath,
   PRIVATE_PATHS,
@@ -212,6 +214,73 @@ describe('pagesFor (#784)', () => {
   it('gives the site being built while the Worker has no door secret', async () => {
     expect(await pagesFor(throughDoor(SECRET), undefined, sameBytes)).toBe(
       'site',
+    );
+  });
+});
+
+/**
+ * The Worker's pages (#784): the chosen pages' binding answers, given the
+ * request untouched. The bindings are stood in by fetchers that name
+ * themselves and record what they were handed.
+ */
+describe('servePages (#784)', () => {
+  const SECRET = 'door-secret';
+  const sameBytes: Equal = (a, b) => {
+    const left = new Uint8Array(a);
+    const right = new Uint8Array(b);
+    return (
+      left.length === right.length && left.every((byte, i) => byte === right[i])
+    );
+  };
+  const named = (name: string, seen: Request[]) => ({
+    fetch: (request: Request): Promise<Response> => {
+      seen.push(request);
+      return Promise.resolve(new Response(name));
+    },
+  });
+
+  it('answers from the holding binding on the dev front door’s host', async () => {
+    const seen: Request[] = [];
+    const request = new Request(`https://${HOLDING_HOST}/`);
+    const response = await servePages(
+      request,
+      SECRET,
+      sameBytes,
+      named('holding', seen),
+      named('site', seen),
+    );
+    expect(await response.text()).toBe('holding');
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBe(request);
+  });
+
+  it('answers from the site binding elsewhere', async () => {
+    const seen: Request[] = [];
+    const request = new Request(
+      'https://yawelo-idle-site-dev.origins.example.workers.dev/',
+    );
+    const response = await servePages(
+      request,
+      SECRET,
+      sameBytes,
+      named('holding', seen),
+      named('site', seen),
+    );
+    expect(await response.text()).toBe('site');
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBe(request);
+  });
+});
+
+/** Every door the site names must exist (#784): a missing one fails loudly. */
+describe('doorTo (#784)', () => {
+  it('names the door that reaches a Worker', () => {
+    expect(siteDoorTo('yawelo-idle-site-dev')).toBe(HOLDING_DOOR);
+  });
+
+  it('refuses a Worker no door reaches, naming it', () => {
+    expect(() => siteDoorTo('yawelo-idle-nobody')).toThrow(
+      'no door reaches yawelo-idle-nobody',
     );
   });
 });

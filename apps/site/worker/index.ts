@@ -25,7 +25,7 @@ import {
   isPrivatePath,
   PRIVATE_PATHS,
   servesPrivate,
-  pagesFor,
+  servePages,
   UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
@@ -113,20 +113,6 @@ async function api(request: Request, env: SiteEnv): Promise<Response> {
   return noStore({ error: UNREADABLE }, 503);
 }
 
-/**
- * The pages: the holding page's dev copy on the dev front door or through
- * the dev site's door (#673, #784), else the site being built. The door is
- * believed only with this Worker's door secret, compared in constant time.
- */
-async function pages(request: Request, env: SiteEnv): Promise<Response> {
-  const shown = await pagesFor(request, env.DOOR_SECRET, (a, b) =>
-    crypto.subtle.timingSafeEqual(a, b),
-  );
-  return shown === 'holding'
-    ? env.HOLDING.fetch(request)
-    : env.ASSETS.fetch(request);
-}
-
 export default {
   fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
@@ -136,7 +122,16 @@ export default {
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
-      return pages(allowed, env);
+      // The holding page on the dev front door or through the dev site's
+      // door (#673, #784), the door believed only with this Worker's door
+      // secret, compared in constant time; else the site being built.
+      return servePages(
+        allowed,
+        env.DOOR_SECRET,
+        crypto.subtle.timingSafeEqual.bind(crypto.subtle),
+        env.HOLDING,
+        env.ASSETS,
+      );
     });
   },
   scheduled(_controller, env, ctx): void {

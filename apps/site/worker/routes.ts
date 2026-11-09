@@ -50,7 +50,8 @@ export const HOLDING_HOST = 'dev.yawelo-idle.shyden.co.uk';
  */
 export const HOLDING_DOOR = doorTo('yawelo-idle-site-dev');
 
-function doorTo(worker: string): string {
+/** The door that reaches `worker`; a Worker no door reaches is refused. */
+export function doorTo(worker: string): string {
   for (const [host, door] of DOORS) if (door.worker === worker) return host;
   throw new Error(`no door reaches ${worker}`);
 }
@@ -81,6 +82,26 @@ export async function pagesFor(
 ): Promise<'holding' | 'site'> {
   const door = await doorOf(request, secret, equal);
   return showsHolding(new URL(request.url).hostname, door) ? 'holding' : 'site';
+}
+
+/** A binding that answers a request: a service binding or the static assets. */
+export interface Pages {
+  fetch(request: Request): Promise<Response>;
+}
+
+/**
+ * The pages `request` gets (`pagesFor`), answered by `holding` or `site`
+ * with the request untouched.
+ */
+export async function servePages(
+  request: Request,
+  secret: string | undefined,
+  equal: Equal,
+  holding: Pages,
+  site: Pages,
+): Promise<Response> {
+  const shown = await pagesFor(request, secret, equal);
+  return (shown === 'holding' ? holding : site).fetch(request);
 }
 
 /** The game's paths, forwarded to the game Worker. */
