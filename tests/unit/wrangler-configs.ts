@@ -50,6 +50,8 @@ export interface DeployConfig {
   assets: Record<string, unknown> | undefined;
   vars: Record<string, unknown>;
   d1_databases: unknown;
+  r2_buckets: unknown;
+  kv_namespaces: unknown;
   services: unknown;
   durable_objects: unknown;
   migrations: unknown;
@@ -73,6 +75,8 @@ export function readDeployConfig(path: string): DeployConfig {
     assets,
     vars,
     d1_databases,
+    r2_buckets,
+    kv_namespaces,
     services,
     durable_objects,
     migrations,
@@ -94,6 +98,8 @@ export function readDeployConfig(path: string): DeployConfig {
     assets,
     vars,
     d1_databases,
+    r2_buckets,
+    kv_namespaces,
     services,
     durable_objects,
     migrations,
