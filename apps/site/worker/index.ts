@@ -25,11 +25,10 @@ import {
   isPrivatePath,
   PRIVATE_PATHS,
   servesPrivate,
-  showsHolding,
+  pagesFor,
   UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
-import { doorOf } from '../../door/worker/origin';
 import { eventWitness } from './witness';
 import privateSpec from '../api/private.openapi.json';
 
@@ -119,16 +118,13 @@ async function api(request: Request, env: SiteEnv): Promise<Response> {
  * the dev site's door (#673, #784), else the site being built. The door is
  * believed only with this Worker's door secret, compared in constant time.
  */
-async function pages(
-  request: Request,
-  hostname: string,
-  env: SiteEnv,
-): Promise<Response> {
-  const door = await doorOf(request, env.DOOR_SECRET, (a, b) =>
+async function pages(request: Request, env: SiteEnv): Promise<Response> {
+  const shown = await pagesFor(request, env.DOOR_SECRET, (a, b) =>
     crypto.subtle.timingSafeEqual(a, b),
   );
-  if (showsHolding(hostname, door)) return env.HOLDING.fetch(request);
-  return env.ASSETS.fetch(request);
+  return shown === 'holding'
+    ? env.HOLDING.fetch(request)
+    : env.ASSETS.fetch(request);
 }
 
 export default {
@@ -136,11 +132,11 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === HOOK_PATH) return hook(request, env, ctx);
     return gateWebRequest(request, env.DEV_PASSWORD, (allowed) => {
-      const { hostname, pathname: path } = new URL(allowed.url);
+      const { pathname: path } = new URL(allowed.url);
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
-      return pages(allowed, hostname, env);
+      return pages(allowed, env);
     });
   },
   scheduled(_controller, env, ctx): void {

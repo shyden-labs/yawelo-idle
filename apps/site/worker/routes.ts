@@ -6,6 +6,7 @@
 
 import { isProdHost, PROD_HOSTNAME } from '@yawelo-idle/lockdown';
 import { DOORS } from '../../door/worker/door';
+import { doorOf, type Equal } from '../../door/worker/origin';
 
 /** Where GitHub's org webhooks deliver (#341). */
 export const HOOK_PATH = '/hooks/github';
@@ -65,6 +66,21 @@ export function showsHolding(
   door: string | undefined,
 ): boolean {
   return hostname === HOLDING_HOST || door === HOLDING_DOOR;
+}
+
+/**
+ * Which pages `request` gets (#673, #784): the holding page's dev copy on the
+ * dev front door's host or through the dev site's door, else the site being
+ * built. The door is believed only with `secret`, compared by `equal` (the
+ * runtime's constant-time comparison in the Worker).
+ */
+export async function pagesFor(
+  request: Request,
+  secret: string | undefined,
+  equal: Equal,
+): Promise<'holding' | 'site'> {
+  const door = await doorOf(request, secret, equal);
+  return showsHolding(new URL(request.url).hostname, door) ? 'holding' : 'site';
 }
 
 /** The game's paths, forwarded to the game Worker. */

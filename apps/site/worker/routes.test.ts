@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DOORS } from '../../door/worker/door';
+import {
+  DOOR_HOST_HEADER,
+  DOOR_SECRET_HEADER,
+  DOORS,
+} from '../../door/worker/door';
+import type { Equal } from '../../door/worker/origin';
 import {
   HOLDING_DOOR,
+  pagesFor,
   HOLDING_HOST,
   isPrivatePath,
   PRIVATE_PATHS,
@@ -155,5 +161,57 @@ describe('isPrivatePath (#589)', () => {
 describe('UNREADABLE (#846)', () => {
   it('is a fixed plain sentence, naming nothing internal', () => {
     expect(UNREADABLE).toBe('The roadmap could not be read just now.');
+  });
+});
+
+/**
+ * Which pages a request gets (#673, #784): the holding page on the dev front
+ * door's host, or through the dev site's door with the door secret; else the
+ * site being built. The comparison is stood in by a byte comparison.
+ */
+describe('pagesFor (#784)', () => {
+  const SECRET = 'door-secret';
+  const ORIGIN = 'https://yawelo-idle-site-dev.origins.example.workers.dev/';
+  const sameBytes: Equal = (a, b) => {
+    const left = new Uint8Array(a);
+    const right = new Uint8Array(b);
+    return (
+      left.length === right.length && left.every((byte, i) => byte === right[i])
+    );
+  };
+  const throughDoor = (secret: string) =>
+    new Request(ORIGIN, {
+      headers: {
+        [DOOR_SECRET_HEADER]: secret,
+        [DOOR_HOST_HEADER]: HOLDING_DOOR,
+      },
+    });
+
+  it('gives the holding page on the dev front door’s host', async () => {
+    expect(
+      await pagesFor(
+        new Request(`https://${HOLDING_HOST}/`),
+        SECRET,
+        sameBytes,
+      ),
+    ).toBe('holding');
+  });
+
+  it('gives the holding page through the dev site’s door with its secret', async () => {
+    expect(await pagesFor(throughDoor(SECRET), SECRET, sameBytes)).toBe(
+      'holding',
+    );
+  });
+
+  it('gives the site being built through the door with a wrong secret', async () => {
+    expect(await pagesFor(throughDoor('not-it'), SECRET, sameBytes)).toBe(
+      'site',
+    );
+  });
+
+  it('gives the site being built while the Worker has no door secret', async () => {
+    expect(await pagesFor(throughDoor(SECRET), undefined, sameBytes)).toBe(
+      'site',
+    );
   });
 });
