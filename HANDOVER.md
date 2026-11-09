@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-10 02:00 WIB (sixty-second session, working overnight while Shyden sleeps; a peer session relayed his request to keep going by Priority and park anything needing him). No Colima or device claim held. **Phones:** none needed.
+**Written:** 2026-11-10 02:10 WIB (laptop shutting down) (sixty-second session, working overnight while Shyden sleeps; a peer session relayed his request to keep going by Priority and park anything needing him). No Colima or device claim held. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. It names #783, which cannot close before the release cut (Shyden, 2026-11-05), so go to step 1.
 
@@ -13,7 +13,8 @@
 
 ## Running
 
-- **Nothing.** At 02:00 WIB Claude Code stopped both pushes (#638 and #938's fix) because the laptop was critically low on memory, and said not to restart them unasked. (Note: `pr-verdict.sh` returned three times while checks were still running; `gh pr checks <n> --watch --required` waited correctly.)
+- **Nothing local.** DEAD: both pushes, stopped by Claude Code for low memory at 02:00 WIB. Re-run: `git -C ../yawelo-idle-784 push` and `git -C ../yawelo-idle-655 push -u origin feat/638-google-read-back`.
+- **Remote:** PR #938's CI finished on `2944a649` (sonarcloud failed, the rest passed); nothing else is in progress. This handover commit (`git rev-parse HEAD` on `handover/2026-10-17-d`) is local only: push it with the two branches. (Note: `pr-verdict.sh` returned three times while checks were still running; `gh pr checks <n> --watch --required` waited correctly.)
 
 ## Resume steps
 
