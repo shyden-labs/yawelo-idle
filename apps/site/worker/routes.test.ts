@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { DOORS } from '../../door/worker/door';
 import {
+  HOLDING_DOOR,
   HOLDING_HOST,
   isPrivatePath,
   PRIVATE_PATHS,
@@ -19,27 +21,68 @@ describe('showsHolding (#673)', () => {
   });
 
   it('shows the holding page on the dev front door', () => {
-    expect(showsHolding('dev.yawelo-idle.shyden.co.uk')).toBe(true);
+    expect(showsHolding('dev.yawelo-idle.shyden.co.uk', undefined)).toBe(true);
   });
 
   it('shows the site on the site Worker’s own workers.dev address', () => {
     expect(
-      showsHolding('yawelo-idle-site-dev.shyden-labs-dev.workers.dev'),
+      showsHolding(
+        'yawelo-idle-site-dev.shyden-labs-dev.workers.dev',
+        undefined,
+      ),
     ).toBe(false);
   });
 
   it('shows the site on the dev API host', () => {
-    expect(showsHolding('dev-api.yawelo-idle.shyden.co.uk')).toBe(false);
-  });
-
-  it('shows the site on a host that only starts with the front door', () => {
-    expect(showsHolding('dev.yawelo-idle.shyden.co.uk.evil.example')).toBe(
+    expect(showsHolding('dev-api.yawelo-idle.shyden.co.uk', undefined)).toBe(
       false,
     );
   });
 
+  it('shows the site on a host that only starts with the front door', () => {
+    expect(
+      showsHolding('dev.yawelo-idle.shyden.co.uk.evil.example', undefined),
+    ).toBe(false);
+  });
+
   it('shows the site on a host that only ends with the front door', () => {
-    expect(showsHolding('evil-dev.yawelo-idle.shyden.co.uk')).toBe(false);
+    expect(showsHolding('evil-dev.yawelo-idle.shyden.co.uk', undefined)).toBe(
+      false,
+    );
+  });
+});
+
+/**
+ * Behind its door (#784), the dev site Worker is reached at its workers.dev
+ * address, so the holding page follows the door the request came through,
+ * named only once its door secret is believed (apps/door/worker/origin.ts).
+ */
+describe('showsHolding behind the doors (#784)', () => {
+  const ORIGIN = 'yawelo-idle-site-dev.origins.example.workers.dev';
+  const doorTo = (worker: string): string => {
+    const found = [...DOORS].find(([, door]) => door.worker === worker);
+    if (found === undefined) throw new Error(`no door for ${worker}`);
+    return found[0];
+  };
+
+  it('is the dev site Worker’s door', () => {
+    expect(HOLDING_DOOR).toBe(doorTo('yawelo-idle-site-dev'));
+  });
+
+  it('shows the holding page through the dev site’s door', () => {
+    expect(showsHolding(ORIGIN, HOLDING_DOOR)).toBe(true);
+  });
+
+  it('shows the site through the test site’s door', () => {
+    expect(showsHolding(ORIGIN, doorTo('yawelo-idle-site-test'))).toBe(false);
+  });
+
+  it('shows the site through the dev API’s door', () => {
+    expect(showsHolding(ORIGIN, doorTo('yawelo-idle-sync-dev'))).toBe(false);
+  });
+
+  it('shows the site at the workers.dev address with no door believed', () => {
+    expect(showsHolding(ORIGIN, undefined)).toBe(false);
   });
 });
 

@@ -5,6 +5,7 @@
  */
 
 import { isProdHost, PROD_HOSTNAME } from '@yawelo-idle/lockdown';
+import { DOORS } from '../../door/worker/door';
 
 /** Where GitHub's org webhooks deliver (#341). */
 export const HOOK_PATH = '/hooks/github';
@@ -36,13 +37,34 @@ export function isRoadmapPath(pathname: string): boolean {
  * The dev front door (apps/dev-hosts/hosts.ts maps it to this Worker), whose
  * pages are the holding page production shows (#673; Shyden, 2026-10-18:
  * "Dev shows holding"). The site being built stays at this Worker's own
- * workers.dev address, behind the same gate.
+ * workers.dev address, behind the same gate. Retired with apps/dev-hosts
+ * when the doors go live (#784, 2026-11-15).
  */
 export const HOLDING_HOST = 'dev.yawelo-idle.shyden.co.uk';
 
-/** Whether a page request on `hostname` is the holding page's to answer. */
-export function showsHolding(hostname: string): boolean {
-  return hostname === HOLDING_HOST;
+/**
+ * The dev site Worker's door (#784): behind it, this Worker is reached at its
+ * workers.dev address, so the holding page follows the door a request came
+ * through instead of its host.
+ */
+export const HOLDING_DOOR = doorTo('yawelo-idle-site-dev');
+
+function doorTo(worker: string): string {
+  for (const [host, door] of DOORS) if (door.worker === worker) return host;
+  throw new Error(`no door reaches ${worker}`);
+}
+
+/**
+ * Whether a page request is the holding page's to answer: on the dev front
+ * door's host, or through the dev site's door. `door` is the door a request
+ * came through, named only once its secret is believed
+ * (apps/door/worker/origin.ts), else undefined.
+ */
+export function showsHolding(
+  hostname: string,
+  door: string | undefined,
+): boolean {
+  return hostname === HOLDING_HOST || door === HOLDING_DOOR;
 }
 
 /** The game's paths, forwarded to the game Worker. */

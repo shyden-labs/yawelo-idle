@@ -12,7 +12,8 @@
  * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
  * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
  * #341); a missing password locks the gate and a missing webhook secret
- * refuses every delivery.
+ * refuses every delivery. `DOOR_SECRET` (#784) joins them when the doors go
+ * live; until then no door is believed.
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
 import { Roadmap, type RoadmapEnv } from './roadmap';
@@ -28,6 +29,7 @@ import {
   UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
+import { doorOf } from '../../door/worker/origin';
 import { eventWitness } from './witness';
 import privateSpec from '../api/private.openapi.json';
 
@@ -37,6 +39,8 @@ interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */
   readonly DEV_PASSWORD?: string;
   readonly ROADMAP_WEBHOOK_SECRET?: string;
+  /** Believes a door's name only when sent with this (#784); absent believes none. */
+  readonly DOOR_SECRET?: string;
 }
 
 /** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
@@ -110,6 +114,23 @@ async function api(request: Request, env: SiteEnv): Promise<Response> {
   return noStore({ error: UNREADABLE }, 503);
 }
 
+/**
+ * The pages: the holding page's dev copy on the dev front door or through
+ * the dev site's door (#673, #784), else the site being built. The door is
+ * believed only with this Worker's door secret, compared in constant time.
+ */
+async function pages(
+  request: Request,
+  hostname: string,
+  env: SiteEnv,
+): Promise<Response> {
+  const door = await doorOf(request, env.DOOR_SECRET, (a, b) =>
+    crypto.subtle.timingSafeEqual(a, b),
+  );
+  if (showsHolding(hostname, door)) return env.HOLDING.fetch(request);
+  return env.ASSETS.fetch(request);
+}
+
 export default {
   fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
@@ -119,8 +140,7 @@ export default {
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
-      if (showsHolding(hostname)) return env.HOLDING.fetch(allowed);
-      return env.ASSETS.fetch(allowed);
+      return pages(allowed, hostname, env);
     });
   },
   scheduled(_controller, env, ctx): void {
