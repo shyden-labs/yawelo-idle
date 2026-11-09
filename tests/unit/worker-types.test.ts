@@ -43,7 +43,13 @@ describe('fresh Worker types (#591)', () => {
   });
 
   it('finds the Workers on disk', () => {
-    expect(WORKERS.sort()).toEqual(['dev-hosts', 'site', 'sync-worker', 'web']);
+    expect(WORKERS.sort()).toEqual([
+      'dev-hosts',
+      'door',
+      'site',
+      'sync-worker',
+      'web',
+    ]);
   });
 
   it('rebuilds exactly the Workers on disk, each by its own types script', () => {

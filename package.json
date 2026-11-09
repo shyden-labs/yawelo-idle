@@ -13,7 +13,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "postinstall": "npm run --silent types",
-    "types": "npm run types --workspace @yawelo-idle/sync-worker --workspace @yawelo-idle/web --workspace @yawelo-idle/site --workspace @yawelo-idle/dev-hosts",
+    "types": "npm run types --workspace @yawelo-idle/sync-worker --workspace @yawelo-idle/web --workspace @yawelo-idle/site --workspace @yawelo-idle/dev-hosts --workspace @yawelo-idle/door",
     "test:unit": "vitest run",
     "test:guards": "vitest run -c vitest.guards.config.ts",
     "test:integration": "vitest run -c vitest.integration.config.ts",

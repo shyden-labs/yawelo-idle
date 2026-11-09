@@ -18,11 +18,14 @@ export const WRANGLER_CONFIGS = [
 ] as const;
 
 /**
- * The production deploy configs: today the holding page alone (#621), an
- * assets-only Worker in the production account. prod-config.test.ts reads
- * these by name; the guards suite's walk counts them with the dev four.
+ * The production deploy configs: the front door (#784), a bindingless
+ * forwarding Worker that door-config.test.ts reads, and the holding page
+ * (#621), an assets-only Worker that prod-config.test.ts reads. Both are in
+ * the production account; the guards suite's walk counts them with the dev
+ * configs.
  */
 export const PROD_WRANGLER_CONFIGS = [
+  'apps/door/wrangler.jsonc',
   'apps/site/holding/wrangler.jsonc',
 ] as const;
 

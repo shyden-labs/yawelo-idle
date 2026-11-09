@@ -89,6 +89,7 @@ const CALLS = [
 
 const ROOTS = [
   'apps/dev-hosts',
+  'apps/door',
   'apps/site',
   'apps/sync-worker',
   'apps/web',

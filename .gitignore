@@ -31,6 +31,7 @@ apps/sync-worker/worker-configuration.d.ts
 apps/web/worker/worker-configuration.d.ts
 apps/site/worker/worker-configuration.d.ts
 apps/dev-hosts/functions/worker-configuration.d.ts
+apps/door/worker/worker-configuration.d.ts
 
 # Session-local agent files (brainstorm mockups, SDD scratch)
 .superpowers/
