@@ -1,0 +1,10 @@
+{
+  "name": "@yawelo-idle/door",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p worker",
+    "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
+  }
+}

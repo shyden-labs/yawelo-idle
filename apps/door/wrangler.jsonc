@@ -1,0 +1,24 @@
+// The front door (#784 AC4): one Worker in the production account, on PROD's
+// zone, answering at each door's name and passing each request on to its
+// environment's Worker at the non-PROD account's workers.dev addresses, with
+// that environment's door secret (worker/door.ts).
+//
+// Pinned to forwarding only (#784 AC1c, tests/unit/door-config.test.ts): no
+// binding, variable, storage, schedule or assets. ORIGIN_DOMAIN and the two
+// door secrets are Worker secrets set by the deploy, which runs only through
+// the `production` environment. Not deployed before 2026-11-15, when DEV moves
+// to the non-PROD account and the doors go live together (Shyden, 2026-11-09).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "yawelo-idle-door",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "dev.yaweloidle.com", "custom_domain": true },
+    { "pattern": "dev-api.yaweloidle.com", "custom_domain": true },
+    { "pattern": "dev-holding.yaweloidle.com", "custom_domain": true },
+    { "pattern": "test.yaweloidle.com", "custom_domain": true },
+  ],
+}

@@ -40,8 +40,9 @@ function holds(value: unknown): boolean {
 }
 
 describe('the production holding page Worker (#621 AC2)', () => {
-  it('is one production config, at the holding page', () => {
+  it('is a production config, beside the front door’s (#784)', () => {
     expect([...PROD_WRANGLER_CONFIGS]).toEqual([
+      'apps/door/wrangler.jsonc',
       'apps/site/holding/wrangler.jsonc',
     ]);
   });

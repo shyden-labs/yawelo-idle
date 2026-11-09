@@ -13,7 +13,7 @@ import {
  */
 
 describe('the deploy configs (#530, #621)', () => {
-  it('finds the three dev Workers, the hostname adapter and the production holding page on disk, and no other', () => {
+  it('finds the dev Workers, the hostname adapter, the front door and the production holding page on disk, and no other', () => {
     expect(
       wranglerConfigsOnDisk('.')
         .map((path) => relative('.', path))
