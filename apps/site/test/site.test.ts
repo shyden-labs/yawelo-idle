@@ -16,8 +16,10 @@ import {
   type Locale,
   type Page,
 } from '../src/i18n';
+import { DOOR_HOST_HEADER, DOOR_SECRET_HEADER } from '../../door/worker/door';
 import {
   EXEMPT_PATHS,
+  HOLDING_DOOR,
   HOLDING_HOST,
   PRIVATE_PATHS,
   ROADMAP_PATHS,
@@ -43,6 +45,7 @@ import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy'
 const DEV = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
 const PROD = SITE;
 const PASSWORD = 'test-only-password';
+const DOOR_SECRET = 'test-only-door-secret';
 
 const authorised = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const wrong = { Authorization: `Basic ${btoa('tester:not-it')}` };
@@ -52,7 +55,7 @@ const server = createTestHarness({
   workers: [
     {
       configPath: './wrangler.jsonc',
-      secrets: { DEV_PASSWORD: PASSWORD },
+      secrets: { DEV_PASSWORD: PASSWORD, DOOR_SECRET },
       bindingOverrides: { HOLDING: 'holding-copy' },
     },
     // The real game Worker, the service wrangler.jsonc's GAME binding names.
@@ -399,6 +402,31 @@ describe('the dev front door shows the holding page production shows (#673)', ()
   it('keeps the site being built at the Worker’s own address', async () => {
     const html = await (await get(`${DEV}/`, authorised)).text();
     expect(html).toContain(' data-dev-strip>');
+  });
+});
+
+/**
+ * Behind its door (#784), this Worker is reached at its workers.dev address,
+ * and the door's name is believed only with the door secret. The door host
+ * is read from routes.ts, never written out (#784 AC1b).
+ */
+describe('through the dev site’s door, the holding page (#784)', () => {
+  const through = (secret: string) => ({
+    ...authorised,
+    [DOOR_SECRET_HEADER]: secret,
+    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+  });
+
+  it('shows the holding page at the workers.dev address with the door secret', async () => {
+    const response = await get(`${DEV}/`, through(DOOR_SECRET));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain(' data-coming-soon>');
+  });
+
+  it('keeps the site being built when the door secret is wrong', async () => {
+    const response = await get(`${DEV}/`, through('not-the-door-secret'));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain(' data-dev-strip>');
   });
 });
 

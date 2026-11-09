@@ -5,6 +5,8 @@
  */
 
 import { isProdHost, PROD_HOSTNAME } from '@yawelo-idle/lockdown';
+import { DOORS } from '../../door/worker/door';
+import { doorOf, type Equal } from '../../door/worker/origin';
 
 /** Where GitHub's org webhooks deliver (#341). */
 export const HOOK_PATH = '/hooks/github';
@@ -36,13 +38,70 @@ export function isRoadmapPath(pathname: string): boolean {
  * The dev front door (apps/dev-hosts/hosts.ts maps it to this Worker), whose
  * pages are the holding page production shows (#673; Shyden, 2026-10-18:
  * "Dev shows holding"). The site being built stays at this Worker's own
- * workers.dev address, behind the same gate.
+ * workers.dev address, behind the same gate. Retired with apps/dev-hosts
+ * when the doors go live (#784, 2026-11-15).
  */
 export const HOLDING_HOST = 'dev.yawelo-idle.shyden.co.uk';
 
-/** Whether a page request on `hostname` is the holding page's to answer. */
-export function showsHolding(hostname: string): boolean {
-  return hostname === HOLDING_HOST;
+/**
+ * The dev site Worker's door (#784): behind it, this Worker is reached at its
+ * workers.dev address, so the holding page follows the door a request came
+ * through instead of its host.
+ */
+export const HOLDING_DOOR = doorTo('yawelo-idle-site-dev');
+
+/** The door that reaches `worker`; a Worker no door reaches is refused. */
+export function doorTo(worker: string): string {
+  for (const [host, door] of DOORS) if (door.worker === worker) return host;
+  throw new Error(`no door reaches ${worker}`);
+}
+
+/**
+ * Whether a page request is the holding page's to answer: on the dev front
+ * door's host, or through the dev site's door. `door` is the door a request
+ * came through, named only once its secret is believed
+ * (apps/door/worker/origin.ts), else undefined.
+ */
+export function showsHolding(
+  hostname: string,
+  door: string | undefined,
+): boolean {
+  return hostname === HOLDING_HOST || door === HOLDING_DOOR;
+}
+
+/**
+ * Which pages `request` gets (#673, #784): the holding page's dev copy on the
+ * dev front door's host or through the dev site's door, else the site being
+ * built. The door is believed only with `secret`, compared by `equal` (the
+ * runtime's constant-time comparison in the Worker).
+ */
+export async function pagesFor(
+  request: Request,
+  secret: string | undefined,
+  equal: Equal,
+): Promise<'holding' | 'site'> {
+  const door = await doorOf(request, secret, equal);
+  return showsHolding(new URL(request.url).hostname, door) ? 'holding' : 'site';
+}
+
+/** A binding that answers a request: a service binding or the static assets. */
+export interface Pages {
+  fetch(request: Request): Promise<Response>;
+}
+
+/**
+ * The pages `request` gets (`pagesFor`), answered by `holding` or `site`
+ * with the request untouched.
+ */
+export async function servePages(
+  request: Request,
+  secret: string | undefined,
+  equal: Equal,
+  holding: Pages,
+  site: Pages,
+): Promise<Response> {
+  const shown = await pagesFor(request, secret, equal);
+  return (shown === 'holding' ? holding : site).fetch(request);
 }
 
 /** The game's paths, forwarded to the game Worker. */
