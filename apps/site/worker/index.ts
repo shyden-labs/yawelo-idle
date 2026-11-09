@@ -12,7 +12,8 @@
  * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
  * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
  * #341); a missing password locks the gate and a missing webhook secret
- * refuses every delivery.
+ * refuses every delivery. `DOOR_SECRET` (#784) joins them when the doors go
+ * live; until then no door is believed.
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
 import { Roadmap, type RoadmapEnv } from './roadmap';
@@ -24,7 +25,7 @@ import {
   isPrivatePath,
   PRIVATE_PATHS,
   servesPrivate,
-  showsHolding,
+  servePages,
   UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
@@ -37,6 +38,8 @@ interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */
   readonly DEV_PASSWORD?: string;
   readonly ROADMAP_WEBHOOK_SECRET?: string;
+  /** Believes a door's name only when sent with this (#784); absent believes none. */
+  readonly DOOR_SECRET?: string;
 }
 
 /** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
@@ -115,12 +118,20 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === HOOK_PATH) return hook(request, env, ctx);
     return gateWebRequest(request, env.DEV_PASSWORD, (allowed) => {
-      const { hostname, pathname: path } = new URL(allowed.url);
+      const { pathname: path } = new URL(allowed.url);
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
-      if (showsHolding(hostname)) return env.HOLDING.fetch(allowed);
-      return env.ASSETS.fetch(allowed);
+      // The holding page on the dev front door or through the dev site's
+      // door (#673, #784), the door believed only with this Worker's door
+      // secret, compared in constant time; else the site being built.
+      return servePages(
+        allowed,
+        env.DOOR_SECRET,
+        crypto.subtle.timingSafeEqual.bind(crypto.subtle),
+        env.HOLDING,
+        env.ASSETS,
+      );
     });
   },
   scheduled(_controller, env, ctx): void {
