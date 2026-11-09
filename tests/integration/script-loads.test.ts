@@ -38,6 +38,7 @@ const SCRIPTS = [
   'scripts/develop-squash-only.ts',
   'scripts/ensure-d1.ts',
   'scripts/file-story.ts',
+  'scripts/google-read-back.ts',
   'scripts/holding-dev.ts',
   'scripts/licence-check.ts',
   'scripts/npm-audit.ts',
