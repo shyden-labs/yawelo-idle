@@ -17,7 +17,7 @@ updates:
       # Remove when both accept TypeScript 7.
       - dependency-name: 'typescript'
         versions: ['>=6.1.0']
-      # Types never run ahead of the runtime (#501): move this with .github/node/Dockerfile.
+      # Types never run ahead of the runtime (#501): move this with docker/node/Dockerfile.
       - dependency-name: '@types/node'
         versions: ['>=27.0.0']
     groups:
@@ -70,7 +70,7 @@ updates:
   # Each Node release arrives as its own pull request; a new major is a
   # deliberate move across every project, so it is never offered.
   - package-ecosystem: 'docker'
-    directory: '/.github/node'
+    directory: '/docker/node'
     target-branch: 'develop'
     schedule:
       interval: 'weekly'
