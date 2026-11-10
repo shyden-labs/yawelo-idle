@@ -33,6 +33,7 @@ const SCRIPTS = [
   'scripts/ci-scope.ts',
   'scripts/coverage.ts',
   'scripts/d1-binding.ts',
+  'scripts/dependabot-check.ts',
   'scripts/dev-behind-develop.ts',
   'scripts/dev-secrets.ts',
   'scripts/develop-squash-only.ts',
