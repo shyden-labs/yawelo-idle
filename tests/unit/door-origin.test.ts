@@ -4,7 +4,13 @@ import {
   DOOR_SECRET_HEADER,
   DOORS,
 } from '../../apps/door/worker/door';
-import { doorOf, refusal, type Equal } from '../../apps/door/worker/origin';
+import {
+  behindDoor,
+  doorOf,
+  refusal,
+  workerEqual,
+  type Equal,
+} from '../../apps/door/worker/origin';
 
 /**
  * How an origin knows a request came through its door (#784 AC4): the door
@@ -170,5 +176,81 @@ describe('refusal (#784 AC4)', () => {
         )
       )?.status,
     ).toBe(500);
+  });
+});
+
+/**
+ * What each origin's entry asks (#784 AC4): the refusal, or its own answer
+ * to the request it was given. The answer is stood in by a recording one.
+ */
+describe('behindDoor (#784 AC4)', () => {
+  const live = { DOOR_REQUIRED: 'true', DOOR_SECRET: SECRET };
+  const serving = () => {
+    const served: Request[] = [];
+    const serve = (admitted: Request) => {
+      served.push(admitted);
+      return Promise.resolve(new Response('served'));
+    };
+    return { served, serve };
+  };
+
+  it('serves a request through the door, handing it on untouched', async () => {
+    const { served, serve } = serving();
+    const admitted = through(SECRET);
+    const response = await behindDoor(admitted, live, serve, sameBytes);
+    expect(await response.text()).toBe('served');
+    expect(served).toHaveLength(1);
+    expect(served[0]).toBe(admitted);
+  });
+
+  it('compares with the runtime’s constant-time comparison when given none', async () => {
+    const { served, serve } = serving();
+    Object.defineProperty(crypto.subtle, 'timingSafeEqual', {
+      configurable: true,
+      value: () => false,
+    });
+    try {
+      const response = await behindDoor(through(SECRET), live, serve);
+      expect(response.status).toBe(403);
+      expect(served).toHaveLength(0);
+    } finally {
+      Reflect.deleteProperty(crypto.subtle, 'timingSafeEqual');
+    }
+  });
+
+  it('answers the refusal and never serves a request without the secret', async () => {
+    const { served, serve } = serving();
+    const response = await behindDoor(request({}), live, serve, sameBytes);
+    expect(response.status).toBe(403);
+    expect(served).toHaveLength(0);
+  });
+});
+
+/**
+ * The comparison a Worker uses: the runtime's crypto.subtle.timingSafeEqual,
+ * which Node lacks, so it is stood in here and must be called as a method of
+ * crypto.subtle.
+ */
+describe('workerEqual (#784 AC4)', () => {
+  it('asks the runtime’s constant-time comparison, as a method of crypto.subtle', () => {
+    const calls: unknown[] = [];
+    Object.defineProperty(crypto.subtle, 'timingSafeEqual', {
+      configurable: true,
+      value(this: unknown, a: ArrayBuffer, b: ArrayBuffer) {
+        calls.push(this, a, b);
+        return true;
+      },
+    });
+    try {
+      const a = new ArrayBuffer(1);
+      const b = new ArrayBuffer(1);
+      expect(workerEqual(a, b)).toBe(true);
+      expect(calls).toHaveLength(3);
+      expect(calls[0]).toBe(crypto.subtle);
+      expect(calls[1]).toBe(a);
+      expect(calls[2]).toBe(b);
+    } finally {
+      Reflect.deleteProperty(crypto.subtle, 'timingSafeEqual');
+    }
   });
 });

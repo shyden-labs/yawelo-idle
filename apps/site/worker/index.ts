@@ -20,7 +20,7 @@
  * (apps/door/worker/origin.ts). DOOR_REQUIRED is "false" until the go-live.
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
-import { refusal } from '../../door/worker/origin';
+import { refusal, workerEqual } from '../../door/worker/origin';
 import { Roadmap, type RoadmapEnv } from './roadmap';
 import {
   HOOK_PATH,
@@ -120,8 +120,7 @@ async function api(request: Request, env: SiteEnv): Promise<Response> {
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    const timingSafeEqual = crypto.subtle.timingSafeEqual.bind(crypto.subtle);
-    const refused = await refusal(request, env, timingSafeEqual);
+    const refused = await refusal(request, env, workerEqual);
     if (refused !== undefined) return refused;
     const { pathname } = new URL(request.url);
     if (pathname === HOOK_PATH) return hook(request, env, ctx);
@@ -136,7 +135,7 @@ export default {
       return servePages(
         allowed,
         env.DOOR_SECRET,
-        timingSafeEqual,
+        workerEqual,
         env.HOLDING,
         env.ASSETS,
       );

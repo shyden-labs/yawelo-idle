@@ -79,3 +79,19 @@ export async function refusal(
   if (await carriesSecret(request, env.DOOR_SECRET, equal)) return undefined;
   return answer(403, 'forbidden');
 }
+
+/** The Worker runtime's constant-time comparison, as each origin uses it. */
+export const workerEqual: Equal = (a, b) => crypto.subtle.timingSafeEqual(a, b);
+
+/**
+ * Each origin's entry (#784 AC4): the refusal, or `serve`'s answer to the
+ * request untouched. `equal` is the runtime's comparison in a Worker.
+ */
+export async function behindDoor(
+  request: Request,
+  env: OriginEnv,
+  serve: (admitted: Request) => Promise<Response>,
+  equal: Equal = workerEqual,
+): Promise<Response> {
+  return (await refusal(request, env, equal)) ?? serve(request);
+}

@@ -11,7 +11,7 @@
  * secret is refused before anything else (apps/door/worker/origin.ts).
  */
 import { markApiRequest } from '@yawelo-idle/lockdown';
-import { refusal, type OriginEnv } from '../../door/worker/origin';
+import { behindDoor, type OriginEnv } from '../../door/worker/origin';
 
 const json = (
   body: unknown,
@@ -46,13 +46,9 @@ async function route(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
-    const refused = await refusal(
-      request,
-      env,
-      crypto.subtle.timingSafeEqual.bind(crypto.subtle),
+  fetch(request, env): Promise<Response> {
+    return behindDoor(request, env, (admitted) =>
+      markApiRequest(admitted, (marked) => route(marked, env)),
     );
-    if (refused !== undefined) return refused;
-    return markApiRequest(request, (marked) => route(marked, env));
   },
 } satisfies ExportedHandler<Env & OriginEnv>;
