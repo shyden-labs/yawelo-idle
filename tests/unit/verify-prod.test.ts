@@ -19,6 +19,7 @@ import {
   reportedCommit,
   robotsJudgement,
   robotsProblems,
+  printVerdict,
   verdictLines,
   type MediaProbe,
   type MediaSource,
@@ -510,5 +511,34 @@ describe('verdictLines (#715): every line names the environment it checked', () 
     expect(verdictLines('dev copy', DEV_MEDIA, ['/ answered 500'])).toEqual([
       "✗ the holding page's dev copy: / answered 500",
     ]);
+  });
+});
+
+describe('printVerdict (#715): prints the lines and gives the exit code', () => {
+  const recorder = () => {
+    const out: string[] = [];
+    const err: string[] = [];
+    return {
+      out,
+      err,
+      log: (line: string) => out.push(line),
+      error: (line: string) => err.push(line),
+    };
+  };
+
+  it('prints the success line and exits 0 when nothing failed', () => {
+    const console = recorder();
+    expect(printVerdict('dev copy', DEV_MEDIA, [], console)).toBe(0);
+    expect(console.out).toEqual(verdictLines('dev copy', DEV_MEDIA, []));
+    expect(console.err).toEqual([]);
+  });
+
+  it('prints each failure as an error and exits 1', () => {
+    const console = recorder();
+    expect(
+      printVerdict('production', PROD_MEDIA, ['/ answered 500'], console),
+    ).toBe(1);
+    expect(console.err).toEqual(['✗ production: / answered 500']);
+    expect(console.out).toEqual([]);
   });
 });

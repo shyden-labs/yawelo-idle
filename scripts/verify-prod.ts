@@ -488,12 +488,28 @@ export function verdictLines(
   ];
 }
 
+/**
+ * Prints a run's verdict (#715): the success line to `console.log`, each
+ * failure to `console.error`. Returns the exit code.
+ */
+export function printVerdict(
+  checked: Checked,
+  media: MediaHost,
+  problems: readonly string[],
+  console: { log(line: string): void; error(line: string): void },
+): number {
+  const lines = verdictLines(checked, media, problems);
+  for (const line of lines)
+    if (problems.length > 0) console.error(line);
+    else console.log(line);
+  return problems.length > 0 ? 1 : 0;
+}
+
 if (import.meta.main) {
   // `--dev-copy` checks the holding page's noindex dev copy (#621 AC8) against
   // dist-holding-dev, made by scripts/holding-dev.ts; otherwise production.
   const dev = process.argv.includes('--dev-copy');
   // A new Custom Domain's DNS and certificate: up to 10 minutes (60 looks, 10 s apart).
-  const media = dev ? DEV_MEDIA : PROD_MEDIA;
   const problems = await verifyProd(
     required(dev ? 'DEV_HOLDING_URL' : 'PROD_URL'),
     required('EXPECTED_SHA'),
@@ -503,12 +519,12 @@ if (import.meta.main) {
     ),
     { polls: 60, pollMs: 10_000 },
     !dev,
-    media,
+    dev ? DEV_MEDIA : PROD_MEDIA,
   );
-  const lines = verdictLines(dev ? 'dev copy' : 'production', media, problems);
-  if (problems.length > 0) {
-    for (const line of lines) console.error(line);
-    process.exit(1);
-  }
-  for (const line of lines) console.log(line);
+  process.exitCode = printVerdict(
+    dev ? 'dev copy' : 'production',
+    dev ? DEV_MEDIA : PROD_MEDIA,
+    problems,
+    console,
+  );
 }
