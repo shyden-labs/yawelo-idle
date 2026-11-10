@@ -259,6 +259,14 @@ describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from 
     );
   });
 
+  it('installs without running any install script', () => {
+    const runs = (job('deploy-door.yml', 'deploy').steps ?? []).map(
+      (each) => each.run,
+    );
+    expect(runs).toContain('npm ci --ignore-scripts');
+    expect(runs).not.toContain('npm ci');
+  });
+
   it('queues behind any production deploy or rollback', () => {
     expect(workflow('deploy-door.yml').concurrency).toEqual({
       group: 'deploy-prod',
