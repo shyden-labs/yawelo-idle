@@ -28,6 +28,7 @@ describe('every workflow', () => {
       'check-release-cut.yml',
       'ci.yml',
       'deploy-dev.yml',
+      'deploy-door.yml',
       'deploy-prod.yml',
       'dev-behind-develop.yml',
       'logs.yml',
