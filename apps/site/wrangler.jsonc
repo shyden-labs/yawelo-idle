@@ -48,6 +48,9 @@
     "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
     "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
     "ROADMAP_REPO": "shyden-labs/yawelo-idle",
+    // "false" until the doors go live on 2026-11-15 (#784 AC4); the deploy
+    // then sets "true" with DOOR_SECRET, and any other value requires the door.
+    "DOOR_REQUIRED": "false",
   },
   "durable_objects": {
     "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],

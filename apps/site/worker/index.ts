@@ -14,8 +14,13 @@
  * #341); a missing password locks the gate and a missing webhook secret
  * refuses every delivery. `DOOR_SECRET` (#784) joins them when the doors go
  * live; until then no door is believed.
+ *
+ * Behind its door (#784 AC4), a request without this environment's door
+ * secret is refused before anything else, the webhook path included
+ * (apps/door/worker/origin.ts). DOOR_REQUIRED is "false" until the go-live.
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
+import { refusal, workerEqual } from '../../door/worker/origin';
 import { Roadmap, type RoadmapEnv } from './roadmap';
 import {
   HOOK_PATH,
@@ -38,7 +43,7 @@ interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */
   readonly DEV_PASSWORD?: string;
   readonly ROADMAP_WEBHOOK_SECRET?: string;
-  /** Believes a door's name only when sent with this (#784); absent believes none. */
+  /** This environment's door secret (#784), which every door request carries. */
   readonly DOOR_SECRET?: string;
 }
 
@@ -114,7 +119,9 @@ async function api(request: Request, env: SiteEnv): Promise<Response> {
 }
 
 export default {
-  fetch(request, env, ctx): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
+    const refused = await refusal(request, env, workerEqual);
+    if (refused !== undefined) return refused;
     const { pathname } = new URL(request.url);
     if (pathname === HOOK_PATH) return hook(request, env, ctx);
     return gateWebRequest(request, env.DEV_PASSWORD, (allowed) => {
@@ -128,7 +135,7 @@ export default {
       return servePages(
         allowed,
         env.DOOR_SECRET,
-        crypto.subtle.timingSafeEqual.bind(crypto.subtle),
+        workerEqual,
         env.HOLDING,
         env.ASSETS,
       );

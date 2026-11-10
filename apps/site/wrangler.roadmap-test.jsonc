@@ -23,6 +23,7 @@
     "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
     "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
     "ROADMAP_REPO": "shyden-labs/yawelo-idle",
+    "DOOR_REQUIRED": "false",
   },
   "durable_objects": {
     "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],

@@ -141,8 +141,10 @@ jobs:
           if-no-files-found: error
       # Each suite below: one measured limit, at least 3 times its slowest
       # run (#476), and none inside it.
+      # Measured 36-41 s over the 18 green runs before #784 added the door
+      # suite (2026-11-10), so 3 times the slowest is over 2 minutes: 3.
       - name: Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)
-        timeout-minutes: 1
+        timeout-minutes: 3
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:worker
       - name: Cross-engine determinism (Node, Chromium, Firefox, WebKit)

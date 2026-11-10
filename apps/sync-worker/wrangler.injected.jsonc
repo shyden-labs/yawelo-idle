@@ -11,6 +11,9 @@
   "preview_urls": false,
   "vars": {
     "COMMIT": "local",
+    // "false" until the doors go live on 2026-11-15 (#784 AC4); the deploy
+    // then sets "true" with DOOR_SECRET, and any other value requires the door.
+    "DOOR_REQUIRED": "false",
   },
   "d1_databases": [
     {

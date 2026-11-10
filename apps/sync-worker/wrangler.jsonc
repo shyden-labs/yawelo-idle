@@ -18,6 +18,9 @@
     // Overwritten at deploy time with `--var COMMIT:<sha>`, so /health can
     // prove which commit is live. "local" never matches a SHA.
     "COMMIT": "local",
+    // "false" until the doors go live on 2026-11-15 (#784 AC4); the deploy
+    // then sets "true" with DOOR_SECRET, and any other value requires the door.
+    "DOOR_REQUIRED": "false",
   },
   // Named, with no id, so no id is ever copied in by hand. The deploy creates
   // the database when it is missing (scripts/ensure-d1.ts, #357), then binds
