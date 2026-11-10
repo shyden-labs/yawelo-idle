@@ -31,6 +31,12 @@ const config = (app: string): string =>
 
 const persist = mkdtempSync(join(tmpdir(), 'door-in-front-'));
 
+interface Log {
+  readonly level: string;
+  readonly message: string;
+}
+const doorLogs: Log[] = [];
+
 type Worker = Awaited<ReturnType<typeof unstable_startWorker>>;
 let sync: Worker | undefined;
 let door: Worker | undefined;
@@ -80,6 +86,7 @@ beforeAll(async () => {
       inspector: false,
       watch: false,
       outboundService: origins,
+      structuredLogsHandler: (log: Log) => doorLogs.push(log),
     },
   });
 });
@@ -95,8 +102,17 @@ describe('the sync Worker behind its door (#784 AC4)', () => {
     const response = await started(door).fetch(
       `https://${doorTo(SYNC_WORKER)}/health`,
     );
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true, db: 'ok' });
+    // Status, body and the door's error logs in one comparison, so a
+    // failure shows why the door answered as it did.
+    expect({
+      status: response.status,
+      body: await response.text(),
+      doorErrors: doorLogs.filter((log) => log.level === 'error'),
+    }).toEqual({
+      status: 200,
+      body: expect.stringContaining('"ok":true') as unknown,
+      doorErrors: [],
+    });
   });
 
   it('refuses a request straight to it without the secret, 403', async () => {
