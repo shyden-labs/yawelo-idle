@@ -11,7 +11,7 @@ import {
 /**
  * The toolchain runs on one Node line, and `engines` holds the floor (#501).
  *
- * `.github/node/Dockerfile` holds the exact version, never a bare major
+ * `docker/node/Dockerfile` holds the exact version, never a bare major
  * (global rule, 2026-10-29, #785: "this is flaky and cannot be allowed. fix
  * it properly"). With `26`, setup-node resolved the line's newest release on
  * every run, so a new Node that warned would turn every open pull request red
@@ -38,14 +38,14 @@ const engines = (): string =>
     }
   ).engines?.node ?? '(no engines.node)';
 
-const DOCKERFILE = '.github/node/Dockerfile';
+const DOCKERFILE = 'docker/node/Dockerfile';
 
 /** The Dockerfile written exactly: one FROM line naming three numbers. */
 const EXACT = /^FROM node:\d+\.\d+\.\d+\n$/;
 
 /** The step that reads the version, the same in every job (repo-template#143). */
 const READ_VERSION = [
-  "version=$(sed -nE 's/^FROM node:([0-9]+\\.[0-9]+\\.[0-9]+)$/\\1/p' .github/node/Dockerfile)",
+  "version=$(sed -nE 's/^FROM node:([0-9]+\\.[0-9]+\\.[0-9]+)$/\\1/p' docker/node/Dockerfile)",
   'test -n "$version"',
   'echo "version=$version" >> "$GITHUB_OUTPUT"',
   '',
@@ -262,7 +262,7 @@ describe('the Node line', () => {
   it('the README names the Dockerfile beside npm ci', () => {
     const readme = readFileSync('README.md', 'utf8');
     expect(readme).toContain(
-      'npm ci                # Node 26.3 or later (see .github/node/Dockerfile); engine-strict is on',
+      'npm ci                # Node 26.3 or later (see docker/node/Dockerfile); engine-strict is on',
     );
   });
 });
