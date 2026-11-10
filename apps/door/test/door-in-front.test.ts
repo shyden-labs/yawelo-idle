@@ -86,6 +86,11 @@ beforeAll(async () => {
       inspector: false,
       watch: false,
       outboundService: origins,
+      // Keep each request's own host: by default wrangler rewrites every
+      // request to the first route's host (dev.), measured in PR #940's run
+      // on 105ad6ee, where a request to the sync Worker's door reached the
+      // site's (installed wrangler, getUserWorkerInnerUrlOverrides).
+      inferOriginFromRoutes: false,
       structuredLogsHandler: (log: Log) => doorLogs.push(log),
     },
   });
