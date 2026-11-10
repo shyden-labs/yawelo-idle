@@ -20,7 +20,7 @@ No ads. No energy timers. No sold progress. No punishment for missed days. No ex
 ## Development
 
 ```sh
-npm ci                # Node 26.3 or later (see .github/node/Dockerfile); engine-strict is on
+npm ci                # Node 26.3 or later (see docker/node/Dockerfile); engine-strict is on
 npm run format:check  # Prettier
 npm run lint          # ESLint, zero warnings
 npm run typecheck     # tsc and svelte-check

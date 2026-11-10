@@ -712,7 +712,7 @@ describe('check-release-cut.yml', () => {
       steps().map((step) => step.name ?? step.uses?.split('@')[0]),
     ).toEqual([
       'actions/checkout',
-      'Read the exact Node version (.github/node/Dockerfile)',
+      'Read the exact Node version (docker/node/Dockerfile)',
       'actions/setup-node',
       'Judge the release cut and post its status',
     ]);
