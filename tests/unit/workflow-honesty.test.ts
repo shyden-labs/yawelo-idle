@@ -27,6 +27,7 @@ describe('every workflow', () => {
       'board-orphans.yml',
       'check-release-cut.yml',
       'ci.yml',
+      'dependabot-daily.yml',
       'deploy-dev.yml',
       'deploy-door.yml',
       'deploy-prod.yml',
