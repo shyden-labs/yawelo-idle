@@ -301,7 +301,7 @@ describe('Dependabot keeps the pins from rotting', () => {
     const ignore =
       isRecord(entry) && Array.isArray(entry.ignore) ? entry.ignore : [];
     // The Dockerfile holds an exact version (#785, #793); semver throws on anything else.
-    const node = readFileSync('.github/node/Dockerfile', 'utf8')
+    const node = readFileSync('docker/node/Dockerfile', 'utf8')
       .trim()
       .replace(/^FROM node:/, '');
     const above = `>=${String(semver.major(node) + 1)}.0.0`;
@@ -527,7 +527,7 @@ describe('Dependabot bumps the Node pin (#793)', () => {
   it('watches the Dockerfile for develop and never offers a new Node major', () => {
     expect(updateFor('docker')).toEqual({
       'package-ecosystem': 'docker',
-      directory: '/.github/node',
+      directory: '/docker/node',
       'target-branch': 'develop',
       schedule: { interval: 'weekly' },
       ignore: [
