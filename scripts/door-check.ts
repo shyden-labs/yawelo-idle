@@ -18,7 +18,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { DOORS } from '../apps/door/worker/door.ts';
-import { report } from './issue-report.ts';
+import { report, type Outage } from './issue-report.ts';
 
 /** The one title every door outage's issue carries. */
 export const ISSUE_TITLE = 'A front door is failing';
@@ -167,6 +167,17 @@ export async function checkDoors(
   return { ok: false, lines: [...lines, ...deps.report(problems)] };
 }
 
+/** The issue a failing door is reported on. */
+export const outage = (problems: readonly string[]): Outage => ({
+  title: ISSUE_TITLE,
+  lead: 'The daily door check (door-check.yml, #784 AC6) found:',
+  problems,
+  footer:
+    'People reach dev and test only through the doors. Read the ' +
+    "door's Worker logs in PROD's account, fix the cause, and add " +
+    'this issue to the board.',
+});
+
 function required(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === '')
@@ -175,74 +186,78 @@ function required(name: string): string {
 }
 
 async function cloudflare(
+  fetcher: typeof fetch,
   token: string,
   path: string,
   body?: unknown,
 ): Promise<unknown> {
-  const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
+  const response = await fetcher(
+    `https://api.cloudflare.com/client/v4${path}`,
+    {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
+  );
   if (!response.ok)
     throw new Error(`Cloudflare ${path}: status ${String(response.status)}`);
   return response.json();
 }
 
-/** PROD's zone id, found by its name with the token. */
-async function zoneId(token: string): Promise<string> {
-  const answer = await cloudflare(token, `/zones?name=${PROD_ZONE}`);
-  const result = isRecord(answer) ? answer.result : undefined;
+/**
+ * The doors' rows for the 24 hours before `now`: PROD's zone found by its
+ * name with the token, then its analytics asked.
+ */
+export async function readDoorRows(
+  token: string,
+  hosts: readonly string[],
+  now: Date,
+  fetcher: typeof fetch,
+): Promise<Row[]> {
+  const zones = await cloudflare(fetcher, token, `/zones?name=${PROD_ZONE}`);
+  const result = isRecord(zones) ? zones.result : undefined;
   const zone: unknown = Array.isArray(result) ? result[0] : undefined;
   if (!isRecord(zone) || typeof zone.id !== 'string')
     throw new Error(`the token reaches no zone named ${PROD_ZONE}`);
-  return zone.id;
-}
-
-async function readRows(hosts: readonly string[]): Promise<Row[]> {
-  const token = required('CLOUDFLARE_API_TOKEN');
-  const until = new Date();
-  const since = new Date(until.getTime() - DAY_MS);
+  const since = new Date(now.getTime() - DAY_MS);
   return rowsOf(
     await cloudflare(
+      fetcher,
       token,
       '/graphql',
-      analyticsQuery(await zoneId(token), since, until, hosts),
+      analyticsQuery(zone.id, since, now, hosts),
     ),
   );
+}
+
+/** `rows` with three 5xx answers for `plant`, the planted failure (AC6). */
+export function withPlant(rows: readonly Row[], plant: string): Row[] {
+  return plant === ''
+    ? [...rows]
+    : [...rows, { host: plant, status: 500, count: 3 }];
 }
 
 if (import.meta.main) {
   const repo = required('GITHUB_REPOSITORY');
   const hosts = [...DOORS.keys()];
-  const plant = process.env['PLANT_FAILING_DOOR'] ?? '';
+  const gh = (args: readonly string[]): string =>
+    execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   const { ok, lines } = await checkDoors({
     hosts,
-    readRows: async () => [
-      ...(await readRows(hosts)),
-      ...(plant === '' ? [] : [{ host: plant, status: 500, count: 3 }]),
-    ],
-    report: (problems) =>
-      report(
-        repo,
-        (args) =>
-          execFileSync('gh', args, {
-            encoding: 'utf8',
-            maxBuffer: 64 * 1024 * 1024,
-          }),
-        {
-          title: ISSUE_TITLE,
-          lead: 'The daily door check (door-check.yml, #784 AC6) found:',
-          problems,
-          footer:
-            'People reach dev and test only through the doors. Read the ' +
-            "door's Worker logs in PROD's account, fix the cause, and add " +
-            'this issue to the board.',
-        },
+    readRows: async () =>
+      withPlant(
+        await readDoorRows(
+          required('CLOUDFLARE_API_TOKEN'),
+          hosts,
+          new Date(),
+          fetch,
+        ),
+        process.env['PLANT_FAILING_DOOR'] ?? '',
       ),
+    report: (problems) => report(repo, gh, outage(problems)),
   });
   for (const line of lines) console.log(line);
   if (!ok) process.exit(1);

@@ -4,8 +4,11 @@ import {
   checkDoors,
   countDoors,
   ISSUE_TITLE,
+  outage,
   problemsOf,
+  readDoorRows,
   rowsOf,
+  withPlant,
   type Row,
 } from '../../scripts/door-check';
 import { DOORS } from '../../apps/door/worker/door';
@@ -207,5 +210,90 @@ describe('checkDoors', () => {
 describe('the issue', () => {
   it('has one title for every door outage, so an open one is commented on', () => {
     expect(ISSUE_TITLE).toBe('A front door is failing');
+  });
+
+  it('carries the problems under the title, naming the check', () => {
+    expect(outage(['a door failed'])).toMatchObject({
+      title: ISSUE_TITLE,
+      lead: 'The daily door check (door-check.yml, #784 AC6) found:',
+      problems: ['a door failed'],
+    });
+  });
+});
+
+describe('readDoorRows: the two Cloudflare calls', () => {
+  const NOW = new Date('2026-11-15T01:00:00.000Z');
+  const groups = [
+    {
+      count: 4,
+      dimensions: { clientRequestHTTPHost: DEV, edgeResponseStatus: 200 },
+    },
+  ];
+  const fakeFetch = (
+    asked: { url: string; init: RequestInit | undefined }[],
+    answers: unknown[],
+    status = 200,
+  ): typeof fetch =>
+    ((url: string, init?: RequestInit) => {
+      asked.push({ url, init });
+      return Promise.resolve(
+        new Response(JSON.stringify(answers.shift()), { status }),
+      );
+    }) as typeof fetch;
+
+  it("finds PROD's zone by name, then asks its last 24 hours", async () => {
+    const asked: { url: string; init: RequestInit | undefined }[] = [];
+    const rows = await readDoorRows(
+      'token',
+      HOSTS,
+      NOW,
+      fakeFetch(asked, [
+        { result: [{ id: 'zone-1' }] },
+        {
+          data: { viewer: { zones: [{ httpRequestsAdaptiveGroups: groups }] } },
+        },
+      ]),
+    );
+    expect(rows).toEqual([{ host: DEV, status: 200, count: 4 }]);
+    expect(asked.map(({ url }) => url)).toEqual([
+      'https://api.cloudflare.com/client/v4/zones?name=yaweloidle.com',
+      'https://api.cloudflare.com/client/v4/graphql',
+    ]);
+    expect(asked[0]?.init?.headers).toEqual({
+      authorization: 'Bearer token',
+      'content-type': 'application/json',
+    });
+    expect(JSON.parse(String(asked[1]?.init?.body))).toEqual(
+      analyticsQuery(
+        'zone-1',
+        new Date('2026-11-14T01:00:00.000Z'),
+        NOW,
+        HOSTS,
+      ),
+    );
+  });
+
+  it('refuses a token that reaches no zone of that name', async () => {
+    await expect(
+      readDoorRows('token', HOSTS, NOW, fakeFetch([], [{ result: [] }])),
+    ).rejects.toThrow('the token reaches no zone named yaweloidle.com');
+  });
+
+  it('refuses an answer that is not 200, naming the path and status', async () => {
+    await expect(
+      readDoorRows('token', HOSTS, NOW, fakeFetch([], [{}], 403)),
+    ).rejects.toThrow('Cloudflare /zones?name=yaweloidle.com: status 403');
+  });
+});
+
+describe('withPlant: the planted failure', () => {
+  it('adds three 5xx answers for the named door', () => {
+    expect(withPlant([], DEV)).toEqual([{ host: DEV, status: 500, count: 3 }]);
+  });
+
+  it('adds nothing when no door is named', () => {
+    expect(withPlant([{ host: DEV, status: 200, count: 1 }], '')).toEqual([
+      { host: DEV, status: 200, count: 1 },
+    ]);
   });
 });
