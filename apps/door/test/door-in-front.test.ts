@@ -198,15 +198,29 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
     expect(response.status).toBe(403);
   });
 
+  const upgrade = {
+    Upgrade: 'websocket',
+    Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}`,
+  };
+
+  it('accepts the live roadmap’s WebSocket upgrade straight, with the secret', async () => {
+    const response = await straightTo(SITE_WORKER, '/api/roadmap/live', {
+      headers: { ...upgrade, [DOOR_SECRET_HEADER]: SECRET },
+    });
+    const socket = response.webSocket;
+    socket?.accept();
+    socket?.close(1000, 'done');
+    expect({
+      status: response.status,
+      socket: socket !== null,
+      body: response.status === 101 ? '' : await response.text(),
+    }).toEqual({ status: 101, socket: true, body: '' });
+  });
+
   it('passes the live roadmap’s WebSocket upgrade through its door', async () => {
     const response = await started(door).fetch(
       `https://${doorTo(SITE_WORKER)}/api/roadmap/live`,
-      {
-        headers: {
-          Upgrade: 'websocket',
-          Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}`,
-        },
-      },
+      { headers: upgrade },
     );
     const socket = response.webSocket;
     socket?.accept();
@@ -214,7 +228,8 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
     expect({
       status: response.status,
       socket: socket !== null,
+      body: response.status === 101 ? '' : await response.text(),
       doorErrors: doorLogs.filter((log) => log.level === 'error'),
-    }).toEqual({ status: 101, socket: true, doorErrors: [] });
+    }).toEqual({ status: 101, socket: true, body: '', doorErrors: [] });
   });
 });
