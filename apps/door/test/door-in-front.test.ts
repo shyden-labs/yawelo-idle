@@ -17,6 +17,7 @@ const SECRET = randomBytes(32).toString('hex');
 const ORIGIN_DOMAIN = 'origins.invalid';
 const SYNC_WORKER = 'yawelo-idle-sync-dev';
 const SITE_WORKER = 'yawelo-idle-site-dev';
+const HOLDING_WORKER = 'yawelo-idle-holding-dev';
 const DEV_PASSWORD = randomBytes(16).toString('hex');
 
 const doorTo = (worker: string): string => {
@@ -51,18 +52,24 @@ const origins = createTestHarness({
       configPath: './site/wrangler.jsonc',
       vars: behindItsDoor.vars,
       secrets: { ...behindItsDoor.secrets, DEV_PASSWORD },
-      bindingOverrides: { HOLDING: 'holding-copy' },
     },
     { configPath: './web/wrangler.jsonc' },
+    // The holding page's dev copy as its real config deploys it, but serving
+    // the harness build's holding pages: the dev copy's own folder is made
+    // only by the dev deploy (scripts/holding-dev.ts).
     {
       config: {
-        name: 'holding-copy',
+        name: HOLDING_WORKER,
+        main: './site/worker/holding.ts',
         compatibility_date: '2026-10-20',
         assets: {
           directory: './site/dist-holding',
+          binding: 'ASSETS',
+          run_worker_first: true,
           not_found_handling: '404-page',
         },
       },
+      ...behindItsDoor,
     },
   ],
 });
@@ -91,7 +98,7 @@ const toOrigin = async (request: Request) => {
   const worker = host.endsWith(`.${ORIGIN_DOMAIN}`)
     ? host.slice(0, -`.${ORIGIN_DOMAIN}`.length)
     : '';
-  if (![SYNC_WORKER, SITE_WORKER].includes(worker))
+  if (![SYNC_WORKER, SITE_WORKER, HOLDING_WORKER].includes(worker))
     throw new Error(`no local origin for ${host}`);
   const answer = await origins.getWorker(worker).fetch(request.url, {
     method: request.method,
@@ -252,5 +259,55 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
       body: response.status === 101 ? '' : await response.text(),
       doorErrors: doorLogs.filter((log) => log.level === 'error'),
     }).toEqual({ status: 101, socket: true, body: '', doorErrors: [] });
+  });
+});
+
+describe('the holding page’s dev copy behind its door (#784 AC4)', () => {
+  it('answers through its own door with the holding page', async () => {
+    const response = await started(door).fetch(
+      `https://${doorTo(HOLDING_WORKER)}/`,
+    );
+    expect({
+      status: response.status,
+      page: (await response.text()).includes('<html'),
+      doorErrors: doorLogs.filter((log) => log.level === 'error'),
+    }).toEqual({ status: 200, page: true, doorErrors: [] });
+  });
+
+  it('answers through the dev site’s door with the holding page, the site passing the secret on', async () => {
+    const response = await started(door).fetch(
+      `https://${doorTo(SITE_WORKER)}/`,
+      { headers: { Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}` } },
+    );
+    expect({
+      status: response.status,
+      page: (await response.text()).includes('<html'),
+    }).toEqual({ status: 200, page: true });
+  });
+
+  it('refuses a request straight to it without the secret, 403', async () => {
+    const response = await straightTo(HOLDING_WORKER, '/');
+    expect(response.status).toBe(403);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.text()).toBe('forbidden');
+  });
+
+  it('refuses a request for a missing page straight to it without the secret, 403, never its 404 page', async () => {
+    const response = await straightTo(HOLDING_WORKER, '/no-such-page');
+    expect(response.status).toBe(403);
+  });
+
+  it('refuses a request straight to it with a wrong secret, 403', async () => {
+    const response = await straightTo(HOLDING_WORKER, '/', {
+      headers: { [DOOR_SECRET_HEADER]: 'not-the-secret' },
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it('answers a request straight to it with the secret, as CI sends it', async () => {
+    const response = await straightTo(HOLDING_WORKER, '/', {
+      headers: { [DOOR_SECRET_HEADER]: SECRET },
+    });
+    expect(response.status).toBe(200);
   });
 });

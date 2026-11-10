@@ -118,11 +118,28 @@ describe('the dev Workers’ deploy configs', () => {
     });
   });
 
+  it('runs the holding page’s dev copy’s script before its files, so its door check sees every request (#784 AC4)', () => {
+    const holding = byName('yawelo-idle-holding-dev');
+    expect(holding.main).toMatch(/apps\/site\/worker\/holding\.ts$/);
+    expect(holding.assets).toEqual({
+      directory: './dist-holding-dev',
+      binding: 'ASSETS',
+      run_worker_first: true,
+      not_found_handling: '404-page',
+    });
+  });
+
+  it('admits every request to the holding page’s dev copy until the doors go live, as the other origins do (#784 AC4)', () => {
+    expect(byName('yawelo-idle-holding-dev').vars).toEqual({
+      DOOR_REQUIRED: 'false',
+    });
+  });
+
   it('serves the sync Worker on workers.dev with no route (#395)', () => {
     expect(byName('yawelo-idle-sync-dev').routes).toBeUndefined();
   });
 
-  it('keeps each public dev Worker’s workers.dev address, and the game and the holding page’s dev copy at none, with no preview URLs (#395, #332, #429, #768)', () => {
+  it('keeps each public dev Worker’s workers.dev address, the holding page’s dev copy’s too for its door, and the game at none, with no preview URLs (#395, #332, #429, #768, #784)', () => {
     // The Pages adapter sets neither key: Pages has no workers.dev address,
     // and its own pages.dev address answers 404 (scripts/verify-dev-hosts.ts, after each dev deploy).
     expect(
@@ -135,7 +152,7 @@ describe('the dev Workers’ deploy configs', () => {
         .sort(),
     ).toEqual([
       ['yawelo-idle-dev-hosts', undefined, undefined],
-      ['yawelo-idle-holding-dev', false, false],
+      ['yawelo-idle-holding-dev', true, false],
       ['yawelo-idle-site-dev', true, false],
       ['yawelo-idle-sync-dev', true, false],
       ['yawelo-idle-web-dev', false, false],
