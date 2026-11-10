@@ -122,7 +122,7 @@ describe('the dev Workers’ deploy configs', () => {
     const holding = byName('yawelo-idle-holding-dev');
     expect(holding.main).toMatch(/apps\/site\/worker\/holding\.ts$/);
     expect(holding.assets).toEqual({
-      directory: './dist-holding-dev',
+      directory: '../dist-holding-dev',
       binding: 'ASSETS',
       run_worker_first: true,
       not_found_handling: '404-page',
