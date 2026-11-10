@@ -36,6 +36,7 @@ const SCRIPTS = [
   'scripts/dev-behind-develop.ts',
   'scripts/dev-secrets.ts',
   'scripts/develop-squash-only.ts',
+  'scripts/door-check.ts',
   'scripts/door-secrets.ts',
   'scripts/ensure-d1.ts',
   'scripts/file-story.ts',
