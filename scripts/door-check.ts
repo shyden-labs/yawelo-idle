@@ -16,9 +16,9 @@
  * PLANT_FAILING_DOOR stands in three 5xx answers for that door: the planted
  * failure that proves the check speaks, on GitHub itself.
  */
-import { execFileSync } from 'node:child_process';
 import { DOORS } from '../apps/door/worker/door.ts';
 import { report, type Outage } from './issue-report.ts';
+import { runGh } from './npm-audit.ts';
 
 /** The one title every door outage's issue carries. */
 export const ISSUE_TITLE = 'A front door is failing';
@@ -243,8 +243,6 @@ export function withPlant(rows: readonly Row[], plant: string): Row[] {
 if (import.meta.main) {
   const repo = required('GITHUB_REPOSITORY');
   const hosts = [...DOORS.keys()];
-  const gh = (args: readonly string[]): string =>
-    execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   const { ok, lines } = await checkDoors({
     hosts,
     readRows: async () =>
@@ -257,7 +255,7 @@ if (import.meta.main) {
         ),
         process.env['PLANT_FAILING_DOOR'] ?? '',
       ),
-    report: (problems) => report(repo, gh, outage(problems)),
+    report: (problems) => report(repo, runGh, outage(problems)),
   });
   for (const line of lines) console.log(line);
   if (!ok) process.exit(1);
