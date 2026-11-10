@@ -514,7 +514,7 @@ describe('verdictLines (#715): every line names the environment it checked', () 
   });
 });
 
-describe('printVerdict (#715): prints the lines and gives the exit code', () => {
+describe('printVerdict (#715): from the --dev-copy flag, prints the lines and gives the exit code', () => {
   const recorder = () => {
     const out: string[] = [];
     const err: string[] = [];
@@ -528,16 +528,14 @@ describe('printVerdict (#715): prints the lines and gives the exit code', () => 
 
   it('prints the success line and exits 0 when nothing failed', () => {
     const console = recorder();
-    expect(printVerdict('dev copy', DEV_MEDIA, [], console)).toBe(0);
+    expect(printVerdict(true, [], console)).toBe(0);
     expect(console.out).toEqual(verdictLines('dev copy', DEV_MEDIA, []));
     expect(console.err).toEqual([]);
   });
 
   it('prints each failure as an error and exits 1', () => {
     const console = recorder();
-    expect(
-      printVerdict('production', PROD_MEDIA, ['/ answered 500'], console),
-    ).toBe(1);
+    expect(printVerdict(false, ['/ answered 500'], console)).toBe(1);
     expect(console.err).toEqual(['✗ production: / answered 500']);
     expect(console.out).toEqual([]);
   });

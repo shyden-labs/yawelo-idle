@@ -489,16 +489,18 @@ export function verdictLines(
 }
 
 /**
- * Prints a run's verdict (#715): the success line to `console.log`, each
- * failure to `console.error`. Returns the exit code.
+ * Prints a run's verdict (#715): `devCopy` is the `--dev-copy` flag, naming
+ * the copy and the media host checked. The success line goes to
+ * `console.log`, each failure to `console.error`. Returns the exit code.
  */
 export function printVerdict(
-  checked: Checked,
-  media: MediaHost,
+  devCopy: boolean,
   problems: readonly string[],
   console: { log(line: string): void; error(line: string): void },
 ): number {
-  const lines = verdictLines(checked, media, problems);
+  const lines = devCopy
+    ? verdictLines('dev copy', DEV_MEDIA, problems)
+    : verdictLines('production', PROD_MEDIA, problems);
   for (const line of lines)
     if (problems.length > 0) console.error(line);
     else console.log(line);
@@ -521,10 +523,5 @@ if (import.meta.main) {
     !dev,
     dev ? DEV_MEDIA : PROD_MEDIA,
   );
-  process.exitCode = printVerdict(
-    dev ? 'dev copy' : 'production',
-    dev ? DEV_MEDIA : PROD_MEDIA,
-    problems,
-    console,
-  );
+  process.exitCode = printVerdict(dev, problems, console);
 }
