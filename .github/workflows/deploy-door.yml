@@ -52,7 +52,9 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
-      - run: npm ci
+      # No install scripts: the deploy needs wrangler's files, not the
+      # workspace's generated types.
+      - run: npm ci --ignore-scripts
       - name: Prove the production token reaches the production account alone
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

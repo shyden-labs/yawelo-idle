@@ -8,9 +8,12 @@
  *
  * JSON, not .env: a value may hold quotes, `#`, `=` or newlines (the App's
  * PEM key has several), which JSON carries exactly. The file is created
- * owner-only and never overwritten.
+ * owner-only, never overwritten, and only inside a temp directory
+ * (tempPath), so a wrong argument never writes secrets into the checkout.
  */
 import { writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve, sep } from 'node:path';
 
 export function writeSecretsFileFrom<Secret extends string>(
   sources: Readonly<Record<Secret, string>>,
@@ -24,10 +27,29 @@ export function writeSecretsFileFrom<Secret extends string>(
       throw new Error(`${sources[secret]} is not set`);
   }
   writeFileSync(
-    path,
+    tempPath(path, process.env),
     JSON.stringify(
       Object.fromEntries(secrets.map((secret) => [secret, values[secret]])),
     ),
     { mode: 0o600, flag: 'wx' },
   );
+}
+
+/**
+ * `path`, resolved, when it lies inside the system's temp directory or the
+ * runner's `RUNNER_TEMP`; anything else is refused, naming the path.
+ */
+export function tempPath(
+  path: string,
+  env: Readonly<Record<string, string | undefined>>,
+): string {
+  const target = resolve(path);
+  const bases = [tmpdir(), env['RUNNER_TEMP']]
+    .filter((base): base is string => base !== undefined && base !== '')
+    .map((base) => resolve(base));
+  if (!bases.some((base) => target.startsWith(base + sep)))
+    throw new Error(
+      `refusing to write a secrets file outside the temp directory: ${path}`,
+    );
+  return target;
 }

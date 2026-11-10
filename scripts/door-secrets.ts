@@ -24,14 +24,22 @@ export function writeDoorSecretsFile(
   writeSecretsFileFrom(SOURCES, path, values);
 }
 
-if (import.meta.main) {
-  const path = process.argv[2];
+/** The command line: the file named by `argv[0]`, from the environment. */
+export function writeDoorSecretsFromEnv(
+  argv: readonly string[],
+  env: Readonly<Record<string, string | undefined>>,
+): void {
+  const path = argv[0];
   if (path === undefined || path === '')
     throw new Error('usage: node scripts/door-secrets.ts <path>');
   writeDoorSecretsFile(path, {
-    ORIGIN_DOMAIN: process.env['ORIGIN_DOMAIN'],
-    DEV_DOOR_SECRET: process.env['DEV_DOOR_SECRET'],
-    TEST_DOOR_SECRET: process.env['TEST_DOOR_SECRET'],
+    ORIGIN_DOMAIN: env['ORIGIN_DOMAIN'],
+    DEV_DOOR_SECRET: env['DEV_DOOR_SECRET'],
+    TEST_DOOR_SECRET: env['TEST_DOOR_SECRET'],
   });
-  console.log(`✓ wrote the door's secrets to ${path}`);
+}
+
+if (import.meta.main) {
+  writeDoorSecretsFromEnv(process.argv.slice(2), process.env);
+  console.log("✓ wrote the door's secrets");
 }

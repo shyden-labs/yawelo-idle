@@ -2,7 +2,10 @@ import { mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { writeDoorSecretsFile } from '../../scripts/door-secrets';
+import {
+  writeDoorSecretsFile,
+  writeDoorSecretsFromEnv,
+} from '../../scripts/door-secrets';
 
 /**
  * The front door's secrets file (#784): the door's deploy uploads its origin
@@ -67,5 +70,25 @@ describe('writeDoorSecretsFile', () => {
       writeDoorSecretsFile(path, { ...VALUES, DEV_DOOR_SECRET: 'other' });
     }).toThrow('EEXIST');
     expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
+  });
+});
+
+describe('writeDoorSecretsFromEnv: the command line', () => {
+  it('writes the file named by its argument from the environment', () => {
+    const path = scratch();
+    writeDoorSecretsFromEnv([path], VALUES);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
+  });
+
+  it('refuses no path, naming its usage', () => {
+    expect(() => {
+      writeDoorSecretsFromEnv([], VALUES);
+    }).toThrow('usage: node scripts/door-secrets.ts <path>');
+  });
+
+  it('refuses an empty path, naming its usage', () => {
+    expect(() => {
+      writeDoorSecretsFromEnv([''], VALUES);
+    }).toThrow('usage: node scripts/door-secrets.ts <path>');
   });
 });
