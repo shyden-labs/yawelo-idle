@@ -15,10 +15,10 @@
  * the run goes red. PLANT_FAILURE adds a failed run of the first ecosystem:
  * the planted failure that proves the check speaks (AC3).
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { report } from './issue-report.ts';
+import { report, type Outage } from './issue-report.ts';
+import { runGh } from './npm-audit.ts';
 
 export interface Ecosystem {
   /** The config's name, e.g. `github-actions`. */
@@ -140,9 +140,9 @@ export function judgeDependabot(
       (run) => run.label === label && run.directory === each.directory,
     );
     if (mine.length === 0) return [`${name} has no Dependabot run recorded`];
-    const newest = mine
-      .map((run) => run.createdAt)
-      .reduce((a, b) => (Date.parse(a) >= Date.parse(b) ? a : b));
+    const newest = new Date(
+      Math.max(...mine.map((run) => Date.parse(run.createdAt))),
+    ).toISOString();
     const problems: string[] = [];
     if (now.getTime() - Date.parse(newest) > (days + GRACE_DAYS) * DAY_MS)
       problems.push(
@@ -160,16 +160,6 @@ export function judgeDependabot(
         );
     return problems;
   });
-}
-
-const gh = (args: readonly string[]): string =>
-  execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-
-function required(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value === '')
-    throw new Error(`${name} is not set`);
-  return value;
 }
 
 export interface RunDeps {
@@ -244,24 +234,36 @@ export function runDependabotCheck(deps: RunDeps): {
   };
 }
 
+/** The repository the check reads, from GITHUB_REPOSITORY. */
+export function repoFrom(
+  env: Readonly<Record<string, string | undefined>>,
+): string {
+  const repo = env['GITHUB_REPOSITORY'];
+  if (repo === undefined || repo === '')
+    throw new Error('GITHUB_REPOSITORY is not set');
+  return repo;
+}
+
+/** The issue a Dependabot outage is reported on (AC3). */
+export const dependabotOutage = (problems: readonly string[]): Outage => ({
+  title: ISSUE_TITLE,
+  lead: 'The daily Dependabot check (dependabot-daily.yml, #458) found:',
+  problems,
+  footer:
+    "Open the repository's Dependabot tab or the run named above, fix " +
+    'the cause, and add this issue to the board. Until then no ' +
+    'dependency update, security fixes included, reaches a pull request.',
+});
+
 if (import.meta.main) {
-  const repo = required('GITHUB_REPOSITORY');
+  const repo = repoFrom(process.env);
   const { ok, lines } = runDependabotCheck({
     repo,
     now: new Date(),
     readConfig: () => readFileSync('.github/dependabot.yml', 'utf8'),
-    gh,
+    gh: runGh,
     plant: process.env['PLANT_FAILURE'] === 'true',
-    report: (problems) =>
-      report(repo, gh, {
-        title: ISSUE_TITLE,
-        lead: 'The daily Dependabot check (dependabot-daily.yml, #458) found:',
-        problems,
-        footer:
-          "Open the repository's Dependabot tab or the run named above, fix " +
-          'the cause, and add this issue to the board. Until then no ' +
-          'dependency update, security fixes included, reaches a pull request.',
-      }),
+    report: (problems) => report(repo, runGh, dependabotOutage(problems)),
   });
   for (const line of lines) (ok ? console.log : console.error)(line);
   if (!ok) process.exit(1);

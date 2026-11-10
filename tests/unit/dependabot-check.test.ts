@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  dependabotOutage,
   ecosystemsOf,
   judgeDependabot,
+  repoFrom,
   runDependabotCheck,
   runOf,
   type DependabotRun,
@@ -347,5 +349,31 @@ updates:
     expect(reported[0]?.[0]).toMatch(
       /^the check could not read Dependabot's runs: /,
     );
+  });
+});
+
+describe('the command line', () => {
+  it('fails by name on a config with no updates list', () => {
+    expect(() => ecosystemsOf('version: 2\n')).toThrow(
+      '.github/dependabot.yml cannot be parsed: no updates list',
+    );
+  });
+
+  it('reads the repository from GITHUB_REPOSITORY', () => {
+    expect(repoFrom({ GITHUB_REPOSITORY: 'shyden-labs/yawelo-idle' })).toBe(
+      'shyden-labs/yawelo-idle',
+    );
+  });
+
+  it('refuses a missing GITHUB_REPOSITORY, naming it', () => {
+    expect(() => repoFrom({})).toThrow('GITHUB_REPOSITORY is not set');
+  });
+
+  it('reports on one issue, naming the check', () => {
+    expect(dependabotOutage(['npm in / stopped'])).toMatchObject({
+      title: 'Dependabot has stopped updating',
+      lead: 'The daily Dependabot check (dependabot-daily.yml, #458) found:',
+      problems: ['npm in / stopped'],
+    });
   });
 });

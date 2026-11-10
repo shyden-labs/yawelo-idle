@@ -40,6 +40,12 @@ describe('the daily Dependabot check (#458)', () => {
     });
   });
 
+  it('installs without running any install script', () => {
+    const runs = (onlyJob(FILE, 'check').steps ?? []).map((step) => step.run);
+    expect(runs).toContain('npm ci --ignore-scripts');
+    expect(runs).not.toContain('npm ci');
+  });
+
   it('never carries on after an error', () => {
     const job = onlyJob(FILE, 'check');
     expect(job['continue-on-error']).toBeUndefined();

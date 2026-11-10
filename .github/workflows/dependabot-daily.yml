@@ -44,8 +44,9 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
-      # The check parses the config with the yaml package.
-      - run: npm ci
+      # The check parses the config with the yaml package; no install
+      # script is needed for that.
+      - run: npm ci --ignore-scripts
       - name: Read Dependabot's runs and report a stopped ecosystem
         env:
           GH_TOKEN: ${{ github.token }}
