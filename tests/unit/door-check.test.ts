@@ -263,7 +263,7 @@ describe('readDoorRows: the two Cloudflare calls', () => {
       authorization: 'Bearer token',
       'content-type': 'application/json',
     });
-    expect(JSON.parse(String(asked[1]?.init?.body))).toEqual(
+    expect(JSON.parse(asked[1]?.init?.body as string)).toEqual(
       analyticsQuery(
         'zone-1',
         new Date('2026-11-14T01:00:00.000Z'),
