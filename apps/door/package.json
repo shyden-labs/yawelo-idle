@@ -4,7 +4,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit -p worker",
+    "test": "vitest run -c vitest.harness.config.ts",
+    "typecheck": "tsc --noEmit -p worker && tsc --noEmit",
     "types": "wrangler types worker/worker-configuration.d.ts --strict-vars=false"
   }
 }
