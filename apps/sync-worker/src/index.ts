@@ -6,8 +6,12 @@
  * On any host but the production API host, every response carries the
  * noindex header and `/robots.txt` blocks crawlers (#39). There is no password:
  * native apps cannot answer a browser challenge (operator decision 2026-10-01).
+ *
+ * Behind its door (#784 AC4), a request without this environment's door
+ * secret is refused before anything else (apps/door/worker/origin.ts).
  */
 import { markApiRequest } from '@yawelo-idle/lockdown';
+import { refusal, type OriginEnv } from '../../door/worker/origin';
 
 const json = (
   body: unknown,
@@ -42,7 +46,13 @@ async function route(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  fetch(request, env): Promise<Response> {
+  async fetch(request, env): Promise<Response> {
+    const refused = await refusal(
+      request,
+      env,
+      crypto.subtle.timingSafeEqual.bind(crypto.subtle),
+    );
+    if (refused !== undefined) return refused;
     return markApiRequest(request, (marked) => route(marked, env));
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env & OriginEnv>;
