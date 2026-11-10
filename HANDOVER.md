@@ -15,11 +15,11 @@
 
 ## Running
 
-- A local wait on develop's deploy-dev for `96d04525` (DEAD after `/clear`). Re-read: `gh run list --branch develop --workflow deploy-dev --limit 1`. It must be green; with DOOR_REQUIRED "false" nothing on dev changes.
+- Nothing. deploy-dev for `96d04525` finished green on every job (build-and-test, coverage, deploy, verify, verify-holding, verify-roadmap, smoke, site-smoke, dev-verified). Worktree `-784` and its branch removed.
 
 ## Resume steps
 
-1. Confirm deploy-dev for `96d04525` is green. Then remove worktree `../yawelo-idle-784` (branch `feat/784-origins-need-the-door`, merged, clean) and its local branch.
+1. (done)
 2. **#784 remaining (failing tests first):**
    - `holding-dev` behind `dev-holding.`: today assets-only with `workers_dev: false`; it needs a Worker script asking `behindDoor` and a `workers.dev` address, plus a door-test case.
    - Move CI to `workers.dev` (`deploy-dev.yml`, `dev-behind-develop.yml`, tests naming a door address) with the door secret, retire `scripts/verify-dev-hosts.ts`, then add the door-host guard over `tests/`, `scripts/`, `.github/` (AC1b). At the go-live GitHub's webhook must target the door.
@@ -40,5 +40,5 @@
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only, ahead of origin).
 - `origin/develop` at `96d04525458d4c9f848a6b9a660392377f0ec7ff`.
-- Worktrees: `-dev-scripts` (detached at develop), `-784` (merged branch, removable after step 1).
+- Worktrees: `-dev-scripts` (detached at develop).
 - Open PRs: none.
