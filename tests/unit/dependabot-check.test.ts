@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ecosystemsOf,
   judgeDependabot,
+  runDependabotCheck,
   runOf,
   type DependabotRun,
   type Ecosystem,
@@ -242,5 +243,109 @@ describe('judgeDependabot', () => {
     expect(judgeDependabot([quarterly], [run({})], NOW)).toEqual([
       'npm in /: interval quarterly is not daily, weekly or monthly',
     ]);
+  });
+});
+
+describe('runDependabotCheck: the whole daily run', () => {
+  const CONFIG = `version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule: { interval: 'weekly' }
+`;
+  const page = (runs: Record<string, unknown>[]) =>
+    JSON.stringify([{ workflow_runs: runs }]);
+  const apiRun = (overrides: Record<string, unknown>) => ({
+    name: 'npm_and_yarn in /. - Update #1',
+    path: 'dynamic/dependabot/dependabot-updates',
+    html_url: 'https://github.com/x/y/actions/runs/1',
+    conclusion: 'success',
+    created_at: ago(DAY_MS),
+    ...overrides,
+  });
+  const deps = (
+    answer: string,
+    reported: string[][],
+    overrides: Partial<Parameters<typeof runDependabotCheck>[0]> = {},
+  ): Parameters<typeof runDependabotCheck>[0] => ({
+    repo: 'shyden-labs/yawelo-idle',
+    now: NOW,
+    readConfig: () => CONFIG,
+    gh: () => answer,
+    plant: false,
+    report: (problems) => {
+      reported.push([...problems]);
+      return ['opened #1'];
+    },
+    ...overrides,
+  });
+
+  it('asks for the dynamic runs since the longest window began', () => {
+    const asked: string[][] = [];
+    runDependabotCheck(
+      deps(page([apiRun({})]), [], {
+        gh: (args) => {
+          asked.push([...args]);
+          return page([apiRun({})]);
+        },
+      }),
+    );
+    expect(asked).toEqual([
+      [
+        'api',
+        '--paginate',
+        '--slurp',
+        'repos/shyden-labs/yawelo-idle/actions/runs?event=dynamic&per_page=100&created=>=2026-11-02',
+      ],
+    ]);
+  });
+
+  it('passes, reporting nothing, when the ecosystem ran', () => {
+    const reported: string[][] = [];
+    expect(runDependabotCheck(deps(page([apiRun({})]), reported))).toEqual({
+      ok: true,
+      lines: ['✓ Dependabot ran every ecosystem within its interval'],
+    });
+    expect(reported).toEqual([]);
+  });
+
+  it('reports a failed run and fails', () => {
+    const reported: string[][] = [];
+    const result = runDependabotCheck(
+      deps(page([apiRun({}), apiRun({ conclusion: 'failure' })]), reported),
+    );
+    expect(result.ok).toBe(false);
+    expect(reported).toHaveLength(1);
+    expect(result.lines).toContain('opened #1');
+  });
+
+  it('reports the planted failure when asked', () => {
+    const reported: string[][] = [];
+    runDependabotCheck(deps(page([apiRun({})]), reported, { plant: true }));
+    expect(reported).toEqual([
+      [
+        'npm in /: "planted failure (#458 AC3)" ended failure: https://github.com/shyden-labs/yawelo-idle/issues/458',
+      ],
+    ]);
+  });
+
+  it('reports a config it cannot read and fails', () => {
+    const reported: string[][] = [];
+    const result = runDependabotCheck(
+      deps('[]', reported, { readConfig: () => 'updates: [' }),
+    );
+    expect(result.ok).toBe(false);
+    expect(reported[0]?.[0]).toMatch(
+      /^the check could not read Dependabot's runs: \.github\/dependabot\.yml cannot be parsed/,
+    );
+  });
+
+  it('reports an answer from GitHub it cannot read and fails', () => {
+    const reported: string[][] = [];
+    const result = runDependabotCheck(deps('not json', reported));
+    expect(result.ok).toBe(false);
+    expect(reported[0]?.[0]).toMatch(
+      /^the check could not read Dependabot's runs: /,
+    );
   });
 });

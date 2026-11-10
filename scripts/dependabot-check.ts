@@ -172,27 +172,36 @@ function required(name: string): string {
   return value;
 }
 
-if (import.meta.main) {
-  const repo = required('GITHUB_REPOSITORY');
-  const now = new Date();
+export interface RunDeps {
+  readonly repo: string;
+  readonly now: Date;
+  readonly readConfig: () => string;
+  readonly gh: (args: readonly string[]) => string;
+  readonly plant: boolean;
+  readonly report: (problems: readonly string[]) => string[];
+}
+
+/** Runs the check once (AC2, AC3): what it found and did, and whether it passed. */
+export function runDependabotCheck(deps: RunDeps): {
+  ok: boolean;
+  lines: string[];
+} {
   let problems: string[];
   try {
-    const ecosystems = ecosystemsOf(
-      readFileSync('.github/dependabot.yml', 'utf8'),
-    );
+    const ecosystems = ecosystemsOf(deps.readConfig());
     // The longest window any ecosystem needs: its interval plus two days.
     const days = Math.max(
       ...ecosystems.map((each) => INTERVAL_DAYS[each.interval] ?? 0),
     );
-    const since = new Date(now.getTime() - (days + GRACE_DAYS) * DAY_MS)
+    const since = new Date(deps.now.getTime() - (days + GRACE_DAYS) * DAY_MS)
       .toISOString()
       .slice(0, 10);
     const pages: unknown = JSON.parse(
-      gh([
+      deps.gh([
         'api',
         '--paginate',
         '--slurp',
-        `repos/${repo}/actions/runs?event=dynamic&per_page=100&created=>=${since}`,
+        `repos/${deps.repo}/actions/runs?event=dynamic&per_page=100&created=>=${since}`,
       ]),
     );
     const runs = (Array.isArray(pages) ? pages : [])
@@ -206,35 +215,54 @@ if (import.meta.main) {
         return read === undefined ? [] : [read];
       });
     const first = ecosystems[0];
-    if (process.env['PLANT_FAILURE'] === 'true' && first !== undefined)
+    if (deps.plant && first !== undefined)
       runs.push({
         label: RUN_LABELS[first.ecosystem] ?? first.ecosystem,
         directory: first.directory,
         title: 'planted failure (#458 AC3)',
         url: 'https://github.com/shyden-labs/yawelo-idle/issues/458',
         conclusion: 'failure',
-        createdAt: now.toISOString(),
+        createdAt: deps.now.toISOString(),
       });
-    problems = judgeDependabot(ecosystems, runs, now);
+    problems = judgeDependabot(ecosystems, runs, deps.now);
   } catch (error) {
     problems = [
       `the check could not read Dependabot's runs: ${error instanceof Error ? error.message : String(error)}`,
     ];
   }
-  if (problems.length === 0) {
-    console.log('✓ Dependabot ran every ecosystem within its interval');
-  } else {
-    for (const problem of problems) console.error(`✗ ${problem}`);
-    for (const line of report(repo, gh, {
-      title: ISSUE_TITLE,
-      lead: 'The daily Dependabot check (dependabot-daily.yml, #458) found:',
-      problems,
-      footer:
-        "Open the repository's Dependabot tab or the run named above, fix " +
-        'the cause, and add this issue to the board. Until then no ' +
-        'dependency update, security fixes included, reaches a pull request.',
-    }))
-      console.error(line);
-    process.exit(1);
-  }
+  if (problems.length === 0)
+    return {
+      ok: true,
+      lines: ['✓ Dependabot ran every ecosystem within its interval'],
+    };
+  return {
+    ok: false,
+    lines: [
+      ...problems.map((problem) => `✗ ${problem}`),
+      ...deps.report(problems),
+    ],
+  };
+}
+
+if (import.meta.main) {
+  const repo = required('GITHUB_REPOSITORY');
+  const { ok, lines } = runDependabotCheck({
+    repo,
+    now: new Date(),
+    readConfig: () => readFileSync('.github/dependabot.yml', 'utf8'),
+    gh,
+    plant: process.env['PLANT_FAILURE'] === 'true',
+    report: (problems) =>
+      report(repo, gh, {
+        title: ISSUE_TITLE,
+        lead: 'The daily Dependabot check (dependabot-daily.yml, #458) found:',
+        problems,
+        footer:
+          "Open the repository's Dependabot tab or the run named above, fix " +
+          'the cause, and add this issue to the board. Until then no ' +
+          'dependency update, security fixes included, reaches a pull request.',
+      }),
+  });
+  for (const line of lines) (ok ? console.log : console.error)(line);
+  if (!ok) process.exit(1);
 }
