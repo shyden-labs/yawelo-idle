@@ -19,6 +19,8 @@ import { DOOR_SECRET_HEADER, DOORS } from '../worker/door';
 const SECRET = randomBytes(32).toString('hex');
 const ORIGIN_DOMAIN = 'origins.invalid';
 const SYNC_WORKER = 'yawelo-idle-sync-dev';
+const SITE_WORKER = 'yawelo-idle-site-dev';
+const DEV_PASSWORD = randomBytes(16).toString('hex');
 
 const doorTo = (worker: string): string => {
   const found = [...DOORS].find(([, door]) => door.worker === worker);
@@ -39,6 +41,7 @@ const doorLogs: Log[] = [];
 
 type Worker = Awaited<ReturnType<typeof unstable_startWorker>>;
 let sync: Worker | undefined;
+let site: Worker | undefined;
 let door: Worker | undefined;
 
 const started = (worker: Worker | undefined): Worker => {
@@ -49,20 +52,41 @@ const started = (worker: Worker | undefined): Worker => {
 /** The origin the door's outgoing request names, served by its local Worker. */
 const origins = async (request: Request) => {
   const host = new URL(request.url).hostname;
-  if (host !== `${SYNC_WORKER}.${ORIGIN_DOMAIN}`)
-    throw new Error(`no local origin for ${host}`);
-  return started(sync).fetch(request.url, {
+  const local = {
+    [`${SYNC_WORKER}.${ORIGIN_DOMAIN}`]: sync,
+    [`${SITE_WORKER}.${ORIGIN_DOMAIN}`]: site,
+  }[host];
+  if (local === undefined) throw new Error(`no local origin for ${host}`);
+  return local.fetch(request.url, {
     method: request.method,
     headers: Object.fromEntries(request.headers),
   });
 };
 
+/** The origin itself, required to come through its door, with a fresh secret. */
+const behindItsDoor = {
+  DOOR_REQUIRED: { type: 'plain_text', value: 'true' },
+  DOOR_SECRET: { type: 'secret_text', value: SECRET },
+} as const;
+
 beforeAll(async () => {
   sync = await unstable_startWorker({
     config: config('sync-worker'),
+    bindings: behindItsDoor,
+    dev: {
+      persist,
+      server: { port: 0 },
+      inspector: false,
+      watch: false,
+    },
+  });
+  // The site's built pages come from the site's own harness build, which
+  // `npm run test:worker` runs before this workspace's tests.
+  site = await unstable_startWorker({
+    config: config('site'),
     bindings: {
-      DOOR_REQUIRED: { type: 'plain_text', value: 'true' },
-      DOOR_SECRET: { type: 'secret_text', value: SECRET },
+      ...behindItsDoor,
+      DEV_PASSWORD: { type: 'secret_text', value: DEV_PASSWORD },
     },
     dev: {
       persist,
@@ -98,6 +122,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await door?.dispose();
+  await site?.dispose();
   await sync?.dispose();
   rmSync(persist, { recursive: true, force: true });
 });
@@ -143,5 +168,56 @@ describe('the sync Worker behind its door (#784 AC4)', () => {
       { headers: { [DOOR_SECRET_HEADER]: SECRET } },
     );
     expect(response.status).toBe(200);
+  });
+});
+
+describe('the dev site Worker behind its door (#784 AC4)', () => {
+  const HOOK = '/hooks/github';
+
+  it('lets a request through its door past the door check', async () => {
+    // The webhook path answers before the dev password: a GET is 405.
+    const response = await started(door).fetch(
+      `https://${doorTo(SITE_WORKER)}${HOOK}`,
+    );
+    expect({
+      status: response.status,
+      allow: response.headers.get('allow'),
+    }).toEqual({ status: 405, allow: 'POST' });
+  });
+
+  it('refuses a request straight to it without the secret, 403', async () => {
+    const response = await started(site).fetch(
+      `https://${SITE_WORKER}.${ORIGIN_DOMAIN}${HOOK}`,
+    );
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe('forbidden');
+  });
+
+  it('refuses a request straight to it with a wrong secret, 403', async () => {
+    const response = await started(site).fetch(
+      `https://${SITE_WORKER}.${ORIGIN_DOMAIN}${HOOK}`,
+      { headers: { [DOOR_SECRET_HEADER]: 'not-the-secret' } },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it('passes the live roadmap’s WebSocket upgrade through its door', async () => {
+    const response = await started(door).fetch(
+      `https://${doorTo(SITE_WORKER)}/api/roadmap/live`,
+      {
+        headers: {
+          Upgrade: 'websocket',
+          Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}`,
+        },
+      },
+    );
+    const socket = response.webSocket;
+    socket?.accept();
+    socket?.close(1000, 'done');
+    expect({
+      status: response.status,
+      socket: socket !== null,
+      doorErrors: doorLogs.filter((log) => log.level === 'error'),
+    }).toEqual({ status: 101, socket: true, doorErrors: [] });
   });
 });
