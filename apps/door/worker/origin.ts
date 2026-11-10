@@ -80,8 +80,16 @@ export async function refusal(
   return answer(403, 'forbidden');
 }
 
+/**
+ * The runtime's `timingSafeEqual`, declared here as well: only the Workers
+ * types have it, and the root typecheck reads this file, through the unit
+ * tests, with Node's.
+ */
+type WorkerSubtle = SubtleCrypto & { timingSafeEqual: Equal };
+
 /** The Worker runtime's constant-time comparison, as each origin uses it. */
-export const workerEqual: Equal = (a, b) => crypto.subtle.timingSafeEqual(a, b);
+export const workerEqual: Equal = (a, b) =>
+  (crypto.subtle as WorkerSubtle).timingSafeEqual(a, b);
 
 /**
  * Each origin's entry (#784 AC4): the refusal, or `serve`'s answer to the
