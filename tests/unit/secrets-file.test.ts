@@ -1,49 +1,58 @@
-import { mkdtempSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { tempPath } from '../../scripts/secrets-file';
+import { writeSecretsFileFrom } from '../../scripts/secrets-file';
 
 /**
- * A secrets file lands only in a temp directory (#784): the path a deploy
- * passes is resolved and refused unless it sits inside the system's temp
- * directory or the runner's RUNNER_TEMP, so a wrong argument can never write
- * secrets into the checkout or anywhere else.
+ * A secrets file lands only in a new directory of its own inside the system's
+ * temp directory (#784). The caller names no path: the path is made here and
+ * returned, so no command-line argument ever decides where secrets are
+ * written (SonarCloud tssecurity:S8707 on #943), and no deploy meets another
+ * one's file.
  */
-describe('tempPath', () => {
-  it("accepts a file in the system's temp directory, resolved", () => {
-    const path = join(mkdtempSync(join(tmpdir(), 'secrets-')), 's.json');
-    expect(tempPath(path, {})).toBe(resolve(path));
+const NAME = 'secrets-file-test';
+const SOURCES = { ONE: 'GITHUB_ONE', TWO: 'GITHUB_TWO' } as const;
+const VALUES = { ONE: 'first "quoted"\nline two', TWO: 'second' };
+const ownDirectories = () =>
+  readdirSync(tmpdir()).filter((entry) => entry.startsWith(`${NAME}-`));
+
+describe('writeSecretsFileFrom', () => {
+  it('writes the values, exactly, in JSON, and returns where', () => {
+    const path = writeSecretsFileFrom(NAME, SOURCES, VALUES);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
   });
 
-  it("accepts a file in the runner's temp directory", () => {
-    expect(
-      tempPath('/runner/_temp/door-secrets.json', {
-        RUNNER_TEMP: '/runner/_temp',
-      }),
-    ).toBe('/runner/_temp/door-secrets.json');
+  it("names the file secrets.json, in a new directory named for it inside the system's temp directory", () => {
+    const path = writeSecretsFileFrom(NAME, SOURCES, VALUES);
+    expect(basename(path)).toBe('secrets.json');
+    expect(dirname(dirname(path))).toBe(tmpdir());
+    expect(basename(dirname(path))).toMatch(/^secrets-file-test-.+$/);
   });
 
-  it('refuses a relative path in the checkout', () => {
-    expect(() => tempPath('door-secrets.json', {})).toThrow(
-      'refusing to write a secrets file outside the temp directory: door-secrets.json',
+  it('gives each call a directory of its own', () => {
+    const first = writeSecretsFileFrom(NAME, SOURCES, VALUES);
+    expect(writeSecretsFileFrom(NAME, SOURCES, VALUES)).not.toBe(first);
+  });
+
+  it('makes the file readable by its owner only', () => {
+    const path = writeSecretsFileFrom(NAME, SOURCES, VALUES);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+  });
+
+  it('refuses a missing value, naming its GitHub secret, and makes no directory', () => {
+    const before = ownDirectories();
+    expect(() => writeSecretsFileFrom(NAME, SOURCES, { ONE: 'first' })).toThrow(
+      'GITHUB_TWO is not set',
     );
+    expect(ownDirectories()).toStrictEqual(before);
   });
 
-  it('refuses a path that climbs out of the temp directory', () => {
-    const path = join(tmpdir(), '..', 'escaped.json');
-    expect(() => tempPath(path, {})).toThrow(
-      `refusing to write a secrets file outside the temp directory: ${path}`,
-    );
-  });
-
-  it("refuses a sibling whose name only starts with the temp directory's", () => {
+  it('refuses an empty value, naming its GitHub secret, and makes no directory', () => {
+    const before = ownDirectories();
     expect(() =>
-      tempPath('/runner/_temp-evil/s.json', { RUNNER_TEMP: '/runner/_temp' }),
-    ).toThrow('outside the temp directory');
-  });
-
-  it('refuses the temp directory itself', () => {
-    expect(() => tempPath(tmpdir(), {})).toThrow('outside the temp directory');
+      writeSecretsFileFrom(NAME, SOURCES, { ...VALUES, ONE: '' }),
+    ).toThrow('GITHUB_ONE is not set');
+    expect(ownDirectories()).toStrictEqual(before);
   });
 });

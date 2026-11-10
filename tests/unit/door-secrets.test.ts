@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   writeDoorSecretsFile,
@@ -12,6 +12,7 @@ import {
  * domain and the two door secrets from `production` environment secrets with
  * the Worker itself (`wrangler deploy --secrets-file`), so nobody types one
  * into Cloudflare. A missing one stops the deploy, naming the GitHub secret.
+ * Where the file goes is scripts/secrets-file.ts's rule.
  */
 
 const VALUES = {
@@ -25,70 +26,52 @@ const SOURCES = [
   ['DEV_DOOR_SECRET', 'DEV_DOOR_SECRET'],
   ['TEST_DOOR_SECRET', 'TEST_DOOR_SECRET'],
 ] as const;
-const scratch = () =>
-  join(mkdtempSync(join(tmpdir(), 'door-secrets-')), 's.json');
+const doorDirectories = () =>
+  readdirSync(tmpdir()).filter((entry) => entry.startsWith('door-secrets-'));
 
 describe('writeDoorSecretsFile', () => {
-  it('writes the three values, exactly, in JSON', () => {
-    const path = scratch();
-    writeDoorSecretsFile(path, VALUES);
+  it('writes the three values, exactly, in JSON, and returns where', () => {
+    const path = writeDoorSecretsFile(VALUES);
     expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
   });
 
-  it('makes the file readable by its owner only', () => {
-    const path = scratch();
-    writeDoorSecretsFile(path, VALUES);
-    expect(statSync(path).mode & 0o777).toBe(0o600);
+  it('writes into a directory named for the door', () => {
+    expect(basename(dirname(writeDoorSecretsFile(VALUES)))).toMatch(
+      /^door-secrets-/,
+    );
   });
 
   it.each(SOURCES)(
     'refuses a missing %s, naming %s, and writes nothing',
     (secret, source) => {
-      const path = scratch();
-      expect(() => {
-        writeDoorSecretsFile(path, { ...VALUES, [secret]: undefined });
-      }).toThrow(`${source} is not set`);
-      expect(() => statSync(path)).toThrow('ENOENT');
+      const before = doorDirectories();
+      expect(() =>
+        writeDoorSecretsFile({ ...VALUES, [secret]: undefined }),
+      ).toThrow(`${source} is not set`);
+      expect(doorDirectories()).toStrictEqual(before);
     },
   );
 
   it.each(SOURCES)(
     'refuses an empty %s, naming %s, and writes nothing',
     (secret, source) => {
-      const path = scratch();
-      expect(() => {
-        writeDoorSecretsFile(path, { ...VALUES, [secret]: '' });
-      }).toThrow(`${source} is not set`);
-      expect(() => statSync(path)).toThrow('ENOENT');
+      const before = doorDirectories();
+      expect(() => writeDoorSecretsFile({ ...VALUES, [secret]: '' })).toThrow(
+        `${source} is not set`,
+      );
+      expect(doorDirectories()).toStrictEqual(before);
     },
   );
-
-  it('refuses to overwrite a file already there', () => {
-    const path = scratch();
-    writeDoorSecretsFile(path, VALUES);
-    expect(() => {
-      writeDoorSecretsFile(path, { ...VALUES, DEV_DOOR_SECRET: 'other' });
-    }).toThrow('EEXIST');
-    expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
-  });
 });
 
 describe('writeDoorSecretsFromEnv: the command line', () => {
-  it('writes the file named by its argument from the environment', () => {
-    const path = scratch();
-    writeDoorSecretsFromEnv([path], VALUES);
+  it('writes the file from the environment and returns where', () => {
+    const path = writeDoorSecretsFromEnv(VALUES);
     expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
   });
 
-  it('refuses no path, naming its usage', () => {
-    expect(() => {
-      writeDoorSecretsFromEnv([], VALUES);
-    }).toThrow('usage: node scripts/door-secrets.ts <path>');
-  });
-
-  it('refuses an empty path, naming its usage', () => {
-    expect(() => {
-      writeDoorSecretsFromEnv([''], VALUES);
-    }).toThrow('usage: node scripts/door-secrets.ts <path>');
+  it('reads only the three secrets from the environment', () => {
+    const path = writeDoorSecretsFromEnv({ ...VALUES, OTHER: 'not a secret' });
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
   });
 });

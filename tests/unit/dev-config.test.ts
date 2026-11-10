@@ -252,6 +252,7 @@ describe('the dev Workers’ deploy configs', () => {
 
 /** The deploy job's steps, read as parsed YAML so no comment counts. */
 interface Step {
+  id?: string;
   name?: string;
   uses?: string;
   run?: unknown;
@@ -385,9 +386,7 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
       holds(
         'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
       ),
-      holds(
-        'npx wrangler deploy --secrets-file "$RUNNER_TEMP/site-secrets.json"',
-      ),
+      holds('npx wrangler deploy --secrets-file "$SECRETS_FILE"'),
       holds(
         'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
       ),
@@ -408,15 +407,22 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
 });
 
 describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
-  const FILE = '"$RUNNER_TEMP/site-secrets.json"';
-
   it('is written from the dev environment secret, then deployed with the site Worker (#332)', () => {
     const steps = deploySteps();
+    // The script names the file's path itself (SonarCloud S8707 on #943):
+    // a failed write stops the step, and the path goes to the deploy.
     const write = steps.findIndex(
-      (step) => runOf(step) === `node scripts/dev-secrets.ts ${FILE}`,
+      (step) =>
+        runOf(step) ===
+        'path="$(node scripts/dev-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"',
     );
     const deploy = steps.findIndex(
-      (step) => runOf(step) === `npx wrangler deploy --secrets-file ${FILE}`,
+      (step) =>
+        runOf(step) === 'npx wrangler deploy --secrets-file "$SECRETS_FILE"',
+    );
+    expect(steps[write]?.id).toBe('site-secrets');
+    expect(steps[deploy]?.env?.['SECRETS_FILE']).toBe(
+      '${{ steps.site-secrets.outputs.path }}',
     );
     expect(write).toBeGreaterThanOrEqual(0);
     expect(steps[write]?.env).toEqual({
