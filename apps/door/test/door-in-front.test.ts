@@ -93,9 +93,30 @@ const toOrigin = async (request: Request) => {
     : '';
   if (![SYNC_WORKER, SITE_WORKER].includes(worker))
     throw new Error(`no local origin for ${host}`);
-  return origins.getWorker(worker).fetch(request.url, {
+  const answer = await origins.getWorker(worker).fetch(request.url, {
     method: request.method,
     headers: Object.fromEntries(request.headers),
+  });
+  if (answer.status !== 101) return answer;
+  // This handoff is Node's fetch, whose WebSocket client offers compression
+  // that the door's own request never did, so the origin's 101 names an
+  // extension and the door refuses it ("added Sec-WebSocket-Extensions when
+  // client did not offer any", PR #940's run on 948ebee1). The 101 goes back
+  // without that one header, as the origin answers the door's real request.
+  const headers = Object.fromEntries(answer.headers);
+  delete headers['sec-websocket-extensions'];
+  const Answer = answer.constructor as new (
+    body: null,
+    init: {
+      status: number;
+      headers: Record<string, string>;
+      webSocket: unknown;
+    },
+  ) => typeof answer;
+  return new Answer(null, {
+    status: 101,
+    headers,
+    webSocket: answer.webSocket,
   });
 };
 
