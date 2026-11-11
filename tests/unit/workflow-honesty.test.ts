@@ -29,6 +29,7 @@ describe('every workflow', () => {
       'ci.yml',
       'dependabot-daily.yml',
       'deploy-dev.yml',
+      'deploy-door.yml',
       'deploy-prod.yml',
       'dev-behind-develop.yml',
       'logs.yml',

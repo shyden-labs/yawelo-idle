@@ -1,0 +1,82 @@
+# Deploys the front door (#784): one bindingless Worker, yawelo-idle-door, on
+# PROD's zone, passing each person's request for dev./dev-api./dev-holding./
+# test. on to its Worker at the non-PROD account's workers.dev addresses with
+# that environment's door secret (apps/door/worker/door.ts).
+#
+# Its own button, started by hand from main, never part of a release
+# (Shyden, 2026-11-10): the door needs the production account and the door
+# secrets, which exist only from the 2026-11-15 go-live, so a release before
+# then is unaffected. The job waits for Shyden's approval in the `production`
+# environment, which admits main alone. The live address is tested once by
+# hand after each door deploy, with the evidence put on #784 (Shyden,
+# 2026-11-09).
+#
+# Every value here is a `production` ENVIRONMENT secret, never a repository
+# secret (tests/unit/workflow-secrets.test.ts, tests/unit/prod-workflows.test.ts).
+name: deploy-door
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never overlaps a production deploy or rollback, and is never cancelled.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # A dispatch from any other branch stops here; the environment admits
+    # main alone as well.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://dev.yaweloidle.com
+    # The token and the door secrets are given only to the steps that need
+    # them, so npm ci's install scripts never hold them.
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: 'npm'
+      # No install scripts: the deploy needs wrangler's files, not the
+      # workspace's generated types.
+      - run: npm ci --ignore-scripts
+      - name: Prove the production token reaches the production account alone
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/token-reach.ts
+      # The script picks the file's place itself, a new directory in the
+      # system's temp, and prints it (SonarCloud S8707 on #943); bash's -e
+      # stops the step if the write fails.
+      - name: Write the door's secrets file
+        id: door-secrets
+        env:
+          ORIGIN_DOMAIN: ${{ secrets.DOOR_ORIGIN_DOMAIN }}
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          TEST_DOOR_SECRET: ${{ secrets.TEST_DOOR_SECRET }}
+        run: |
+          path="$(node scripts/door-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+      # Named from the repository root: from a subfolder of a workspace, npx
+      # runs wrangler at the workspace's root (deploy-dev run 38889757344).
+      - name: Deploy the front door
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SECRETS_FILE: ${{ steps.door-secrets.outputs.path }}
+        run: npx wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"
