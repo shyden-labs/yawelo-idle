@@ -48,6 +48,15 @@ describe('two read-backs at once (#638 AC5)', () => {
       number
     >;
     expect(Object.values(ledger).reduce((a, b) => a + b, 0)).toBe(200);
-    expect(order).toEqual(['first in', 'first out', 'second in', 'second out']);
+    // Either run may take the lock first (#958); neither enters before the
+    // other leaves.
+    const [winner, loser] =
+      order[0] === 'second in' ? ['second', 'first'] : ['first', 'second'];
+    expect(order).toEqual([
+      `${winner} in`,
+      `${winner} out`,
+      `${loser} in`,
+      `${loser} out`,
+    ]);
   });
 });
