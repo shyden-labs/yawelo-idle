@@ -14,8 +14,9 @@
  * where texts.json is a JSON array of strings; prints the read-back as a JSON
  * array in the same order.
  */
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { link, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -193,13 +194,20 @@ export function machineDeps(worktree: string = process.cwd()): LedgerDeps {
         throw error;
       }
     },
+    // The lock appears with its full content at once (#958): written to a
+    // private file first, then linked into place. The link fails on an
+    // existing lock, so no reader ever sees an empty lock and removes it.
     create: async (path, text) => {
+      const own = `${path}.${randomUUID()}`;
+      await writeFile(own, text, { flag: 'wx' });
       try {
-        await writeFile(path, text, { flag: 'wx' });
+        await link(own, path);
         return true;
       } catch (error) {
         if (isCode(error, 'EEXIST')) return false;
         throw error;
+      } finally {
+        await rm(own, { force: true });
       }
     },
     write: (path, text) => writeFile(path, text),
