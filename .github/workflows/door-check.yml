@@ -1,0 +1,52 @@
+# The door check (#784 AC6): reads each front door's requests and 5xx answers
+# over the last day from Cloudflare's analytics for PROD's zone, and reports a
+# failing door, or an answer it could not read, on one issue assigned to
+# ShydenMcM; the run goes red as well (scripts/door-check.ts).
+#
+# Its token (Zone Read and Analytics Read on PROD's zone alone) is a
+# `door-cron` ENVIRONMENT secret; that environment admits main alone, and the
+# job runs only from main (global rule: an unattended job's production
+# credential lives in its own environment, dispatched with --ref main). The
+# daily dispatch from develop is added with the 2026-11-15 go-live, when the
+# doors exist to be read (Shyden, 2026-11-09: built now, live then).
+#
+# A dispatch may name a door to plant three 5xx answers for: the planted
+# failure that proves the check speaks.
+name: door-check
+on:
+  workflow_dispatch:
+    inputs:
+      plant_failing_door:
+        description: 'Planted failure (#784 AC6): report three 5xx answers for this door host'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    environment: door-cron
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+      - name: Read each door's last day and report a failing one
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.DOOR_ANALYTICS_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PLANT_FAILING_DOOR: ${{ inputs.plant_failing_door }}
+        run: node scripts/door-check.ts

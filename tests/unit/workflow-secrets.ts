@@ -8,7 +8,9 @@ import { parse } from 'yaml';
  * an ENVIRONMENT secret: GitHub hands those to a job only if the job names the
  * environment, and `dev` and `production` each admit one branch. `board-read`
  * (#580) admits pull-request runs (each `refs/pull/<n>/merge`) and holds only the
- * read-only roadmap App's key; a fork's pull request gets no secrets at all,
+ * read-only roadmap App's key; `door-cron` (#784 AC6) admits main alone and
+ * holds only the door check's analytics token for PROD's zone. A fork's pull
+ * request gets no secrets at all,
  * so only branches pushed to this repository can reach it. A secret read
  * outside such a job can only be a repository secret, which any workflow on
  * any branch can read, so the rule this enforces is "no secret reference
@@ -24,6 +26,7 @@ export const PROTECTED_ENVIRONMENTS = [
   'production',
   'board-read',
   'sonarcloud',
+  'door-cron',
 ] as const;
 
 /** The token GitHub mints per run. It is not a stored secret. */
