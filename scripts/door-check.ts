@@ -178,8 +178,10 @@ export const outage = (problems: readonly string[]): Outage => ({
     'this issue to the board.',
 });
 
-function required(name: string): string {
-  const value = process.env[name];
+type Env = Readonly<Record<string, string | undefined>>;
+
+function required(env: Env, name: string): string {
+  const value = env[name];
   if (value === undefined || value === '')
     throw new Error(`${name} is not set`);
   return value;
@@ -240,23 +242,42 @@ export function withPlant(rows: readonly Row[], plant: string): Row[] {
     : [...rows, { host: plant, status: 500, count: 3 }];
 }
 
-if (import.meta.main) {
-  const repo = required('GITHUB_REPOSITORY');
+export interface MainDeps {
+  readonly fetcher: typeof fetch;
+  readonly now: Date;
+  /** Reports the outage on the repo's issue; says what it did. */
+  readonly report: (repo: string, outage: Outage) => string[];
+  readonly log: (line: string) => void;
+}
+
+/** One run of the daily check, as door-check.yml starts it: the exit code. */
+export async function main(env: Env, deps: MainDeps): Promise<number> {
+  const repo = required(env, 'GITHUB_REPOSITORY');
   const hosts = [...DOORS.keys()];
   const { ok, lines } = await checkDoors({
     hosts,
     readRows: async () =>
       withPlant(
         await readDoorRows(
-          required('CLOUDFLARE_API_TOKEN'),
+          required(env, 'CLOUDFLARE_API_TOKEN'),
           hosts,
-          new Date(),
-          fetch,
+          deps.now,
+          deps.fetcher,
         ),
-        process.env['PLANT_FAILING_DOOR'] ?? '',
+        env['PLANT_FAILING_DOOR'] ?? '',
       ),
-    report: (problems) => report(repo, runGh, outage(problems)),
+    report: (problems) => deps.report(repo, outage(problems)),
   });
-  for (const line of lines) console.log(line);
-  if (!ok) process.exit(1);
+  for (const line of lines) deps.log(line);
+  return ok ? 0 : 1;
 }
+
+if (import.meta.main)
+  process.exitCode = await main(process.env, {
+    fetcher: fetch,
+    now: new Date(),
+    report: (repo, found) => report(repo, runGh, found),
+    log: (line) => {
+      console.log(line);
+    },
+  });

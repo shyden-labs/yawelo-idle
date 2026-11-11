@@ -4,6 +4,7 @@ import {
   checkDoors,
   countDoors,
   ISSUE_TITLE,
+  main,
   outage,
   problemsOf,
   readDoorRows,
@@ -12,6 +13,7 @@ import {
   type Row,
 } from '../../scripts/door-check';
 import { DOORS } from '../../apps/door/worker/door';
+import type { Outage } from '../../scripts/issue-report';
 
 /**
  * The daily door check (#784 AC6): reads each door's requests and 5xx
@@ -141,6 +143,34 @@ describe('rowsOf', () => {
     ).toThrow('Cloudflare analytics returned no zone');
   });
 
+  it('refuses an answer that is not an object', () => {
+    expect(() => rowsOf(null)).toThrow(
+      'Cloudflare analytics answered no object',
+    );
+  });
+
+  it('refuses an array as the answer', () => {
+    expect(() => rowsOf([])).toThrow('Cloudflare analytics answered no object');
+  });
+
+  it("names an error of an unknown shape as '?'", () => {
+    expect(() => rowsOf({ data: null, errors: ['boom'] })).toThrow(
+      'Cloudflare analytics refused: ?',
+    );
+  });
+
+  it('refuses a zone with no request groups', () => {
+    expect(() => rowsOf(answer(undefined))).toThrow(
+      'Cloudflare analytics returned no request groups',
+    );
+  });
+
+  it('refuses a group that is not an object', () => {
+    expect(() => rowsOf(answer([4]))).toThrow(
+      'Cloudflare analytics returned a group of an unknown shape',
+    );
+  });
+
   it('refuses a group of the wrong shape', () => {
     expect(() => rowsOf(answer([{ count: '4', dimensions: {} }]))).toThrow(
       'Cloudflare analytics returned a group of an unknown shape',
@@ -204,6 +234,19 @@ describe('checkDoors', () => {
         "the doors' analytics could not be read: DOOR_ANALYTICS_TOKEN is not set",
       ],
     ]);
+  });
+
+  it('names a rejection that is not an Error by its text', async () => {
+    const result = await checkDoors({
+      hosts: HOSTS,
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the case under test
+      readRows: () => Promise.reject('offline'),
+      report: () => [],
+    });
+    expect(result).toEqual({
+      ok: false,
+      lines: ["the doors' analytics could not be read: offline"],
+    });
   });
 });
 
@@ -273,6 +316,12 @@ describe('readDoorRows: the two Cloudflare calls', () => {
     );
   });
 
+  it('refuses a zones answer that is not an object', async () => {
+    await expect(
+      readDoorRows('token', HOSTS, NOW, fakeFetch([], [[]])),
+    ).rejects.toThrow('the token reaches no zone named yaweloidle.com');
+  });
+
   it('refuses a token that reaches no zone of that name', async () => {
     await expect(
       readDoorRows('token', HOSTS, NOW, fakeFetch([], [{ result: [] }])),
@@ -294,6 +343,98 @@ describe('withPlant: the planted failure', () => {
   it('adds nothing when no door is named', () => {
     expect(withPlant([{ host: DEV, status: 200, count: 1 }], '')).toEqual([
       { host: DEV, status: 200, count: 1 },
+    ]);
+  });
+});
+
+describe('main: the run the workflow starts', () => {
+  const NOW = new Date('2026-11-15T01:00:00.000Z');
+  const ENV = {
+    GITHUB_REPOSITORY: 'shyden-labs/yawelo-idle',
+    CLOUDFLARE_API_TOKEN: 'token',
+  };
+  const quietFetch = (() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify(
+          (quietFetch as unknown as { calls: number }).calls++ === 0
+            ? { result: [{ id: 'zone-1' }] }
+            : {
+                data: {
+                  viewer: {
+                    zones: [
+                      {
+                        httpRequestsAdaptiveGroups: HOSTS.map((host) => ({
+                          count: 1,
+                          dimensions: {
+                            clientRequestHTTPHost: host,
+                            edgeResponseStatus: 200,
+                          },
+                        })),
+                      },
+                    ],
+                  },
+                },
+              },
+        ),
+      ),
+    )) as unknown as typeof fetch & { calls: number };
+  const run = (env: Record<string, string | undefined>) => {
+    quietFetch.calls = 0;
+    const reports: { repo: string; outage: Outage }[] = [];
+    const logged: string[] = [];
+    const done = main(env, {
+      fetcher: quietFetch,
+      now: NOW,
+      report: (repo, outage) => {
+        reports.push({ repo, outage });
+        return ['reported'];
+      },
+      log: (line) => logged.push(line),
+    });
+    return { done, reports, logged };
+  };
+
+  it('passes, logs each door and reports nothing when every door is quiet', async () => {
+    const { done, reports, logged } = run(ENV);
+    expect(await done).toBe(0);
+    expect(reports).toEqual([]);
+    expect(logged).toEqual(
+      HOSTS.map((host) => `✓ ${host}: 1 requests, 0 answered 5xx`),
+    );
+  });
+
+  it('fails and reports the planted door on the repo when one is planted', async () => {
+    const { done, reports, logged } = run({ ...ENV, PLANT_FAILING_DOOR: DEV });
+    expect(await done).toBe(1);
+    expect(reports.map(({ repo }) => repo)).toEqual([
+      'shyden-labs/yawelo-idle',
+    ]);
+    expect(reports[0]?.outage.title).toBe(ISSUE_TITLE);
+    expect(reports[0]?.outage.problems.join('\n')).toContain(DEV);
+    expect(logged).toContain(`✗ ${DEV}: 4 requests, 3 answered 5xx`);
+    expect(logged.at(-1)).toBe('reported');
+  });
+
+  it('refuses to start without the repository', async () => {
+    await expect(run({ CLOUDFLARE_API_TOKEN: 'token' }).done).rejects.toThrow(
+      'GITHUB_REPOSITORY is not set',
+    );
+  });
+
+  it('refuses an empty repository', async () => {
+    await expect(run({ ...ENV, GITHUB_REPOSITORY: '' }).done).rejects.toThrow(
+      'GITHUB_REPOSITORY is not set',
+    );
+  });
+
+  it('fails and reports a missing Cloudflare token', async () => {
+    const { done, reports } = run({
+      GITHUB_REPOSITORY: 'shyden-labs/yawelo-idle',
+    });
+    expect(await done).toBe(1);
+    expect(reports[0]?.outage.problems).toEqual([
+      "the doors' analytics could not be read: CLOUDFLARE_API_TOKEN is not set",
     ]);
   });
 });
