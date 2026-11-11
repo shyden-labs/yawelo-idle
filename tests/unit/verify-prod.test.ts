@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Probe } from '../../scripts/verify-dev';
-import type { MediaHost } from '../../apps/site/src/media';
+import {
+  DEV_MEDIA,
+  PROD_MEDIA,
+  type MediaHost,
+} from '../../apps/site/src/media';
 import {
   mediaJudgement,
   mediaProblems,
@@ -15,6 +19,8 @@ import {
   reportedCommit,
   robotsJudgement,
   robotsProblems,
+  printVerdict,
+  verdictLines,
   type MediaProbe,
   type MediaSource,
 } from '../../scripts/verify-prod';
@@ -473,5 +479,64 @@ describe('the commit a page reports', () => {
 
   it('is undefined on a page with no stamp', () => {
     expect(reportedCommit('<html></html>')).toBeUndefined();
+  });
+});
+
+describe('verdictLines (#715): every line names the environment it checked', () => {
+  it('a passing production check names production and its media host', () => {
+    expect(verdictLines('production', PROD_MEDIA, [])).toEqual([
+      `✓ production serves exactly what this commit builds, in English and Indonesian, with its headers, 404 pages, robots file and promo video from ${PROD_MEDIA.origin}`,
+    ]);
+  });
+
+  it('a passing dev-copy check names the dev copy and its media host', () => {
+    expect(verdictLines('dev copy', DEV_MEDIA, [])).toEqual([
+      `✓ the holding page's dev copy serves exactly what this commit builds, in English and Indonesian, with its headers, 404 pages, robots file and promo video from ${DEV_MEDIA.origin}`,
+    ]);
+  });
+
+  it('a failing production check names production on each problem', () => {
+    expect(
+      verdictLines('production', PROD_MEDIA, [
+        '/ answered 500',
+        'robots.txt differs',
+      ]),
+    ).toEqual([
+      '✗ production: / answered 500',
+      '✗ production: robots.txt differs',
+    ]);
+  });
+
+  it('a failing dev-copy check names the dev copy on each problem', () => {
+    expect(verdictLines('dev copy', DEV_MEDIA, ['/ answered 500'])).toEqual([
+      "✗ the holding page's dev copy: / answered 500",
+    ]);
+  });
+});
+
+describe('printVerdict (#715): from the --dev-copy flag, prints the lines and gives the exit code', () => {
+  const recorder = () => {
+    const out: string[] = [];
+    const err: string[] = [];
+    return {
+      out,
+      err,
+      log: (line: string) => out.push(line),
+      error: (line: string) => err.push(line),
+    };
+  };
+
+  it('prints the success line and exits 0 when nothing failed', () => {
+    const console = recorder();
+    expect(printVerdict(true, [], console)).toBe(0);
+    expect(console.out).toEqual(verdictLines('dev copy', DEV_MEDIA, []));
+    expect(console.err).toEqual([]);
+  });
+
+  it('prints each failure as an error and exits 1', () => {
+    const console = recorder();
+    expect(printVerdict(false, ['/ answered 500'], console)).toBe(1);
+    expect(console.err).toEqual(['✗ production: / answered 500']);
+    expect(console.out).toEqual([]);
   });
 });
