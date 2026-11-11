@@ -462,6 +462,51 @@ function required(name: string): string {
   return value;
 }
 
+/** Which copy of the holding page a run checked. */
+export type Checked = 'production' | 'dev copy';
+
+const NAMES: Readonly<Record<Checked, string>> = {
+  production: 'production',
+  'dev copy': "the holding page's dev copy",
+};
+
+/**
+ * What a run prints (#715): one line per problem, or the one success line,
+ * each naming the copy it checked, and the success line its media host too,
+ * so a dev-copy run never reads as a production one.
+ */
+export function verdictLines(
+  checked: Checked,
+  media: MediaHost,
+  problems: readonly string[],
+): string[] {
+  const name = NAMES[checked];
+  if (problems.length > 0)
+    return problems.map((problem) => `✗ ${name}: ${problem}`);
+  return [
+    `✓ ${name} serves exactly what this commit builds, in English and Indonesian, with its headers, 404 pages, robots file and promo video from ${media.origin}`,
+  ];
+}
+
+/**
+ * Prints a run's verdict (#715): `devCopy` is the `--dev-copy` flag, naming
+ * the copy and the media host checked. The success line goes to
+ * `console.log`, each failure to `console.error`. Returns the exit code.
+ */
+export function printVerdict(
+  devCopy: boolean,
+  problems: readonly string[],
+  console: { log(line: string): void; error(line: string): void },
+): number {
+  const lines = devCopy
+    ? verdictLines('dev copy', DEV_MEDIA, problems)
+    : verdictLines('production', PROD_MEDIA, problems);
+  for (const line of lines)
+    if (problems.length > 0) console.error(line);
+    else console.log(line);
+  return problems.length > 0 ? 1 : 0;
+}
+
 if (import.meta.main) {
   // `--dev-copy` checks the holding page's noindex dev copy (#621 AC8) against
   // dist-holding-dev, made by scripts/holding-dev.ts; otherwise production.
@@ -478,11 +523,5 @@ if (import.meta.main) {
     !dev,
     dev ? DEV_MEDIA : PROD_MEDIA,
   );
-  if (problems.length > 0) {
-    for (const problem of problems) console.error(`✗ ${problem}`);
-    process.exit(1);
-  }
-  console.log(
-    '✓ production serves exactly what this commit builds, in English and Indonesian, with its headers, 404 pages, robots file and promo video',
-  );
+  process.exitCode = printVerdict(dev, problems, console);
 }

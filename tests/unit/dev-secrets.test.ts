@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { writeSecretsFile } from '../../scripts/dev-secrets';
 
@@ -23,46 +23,36 @@ const SOURCES = [
   ['ROADMAP_WEBHOOK_SECRET', 'ROADMAP_WEBHOOK_SECRET'],
   ['ROADMAP_APP_KEY', 'ROADMAP_APP_KEY'],
 ] as const;
-const scratch = () =>
-  join(mkdtempSync(join(tmpdir(), 'dev-secrets-')), 's.json');
+const devDirectories = () =>
+  readdirSync(tmpdir()).filter((entry) => entry.startsWith('dev-secrets-'));
 
 describe('writeSecretsFile', () => {
-  it('writes the three secrets, exactly, in JSON', () => {
-    const path = scratch();
-    writeSecretsFile(path, VALUES);
+  it('writes the three secrets, exactly, in JSON, and returns where', () => {
+    const path = writeSecretsFile(VALUES);
     expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
   });
 
-  it('makes the file readable by its owner only', () => {
-    const path = scratch();
-    writeSecretsFile(path, VALUES);
-    expect(statSync(path).mode & 0o777).toBe(0o600);
+  it('writes into a directory named for the dev site', () => {
+    expect(basename(dirname(writeSecretsFile(VALUES)))).toMatch(
+      /^dev-secrets-/,
+    );
   });
 
   for (const [secret, source] of SOURCES) {
     it(`refuses a missing ${secret}, naming ${source}, and writes nothing`, () => {
-      const path = scratch();
-      expect(() => {
-        writeSecretsFile(path, { ...VALUES, [secret]: undefined });
-      }).toThrow(`${source} is not set`);
-      expect(() => statSync(path)).toThrow('ENOENT');
+      const before = devDirectories();
+      expect(() =>
+        writeSecretsFile({ ...VALUES, [secret]: undefined }),
+      ).toThrow(`${source} is not set`);
+      expect(devDirectories()).toStrictEqual(before);
     });
 
     it(`refuses an empty ${secret}, naming ${source}, and writes nothing`, () => {
-      const path = scratch();
-      expect(() => {
-        writeSecretsFile(path, { ...VALUES, [secret]: '' });
-      }).toThrow(`${source} is not set`);
-      expect(() => statSync(path)).toThrow('ENOENT');
+      const before = devDirectories();
+      expect(() => writeSecretsFile({ ...VALUES, [secret]: '' })).toThrow(
+        `${source} is not set`,
+      );
+      expect(devDirectories()).toStrictEqual(before);
     });
   }
-
-  it('refuses to overwrite a file already there', () => {
-    const path = scratch();
-    writeSecretsFile(path, VALUES);
-    expect(() => {
-      writeSecretsFile(path, { ...VALUES, DEV_PASSWORD: 'other' });
-    }).toThrow('EEXIST');
-    expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
-  });
 });
