@@ -8,7 +8,7 @@
 
 - **Merged #959** (#958's ledger lock fix) as `58e0748cff01027b78f6758d4ed19cb7ea19d4c3`. **#958 closed** with the evidence on it: the integration test passed in build-and-test, coverage and sonar-coverage on the head.
 - **PR #955 (#942):** branch updated; head `84733c5e3ad7711c15a588842476c12715c357b3`, CI running.
-- **#957 (In Progress):** PR **#960**, branch `fix/957-id-dev-banner`, head `52856f4fff2a23828e493f1c60b47b94b4ef1fce`, worktree `../yawelo-idle-957`. New `apps/site/src/dev-strip.test.ts`, seen red on *sangat berbeda* first; local unit suite 14115 passed. PR #960 is BEHIND develop (opened before #959's merge landed in its base).
+- **#957 (In Progress):** PR **#960**, branch `fix/957-id-dev-banner`, head `52856f4fff2a23828e493f1c60b47b94b4ef1fce`, worktree `../yawelo-idle-957`. New `apps/site/src/dev-strip.test.ts`, seen red on _sangat berbeda_ first; local unit suite 14115 passed. PR #960 is BEHIND develop (opened before #959's merge landed in its base).
 - Worktrees `-784` and `-958` removed. Road to Launch page republished (v33, 06:44 WIB).
 
 ## Resume steps
