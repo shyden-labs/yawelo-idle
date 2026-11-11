@@ -12,6 +12,7 @@ import { parse } from 'yaml';
 const WORKFLOWS = new URL('../../.github/workflows/', import.meta.url).pathname;
 
 interface Step {
+  id?: string;
   name?: string;
   run?: string;
   'working-directory'?: string;
@@ -246,16 +247,22 @@ describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from 
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
       TEST_DOOR_SECRET: '${{ secrets.TEST_DOOR_SECRET }}',
     });
+    // The script names the file's path itself (SonarCloud S8707 on #943):
+    // a failed write stops the step, and the path goes to the deploy.
+    expect(write.id).toBe('door-secrets');
     expect(write.run).toBe(
-      'node scripts/door-secrets.ts "$RUNNER_TEMP/door-secrets.json"',
+      'path="$(node scripts/door-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"\n',
     );
   });
 
   it('deploys the door config, named from the repository root, with its secrets, tagged with the commit', () => {
     const deploy = step('deploy-door.yml', 'deploy', 'Deploy the front door');
     expect(deploy['working-directory']).toBeUndefined();
+    expect(deploy.env?.['SECRETS_FILE']).toBe(
+      '${{ steps.door-secrets.outputs.path }}',
+    );
     expect(deploy.run).toBe(
-      'npx wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$RUNNER_TEMP/door-secrets.json" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
+      'npx wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
     );
   });
 

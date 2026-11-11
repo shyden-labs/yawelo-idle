@@ -1,8 +1,8 @@
 /**
- * Writes the dev site Worker's secrets file (#357, #341).
+ * Writes the dev site Worker's secrets file (#357, #341) and prints its path.
  *
  *     DEV_PASSWORD=… ROADMAP_WEBHOOK_SECRET=… ROADMAP_APP_KEY=… \
- *       node scripts/dev-secrets.ts <path>
+ *       node scripts/dev-secrets.ts
  *
  * The deploy then runs `wrangler deploy --secrets-file <path>`, which uploads
  * them with the Worker version itself. Each is kept in one place, a `dev`
@@ -20,20 +20,17 @@ const SOURCES = {
 } as const;
 
 export function writeSecretsFile(
-  path: string,
   values: Partial<Record<keyof typeof SOURCES, string>>,
-): void {
-  writeSecretsFileFrom(SOURCES, path, values);
+): string {
+  return writeSecretsFileFrom('dev-secrets', SOURCES, values);
 }
 
 if (import.meta.main) {
-  const path = process.argv[2];
-  if (path === undefined || path === '')
-    throw new Error('usage: node scripts/dev-secrets.ts <path>');
-  writeSecretsFile(path, {
-    DEV_PASSWORD: process.env['DEV_PASSWORD'],
-    ROADMAP_WEBHOOK_SECRET: process.env['ROADMAP_WEBHOOK_SECRET'],
-    ROADMAP_APP_KEY: process.env['ROADMAP_APP_KEY'],
-  });
-  console.log(`✓ wrote the site's secrets to ${path}`);
+  console.log(
+    writeSecretsFile({
+      DEV_PASSWORD: process.env['DEV_PASSWORD'],
+      ROADMAP_WEBHOOK_SECRET: process.env['ROADMAP_WEBHOOK_SECRET'],
+      ROADMAP_APP_KEY: process.env['ROADMAP_APP_KEY'],
+    }),
+  );
 }
