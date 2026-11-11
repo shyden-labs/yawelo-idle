@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-11 14:12 WIB (seventy-first session, `yawelo-idle-70`). Nothing runs locally. No Colima or device claim held. **Phones:** none needed. Three PRs wait on GitHub CI only.
+**Written:** 2026-11-11 15:33 WIB (seventy-first session, `yawelo-idle-70`, laptop shutdown). Nothing runs locally. Colima stopped, no claims. **Phones:** none needed. At 15:31 WIB PRs #955, #954, #949 and #950 had every check green (unmerged): merge them one at a time.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. board-next names #783 (P0), which waits on the next release cut: nothing to do there now.
 
@@ -9,7 +9,7 @@
 - **Merged:** Dependabot #948 into develop as `0f6f67e5d252cd2ab0f7ca9da2fbd66c866a6aa3`.
 - **PR #954 (#784 AC6 door check):** Sonar gate failed on new-code coverage (75.6% < 80, all in `scripts/door-check.ts`). Commit `9299ff32`: the entry block became an exported `main(env, deps)` returning the exit code; 12 tests added (main red first; 5 mutants each killed). Develop merged in; head `2f1bfb88`, pushed. Local unit run: 14113 passed.
 - **#949** updated from develop (CI running). **#955** CI still running from 14:01 WIB.
-- Road to Launch page republished (v30, 14:10 WIB).
+- Road to Launch page republished (v31, 15:32 WIB).
 
 ## Resume steps
 
