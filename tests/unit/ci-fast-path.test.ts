@@ -52,6 +52,7 @@ const ORDER = [
   'actions/checkout',
   'Read the exact Node version (docker/node/Dockerfile)',
   'actions/setup-node',
+  "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
   'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
@@ -80,6 +81,7 @@ const DOCS_ONLY = [
   'actions/checkout',
   'Read the exact Node version (docker/node/Dockerfile)',
   'actions/setup-node',
+  "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
   'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
@@ -148,6 +150,17 @@ describe('build-and-test’s steps (#360 AC2)', () => {
     );
     expect(readers.map(idOf)).toEqual(Object.keys(SKIPPED));
     expect(all.map(idOf)).toEqual(ORDER);
+  });
+});
+
+describe('the ICU and CLDR print (#942 AC4)', () => {
+  it('prints the ICU and CLDR versions of the Node the job runs, with Node alone', () => {
+    const print = steps().find(
+      (s) => idOf(s) === "Print Node's ICU and CLDR versions (#942)",
+    );
+    expect(print?.run).toBe(
+      "node -p '`icu ${process.versions.icu} cldr ${process.versions.cldr}`'",
+    );
   });
 });
 
