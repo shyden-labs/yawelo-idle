@@ -1,41 +1,26 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-13 18:20 WIB (session `yawelo-idle-a0`). Colima not used. **Phones:** none needed (a peer relayed "both devices plugged in"; nothing here uses them).
+**Written:** 2026-11-13 18:34 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
-- **New global rule** (Shyden): anything can deploy to dev at any time (`~/.claude/CLAUDE.md` Supply Chain; reference-supply-chain.md). Every peer session was told.
-- **#961** closed: `dev` and `board-read` environments set to No restriction in Shyden's Chrome (read back); PR #962 merged as `ef366e57` (deploy-dev deploys any branch started by hand; a `pull_request_target` job may name no environment). Branch deploy run 43386209090 green.
-- **#933** reopened, P0: AC4's "every assertion kept" was a line count, not proof. ACs 6–9 added (count assertions in CI both sides, map each one).
-- Repeated-journeys audit (repo-template's request): nothing new since #933.
-
-## In flight
-
-- **#933**, branch `933-assertion-counts`, worktree `../yawelo-idle-933`, pushed head `6a4116d3`. No PR yet.
-- **Before/after mapping DONE** and posted on #933 (comment 6851186490): every pre-#934 assertion is kept. The 23 fewer runtime assertions are all setup that now runs once per journey: `openMap()` 2×(14→5) = 18, and `conflicted()`'s merge check 6→1 = 5.
-- deploy-dev run **43415406638** on `6a4116d3` (the width fold) was dispatched at 18:15 WIB. Dispatch nothing else on dev until it finishes.
+- **#957 closed**: banner measured on dev by headless Playwright with `DEV_PASSWORD` (`~/.config/shyden/yawelo-dev.env`), evidence on the ticket. Shyden: never ask him to type the dev password again (memory `feedback-dev-access-without-shyden`). `dev.yawelo-idle.shyden.co.uk` = holding page; the full site = `yawelo-idle-site-dev.shyden-labs-dev.workers.dev`.
+- **#933**: run 43415406638 on `6a4116d3` all green; roadmap 35 assertions on each of 5 targets, posted (comment 6851640260). **PR #963** opened.
+- **#830** decision (Shyden, 18:40 WIB, recorded on the ticket): build the Indonesian with Google read-back; **may merge into develop** once read-back matches; ticket stays open for his reading before production.
 
 ## Resume steps
 
-1. `gh run view 43415406638 -R shyden-labs/yawelo-idle`. When it is done, save `--log` to the scratchpad and pull the site-smoke `Assertions per test (#933):` block. Expected roadmap result: "pressing islands" goes 12→14, "fits 320 px" is gone (−3), so the roadmap total is 36−1 = 35, because one `openMap` call (2 assertions) disappears and the overflow check (1) moves into the journey. Post the figures on #933.
-2. Open the #933 PR (`Refs #933`) and merge it once green on its headRefOid. Then delete branch `933-before-934` and both worktrees (`-933`, `-933-before`), and check ACs 6–9 before closing #933 by hand.
-3. **#957 AC3:** Shyden types the dev password in the Yawelo Chrome tab (`dev.yawelo-idle.shyden.co.uk/id/`). Then check `COPY.id.devStrip` and close.
-4. **#830:** Indonesian translation with Google read-back, then implement (approved 2026-11-13).
-5. **PARKED until 2026-11-15:** #784 go-live.
+1. **PR #963**: `~/.claude/scripts/pr-verdict.sh 963`. Green on its headRefOid → squash-merge into develop (`--match-head-commit` from a file). Then delete branch `933-before-934`, remove worktrees `../yawelo-idle-933`, `../yawelo-idle-933-before` (and `-961`), check ACs 6–9 against the #933 comments, close #933 by hand.
+2. **#830 after 15:00 WIB 2026-11-14** (Google day resets): drafts in `.superpowers/sdd/830/830-id.json` (+ `830-en.json`). Run `node scripts/google-read-back.ts id en < 830-id.json` and `en id < 830-en.json` from `-dev-scripts`; write `docs/translations/<date>-roadmap-id.md` (table like `2026-10-16-holding-page-id.md`); implement in `apps/site/src/copy-en.ts` / `copy.ts` test-first; merge to develop when green; leave #830 open for Shyden.
+3. **PARKED until 2026-11-15:** #784 go-live.
 
-## Decided by Shyden 2026-11-13 15:35 WIB
+## Waiting on Shyden (AFK)
 
-- **#830** draft approved as written: next, Indonesian translation with Google read-back, then implement.
-- **#717**: read-only daily Cloudflare cron reading the public run list, emailing support@yaweloidle.com; no GitHub key in Cloudflare.
-- **Epic #6** closed (18/18). Stray `scratch-928-*`/`scratch-ho-*` logs deleted.
-
-## Waiting on Shyden
-
-- #957 dev password in the Yawelo tab; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
+- #830 final reading of the Indonesian; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
 
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `ef366e576b6f550cdb4caaf432218a25825212b2`.
-- Worktrees: `-dev-scripts` (detached), `-933`, `-933-before`. `-961` can be removed.
+- Worktrees: `-dev-scripts` (detached), `-933`, `-933-before`, `-961` (removable).
