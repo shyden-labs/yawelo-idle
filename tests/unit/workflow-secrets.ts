@@ -6,9 +6,9 @@ import { parse } from 'yaml';
  * The agent App has `workflows: write`, and this repo is public, so anyone can
  * open a fork PR that runs workflows. That is safe only while every secret is
  * an ENVIRONMENT secret: GitHub hands those to a job only if the job names the
- * environment, and `dev` and `production` each admit one branch. `board-read`
- * (#580) admits pull-request runs (each `refs/pull/<n>/merge`) and holds only the
- * read-only roadmap App's key; `door-cron` (#784 AC6) admits main alone and
+ * environment. `production` admits `main` alone; `dev` and `board-read` admit
+ * every branch (#961: anything can deploy to dev), `board-read` holding only
+ * the read-only roadmap App's key; `door-cron` (#784 AC6) admits main alone and
  * holds only the door check's analytics token for PROD's zone. A fork's pull
  * request gets no secrets at all,
  * so only branches pushed to this repository can reach it. A secret read
@@ -158,7 +158,9 @@ function targetStepProblems(id: string, step: Yaml): string[] {
  * request's code or carry its text: no checkout of a ref or repository, no
  * kept credential, no secret, a token writing nothing but statuses, no
  * expression in a shell line or action input, no fetching tool in a shell
- * line, no action beyond checkout and setup-node, and no reusable workflow.
+ * line, no action beyond checkout and setup-node, no reusable workflow, and
+ * no environment (#961: dev admits every branch, so naming it here would hand
+ * its secrets to a run a pull request started).
  */
 function targetProblems(
   permissions: Yaml,
@@ -184,6 +186,12 @@ function targetProblems(
   );
   for (const [id, job] of jobs) {
     if (!isRecord(job)) continue;
+    const environment = environmentName(job.environment);
+    if (environment !== undefined) {
+      problems.push(
+        `job ${id} names environment "${environment}"; no job here may name an environment`,
+      );
+    }
     if (typeof job.uses === 'string') {
       problems.push(
         `jobs.${id} calls the reusable workflow ${job.uses}, which these rules cannot follow`,
