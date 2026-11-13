@@ -1,5 +1,9 @@
 import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
-import { BROWSER_TARGETS, TARGET_TOTALS_REPORTER } from '../browser-targets';
+import {
+  ASSERTION_COUNTS_REPORTER,
+  BROWSER_TARGETS,
+  TARGET_TOTALS_REPORTER,
+} from '../browser-targets';
 
 /**
  * The site's browser suite (#827): the roadmap page as deployed on dev, the
@@ -34,7 +38,7 @@ export function siteSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: [['list'], [TARGET_TOTALS_REPORTER]],
+    reporter: [['list'], [TARGET_TOTALS_REPORTER], [ASSERTION_COUNTS_REPORTER]],
     projects: BROWSER_TARGETS,
   };
   return defineConfig({

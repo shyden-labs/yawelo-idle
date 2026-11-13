@@ -23,3 +23,8 @@ export const BROWSER_TARGETS: (Project & { name: string })[] = [
 export const TARGET_TOTALS_REPORTER = fileURLToPath(
   new URL('target-totals-reporter.ts', import.meta.url),
 );
+
+/** Prints each test's count of assertions made in the run (#933 AC6). */
+export const ASSERTION_COUNTS_REPORTER = fileURLToPath(
+  new URL('assertion-counts-reporter.ts', import.meta.url),
+);

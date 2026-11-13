@@ -2,6 +2,7 @@ import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
 import {
   BROWSER_TARGETS,
   TARGET_TOTALS_REPORTER,
+  ASSERTION_COUNTS_REPORTER,
 } from './tests/browser-targets';
 
 /**
@@ -42,7 +43,7 @@ export function webSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: [['list'], [TARGET_TOTALS_REPORTER]],
+    reporter: [['list'], [TARGET_TOTALS_REPORTER], [ASSERTION_COUNTS_REPORTER]],
     projects: BROWSER_TARGETS,
   };
   const target = env['WEB_SMOKE_URL'];

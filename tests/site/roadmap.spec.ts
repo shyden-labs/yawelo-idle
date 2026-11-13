@@ -158,6 +158,17 @@ test('pressing islands: a panel opens with its plain words, closes, and only one
   await press(buttons.nth(1), hasTouch);
   await expect.soft(buttons.nth(0)).toHaveAttribute('aria-expanded', 'false');
   await expect.soft(buttons.nth(1)).toHaveAttribute('aria-expanded', 'true');
+
+  // At 320 px wide, with an island open, nothing scrolls sideways. The width
+  // is a step of this journey, not a journey of its own (2026-11-13).
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.reload();
+  await expect(page.locator('.island').first()).toBeVisible();
+  await press(buttons.first(), hasTouch);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect.soft(overflow, 'horizontal scroll at 320 px').toBeLessThanOrEqual(0);
 });
 
 test('the keyboard: Tab reaches the first island, Enter opens it, Space closes it', async ({
@@ -175,19 +186,6 @@ test('the keyboard: Tab reaches the first island, Enter opens it, Space closes i
   await expect.soft(first).toHaveAttribute('aria-expanded', 'true');
   await page.keyboard.press('Space');
   await expect.soft(first).toHaveAttribute('aria-expanded', 'false');
-});
-
-test('fits 320 px wide with no horizontal scroll', async ({
-  page,
-  hasTouch,
-}) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  await openMap(page);
-  await press(islandButtons(page).first(), hasTouch);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - window.innerWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test('says it is not live when the socket is refused, keeping the snapshot read (#829)', async ({

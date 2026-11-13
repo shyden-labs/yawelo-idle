@@ -58,4 +58,14 @@ describe('the integration suite in CI (#490)', () => {
     ]);
     expect(root.test?.exclude).toContain('tests/integration/**');
   });
+
+  it('prints each integration test’s count of assertions made (#933)', () => {
+    expect(integration.test?.setupFiles).toEqual([
+      'tests/vitest-assertion-counts-setup.ts',
+    ]);
+    expect(integration.test?.reporters).toEqual([
+      'default',
+      './tests/vitest-assertion-counts.ts',
+    ]);
+  });
 });
