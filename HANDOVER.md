@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-13 15:12 WIB (session `yawelo-idle-68`, continued). Colima not used. **Phones:** none needed.
+**Written:** 2026-11-13 15:25 WIB (session `yawelo-idle-68`, continued). Colima not used. **Phones:** none needed.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
@@ -14,12 +14,13 @@
 ## In flight
 
 - **#933**, branch `933-assertion-counts`, worktree `../yawelo-idle-933`. Pushed head `8a6d9ab6` (counters wired into web/site/engines Playwright and integration). **Local, unpushed:** `6a4116d3`: "fits 320 px wide" folded into "pressing islands" as its last step (prettier, eslint, `tsc -p tests/site` clean). No PR yet.
-- Measuring branch `933-before-934` (`3b2b1175`, worktree `../yawelo-idle-933-before`): the 5 files from `e18f890a`. **Never merge it**; delete it after measuring. **Not dispatched yet.**
-- deploy-dev run 43389539517 on `933-assertion-counts` (`8a6d9ab6`) was pending at 15:10 WIB behind develop's push run 43389070608. Dispatch only one at a time: a second pending run in the concurrency group cancels the first.
+- Measuring branch `933-before-934` (`3b2b1175`, worktree `../yawelo-idle-933-before`): the 5 files from `e18f890a`. **Never merge it**; delete it after measuring. Dispatched: deploy-dev run **43391580634**, pending at 15:22 WIB.
+- deploy-dev run **43389539517** on `933-assertion-counts` (`8a6d9ab6`) in progress at 15:22 WIB (build-and-test running). Dispatch nothing more until both finish: a second pending run in the concurrency group cancels the first.
+- Unit suite on `6a4116d3` was running in the background (log `../yawelo-idle-933/.superpowers/sdd/933/unit-6a4116d3.log`); if the session ended, it is DEAD: re-run `npm run test:unit` there.
 
 ## Resume steps
 
-1. `gh run list -R shyden-labs/yawelo-idle --workflow deploy-dev.yml -L 4`. When 43389539517 has finished, `gh workflow run deploy-dev.yml -R shyden-labs/yawelo-idle --ref 933-before-934`.
+1. `gh run list -R shyden-labs/yawelo-idle --workflow deploy-dev.yml -L 4`: wait for 43389539517 (after) and 43391580634 (before) to finish.
 2. Pull counts from both runs: `gh run view <id> -R shyden-labs/yawelo-idle --log`, the lines after `Assertions per test (#933):` per job (build-and-test for integration, smoke, site-smoke).
 3. Map every pre-#934 assertion to its home now; post counts, mapping and run links on #933. A missing one: ticket, restore with a failing test first.
 4. Push `6a4116d3`, dispatch deploy-dev on it, and record the site-smoke counts before/after the width fold (roadmap.spec "pressing islands" +2, "fits 320 px" test gone with its 2).
