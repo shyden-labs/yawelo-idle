@@ -155,6 +155,14 @@ describe('scanWorkflow', () => {
     expect(problems(target(`${checkout()}${setupNode}${judge}`))).toEqual([]);
   });
 
+  it('refuses pull_request_target whose job names an environment (#961)', () => {
+    // Dev admits every branch (#961), so a job here naming one would run
+    // the default branch's workflow with that environment's secrets.
+    expect(problems(target(checkout(), '    environment: dev\n'))).toEqual([
+      'pull_request_target: job t names environment "dev"; no job here may name an environment',
+    ]);
+  });
+
   it('refuses pull_request_target that sets no permissions', () => {
     expect(problems(target(checkout(), '', ''))).toEqual([NO_PERMISSIONS]);
   });
@@ -288,6 +296,7 @@ describe('scanWorkflow', () => {
   it('refuses pull_request_target that reads a secret, even in a protected environment', () => {
     const steps = `${checkout()}      - run: deploy\n        env:\n          TOKEN: \${{ secrets.DEPLOY }}\n`;
     expect(problems(target(steps, '    environment: dev\n'))).toEqual([
+      'pull_request_target: job t names environment "dev"; no job here may name an environment',
       'pull_request_target: it reads secrets.DEPLOY, which nothing triggered by a pull request may hold',
     ]);
   });
