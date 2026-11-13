@@ -18,10 +18,10 @@ describe('deploy-dev can be dispatched on develop alone (#497 AC3)', () => {
     });
   });
 
-  // Every other job needs `test`, so a dispatch from any other branch runs
-  // nothing; the `dev` environment admits develop alone as well.
-  it('runs its first job only on develop', () => {
-    expect(workflow('deploy-dev.yml').jobs?.['test']?.if).toBe(DEVELOP_ONLY);
+  // A push deploys develop alone (above); a run started by hand deploys the
+  // branch it is started on, since anything can deploy to dev (#961).
+  it('runs its first job on whichever branch it is started on (#961)', () => {
+    expect(workflow('deploy-dev.yml').jobs?.['test']?.if).toBeUndefined();
   });
 });
 
