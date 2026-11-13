@@ -32,6 +32,7 @@ describe('every workflow', () => {
       'deploy-door.yml',
       'deploy-prod.yml',
       'dev-behind-develop.yml',
+      'door-check.yml',
       'logs.yml',
       'npm-audit-daily.yml',
       'rollback-prod.yml',
