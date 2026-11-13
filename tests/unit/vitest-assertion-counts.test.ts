@@ -5,55 +5,68 @@ import VitestAssertionCounts, {
 } from '../vitest-assertion-counts';
 
 /**
- * Each integration test's assertions are counted as the run makes them
- * (#933 AC6): Vitest's own count of `expect` calls in a test, hard and soft,
- * which the setup file records on the test's meta after each test, and the
- * reporter prints. These stand-ins carry what each side reads.
+ * #933 AC6, redone test-first: Vitest's own count of each integration
+ * test's assertions, recorded on its meta and printed.
  */
-
-const testCase = (file: string, name: string, assertions?: number): TestCase =>
+const testCase = (
+  file: string,
+  fullName: string,
+  meta: Record<string, unknown>,
+) =>
   ({
-    fullName: name,
     module: { relativeModuleId: file },
-    meta: () => (assertions === undefined ? {} : { assertions }),
+    fullName,
+    meta: () => meta,
   }) as unknown as TestCase;
 
-function report(cases: TestCase[]): string {
-  const printed: string[] = [];
-  const reporter = new VitestAssertionCounts({
-    write: (t) => printed.push(t),
+const run = (cases: TestCase[]): string => {
+  let printed = '';
+  const reporter = new VitestAssertionCounts((text) => {
+    printed += text;
   });
-  for (const c of cases) reporter.onTestCaseResult(c);
+  for (const one of cases) reporter.onTestCaseResult(one);
   reporter.onTestRunEnd();
-  return printed.join('');
-}
+  return printed;
+};
 
-describe('the Vitest assertion counts reporter', () => {
-  it('prints each test’s recorded count, and the total', () => {
-    expect(
-      report([
-        testCase('tests/integration/a.test.ts', 'a > reads', 4),
-        testCase('tests/integration/b.test.ts', 'b > writes', 1),
-      ]),
-    ).toBe(
-      'Assertions per test (#933):\n' +
-        'tests/integration/a.test.ts › a > reads: 4\n' +
-        'tests/integration/b.test.ts › b > writes: 1\n' +
-        'Assertions in all: 5 in 2 tests\n',
-    );
-  });
-
-  it('prints a test with no recorded count as unknown, never as 0', () => {
-    expect(
-      report([testCase('tests/integration/a.test.ts', 'a > skipped')]),
-    ).toContain('tests/integration/a.test.ts › a > skipped: unknown\n');
+describe('recordAssertions', () => {
+  it('puts the count on the meta', () => {
+    const meta: Record<string, unknown> = {};
+    recordAssertions(meta, 4);
+    expect(meta).toEqual({ assertionCalls: 4 });
   });
 });
 
-describe('recordAssertions', () => {
-  it('copies the assertion count onto the test’s meta', () => {
-    const task = { meta: {} as Record<string, unknown> };
-    recordAssertions(task, 3);
-    expect(task.meta).toEqual({ assertions: 3 });
+describe('the Vitest assertion counts reporter (#933)', () => {
+  it('prints each test’s recorded count under the heading, with the total', () => {
+    expect(
+      run([
+        testCase('tests/integration/a.test.ts', 'reads > the tree', {
+          assertionCalls: 3,
+        }),
+        testCase('tests/integration/b.test.ts', 'writes', {
+          assertionCalls: 0,
+        }),
+      ]),
+    ).toBe(
+      'Assertions per test (#933):\n' +
+        'tests/integration/a.test.ts › reads > the tree: 3\n' +
+        'tests/integration/b.test.ts › writes: 0\n' +
+        'Assertions in all: 3 in 2 tests\n',
+    );
+  });
+
+  it('prints unknown, never 0, for a test with no recorded count, and leaves it out of the total', () => {
+    expect(
+      run([
+        testCase('tests/integration/a.test.ts', 'skipped', {}),
+        testCase('tests/integration/b.test.ts', 'ran', { assertionCalls: 2 }),
+      ]),
+    ).toBe(
+      'Assertions per test (#933):\n' +
+        'tests/integration/a.test.ts › skipped: unknown\n' +
+        'tests/integration/b.test.ts › ran: 2\n' +
+        'Assertions in all: 2 in 2 tests\n',
+    );
   });
 });
