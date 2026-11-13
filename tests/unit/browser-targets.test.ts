@@ -4,7 +4,11 @@ import { devices, type PlaywrightTestConfig } from '@playwright/test';
 import enginesConfig from '../../playwright.engines.config';
 import { webSmokeConfig } from '../../playwright.web.config';
 import { siteSmokeConfig } from '../site/smoke-config';
-import { BROWSER_TARGETS, TARGET_TOTALS_REPORTER } from '../browser-targets';
+import {
+  ASSERTION_COUNTS_REPORTER,
+  BROWSER_TARGETS,
+  TARGET_TOTALS_REPORTER,
+} from '../browser-targets';
 
 /**
  * One suite, run unchanged on every target (#883 AC1, AC2). The targets are
@@ -75,7 +79,11 @@ describe.each(CONFIGS)('%s (#883 AC2, AC3)', (_label, config) => {
     expect(config.projects).toEqual(BROWSER_TARGETS);
   });
 
-  it('prints each target’s total and fails when they differ', () => {
-    expect(config.reporter).toEqual([['list'], [TARGET_TOTALS_REPORTER]]);
+  it('prints each target’s total, fails when they differ, and counts each test’s assertions (#933)', () => {
+    expect(config.reporter).toEqual([
+      ['list'],
+      [TARGET_TOTALS_REPORTER],
+      [ASSERTION_COUNTS_REPORTER],
+    ]);
   });
 });

@@ -16,5 +16,9 @@ export default defineConfig({
     include: ['tests/integration/**/*.test.ts'],
     testTimeout: 0,
     hookTimeout: 0,
+    // Each test's count of assertions made (#933), so a merge of tests can
+    // be proven to keep every check.
+    setupFiles: ['tests/vitest-assertion-counts-setup.ts'],
+    reporters: ['default', './tests/vitest-assertion-counts.ts'],
   },
 });
