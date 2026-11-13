@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-13 18:58 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
+**Written:** 2026-11-13 20:53 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
@@ -17,7 +17,7 @@
 
 ## Resume steps
 
-1. Work P3 tickets (board-next lists P0s that wait on the release; pick the first actionable P3 from the board).
+1. **#104 (UI catalogues), in progress, NOT pushed:** worktree `../yawelo-idle-104`, branch `104-ui-catalogues`, local commit `89ba4964` (wip). Plan and red/plant logs in `../yawelo-idle-104/.superpowers/sdd/104/`. Built test-first: `packages/ui/src/i18n/{catalogue,review,same-in-both}.ts`, `t`/`parts`/`slots`, the Shell on the catalogue, content exports `reviewSchema`/`missingEvidence`/`Review`; every guard seen red by a planted defect. Only red left: 5 "can ship" tests (review blocks are `draft`). **After 15:00 WIB 2026-11-14:** Google read-back of the 4 Indonesian strings (`game.name` is allow-listed), write each claude-checked block (2 sources, back-translation, label audit for ≤3 words), `docs/translations/2026-11-14-ui-catalogue-id.md`; run the unit suite; squash the wip into one commit; push; set #104 In Progress; PR `Refs #104`; merge on green.
 2. **#830 after 15:00 WIB 2026-11-14** (Google day resets): drafts in `.superpowers/sdd/830/830-id.json` (+ `830-en.json`). Run `node scripts/google-read-back.ts id en < 830-id.json` and `en id < 830-en.json` from `-dev-scripts`; write `docs/translations/<date>-roadmap-id.md` (table like `2026-10-16-holding-page-id.md`); implement in `apps/site/src/copy-en.ts` / `copy.ts` test-first; merge to develop when green; leave #830 open for Shyden.
 3. **PARKED until 2026-11-15:** #784 go-live.
 
@@ -28,4 +28,4 @@
 ## State
 
 - Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `1fae584d` (#963).
-- Worktrees: `-dev-scripts` (detached at origin/develop `1fae584d`).
+- Worktrees: `-dev-scripts` (detached at origin/develop `1fae584d`), `-104` (branch `104-ui-catalogues`, local only).
