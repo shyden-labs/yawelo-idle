@@ -81,6 +81,7 @@ const DRY_RUNS = [
   'deploy-dev.yml / deploy / Deploy the game Worker',
   "deploy-dev.yml / deploy / Deploy the holding page's dev copy",
   'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
+  'deploy-door.yml / deploy / Deploy the front door',
   'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
 ];
 
@@ -101,11 +102,14 @@ describe('every wrangler call reads the config it means (#627)', () => {
   });
 
   it.each(DRY_RUNS)(
-    '%s: a dry run reports the assets directory it means',
+    '%s: a dry run reports the assets directory it means, or none',
     (step) => {
       const meant = WRANGLER_STEPS.find((each) => each.step === step);
       if (meant === undefined) throw new Error(`${step}: not in the table`);
-      expect(assetsReported(dryRun(callAt(step)))).toBe(assetsOf(ROOT, meant));
+      // A Worker with no assets (the door) reports none: null on both sides.
+      expect(assetsReported(dryRun(callAt(step))) ?? null).toBe(
+        assetsOf(ROOT, meant),
+      );
     },
   );
 });

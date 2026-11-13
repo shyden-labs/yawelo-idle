@@ -19,6 +19,7 @@ export interface WorkflowStep {
   readonly if?: string;
   readonly uses?: string;
   readonly 'timeout-minutes'?: number;
+  readonly 'continue-on-error'?: unknown;
   // YAML may type it otherwise: read it through runOf.
   readonly run?: unknown;
   readonly env?: Readonly<Record<string, unknown>>;
@@ -30,6 +31,7 @@ export interface WorkflowJob {
   readonly needs?: unknown;
   readonly 'runs-on'?: string;
   readonly 'timeout-minutes'?: number;
+  readonly 'continue-on-error'?: unknown;
   readonly environment?: unknown;
   readonly container?: { readonly image?: string; readonly options?: string };
   readonly env?: Readonly<Record<string, unknown>>;

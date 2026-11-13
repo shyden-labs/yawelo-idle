@@ -19,7 +19,7 @@ import {
  * because Dependabot's docker ecosystem bumps it and no ecosystem bumps
  * `.nvmrc` (#793, global rule amended 2026-10-30; the shape is
  * shyden-labs/repo-template#143's): each Node release arrives as Dependabot's
- * own pull request. 26.12.1 is the version every project runs.
+ * own pull request. 26.13.0 is the version every project runs.
  * `engines.node` (with `.npmrc` `engine-strict=true`)
  * refuses what the line must not run: eslint-plugin-astro and
  * astro-eslint-parser need `^22.22.3 || ^24.16.0 || >=26.3.0`, so Node 26.0
@@ -54,8 +54,8 @@ const READ_VERSION = [
 const VERSION_OUTPUT = '${{ steps.node.outputs.version }}';
 
 describe('the Node version (#785, #793)', () => {
-  it('the Dockerfile holds node 26.12.1 exactly, the version every project runs', () => {
-    expect(readFileSync(DOCKERFILE, 'utf8')).toBe('FROM node:26.12.1\n');
+  it('the Dockerfile holds node 26.13.0 exactly, the version every project runs', () => {
+    expect(readFileSync(DOCKERFILE, 'utf8')).toBe('FROM node:26.13.0\n');
   });
 
   it('.nvmrc is gone, so the version has one home', () => {

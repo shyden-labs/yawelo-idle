@@ -158,8 +158,10 @@ export const COPY: Record<Locale, Copy> = {
   },
   id: {
     languageName: 'Bahasa Indonesia',
+    // Google read-back 2026-11-12 (#957): "In development: what you see may
+    // change, and the released game may be completely different."
     devStrip:
-      'Dalam pengembangan: yang Anda lihat bisa berubah, dan game yang dirilis bisa sangat berbeda.',
+      'Dalam pengembangan: yang Anda lihat bisa berubah, dan game yang dirilis bisa sama sekali berbeda.',
     comingSoon: 'Segera hadir',
     tagline: 'Petualangan idle menjelajahi bahasa sungguhan.',
     titles: { home: 'Yawelo Idle', roadmap: 'Peta jalan' },

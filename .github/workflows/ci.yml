@@ -65,6 +65,10 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
+      # Dates and language names come from Node's built-in ICU and CLDR, so the
+      # run records which ones it used (#942 AC4).
+      - name: Print Node's ICU and CLDR versions (#942)
+        run: node -p '`icu ${process.versions.icu} cldr ${process.versions.cldr}`'
       - name: Classify the change as docs-only or full (#360)
         id: classify
         env:
