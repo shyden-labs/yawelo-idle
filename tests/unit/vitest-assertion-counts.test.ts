@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { TestCase } from 'vitest/node';
 import VitestAssertionCounts, {
   recordAssertions,
@@ -21,8 +21,10 @@ const testCase = (
 
 const run = (cases: TestCase[]): string => {
   let printed = '';
-  const reporter = new VitestAssertionCounts((text) => {
-    printed += text;
+  const reporter = new VitestAssertionCounts({
+    write: (text: string) => {
+      printed += text;
+    },
   });
   for (const one of cases) reporter.onTestCaseResult(one);
   reporter.onTestRunEnd();
@@ -68,5 +70,17 @@ describe('the Vitest assertion counts reporter (#933)', () => {
         'tests/integration/b.test.ts › ran: 2\n' +
         'Assertions in all: 2 in 2 tests\n',
     );
+  });
+
+  it('writes to stdout when Vitest builds it with its own options', () => {
+    const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    try {
+      new VitestAssertionCounts({}).onTestRunEnd();
+      expect(stdout).toHaveBeenCalledWith(
+        'Assertions per test (#933):\nAssertions in all: 0 in 0 tests\n',
+      );
+    } finally {
+      stdout.mockRestore();
+    }
   });
 });

@@ -17,12 +17,18 @@ export default class AssertionCounts implements Reporter {
 
   private readonly write: (text: string) => void;
 
+  /**
+   * The runner builds a reporter with its own options object, so the
+   * writer comes in one too; a test passes `write`, the runner none.
+   */
   constructor(
-    write: (text: string) => void = (text) => {
-      process.stdout.write(text);
-    },
+    options: { write?: (text: string) => void; [option: string]: unknown } = {},
   ) {
-    this.write = write;
+    this.write =
+      options.write ??
+      ((text) => {
+        process.stdout.write(text);
+      });
   }
 
   /** `project › file › describe… › title`. */

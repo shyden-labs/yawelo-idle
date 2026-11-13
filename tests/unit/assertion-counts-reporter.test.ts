@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { TestCase, TestResult, TestStep } from '@playwright/test/reporter';
 import AssertionCounts from '../assertion-counts-reporter';
 
@@ -18,8 +18,10 @@ const result = {} as TestResult;
 
 const run = (play: (reporter: AssertionCounts) => void): string => {
   let printed = '';
-  const reporter = new AssertionCounts((text) => {
-    printed += text;
+  const reporter = new AssertionCounts({
+    write: (text: string) => {
+      printed += text;
+    },
   });
   play(reporter);
   reporter.onEnd();
@@ -93,5 +95,17 @@ describe('the Playwright assertion counts reporter (#933)', () => {
       r.onStepEnd(test, result, step('expect'));
     });
     expect(printed).toContain('chromium › x.spec.ts › flaky: 1\n');
+  });
+
+  it('writes to stdout when Playwright builds it with its own options', () => {
+    const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    try {
+      new AssertionCounts({ configDir: '/repo' }).onEnd();
+      expect(stdout).toHaveBeenCalledWith(
+        'Assertions per test (#933):\nAssertions in all: 0 in 0 tests\n',
+      );
+    } finally {
+      stdout.mockRestore();
+    }
   });
 });
