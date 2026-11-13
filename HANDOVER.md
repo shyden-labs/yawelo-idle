@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-13 15:40 WIB (session `yawelo-idle-68`, continued). Colima not used. **Phones:** none needed.
+**Written:** 2026-11-13 18:20 WIB (session `yawelo-idle-a0`). Colima not used. **Phones:** none needed (a peer relayed "both devices plugged in"; nothing here uses them).
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
@@ -13,20 +13,17 @@
 
 ## In flight
 
-- **#933**, branch `933-assertion-counts`, worktree `../yawelo-idle-933`. Pushed head `6a4116d3` (on top of `8a6d9ab6`, counters wired into web/site/engines Playwright and integration); "fits 320 px wide" folded into "pressing islands" as its last step (prettier, eslint, `tsc -p tests/site` clean). No PR yet.
-- Measuring branch `933-before-934` (`3b2b1175`, worktree `../yawelo-idle-933-before`): the 5 files from `e18f890a`. **Never merge it**; delete it after measuring. Dispatched: deploy-dev run **43391580634**, pending at 15:22 WIB.
-- deploy-dev run **43389539517** on `933-assertion-counts` (`8a6d9ab6`) in progress at 15:22 WIB (build-and-test running). Dispatch nothing more until both finish: a second pending run in the concurrency group cancels the first.
-- `6a4116d3` (width fold) **pushed**; unit suite 14131/14131 passed first (rc 0). Not yet deployed: dispatch it only after both measuring runs finish.
+- **#933**, branch `933-assertion-counts`, worktree `../yawelo-idle-933`, pushed head `6a4116d3`. No PR yet.
+- **Before/after mapping DONE** and posted on #933 (comment 6851186490): every pre-#934 assertion is kept. The 23 fewer runtime assertions are all setup that now runs once per journey: `openMap()` 2×(14→5) = 18, and `conflicted()`'s merge check 6→1 = 5.
+- deploy-dev run **43415406638** on `6a4116d3` (the width fold) was dispatched at 18:15 WIB. Dispatch nothing else on dev until it finishes.
 
 ## Resume steps
 
-1. `gh run list -R shyden-labs/yawelo-idle --workflow deploy-dev.yml -L 4`: wait for 43389539517 (after) and 43391580634 (before) to finish.
-2. Pull counts from both runs: `gh run view <id> -R shyden-labs/yawelo-idle --log`, the lines after `Assertions per test (#933):` per job (build-and-test for integration, smoke, site-smoke).
-3. Map every pre-#934 assertion to its home now; post counts, mapping and run links on #933. A missing one: ticket, restore with a failing test first.
-4. Dispatch deploy-dev on `933-assertion-counts` (`6a4116d3`, already pushed) and record the site-smoke counts before/after the width fold (roadmap.spec "pressing islands" +2, "fits 320 px" test gone with its 2).
-5. Open the #933 PR, merge on green, delete `933-before-934` and both worktrees.
-6. **#957 AC3:** Shyden types the dev password in the Yawelo Chrome tab (`dev.yawelo-idle.shyden.co.uk/id/`, Browser `df91d304`); then check `COPY.id.devStrip` and close.
-7. **PARKED until 2026-11-15:** #784 go-live.
+1. `gh run view 43415406638 -R shyden-labs/yawelo-idle`. When it is done, save `--log` to the scratchpad and pull the site-smoke `Assertions per test (#933):` block. Expected roadmap result: "pressing islands" goes 12→14, "fits 320 px" is gone (−3), so the roadmap total is 36−1 = 35, because one `openMap` call (2 assertions) disappears and the overflow check (1) moves into the journey. Post the figures on #933.
+2. Open the #933 PR (`Refs #933`) and merge it once green on its headRefOid. Then delete branch `933-before-934` and both worktrees (`-933`, `-933-before`), and check ACs 6–9 before closing #933 by hand.
+3. **#957 AC3:** Shyden types the dev password in the Yawelo Chrome tab (`dev.yawelo-idle.shyden.co.uk/id/`). Then check `COPY.id.devStrip` and close.
+4. **#830:** Indonesian translation with Google read-back, then implement (approved 2026-11-13).
+5. **PARKED until 2026-11-15:** #784 go-live.
 
 ## Decided by Shyden 2026-11-13 15:35 WIB
 
