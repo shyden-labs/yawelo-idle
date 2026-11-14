@@ -1,11 +1,11 @@
 import { afterEach, expect } from 'vitest';
 import { recordAssertions } from './vitest-assertion-counts';
 
-// After each integration test, record Vitest's count of its `expect` calls
-// on the test's meta, for the assertion counts reporter (#933 AC6).
+// After each integration test, Vitest's own count of the assertions it made
+// goes on the test's meta, where the counts reporter reads it (#933 AC6).
 afterEach(({ task }) => {
   recordAssertions(
-    task as unknown as { meta: Record<string, unknown> },
+    task.meta as Record<string, unknown>,
     expect.getState().assertionCalls,
   );
 });

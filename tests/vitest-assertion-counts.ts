@@ -1,42 +1,54 @@
 import type { Reporter, TestCase } from 'vitest/node';
 
 /**
- * Prints how many assertions each integration test made in this run (#933
- * AC6), read from Vitest itself: its count of `expect` calls in the test,
- * hard and soft. The setup file (vitest-assertion-counts-setup.ts) copies
- * that count onto the test's meta after each test; this reporter prints it.
- * A test with no recorded count prints "unknown", never 0.
+ * Prints how many assertions each integration test made in the run (#933
+ * AC6), from Vitest's own count, copied onto the test's meta by
+ * ./vitest-assertion-counts-setup.ts. A test with no count recorded (one
+ * skipped, or failed before its hook ran) prints `unknown`, never 0.
  */
 export default class VitestAssertionCounts implements Reporter {
-  private readonly write: (text: string) => void;
   private readonly lines: string[] = [];
   private all = 0;
 
-  constructor(options: { write?: (text: string) => void } = {}) {
-    this.write = options.write ?? ((text) => process.stdout.write(text));
+  private readonly write: (text: string) => void;
+
+  /**
+   * The runner builds a reporter with its own options object, so the
+   * writer comes in one too; a test passes `write`, the runner none.
+   */
+  constructor(
+    options: { write?: (text: string) => void; [option: string]: unknown } = {},
+  ) {
+    this.write =
+      options.write ??
+      ((text) => {
+        process.stdout.write(text);
+      });
   }
 
   onTestCaseResult(testCase: TestCase): void {
-    const recorded = (testCase.meta() as { assertions?: unknown }).assertions;
-    const count = typeof recorded === 'number' ? recorded : undefined;
-    if (count !== undefined) this.all += count;
+    const recorded: unknown = (testCase.meta() as Record<string, unknown>)
+      .assertionCalls;
+    const count = typeof recorded === 'number' ? recorded : null;
+    if (count !== null) this.all += count;
     this.lines.push(
-      `${testCase.module.relativeModuleId} › ${testCase.fullName}: ${count === undefined ? 'unknown' : String(count)}\n`,
+      `${testCase.module.relativeModuleId} › ${testCase.fullName}: ${count === null ? 'unknown' : String(count)}\n`,
     );
   }
 
   onTestRunEnd(): void {
     this.write(
-      `Assertions per test (#933):\n${this.lines.join('')}` +
+      'Assertions per test (#933):\n' +
+        this.lines.join('') +
         `Assertions in all: ${String(this.all)} in ${String(this.lines.length)} tests\n`,
     );
   }
 }
 
-/** Copies a test's assertion count onto its meta, for the reporter. */
+/** Copies a finished test's assertion count onto its meta, for the reporter. */
 export function recordAssertions(
-  task: { meta: Record<string, unknown> },
-  assertions: number,
+  meta: Record<string, unknown>,
+  assertionCalls: number,
 ): void {
-  task.meta['assertions'] = assertions;
+  meta.assertionCalls = assertionCalls;
 }

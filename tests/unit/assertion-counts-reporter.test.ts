@@ -1,78 +1,111 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { TestCase, TestResult, TestStep } from '@playwright/test/reporter';
 import AssertionCounts from '../assertion-counts-reporter';
 
 /**
- * Each browser test's assertions are counted as the run makes them (#933
- * AC6): every `expect`, hard or soft, is one of Playwright's steps in the
- * `expect` category. An `expect` inside another (a `toPass` or `poll` retry)
- * is not counted again, so a retry cannot inflate a test's count. These
- * stand-ins carry what the reporter reads.
+ * #933 AC6, redone test-first: the Playwright reporter counts each test's
+ * `expect` steps (hard and soft alike), once each, and prints them.
  */
-
-const test = (...path: string[]): TestCase =>
-  ({ titlePath: () => ['', ...path] }) as unknown as TestCase;
+const testCase = (project: string, file: string, ...titles: string[]) =>
+  ({
+    titlePath: () => ['', project, file, ...titles],
+  }) as unknown as TestCase;
 
 const step = (category: string, parent?: TestStep): TestStep =>
   ({ category, parent }) as unknown as TestStep;
 
-const RESULT = {} as TestResult;
+const result = {} as TestResult;
 
-function report(run: (reporter: AssertionCounts) => void): Promise<string> {
-  const printed: string[] = [];
-  const reporter = new AssertionCounts({ write: (t) => printed.push(t) });
-  run(reporter);
-  return reporter.onEnd().then(() => printed.join(''));
-}
+const run = (play: (reporter: AssertionCounts) => void): string => {
+  let printed = '';
+  const reporter = new AssertionCounts({
+    write: (text: string) => {
+      printed += text;
+    },
+  });
+  play(reporter);
+  reporter.onEnd();
+  return printed;
+};
 
-describe('the assertion counts reporter', () => {
-  it('prints each test’s count of expect steps, hard and soft alike', async () => {
-    const a = test('chromium', 'roadmap.spec.ts', 'draws the board');
-    const b = test('chromium', 'shell.spec.ts', 'loads the game');
-    const printed = await report((r) => {
-      r.onTestBegin(a);
-      r.onStepEnd(a, RESULT, step('expect'));
-      r.onStepEnd(a, RESULT, step('expect'));
-      r.onStepEnd(a, RESULT, step('pw:api'));
-      r.onTestBegin(b);
-      r.onStepEnd(b, RESULT, step('expect'));
+describe('the Playwright assertion counts reporter (#933)', () => {
+  it('prints each test’s expect steps under the heading, with the total', () => {
+    const first = testCase('chromium', 'site/roadmap.spec.ts', 'opens');
+    const second = testCase('webkit', 'site/roadmap.spec.ts', 'closes');
+    const printed = run((r) => {
+      r.onTestBegin(first);
+      r.onStepEnd(first, result, step('expect'));
+      r.onStepEnd(first, result, step('expect'));
+      r.onTestBegin(second);
+      r.onStepEnd(second, result, step('expect'));
     });
     expect(printed).toBe(
       'Assertions per test (#933):\n' +
-        'chromium › roadmap.spec.ts › draws the board: 2\n' +
-        'chromium › shell.spec.ts › loads the game: 1\n' +
+        'chromium › roadmap.spec.ts › opens: 2\n' +
+        'webkit › roadmap.spec.ts › closes: 1\n' +
         'Assertions in all: 3 in 2 tests\n',
     );
   });
 
-  it('does not count an expect made inside another expect', async () => {
-    const a = test('webkit-phone', 'roadmap.spec.ts', 'polls the board');
-    const printed = await report((r) => {
-      r.onTestBegin(a);
-      const outer = step('expect');
-      r.onStepEnd(a, RESULT, step('expect', outer));
-      r.onStepEnd(a, RESULT, step('expect', step('test.step', outer)));
-      r.onStepEnd(a, RESULT, outer);
+  it('counts no step that is not an expect', () => {
+    const test = testCase('firefox', 'a.spec.ts', 'loads');
+    const printed = run((r) => {
+      r.onTestBegin(test);
+      r.onStepEnd(test, result, step('pw:api'));
+      r.onStepEnd(test, result, step('hook'));
     });
-    expect(printed).toContain(
-      'webkit-phone › roadmap.spec.ts › polls the board: 1\n',
-    );
+    expect(printed).toContain('firefox › a.spec.ts › loads: 0\n');
   });
 
-  it('counts an expect inside a test.step', async () => {
-    const a = test('chromium', 'roadmap.spec.ts', 'opens a card');
-    const printed = await report((r) => {
-      r.onTestBegin(a);
-      r.onStepEnd(a, RESULT, step('expect', step('test.step')));
+  it('counts an expect inside a test.step', () => {
+    const test = testCase('firefox', 'a.spec.ts', 'loads');
+    const printed = run((r) => {
+      r.onTestBegin(test);
+      r.onStepEnd(test, result, step('expect', step('test.step')));
     });
-    expect(printed).toContain('chromium › roadmap.spec.ts › opens a card: 1\n');
+    expect(printed).toContain('firefox › a.spec.ts › loads: 1\n');
   });
 
-  it('prints a test that made no assertion as 0', async () => {
-    const a = test('chromium', 'shell.spec.ts', 'checks nothing');
-    const printed = await report((r) => {
-      r.onTestBegin(a);
+  it('does not count an expect made inside another expect (a toPass retry)', () => {
+    const test = testCase('firefox', 'a.spec.ts', 'loads');
+    const outer = step('expect');
+    const printed = run((r) => {
+      r.onTestBegin(test);
+      r.onStepEnd(test, result, step('expect', step('pw:api', outer)));
+      r.onStepEnd(test, result, outer);
     });
-    expect(printed).toContain('chromium › shell.spec.ts › checks nothing: 0\n');
+    expect(printed).toContain('firefox › a.spec.ts › loads: 1\n');
+  });
+
+  it('names a test by its describe blocks too', () => {
+    const test = testCase('chromium', 'x.spec.ts', 'the map', 'opens');
+    const printed = run((r) => {
+      r.onTestBegin(test);
+    });
+    expect(printed).toContain('chromium › x.spec.ts › the map › opens: 0\n');
+  });
+
+  it('counts a retried test from its last attempt alone', () => {
+    const test = testCase('chromium', 'x.spec.ts', 'flaky');
+    const printed = run((r) => {
+      r.onTestBegin(test);
+      r.onStepEnd(test, result, step('expect'));
+      r.onStepEnd(test, result, step('expect'));
+      r.onTestBegin(test);
+      r.onStepEnd(test, result, step('expect'));
+    });
+    expect(printed).toContain('chromium › x.spec.ts › flaky: 1\n');
+  });
+
+  it('writes to stdout when Playwright builds it with its own options', () => {
+    const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    try {
+      new AssertionCounts({ configDir: '/repo' }).onEnd();
+      expect(stdout).toHaveBeenCalledWith(
+        'Assertions per test (#933):\nAssertions in all: 0 in 0 tests\n',
+      );
+    } finally {
+      stdout.mockRestore();
+    }
   });
 });
