@@ -50,7 +50,7 @@ const IDS = 'unique lexicon ids';
 const STRINGS = 'no empty strings';
 
 /** The fixture's string leaves, counted by `jq '[..|strings]|length'`. */
-const FIXTURE_LEAVES = 22;
+const FIXTURE_LEAVES = 30;
 
 describe('structureChecks: the fixtures pass, and say what they judged', () => {
   it('en-id judges its one id', () => {

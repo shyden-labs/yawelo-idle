@@ -3,8 +3,9 @@
  * refuses a malformed pack here, so the engine never meets bad data.
  *
  * The pack is the spec's flat shape. Lexicon items carry exactly #101 AC2's
- * fields; every other kind is a strict `{ id }` until the story that reads
- * more adds it (#102, #110, #462). Every object is strict (AC4), so a typo
+ * fields; grammar nodes, culture cards, motifs and story lines carry their
+ * id, source and licence (#102), and the rest a strict `{ id }`, until the
+ * story that reads more adds it (#110, #462). Every object is strict (AC4), so a typo
  * such as `translation` is refused rather than ignored.
  */
 import { z } from 'zod';
@@ -121,6 +122,16 @@ const lexiconItem = z.strictObject({
 /** A kind no story reads yet: an id and nothing else. */
 const idOnly = z.strictObject({ id: z.string() });
 
+/**
+ * A content kind whose fields later stories add (#110, #462): its id, and
+ * the source and licence every content item records (#102 AC3).
+ */
+const licensedItem = z.strictObject({
+  id: z.string(),
+  source: z.string(),
+  licence: z.string(),
+});
+
 export const courseSchema = z
   .strictObject({
     id: z.string(),
@@ -130,10 +141,10 @@ export const courseSchema = z
     destinations: z.array(idOnly),
     encounters: z.array(idOnly),
     lexicon: z.array(lexiconItem),
-    grammarNodes: z.array(idOnly),
-    cultureCards: z.array(idOnly),
-    motifs: z.array(idOnly),
-    story: z.array(idOnly),
+    grammarNodes: z.array(licensedItem),
+    cultureCards: z.array(licensedItem),
+    motifs: z.array(licensedItem),
+    story: z.array(licensedItem),
   })
   .superRefine((course, context) => {
     if (course.sourceLang === course.targetLang)
@@ -345,4 +356,116 @@ function noEmptyStrings(course: CoursePack): StructureCheck {
  */
 export function structureChecks(course: CoursePack): readonly StructureCheck[] {
   return [uniqueIds(course), noEmptyStrings(course)];
+}
+
+/**
+ * The content licence allow-list (#102 AC1; spec §5.3, D17): adapted CC BY-SA
+ * material stays CC BY-SA, and original work is CC BY-NC-SA. Nothing else
+ * ships, however close its spelling.
+ */
+export const LICENCES = ['CC-BY-SA-4.0', 'CC-BY-NC-SA-4.0'] as const;
+export type Licence = (typeof LICENCES)[number];
+
+/** The ShareAlike licence an item from a BY-SA source must keep. */
+const SHARE_ALIKE: Licence = 'CC-BY-SA-4.0';
+
+/**
+ * Every source an item may cite (#102 AC4), by the id before the first
+ * colon of its `source` (`wiktionary:rumah` cites `wiktionary`).
+ */
+export const SOURCES: Readonly<
+  Record<string, { readonly licence: Licence; readonly url: string }>
+> = {
+  // Wiktionary's text is CC BY-SA 4.0 (Wikimedia Terms of Use from 2023-06-07).
+  wiktionary: { licence: 'CC-BY-SA-4.0', url: 'https://en.wiktionary.org/' },
+  // Written by Shyden Labs for the game (LICENSE-CONTENT.md).
+  original: {
+    licence: 'CC-BY-NC-SA-4.0',
+    url: 'https://github.com/shyden-labs/yawelo-idle',
+  },
+};
+
+/** An item the licence guard judges: its id, its source and its licence. */
+export interface Licensed {
+  readonly id: string;
+  readonly source: string;
+  readonly licence: string;
+}
+
+const isLicence = (licence: string): licence is Licence =>
+  (LICENCES as readonly string[]).includes(licence);
+
+/** Why one item's licence may not ship, if it may not. */
+function licenceErrors(kind: string, item: Licensed): LoadError[] {
+  const error = (field: string, why: string): LoadError => ({
+    kind,
+    item: item.id,
+    field,
+    message: `${kind} ${item.id}: ${why}`,
+  });
+  const errors: LoadError[] = [];
+  if (!isLicence(item.licence))
+    errors.push(
+      error(
+        'licence',
+        `licence "${item.licence}" is not ${LICENCES.join(' or ')}`,
+      ),
+    );
+  const [sourceId = ''] = item.source.split(':');
+  const source = Object.hasOwn(SOURCES, sourceId)
+    ? SOURCES[sourceId]
+    : undefined;
+  if (source === undefined)
+    errors.push(
+      error(
+        'source',
+        `source "${item.source}" names no registered source (${sourceId})`,
+      ),
+    );
+  else if (
+    source.licence === SHARE_ALIKE &&
+    isLicence(item.licence) &&
+    item.licence !== SHARE_ALIKE
+  )
+    errors.push(
+      error(
+        'licence',
+        `licence is ${item.licence}, but source ${sourceId} is ${SHARE_ALIKE}, so ShareAlike keeps it ${SHARE_ALIKE}`,
+      ),
+    );
+  return errors;
+}
+
+/**
+ * The licence guard over one kind's items (#102): each refusal names the
+ * item, and the verdict says how many it judged, so an empty kind cannot
+ * pass for a clean one. The UI catalogue runs it too (AC3).
+ */
+export function licenceCheck(
+  kind: string,
+  items: readonly Licensed[],
+): StructureCheck {
+  return verdict(
+    `licences: ${kind}`,
+    items.length,
+    items.flatMap((item) => licenceErrors(kind, item)),
+  );
+}
+
+/** The content kinds that carry a licence, in the order they are judged. */
+const LICENSED_KINDS = [
+  'lexicon',
+  'grammarNodes',
+  'cultureCards',
+  'motifs',
+  'story',
+] as const;
+
+/**
+ * The licence guard over every content kind of a course (#102 AC1 to AC3),
+ * one verdict per kind. Separate from `loadCourse`, like `structureChecks`,
+ * for the content build to run beside them (#106).
+ */
+export function licenceChecks(course: CoursePack): readonly StructureCheck[] {
+  return LICENSED_KINDS.map((kind) => licenceCheck(kind, course[kind]));
 }
