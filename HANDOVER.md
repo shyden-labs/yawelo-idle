@@ -1,10 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-13 20:53 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
+**Written:** 2026-11-14 07:12 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
+
+- **#933 closed** (2026-11-14): Shyden: "933 redone test first". PR #965 merged as `2edbe543`: counters written new test-first (red 14/28), a runner-construction defect CI found fixed test-first (red 10/11), CI run 43530965451 printed counts in all 4 suites, no `unknown`.
 
 - **#957 closed**: banner measured on dev by headless Playwright with `DEV_PASSWORD` (`~/.config/shyden/yawelo-dev.env`), evidence on the ticket. Shyden: never ask him to type the dev password again (memory `feedback-dev-access-without-shyden`). `dev.yawelo-idle.shyden.co.uk` = holding page; the full site = `yawelo-idle-site-dev.shyden-labs-dev.workers.dev`.
 - **#933**: run 43415406638 on `6a4116d3` all green; roadmap 35 assertions on each of 5 targets, posted (comment 6851640260). **PR #963** opened.
@@ -23,9 +25,10 @@
 
 ## Waiting on Shyden (AFK)
 
-- #830 final reading of the Indonesian; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud. #933 AC6 ruling; #964 org-webhook deliveries consent.
+- **#964:** Shyden approved reading the org webhook log (2026-11-14). He runs `! zsh /private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/3e7e36f8-ea22-4801-a890-8ef3ec9c9c02/scratchpad/964-deliveries.zsh` (read-only; writes `964-deliveries.tsv` beside it). Not run yet. If the scratchpad is gone, rewrite it: list `orgs/shyden-labs/hooks`, then each hook's `/deliveries` (paginated), as TSV.
+- #830 final reading of the Indonesian; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
 
 ## State
 
-- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `1fae584d` (#963).
+- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `2edbe543` (#965).
 - Worktrees: `-dev-scripts` (detached at origin/develop `1fae584d`), `-104` (branch `104-ui-catalogues`, local only).
