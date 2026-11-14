@@ -1,10 +1,14 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-14 13:52 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
+**Written:** 2026-11-14 16:40 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. board-next says #783 (waits on the next release cut); P0-P2 otherwise all wait.
 
 ## Done this session
+
+- **#104 closed**: PR #968 → `a72129e4`, follow-up PR #973 (AC1 compile-time test) → `7cb5b007`; AC1/AC2 mutation-proven; on dev (`/play/`). **#830 AC1 text** merged (PR #972 → `b54407b6`), on dev in en and id. **#971 filed** (timeouts repeat). Progress page republished 16:35 WIB (version 44).
+
+- **#969 closed** (P0, filed today): Integration tests timed out at 5 min on PR #968; the pre-push test's four hook runs now concurrent (PR #970 → `9ca2b926`); step 2 min 21 s, file 139 s (was 290 s); #933 counter adds the context expect's count. Evidence on #969.
 
 - **#124 closed** (2026-11-14): Platform interface, web implementation, contract suite and the platform-only lint ban. PR #967 squash-merged as `24587498`; dev deploy run 43547152881 verified this commit, smoke on every target green. Guard seen red in CI run 43544474563 before the wiring. Evidence on #124; session logs in `.superpowers/sdd/124/` (ignored). Real-browser IndexedDB proof is #146 AC5. Worktree and branch removed.
 - Progress page republished 09:56 WIB (version 42); its source is `.superpowers/road-to-launch.html` (ignored), rebuilt from the published page.
@@ -26,9 +30,10 @@
 
 ## Resume steps
 
-1. **#104 on PR #968** (head `fc07c55b`, one commit on develop `24587498`; #104 In Progress): `~/.claude/scripts/pr-verdict.sh 968` until every required check is done (it can return in progress). Green on the head SHA (`git -C ../yawelo-idle-104 rev-parse HEAD`) → squash-merge into develop with `--match-head-commit`, verify the dev deploy, shut the ticket by hand with evidence, note on #104 why no `Website: announce` (the shell copy is not new), remove worktree `../yawelo-idle-104`. Red → fix test-first in a new commit on the branch. Done 13:45 WIB: Google read-back id→en (Google day 11-13) matched all 4; Google's own en→id not run (67 chars left); second sources KBBI (kbbi.kemendikdasmen.go.id; kemdikbud host no longer answers), Wiktionary, the site's shipped id copy. Evidence `docs/translations/2026-11-14-ui-catalogue-id.md`. Unit 174 files / 14,250 passed after `npm ci`; a first run failed 106 (no `fake-indexeddb` installed, and 1 s timeouts at load avg 196 from peer sessions; load not proven the cause).
-2. **#830 after 15:00 WIB 2026-11-14** (Google day resets): drafts in `.superpowers/sdd/830/830-id.json` (+ `830-en.json`). Run `node scripts/google-read-back.ts id en < 830-id.json` and `en id < 830-en.json` from `-dev-scripts`; write `docs/translations/<date>-roadmap-id.md` (table like `2026-10-16-holding-page-id.md`); implement in `apps/site/src/copy-en.ts` / `copy.ts` test-first; merge to develop when green; leave #830 open for Shyden.
+1. **#830** (Todo, open): merged as `b54407b6` (PR #972), checked on dev (evidence comment 6875070476). After 15:00 WIB 2026-11-15: write the 4 approved English lines (from `docs/translations/2026-11-14-roadmap-id.md`) to a JSON array and run `node scripts/google-read-back.ts en id < file` from `-dev-scripts`; add Google's own en→id column to that doc in a docs PR. Then AC2 (Public titles/summaries, Shyden approves) and AC3 wait on him.
+2. **#971** (P2): laptop unit 1 s timeouts repeated today. At the next failure, measure DURING the run (2 s sampler of `vm.loadavg`, `vm.swapusage`, `memory_pressure`) plus each test's own CPU.
 3. **PARKED until 2026-11-15:** #784 go-live.
+4. Otherwise `board-next.ts` (it said #783, waits on the next release cut; P0-P2 otherwise all wait).
 
 ## Waiting on Shyden (AFK)
 
@@ -36,5 +41,5 @@
 
 ## State
 
-- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `2edbe543` (#965).
-- Worktrees: `-dev-scripts` (detached at origin/develop `1fae584d`), `-104` (branch `104-ui-catalogues`, local only).
+- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `7cb5b007` (#973).
+- Worktrees: `-dev-scripts` only (detached at origin/develop). No local job running.
