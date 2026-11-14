@@ -1,8 +1,14 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-14 08:18 WIB, before a laptop restart (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
+**Written:** 2026-11-14 09:07 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
 
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. board-next says #783 (waits on the next release cut); P0-P2 otherwise all wait.
+
+## In flight: #124 (Platform interface), PR #967, Status In Progress
+
+- Worktree `../yawelo-idle-124`, branch `124-platform`, pushed head `da9da974` (stage 1). Plan, red logs, mutation predictions and results in `../yawelo-idle-124/.superpowers/sdd/124/`.
+- Stage 1 deliberately leaves out the `eslint.config.js` wiring, so CI shows `tests/guards/platform-only-config.test.ts` red (guards run only in CI). The wired file is saved at `.superpowers/sdd/124/eslint.config.wired.js` (it adds the `platformOnlyBlock` import and `platformOnlyBlock,` before `coreDeterminismBlock,` with a comment).
+- **Resume:** (1) `~/.claude/scripts/pr-verdict.sh 967` until CI is done; confirm the guards step is red ONLY on platform-only-config tests (record the run id and failing names on the PR). (2) Apply the wiring (`cp .superpowers/sdd/124/eslint.config.wired.js eslint.config.js`, check `git diff` is just those lines), run `npm run lint` and the unit suite, commit `Refs #124`, push. (3) Merge on green (squash, `--match-head-commit` from a file). (4) Verify the dev deploy; shut the ticket by hand with evidence; no Website story (nothing player-visible; say so on the ticket).
 
 ## Done this session
 
