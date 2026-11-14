@@ -16,6 +16,14 @@ describe('slots', () => {
 });
 
 describe('t', () => {
+  // AC1: an unknown key is a compile error. The directive below fails the
+  // typecheck once it is unused, so the build breaks if `t` ever accepts any
+  // string; at run time the key finds no template and `t` throws.
+  it('refuses an unknown key at compile time (AC1)', () => {
+    // @ts-expect-error 'shell.unknown' is not a key of the catalogue
+    expect(() => t('en', 'shell.unknown')).toThrow();
+  });
+
   it('returns a plain string as it is', () => {
     expect(t('id', 'shell.comingSoon')).toBe('Segera hadir.');
   });
