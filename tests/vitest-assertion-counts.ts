@@ -45,10 +45,15 @@ export default class VitestAssertionCounts implements Reporter {
   }
 }
 
-/** Copies a finished test's assertion count onto its meta, for the reporter. */
+/**
+ * Copies a finished test's assertion count onto its meta, for the reporter:
+ * the shared `expect`'s count plus the test's own, which a concurrent test
+ * asserts with from its context and which counts apart (#969).
+ */
 export function recordAssertions(
   meta: Record<string, unknown>,
-  assertionCalls: number,
+  shared: number,
+  own: number,
 ): void {
-  meta.assertionCalls = assertionCalls;
+  meta.assertionCalls = shared + own;
 }

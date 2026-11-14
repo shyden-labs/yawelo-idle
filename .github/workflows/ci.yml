@@ -112,7 +112,9 @@ jobs:
       # A unit test starts no process. One measured limit. Since #818 the
       # suite runs the real pre-push hook on four copies of the repository
       # (clean, then a break at each gate). Measured on PR #821's first run,
-      # 2026-10-31: the step took 3 min 40 s, the pre-push file 217 s of it.
+      # 2026-10-31: the step took 3 min 40 s, the pre-push file 217 s of it;
+      # by 2026-11-14 the file took 290 s and the step timed out (#969), so
+      # the four copies now run at once. The step's new time is on #969.
       - name: Integration tests
         timeout-minutes: 5
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
