@@ -104,6 +104,7 @@ const ROOTS = [
   'packages/content',
   'packages/core',
   'packages/lockdown',
+  'packages/platform',
   'packages/progress',
   'packages/ui',
 ];
