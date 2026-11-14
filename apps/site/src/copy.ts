@@ -21,6 +21,15 @@ import type { LegalLocale, LegalPage, Locale, LocalisedPage } from './i18n';
  */
 export interface VoyageCopy {
   intro: string;
+  /** What "launch" means (#830). */
+  launch: string;
+  /** How to read the percentage, the points and the date (#830). */
+  howToRead: string;
+  /**
+   * On a page whose board text stays English, a line saying so in the
+   * page's language (#830); null where nothing is in another language.
+   */
+  englishNote: string | null;
   loading: string;
   failed: string;
   islandsLabel: string;
@@ -72,6 +81,9 @@ export interface SummaryCopy {
 
 const VOYAGE_PLACEHOLDER: VoyageCopy = {
   intro: COPY_EN.roadmap.intro.text,
+  launch: COPY_EN.roadmap.launch.text,
+  howToRead: COPY_EN.roadmap.howToRead.text,
+  englishNote: null,
   loading: 'Reading the board…',
   failed: 'The roadmap could not be read just now.',
   islandsLabel: 'The voyage to launch',
@@ -171,8 +183,20 @@ export const COPY: Record<Locale, Copy> = {
     notFoundTitle: 'Halaman tidak ditemukan',
     notFoundBody: 'Tidak ada halaman di alamat ini.',
     homeLink: 'Kembali ke beranda',
-    // English until #830 translates it with its D18 evidence.
-    voyage: VOYAGE_PLACEHOLDER,
+    // The page's own text is Indonesian, each line read back by Google
+    // Cloud Translation (docs/translations/2026-11-14-roadmap-id.md, #830);
+    // the map's labels stay English placeholders for now.
+    voyage: {
+      ...VOYAGE_PLACEHOLDER,
+      intro:
+        'Inilah perkembangan pengerjaan Yawelo Idle, dibaca langsung dari papan pengembangan. Halaman ini diperbarui sendiri saat pekerjaan berjalan, tanpa perlu dimuat ulang.',
+      launch:
+        'Peluncuran adalah hari ketika Yawelo Idle dibuka untuk semua orang, gratis dimainkan di peramban Anda.',
+      howToRead:
+        'Persentase ini menghitung cerita yang sudah selesai dari semua cerita yang direncanakan sejauh ini. Satu cerita adalah satu bagian pekerjaan. Cerita baru ditambahkan seiring game berkembang, jadi angkanya bisa turun maupun naik. Poin menunjukkan besarnya pekerjaan yang tersisa: pekerjaan yang lebih besar punya poin lebih banyak. Tanggalnya adalah perkiraan dari laju tujuh hari terakhir, bukan janji.',
+      englishNote:
+        'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.',
+    },
   },
 };
 

@@ -314,6 +314,31 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
   );
 });
 
+describe('the roadmap page’s own text, in its language (#830)', () => {
+  /** The Indonesian page's note that the board's own text stays English. */
+  const NOTE =
+    'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.';
+
+  it.each([
+    ['en', false],
+    ['id', true],
+  ] as const)(
+    'the %s roadmap says what it shows, what launch means and how to read it (note shown: %s)',
+    async (locale, noted) => {
+      const html = await (
+        await get(`${DEV}${pagePath(locale, 'roadmap')}`, authorised)
+      ).text();
+      const { intro, launch, howToRead } = COPY[locale].voyage;
+      expect([
+        html.includes(`<p lang="${locale}">${intro}</p>`),
+        html.includes(`<p lang="${locale}">${launch}</p>`),
+        html.includes(`<p lang="${locale}">${howToRead}</p>`),
+        html.includes(`<p lang="${locale}">${NOTE}</p>`),
+      ]).toEqual([true, true, true, noted]);
+    },
+  );
+});
+
 describe('legal pages are English and Indonesian (#928)', () => {
   it.each(
     (['en', 'id'] as const).flatMap((locale) =>

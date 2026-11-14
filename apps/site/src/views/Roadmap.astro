@@ -14,13 +14,19 @@ interface Props {
 }
 const { locale } = Astro.props;
 const copy = COPY[locale];
-// The voyage's labels are English placeholders in both locales until #830.
+// The page's own text is in its language (#830); the voyage's labels are
+// English placeholders in both locales for now.
 const copyLang = 'en';
 ---
 
 <Base locale={locale} page="roadmap" title={copy.titles.roadmap}>
   <h1>{copy.titles.roadmap}</h1>
-  <p lang={copyLang}>{copy.voyage.intro}</p>
+  <p lang={locale}>{copy.voyage.intro}</p>
+  <p lang={locale}>{copy.voyage.launch}</p>
+  <p lang={locale}>{copy.voyage.howToRead}</p>
+  {copy.voyage.englishNote !== null && (
+    <p lang={locale}>{copy.voyage.englishNote}</p>
+  )}
   <VoyageMap client:load copy={copy.voyage} copyLang={copyLang} />
   <noscript>
     <p lang={copyLang}>{copy.voyage.failed}</p>
