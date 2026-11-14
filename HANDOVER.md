@@ -1,17 +1,13 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-14 09:07 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
+**Written:** 2026-11-14 09:58 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. board-next says #783 (waits on the next release cut); P0-P2 otherwise all wait.
 
-## In flight: #124 (Platform interface), PR #967, Status In Progress
-
-- Worktree `../yawelo-idle-124`, branch `124-platform`, pushed head `a6288f29` (stage 2). Plan, red logs, mutation predictions and results in `../yawelo-idle-124/.superpowers/sdd/124/`.
-- Stage 1 (`da9da974`) left out the `eslint.config.js` wiring: CI run 43544474563 showed `platform-only-config` red on its 8 expected tests (posted on the PR), plus `erasable-syntax` wanting `packages/platform/tsconfig.json` listed.
-- Stage 2 pushed as `a6288f29`: the wiring (2 lines + a comment in `eslint.config.js`) and the erasable-syntax list entry; repo lint clean.
-- **Resume:** (1) done (unit 14206/14206); (2) `~/.claude/scripts/pr-verdict.sh 967` until done (it can return in progress); (3) merge on green (squash, `--match-head-commit` from a file); (4) verify the dev deploy; shut the ticket by hand with evidence; no Website story (nothing player-visible; say so on the ticket).
-
 ## Done this session
+
+- **#124 closed** (2026-11-14): Platform interface, web implementation, contract suite and the platform-only lint ban. PR #967 squash-merged as `24587498`; dev deploy run 43547152881 verified this commit, smoke on every target green. Guard seen red in CI run 43544474563 before the wiring. Evidence on #124; session logs in `.superpowers/sdd/124/` (ignored). Real-browser IndexedDB proof is #146 AC5. Worktree and branch removed.
+- Progress page republished 09:56 WIB (version 42); its source is `.superpowers/road-to-launch.html` (ignored), rebuilt from the published page.
 
 - **#966 filed** (P3, 3 pts): the site and holding page have no og:/twitter: tags. Shyden ruled 2026-11-14 (via shyden.co.uk): a real 1200×630 screenshot of the top of each page, per language, from the built site, committed, with og:image:width/height/alt; a test fails on missing, wrong size or one flat colour. Recorded on #966.
 
