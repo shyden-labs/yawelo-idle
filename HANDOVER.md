@@ -1,10 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-14 07:12 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
+**Written:** 2026-11-14 07:40 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
+
+- **#964 closed** (2026-11-14): deliveries for 11-07 and 10-23 expired (GitHub keeps ~3 days; read in Chrome, the API 404s for the operator); cause unmeasurable; practice for the next drift in memory `project-roadmap-drift-read-deliveries-within-3-days`.
 
 - **#933 closed** (2026-11-14): Shyden: "933 redone test first". PR #965 merged as `2edbe543`: counters written new test-first (red 14/28), a runner-construction defect CI found fixed test-first (red 10/11), CI run 43530965451 printed counts in all 4 suites, no `unknown`.
 
@@ -25,7 +27,6 @@
 
 ## Waiting on Shyden (AFK)
 
-- **#964:** Shyden approved reading the org webhook log (2026-11-14). He runs `! zsh /private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/3e7e36f8-ea22-4801-a890-8ef3ec9c9c02/scratchpad/964-deliveries.zsh` (read-only; writes `964-deliveries.tsv` beside it). Not run yet. If the scratchpad is gone, rewrite it: list `orgs/shyden-labs/hooks`, then each hook's `/deliveries` (paginated), as TSV.
 - #830 final reading of the Indonesian; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
 
 ## State
