@@ -7,6 +7,7 @@ import astro from 'eslint-plugin-astro';
 import globals from 'globals';
 import svelteConfig from './apps/web/svelte.config.js';
 import { coreDeterminismBlock } from './eslint.core-determinism.ts';
+import { platformOnlyBlock } from './eslint.platform-only.ts';
 
 /**
  * One flat config for the whole monorepo. `--max-warnings 0` in the lint
@@ -84,6 +85,8 @@ export default defineConfig(
     files: ['apps/site/holding/public/**/*.js'],
     languageOptions: { globals: { ...globals.browser } },
   },
+  // Before core's block, which carries the same bans for core's source.
+  platformOnlyBlock,
   coreDeterminismBlock,
   {
     files: ['**/*.js'],

@@ -48,6 +48,7 @@ describe('eslint.config.js uses no deprecated API', () => {
       'globals: globals',
       './apps/web/svelte.config.js: svelteConfig',
       './eslint.core-determinism.ts: coreDeterminismBlock',
+      './eslint.platform-only.ts: platformOnlyBlock',
     ]);
   });
 
