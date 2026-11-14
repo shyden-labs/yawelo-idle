@@ -14,7 +14,12 @@ import { platformOnly } from '../../eslint.platform-only';
 
 const eslint = new ESLint({
   overrideConfig: [
-    { files: ['**/*.ts'], ...tseslint.configs.disableTypeChecked },
+    // A fixture path is not on disk, and the project service refuses a
+    // file it cannot find, a .svelte one included (measured on #124's CI).
+    {
+      files: ['**/*.ts', '**/*.svelte'],
+      ...tseslint.configs.disableTypeChecked,
+    },
   ],
 });
 const configFor = (filePath: string): Promise<Linter.Config> =>
