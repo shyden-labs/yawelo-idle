@@ -57,7 +57,9 @@ const review = z.strictObject({
   history: z.array(historyEntry),
 });
 
-type Review = z.output<typeof review>;
+/** The review block, shared with the UI catalogue (#104 AC6). */
+export const reviewSchema = review;
+export type Review = z.output<typeof review>;
 
 /** Text this short needs a label audit: a bare label gives no context. */
 const LABEL_AUDIT_MAX_WORDS = 3;
@@ -73,7 +75,7 @@ const isVisible = (text: string | null): boolean =>
  * distinct sources, a back-translation, and a label audit when the text is
  * three words or fewer. Each entry is the field and why.
  */
-function missingEvidence(
+export function missingEvidence(
   block: Review,
   text: string,
 ): readonly (readonly [field: string, message: string])[] {
