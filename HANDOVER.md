@@ -6,9 +6,10 @@
 
 ## In flight: #124 (Platform interface), PR #967, Status In Progress
 
-- Worktree `../yawelo-idle-124`, branch `124-platform`, pushed head `da9da974` (stage 1). Plan, red logs, mutation predictions and results in `../yawelo-idle-124/.superpowers/sdd/124/`.
-- Stage 1 deliberately leaves out the `eslint.config.js` wiring, so CI shows `tests/guards/platform-only-config.test.ts` red (guards run only in CI). The wired file is saved at `.superpowers/sdd/124/eslint.config.wired.js` (it adds the `platformOnlyBlock` import and `platformOnlyBlock,` before `coreDeterminismBlock,` with a comment).
-- **Resume:** (1) `~/.claude/scripts/pr-verdict.sh 967` until CI is done; confirm the guards step is red ONLY on platform-only-config tests (record the run id and failing names on the PR). (2) Apply the wiring (`cp .superpowers/sdd/124/eslint.config.wired.js eslint.config.js`, check `git diff` is just those lines), run `npm run lint` and the unit suite, commit `Refs #124`, push. (3) Merge on green (squash, `--match-head-commit` from a file). (4) Verify the dev deploy; shut the ticket by hand with evidence; no Website story (nothing player-visible; say so on the ticket).
+- Worktree `../yawelo-idle-124`, branch `124-platform`, pushed head `a6288f29` (stage 2). Plan, red logs, mutation predictions and results in `../yawelo-idle-124/.superpowers/sdd/124/`.
+- Stage 1 (`da9da974`) left out the `eslint.config.js` wiring: CI run 43544474563 showed `platform-only-config` red on its 8 expected tests (posted on the PR), plus `erasable-syntax` wanting `packages/platform/tsconfig.json` listed.
+- Stage 2 pushed as `a6288f29`: the wiring (2 lines + a comment in `eslint.config.js`) and the erasable-syntax list entry; repo lint clean.
+- **Resume:** (1) done (unit 14206/14206); (2) `~/.claude/scripts/pr-verdict.sh 967` until done (it can return in progress); (3) merge on green (squash, `--match-head-commit` from a file); (4) verify the dev deploy; shut the ticket by hand with evidence; no Website story (nothing player-visible; say so on the ticket).
 
 ## Done this session
 
