@@ -34,8 +34,16 @@ const run = (cases: TestCase[]): string => {
 describe('recordAssertions', () => {
   it('puts the count on the meta', () => {
     const meta: Record<string, unknown> = {};
-    recordAssertions(meta, 4);
+    recordAssertions(meta, 4, 0);
     expect(meta).toEqual({ assertionCalls: 4 });
+  });
+
+  // A concurrent test asserts with its own `expect` from the test context,
+  // which keeps its own count apart from the shared one (#969).
+  it('adds the count of the test’s own expect to the shared one', () => {
+    const meta: Record<string, unknown> = {};
+    recordAssertions(meta, 2, 3);
+    expect(meta).toEqual({ assertionCalls: 5 });
   });
 });
 

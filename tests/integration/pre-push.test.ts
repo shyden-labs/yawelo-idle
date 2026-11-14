@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   cpSync,
   existsSync,
@@ -26,6 +26,10 @@ import { describe, expect, it } from 'vitest';
  * a later gate that ran would name its file in the output: the stop is seen,
  * not assumed. The copy shares this checkout's installed node_modules by
  * symlink, since installing in each copy would cost minutes.
+ *
+ * The four runs are independent copies, so they run at once (#969): one
+ * after another they took 290 s of the step's 5-minute limit on 2026-11-14,
+ * and the time grows with the repository.
  */
 
 const HOOK = '.githooks/pre-push';
@@ -67,8 +71,26 @@ function nestedNodeModules(): string[] {
   );
 }
 
+/** Runs `command` in `cwd` to its end, collecting stdout and stderr. */
+function runToEnd(command: string, cwd: string): Promise<Run> {
+  return new Promise((done, failed) => {
+    const child = spawn(command, [], { cwd });
+    let output = '';
+    child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+      output += chunk;
+    });
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+      output += chunk;
+    });
+    child.on('error', failed);
+    child.on('close', (status) => {
+      done({ status, output });
+    });
+  });
+}
+
 /** Runs the real hook in a copy of the repository with `planted` written in. */
-function runHook(planted: readonly Gate[]): Run {
+async function runHook(planted: readonly Gate[]): Promise<Run> {
   const dir = mkdtempSync(join(tmpdir(), 'pre-push-'));
   try {
     cpSync(ROOT, dir, {
@@ -82,9 +104,7 @@ function runHook(planted: readonly Gate[]): Run {
     for (const gate of planted) {
       writeFileSync(join(dir, BREAKS[gate].path), BREAKS[gate].text);
     }
-    const run = spawnSync(HOOK, [], { cwd: dir, encoding: 'utf8' });
-    if (run.error) throw run.error;
-    return { status: run.status, output: `${run.stdout}${run.stderr}` };
+    return await runToEnd(HOOK, dir);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -95,16 +115,19 @@ describe('the pre-push hook (#123 AC2, #818)', () => {
     expect(statSync(HOOK).mode & 0o111).toBe(0o111);
   });
 
-  it('passes a clean copy of the repository, run with the real tools', () => {
-    const run = runHook([]);
-    expect(run.status, run.output).toBe(0);
-  });
+  it.concurrent(
+    'passes a clean copy of the repository, run with the real tools',
+    async ({ expect }) => {
+      const run = await runHook([]);
+      expect(run.status, run.output).toBe(0);
+    },
+  );
 
-  it.each(GATES.map((gate, index) => [gate, index] as const))(
+  it.concurrent.for(GATES.map((gate, index) => [gate, index] as const))(
     'stops at the %s gate, running no gate after it',
-    (gate, index) => {
+    async ([gate, index], { expect }) => {
       const later = GATES.slice(index + 1);
-      const run = runHook([gate, ...later]);
+      const run = await runHook([gate, ...later]);
       expect(run.status, run.output).not.toBe(0);
       expect(run.output).toContain(basename(BREAKS[gate].path));
       // one scenario: each later gate's break must be absent from this run
