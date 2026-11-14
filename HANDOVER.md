@@ -1,10 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-14 07:40 WIB (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
+**Written:** 2026-11-14 08:18 WIB, before a laptop restart (session `yawelo-idle-a0`). Colima not used. **Shyden is AFK, possibly for days** (relayed by repo-template-97): keep going without him; he said "OK to go" was fine.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
+
+- **#966 filed** (P3, 3 pts): the site and holding page have no og:/twitter: tags. Shyden ruled 2026-11-14 (via shyden.co.uk): a real 1200×630 screenshot of the top of each page, per language, from the built site, committed, with og:image:width/height/alt; a test fails on missing, wrong size or one flat colour. Recorded on #966.
 
 - **#964 closed** (2026-11-14): deliveries for 11-07 and 10-23 expired (GitHub keeps ~3 days; read in Chrome, the API 404s for the operator); cause unmeasurable; practice for the next drift in memory `project-roadmap-drift-read-deliveries-within-3-days`.
 
