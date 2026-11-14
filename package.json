@@ -51,6 +51,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-astro": "^3.2.1",
     "eslint-plugin-svelte": "^3.24.1",
+    "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "ignore": "^7.0.14",
     "istanbul-lib-coverage": "^3.2.2",
