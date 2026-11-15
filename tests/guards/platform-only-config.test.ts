@@ -1,6 +1,7 @@
 import { ESLint, type Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { describe, expect, it } from 'vitest';
+import { NO_WAKE_LOCK_SYNTAX } from '../../eslint.no-wake-lock';
 import { platformOnly } from '../../eslint.platform-only';
 
 /**
@@ -55,14 +56,16 @@ describe('the full ESLint config holds every source file outside packages/platfo
   });
 });
 
-describe('packages/platform itself is not held to them (#124 AC3)', () => {
+describe('packages/platform itself is not held to them, only to the wakeLock ban (#124 AC3, #128 AC4)', () => {
   it.each([
     'packages/platform/src/web.ts',
     'packages/platform/test/web.test.ts',
   ])('%s', async (filePath) => {
     const rules = (await configFor(filePath)).rules ?? {};
     expect.soft(rules['no-restricted-globals']).toBeUndefined();
-    expect.soft(rules['no-restricted-syntax']).toBeUndefined();
+    expect
+      .soft(optionsOf(rules['no-restricted-syntax']), 'no-restricted-syntax')
+      .toEqual(NO_WAKE_LOCK_SYNTAX);
   });
 });
 

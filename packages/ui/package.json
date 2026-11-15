@@ -4,7 +4,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./game-store": "./src/game-store.ts"
   },
   "scripts": {
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && svelte-check --tsconfig ./test/tsconfig.json --fail-on-warnings"
@@ -16,6 +17,8 @@
     "svelte-check": "^4.7.8"
   },
   "dependencies": {
-    "@yawelo-idle/content": "*"
+    "@yawelo-idle/content": "*",
+    "@yawelo-idle/core": "*",
+    "@yawelo-idle/platform": "*"
   }
 }

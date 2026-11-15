@@ -1,4 +1,5 @@
 import type { Linter } from 'eslint';
+import { NO_WAKE_LOCK_SYNTAX } from './eslint.no-wake-lock.ts';
 
 /**
  * Only packages/platform reaches the host's storage, notifications and
@@ -35,6 +36,8 @@ export const PLATFORM_ONLY_SYNTAX = [
     selector: `ObjectPattern > Property[key.name=${NAME_PATTERN}]`,
     message: `a host member: ${MESSAGE}`,
   },
+  // Carried here so a file this block judges is refused wakeLock too (#128).
+  ...NO_WAKE_LOCK_SYNTAX,
 ];
 
 export const platformOnly: Linter.RulesRecord = {
