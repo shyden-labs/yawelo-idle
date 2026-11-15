@@ -9,10 +9,13 @@ import { canonicalBytes, loadBlob, save, toBlob } from '../src/index.ts';
  * whole state its starts fixture holds (slice 396). Its state is plain JSON,
  * so it is read from the line itself, without core's fixture code.
  *
- * CPU is the process's (user + system), never wall time. The bounds are
- * about 3x what this test measured on the laptop at load below 5
- * (2026-11-16), so a machine twice as slow still passes and an encoder ten
- * times slower does not.
+ * CPU is the process's (user + system), never wall time. Measured on the
+ * laptop, 2026-11-16 at load 13, eight write-and-read rounds in one process:
+ * the first, cold one 113 ms (the one this test takes), the warm ones 23 to
+ * 59 ms; the blob 12,176 bytes of 74,030 canonical. The CPU bound is about
+ * 3.5x the cold round, so a slower machine still passes and an encoder ten
+ * times slower does not. The size is the same on every run, so its bound is
+ * close: about 1.25x.
  */
 const STARTS = new URL(
   '../../core/fixtures/golden-starts.jsonl',
@@ -21,9 +24,9 @@ const STARTS = new URL(
 const SLICE = 396;
 
 /** Process CPU, in milliseconds, of one write and one read of the save. */
-const CPU_BOUND_MS = 60;
+const CPU_BOUND_MS = 400;
 /** Bytes of the stored blob. */
-const SIZE_BOUND_BYTES = 24_000;
+const SIZE_BOUND_BYTES = 15_000;
 
 function fiveWeekState(): GameState {
   const line = readFileSync(STARTS, 'utf8').split('\n')[SLICE] ?? '';
@@ -48,6 +51,6 @@ describe('a 5-week Diligent-style save (#159 AC4)', () => {
     expect.soft(blob.byteLength, 'blob bytes').toBeLessThan(SIZE_BOUND_BYTES);
     expect
       .soft(canonicalBytes(saved).byteLength, 'the save is the 5-week one')
-      .toBeGreaterThan(80_000);
+      .toBeGreaterThan(70_000);
   });
 });
