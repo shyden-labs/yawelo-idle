@@ -49,6 +49,7 @@ describe('eslint.config.js uses no deprecated API', () => {
       './apps/web/svelte.config.js: svelteConfig',
       './eslint.core-determinism.ts: coreDeterminismBlock',
       './eslint.platform-only.ts: platformOnlyBlock',
+      './eslint.no-wake-lock.ts: noWakeLockBlock',
     ]);
   });
 
