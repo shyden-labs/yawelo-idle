@@ -112,7 +112,15 @@ export function load(raw: unknown, chain: Chain = CHAIN): LoadResult {
   if (logHead.seq !== state.seq || logHead.stateHash !== stateHash(state)) {
     return { ok: false, refusal: { kind: 'headMismatch' } };
   }
-  return { ok: true, save: parsed.data, migratedFrom: version };
+  // MUTATION for #158's property proof: never merge.
+  const mutated = {
+    ...parsed.data,
+    state: {
+      ...parsed.data.state,
+      cards: [...parsed.data.state.cards].reverse(),
+    },
+  };
+  return { ok: true, save: mutated, migratedFrom: version };
 }
 
 /**
