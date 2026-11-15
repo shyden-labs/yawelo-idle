@@ -167,6 +167,7 @@ text they ship follows the list, printed once with the packages it covers.
 - `break_infinity.js` 2.2.0 (MIT)
 - `debug` 2.6.9 (MIT)
 - `es-errors` 1.3.0 (MIT)
+- `fflate` 0.8.3 (MIT)
 - `function-bind` 1.1.2 (MIT)
 - `hasown` 2.0.4 (MIT)
 - `is-core-module` 2.17.0 (MIT)
@@ -1358,6 +1359,34 @@ SOFTWARE.
 
 ### Text 13
 
+Covers: `fflate`.
+
+```text
+MIT License
+
+Copyright (c) 2026 Arjun Barrett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Text 14
+
 Covers: `function-bind`.
 
 ```text
@@ -1382,7 +1411,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### Text 14
+### Text 15
 
 Covers: `hasown`.
 
@@ -1410,7 +1439,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 15
+### Text 16
 
 Covers: `is-core-module`.
 
@@ -1437,7 +1466,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 16
+### Text 17
 
 Covers: `ms`.
 
@@ -1465,7 +1494,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 17
+### Text 18
 
 Covers: `pad-end`.
 
@@ -1493,7 +1522,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 18
+### Text 19
 
 Covers: `path-parse`.
 
@@ -1521,7 +1550,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 19
+### Text 20
 
 Covers: `resolve`.
 
@@ -1549,7 +1578,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 20
+### Text 21
 
 Covers: `supports-preserve-symlinks-flag`.
 
@@ -1577,7 +1606,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 21
+### Text 22
 
 Covers: `swagger-ui-dist`.
 
@@ -1785,7 +1814,7 @@ Apache License
    limitations under the License.
 ```
 
-### Text 22
+### Text 23
 
 Covers: `swagger-ui-dist`.
 
@@ -1794,7 +1823,7 @@ swagger-ui
 Copyright 2020-2021 SmartBear Software Inc.
 ```
 
-### Text 23
+### Text 24
 
 Covers: `ts-fsrs`.
 
@@ -1822,7 +1851,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 24
+### Text 25
 
 Covers: `zod`.
 
