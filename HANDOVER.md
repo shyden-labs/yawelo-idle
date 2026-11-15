@@ -1,48 +1,28 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-14 18:35 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
+**Written:** 2026-11-15 09:40 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
 
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. board-next says #783 (waits on the next release cut); P0-P2 otherwise all wait.
+**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
-## Done this session
+## In flight
 
-- **#102 closed** (P3): PR #974 squash-merged as `fba76b52`; CI on head `2d4d1e15` green by job name; dev deploy run 43588553169 on `fba76b52` all success. Allow-list, `SOURCES` registry (wiktionary, original), `licenceCheck`/`licenceChecks`, four kinds carry source+licence, UI strings licensed CC BY-NC-SA 4.0 (`packages/ui/src/i18n/licences.ts`, **Shyden to confirm that licence for UI strings**), LICENSE-CONTENT.md names them. Evidence comment 6876371963; logs in `.superpowers/sdd/102/`. #106 told to run `licenceChecks`. Worktree and branch removed. Progress page version 45 (18:30 WIB).
-
-- **#104 closed**: PR #968 → `a72129e4`, follow-up PR #973 (AC1 compile-time test) → `7cb5b007`; AC1/AC2 mutation-proven; on dev (`/play/`). **#830 AC1 text** merged (PR #972 → `b54407b6`), on dev in en and id. **#971 filed** (timeouts repeat). Progress page republished 16:35 WIB (version 44).
-
-- **#969 closed** (P0, filed today): Integration tests timed out at 5 min on PR #968; the pre-push test's four hook runs now concurrent (PR #970 → `9ca2b926`); step 2 min 21 s, file 139 s (was 290 s); #933 counter adds the context expect's count. Evidence on #969.
-
-- **#124 closed** (2026-11-14): Platform interface, web implementation, contract suite and the platform-only lint ban. PR #967 squash-merged as `24587498`; dev deploy run 43547152881 verified this commit, smoke on every target green. Guard seen red in CI run 43544474563 before the wiring. Evidence on #124; session logs in `.superpowers/sdd/124/` (ignored). Real-browser IndexedDB proof is #146 AC5. Worktree and branch removed.
-- Progress page republished 09:56 WIB (version 42); its source is `.superpowers/road-to-launch.html` (ignored), rebuilt from the published page.
-
-- **#966 filed** (P3, 3 pts): the site and holding page have no og:/twitter: tags. Shyden ruled 2026-11-14 (via shyden.co.uk): a real 1200×630 screenshot of the top of each page, per language, from the built site, committed, with og:image:width/height/alt; a test fails on missing, wrong size or one flat colour. Recorded on #966.
-
-- **#964 closed** (2026-11-14): deliveries for 11-07 and 10-23 expired (GitHub keeps ~3 days; read in Chrome, the API 404s for the operator); cause unmeasurable; practice for the next drift in memory `project-roadmap-drift-read-deliveries-within-3-days`.
-
-- **#933 closed** (2026-11-14): Shyden: "933 redone test first". PR #965 merged as `2edbe543`: counters written new test-first (red 14/28), a runner-construction defect CI found fixed test-first (red 10/11), CI run 43530965451 printed counts in all 4 suites, no `unknown`.
-
-- **#957 closed**: banner measured on dev by headless Playwright with `DEV_PASSWORD` (`~/.config/shyden/yawelo-dev.env`), evidence on the ticket. Shyden: never ask him to type the dev password again (memory `feedback-dev-access-without-shyden`). `dev.yawelo-idle.shyden.co.uk` = holding page; the full site = `yawelo-idle-site-dev.shyden-labs-dev.workers.dev`.
-- **#933**: run 43415406638 on `6a4116d3` all green; roadmap 35 assertions on each of 5 targets, posted (comment 6851640260). **PR #963** opened.
-- **#830** decision (Shyden, 18:40 WIB, recorded on the ticket): build the Indonesian with Google read-back; **may merge into develop** once read-back matches; ticket stays open for his reading before production.
-
-- **#933**: PR #963 merged as `1fae584d`; branches and worktrees removed. **Left open, Status Todo**: AC6's "tests fail first" has no recorded red run; measured today that 4 of 7 counter tests fail with counting broken (comment 6851905334). Shyden rules: accept, or redo test-first.
-- **#712** tally posted and closed (49 deploys, 48 green, 0 transient). **#964 filed** (P2, 3 pts): the 2026-11-07 missed webhook (#523/#590 at 00:10:56–00:11:17 UTC; unmeasured hypothesis: a read going backwards) and the unexplained 2026-10-23 drift 1851. Needs Shyden's consent to read org webhook deliveries; else measure `/api/roadmap/health` at the next drift.
-- **#864** tally posted (0 site-smoke reds since #865). P0–P2 otherwise all wait: #783/#757/#713 on the next release cut, #425/#426/#457/#759 on #784, #888/#864 are watches to 11-19/11-20, #812 needs a phone.
-- Progress page republished 18:57 WIB (version 40).
+- **#975** (P3, 2 pts, filed 2026-11-14, blocks #109; Shyden chose this fix 2026-11-15): PR #976, branch `975-ts-import-endings`, head `13d531f9` (pushed), worktree `../yawelo-idle-975`. 135 relative imports in `packages/core/src` end in `.ts`; core/content/bots/ui tsconfigs set `allowImportingTsExtensions`. Laptop: probe red→green (`.superpowers/sdd/975/{red,green}.log`), unit 14,310 before and after, lint/typecheck/format clean. CI was running at 09:40 WIB.
+- **#109** (P3, In Progress): branch `109-evidence-recorder`, head `f8e57dfc`, **committed, not pushed**, worktree `../yawelo-idle-109`. `packages/content/src/evidence.ts` (record source / back-translation / label audit, promote, evidenceGaps, statusReport), `scripts/content.ts` CLI, npm `content` and `content:check`, added to `tests/integration/script-loads.test.ts`. Red on throwing stubs 32 + 11 (`red-module.log`, `red-cli.log`), green 43; 6 mutations each red (`.superpowers/sdd/109/M*.log`); unit 14,353 green. A real `node scripts/content.ts` run failed with ERR_MODULE_NOT_FOUND, hence #975.
+  - Reading of AC2 used: an id is recorded once; the drafting source (`item.source`) counts only as the first source. AC5's share is over shipped items (claude-checked + native-reviewed), as `needsDisclosure`. AC3's method goes in the history line.
 
 ## Resume steps
 
-0. Next P3 with no wait: `board-next.ts` says #783 (waits on the release cut). Unblocked P3s: #109 (Claude-check evidence recorder, 5), #125 (design tokens, 5), #127, #128, #158, #162; #52/#106/#107 wait on Shyden or #784.
-1. **#830** (Todo, open): merged as `b54407b6` (PR #972), checked on dev (evidence comment 6875070476). After 15:00 WIB 2026-11-15: write the 4 approved English lines (from `docs/translations/2026-11-14-roadmap-id.md`) to a JSON array and run `node scripts/google-read-back.ts en id < file` from `-dev-scripts`; add Google's own en→id column to that doc in a docs PR. Then AC2 (Public titles/summaries, Shyden approves) and AC3 wait on him.
-2. **#971** (P2): laptop unit 1 s timeouts repeated today. At the next failure, measure DURING the run (2 s sampler of `vm.loadavg`, `vm.swapusage`, `memory_pressure`) plus each test's own CPU.
-3. **PARKED until 2026-11-15:** #784 go-live.
-4. Otherwise `board-next.ts` (it said #783, waits on the next release cut; P0-P2 otherwise all wait).
+1. PR #976: read CI by job name on the head SHA (`~/.claude/scripts/pr-verdict.sh 976`); green → squash-merge into develop, verify the dev deploy, post evidence on #975, close it by hand, remove worktree/branch.
+2. #109: in `../yawelo-idle-109`, `git merge origin/develop` (no rebase); add `.ts` to `./index` in `evidence.ts` and `./evidence` in `index.ts`; prettier, lint, typecheck, unit; drive the CLI end to end on a copy of the fixture (commands in `.superpowers/sdd/109/cli-run.log`'s session); push, PR, CI, merge, evidence, close.
+3. **#830**: after 15:00 WIB 2026-11-15, write the 4 approved English lines (from `docs/translations/2026-11-14-roadmap-id.md`) to a JSON array, run `node scripts/google-read-back.ts en id < file` from `-dev-scripts`, add Google's en→id column in a docs PR. AC2/AC3 wait on Shyden.
+4. **#784** go-live unparks 2026-11-15.
+5. **#971** (P2): at the next laptop unit 1 s timeout, measure during the run (2 s sampler of `vm.loadavg`, `vm.swapusage`, `memory_pressure`).
 
 ## Waiting on Shyden (AFK)
 
-- #830 final reading of the Indonesian; #102's choice of CC BY-NC-SA 4.0 for UI strings (original work, per D17); #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
+- #830 final reading of the Indonesian; #102's CC BY-NC-SA 4.0 for UI strings; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
 
 ## State
 
-- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `fba76b52` (#974).
-- Worktrees: `-dev-scripts` only (detached at origin/develop, `fba76b52`). No local job running.
+- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `fba76b52`.
+- Worktrees: `-dev-scripts` (detached at origin/develop), `-109`, `-975`. No local job running.
