@@ -10,7 +10,7 @@ import {
 } from '@yawelo-idle/core';
 import { describe, expect, it } from 'vitest';
 import { load, save, SAVE_VERSION } from '../src/index.ts';
-import { course, MINUTE_MS, rich, START } from '../../core/test/log-laws.ts';
+import { course, MINUTE_MS, rich, START } from '../test/states.ts';
 
 /**
  * The save round trip on generated states (#158 AC3): any state reached by
@@ -80,7 +80,7 @@ const playedState: fc.Arbitrary<GameState> = fc
     }),
   )
   .map(([isRich, seed, steps]) => {
-    const start = isRich ? rich(c) : initialState(START, seed);
+    const start = isRich ? rich() : initialState(START, seed);
     let minutes = 0;
     const events = steps.map(([fields, gap], index) => {
       minutes += gap;
