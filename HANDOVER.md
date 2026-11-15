@@ -1,31 +1,26 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-15 12:55 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
+**Written:** 2026-11-15 16:12 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## Done this session
 
-- **#975 closed** (filed 2026-11-14, Shyden chose the fix 2026-11-15): PR #976 → `e09d3f3d`; 135 core imports end in `.ts`, four tsconfigs allow it; plain-Node load red→green; unit 14,310 before/after; dev deploy 43669335722 all success. Evidence comment 6888308108.
-- **#109 closed**: PR #977 → `bca9cd87`. Written again test-first on a fresh branch after a self-caught slip (two untested CLI branches; memory `feedback-failing-test-before-any-code` updated). 50 red on stubs, 15 mutations red, unit 14,360, CI integration `✓ scripts/content.ts loads`, dev deploy 43670583130 all success, real run from develop. Evidence comment 6888527060. **Shyden to confirm two readings**: AC2 drafting source only as first source; AC5 share over shipped items.
-- Progress page republished (version 47).
-
-## In flight
-
-- **#158** (save schema, P3) on PR #978, branch `158-save-schema`, head `99567074` (one commit; red stage kept as tag `evidence/158-red`), worktree `../yawelo-idle-158`. Board: In Progress. Evidence in the PR body and `../yawelo-idle-158/.superpowers/sdd/158/` (red/green logs, predictions, 7 mutations). CI verdict was being waited on: re-run `~/.claude/scripts/pr-verdict.sh 978`. On green (steps by name, head SHA): squash-merge into develop, wait the dev deploy, close #158 with an evidence comment, then remove the worktree.
+- **#158 closed** (save schema, 5 pts): PR #978 → `a058d5ed` (new workspace `packages/save`), PR #981 → `2dfdddab` (the property now draws whole Journey trips: a reversed-cards mutation had passed all 200 runs; red against it in run 43694583814, tag `evidence/158-property-red`; 38/200 states hold 2+ cards). Red stage tag `evidence/158-red`. Dev deploys 43691993925 and 43696256005 all success. I closed it once before AC3 was proven and reopened it; memory `feedback-a-property-is-proven-red-in-ci`. Note left on #160: its writer must call `mayReplace`.
+- **#830**: Google's en→id rendering merged (PR #980 → `48e54e7f`), same meaning on all four lines. Still open for Shyden's reading.
+- Progress page republished (version 48).
 
 ## Resume steps
 
-1. Finish #158 (above). `board-next.ts` says #783 (waits on the next release cut). Unblocked P3s: #125 (design tokens: needs Shyden's region colours), #127, #128, #162.
-2. **#784**: the account step unparked 2026-11-15, but Shyden clicks Create Account (memory `project-non-prod-account-parked-until-11-15`); waits on him.
-3. **#830**: after 15:00 WIB 2026-11-15, write the 4 approved English lines (from `docs/translations/2026-11-14-roadmap-id.md`) to a JSON array, run `node scripts/google-read-back.ts en id < file` from `-dev-scripts`, add Google's en→id column in a docs PR. AC2/AC3 wait on Shyden.
-4. **#971** (P2): at the next laptop unit 1 s timeout, measure during the run (2 s sampler of `vm.loadavg`, `vm.swapusage`, `memory_pressure`).
+1. `board-next.ts` says #783 (waits on the next release cut). Unblocked P3s: #127, #128, #162 (#125 needs Shyden's region colours). #160 (backups) follows #158 and #159.
+2. **#784**: the account step unparked 2026-11-15 but needs Shyden's click on Create Account (memory `project-non-prod-account-parked-until-11-15`).
+3. **#971** (P2): at the next laptop unit 1 s timeout, measure during the run (2 s sampler of `vm.loadavg`, `vm.swapusage`, `memory_pressure`).
 
 ## Waiting on Shyden (AFK)
 
-- #830 final reading of the Indonesian; #102's CC BY-NC-SA 4.0 for UI strings; #106/#107 scope; Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud.
+- #830 reading of the Indonesian; #102's CC BY-NC-SA 4.0 for UI strings; #106/#107 scope; #109's two readings (AC2, AC5); Sonar exclusion of `docker/node/Dockerfile` (S6471); Sparked Host ticket #073955; S9382 in SonarCloud; #784 Create Account; #125 region colours.
 
 ## State
 
-- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `bca9cd87` (#977).
-- Worktrees: `-dev-scripts` only (detached at origin/develop `bca9cd87`). No local job running.
+- Main checkout on `handover/2026-10-17-d` (handover commits only). `origin/develop` at `2dfdddab` (#981).
+- Worktrees: `-dev-scripts` only (detached at origin/develop). No local job running. #158 evidence in `.superpowers/sdd/158/` (git-ignored).
