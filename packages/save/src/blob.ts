@@ -48,7 +48,8 @@ const MAGIC = Uint8Array.of(0x59, 0x49, 0x53, 0x56);
 const CHECKSUM_BYTES = 32;
 const HEADER_BYTES = MAGIC.length + 1 + CHECKSUM_BYTES;
 /** A stored format: changing the level changes every blob's bytes. */
-const LEVEL = 6;
+// MUTATION (#159 proof, never merged): another level outside Node.
+const LEVEL = 'process' in globalThis ? 6 : 1;
 /** fflate's code for a stream that ends before its last block does. */
 const UNEXPECTED_EOF = 0;
 
@@ -115,8 +116,9 @@ const corrupt = (reason: CorruptReason): LoadResult => ({
 /** The reason the header is unreadable, or null when it reads. */
 function headerFault(blob: Uint8Array): CorruptReason | null {
   if (blob.byteLength === 0) return 'empty';
-  const shown = blob.subarray(0, MAGIC.length);
-  if (!sameBytes(shown, MAGIC.subarray(0, shown.byteLength))) {
+  // MUTATION (#159 proof, never merged): the magic's first byte is skipped.
+  const shown = blob.subarray(1, MAGIC.length);
+  if (!sameBytes(shown, MAGIC.subarray(1, 1 + shown.byteLength))) {
     return 'notASaveBlob';
   }
   if (blob.byteLength <= MAGIC.length) return 'truncated';
