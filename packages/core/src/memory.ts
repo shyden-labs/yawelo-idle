@@ -38,9 +38,9 @@ import {
   FSRS7_MODEL_BOUNDS,
   FSRS7Model,
 } from 'ts-fsrs/models/fsrs-7';
-import { BALANCE, type Rank } from './balance';
-import { DAY_MS, type WallMs } from './clock';
-import { exp, expm1, ln, log1p, pow } from './det-math';
+import { BALANCE, type Rank } from './balance.ts';
+import { DAY_MS, type WallMs } from './clock.ts';
+import { exp, expm1, ln, log1p, pow } from './det-math.ts';
 
 /** FSRS-7's default weights, read from ts-fsrs. */
 export const WEIGHTS: readonly number[] = Object.freeze([

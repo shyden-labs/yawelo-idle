@@ -15,16 +15,16 @@ import {
   BALANCE,
   JOURNEY_DURATION_IDS,
   type JourneyDurationId,
-} from './balance';
-import { simMs } from './clock';
-import type { Course, CultureCard } from './course';
-import { Num } from './num';
-import { rateAt } from './production';
-import { intFrom } from './rng';
-import { currentRegion } from './route';
-import { reanchor, type Rejection, type Result } from './sim';
-import type { GameState, Journey } from './state';
-import { journeyDurationFactor, journeySlots } from './upgrades';
+} from './balance.ts';
+import { simMs } from './clock.ts';
+import type { Course, CultureCard } from './course.ts';
+import { Num } from './num.ts';
+import { rateAt } from './production.ts';
+import { intFrom } from './rng.ts';
+import { currentRegion } from './route.ts';
+import { reanchor, type Rejection, type Result } from './sim.ts';
+import type { GameState, Journey } from './state.ts';
+import { journeyDurationFactor, journeySlots } from './upgrades.ts';
 
 /** What a slot holds: `locked` until bought, then `empty`, `away` or `returned`. */
 export type JourneyStatus = 'locked' | 'empty' | 'away' | 'returned';

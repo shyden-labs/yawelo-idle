@@ -7,11 +7,11 @@
  * any later time are derived and never stored. That is what makes splitting
  * an interval unable to change any stored arithmetic.
  */
-import { BALANCE, type JourneyDurationId } from './balance';
-import { simMs, type SimMs, type WallMs } from './clock';
-import type { WordMemory } from './memory';
-import { Num, type NumTuple } from './num';
-import { createStreams, type RngStreams } from './rng';
+import { BALANCE, type JourneyDurationId } from './balance.ts';
+import { simMs, type SimMs, type WallMs } from './clock.ts';
+import type { WordMemory } from './memory.ts';
+import { Num, type NumTuple } from './num.ts';
+import { createStreams, type RngStreams } from './rng.ts';
 
 /** The state's own random streams, one per purpose (design §3). */
 export const RNG_STREAMS = ['cards'] as const;

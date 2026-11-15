@@ -12,8 +12,8 @@
  */
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
-import { isPlainObject } from './events';
-import type { GameState } from './state';
+import { isPlainObject } from './events.ts';
+import type { GameState } from './state.ts';
 
 /** A finite number's IEEE-754 bits, big-endian, as 16 hex digits after `0x`. */
 function bits(value: number, path: string): string {

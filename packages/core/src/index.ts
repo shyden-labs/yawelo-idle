@@ -3,8 +3,8 @@
  * TypeScript with no DOM, timers, network or system clock, so the same code
  * runs in browsers, Electron, Capacitor and Workers and replays identically.
  */
-export { exp, expm1, ln, log10, log1p, pow } from './det-math';
-export { Num, type NumTuple } from './num';
+export { exp, expm1, ln, log10, log1p, pow } from './det-math.ts';
+export { Num, type NumTuple } from './num.ts';
 export {
   bucketEnd,
   bucketStart,
@@ -15,7 +15,7 @@ export {
   wallMs,
   type SimMs,
   type WallMs,
-} from './clock';
+} from './clock.ts';
 export {
   createStreams,
   drawFrom,
@@ -27,7 +27,7 @@ export {
   type Draw,
   type RngState,
   type RngStreams,
-} from './rng';
+} from './rng.ts';
 export {
   BALANCE,
   JOURNEY_DURATION_IDS,
@@ -36,14 +36,14 @@ export {
   type JourneyDurationId,
   type Rank,
   type StampUpgradeId,
-} from './balance';
+} from './balance.ts';
 export {
   encounterOutput,
   milestoneFactor,
   milestonesReached,
   purchaseCost,
-} from './encounters';
-export { cultureCard, festivalLive, heldCards } from './cards';
+} from './encounters.ts';
+export { cultureCard, festivalLive, heldCards } from './cards.ts';
 export {
   cardPool,
   collectJourney,
@@ -51,7 +51,7 @@ export {
   journeyStatus,
   startJourney,
   type JourneyStatus,
-} from './journeys';
+} from './journeys.ts';
 export {
   encounterRate,
   producedBetween,
@@ -63,7 +63,7 @@ export {
   wordMultiplier,
   type EncounterRate,
   type RateLine,
-} from './production';
+} from './production.ts';
 export {
   encounterCostFactor,
   encounterPrice,
@@ -79,28 +79,32 @@ export {
   upgradeLevel,
   type Upgrade,
   type UpgradeCurrency,
-} from './upgrades';
+} from './upgrades.ts';
 export {
   RANKS,
   type MemoryCard,
   type QueueItem,
   type WordMemory,
-} from './memory';
-export { findGrammarNode, grammarNodeCost, ownedGrammarNodes } from './grammar';
+} from './memory.ts';
+export {
+  findGrammarNode,
+  grammarNodeCost,
+  ownedGrammarNodes,
+} from './grammar.ts';
 export {
   automationOpensAt,
   automationUnlocked,
   bestPayback,
   nextPurchaseTick,
-} from './automation';
-export { pickUpCost, pickUpPool } from './words';
+} from './automation.ts';
+export { pickUpCost, pickUpPool } from './words.ts';
 export {
   currentDestination,
   currentRegion,
   regionsReached,
   route,
   type Stop,
-} from './route';
+} from './route.ts';
 export {
   goalMet,
   runUnderstanding,
@@ -111,10 +115,15 @@ export {
   wordsHeld,
   type SailGoal,
   type SailPreview,
-} from './sail';
-export { UNFOLD_FLAGS, unfold, type Unfold, type UnfoldFlag } from './unfold';
-export { stateHash } from './hash';
-export { apply, replay, type Refusal, type Replayed } from './log';
+} from './sail.ts';
+export {
+  UNFOLD_FLAGS,
+  unfold,
+  type Unfold,
+  type UnfoldFlag,
+} from './unfold.ts';
+export { stateHash } from './hash.ts';
+export { apply, replay, type Refusal, type Replayed } from './log.ts';
 export {
   EVENT_TYPES,
   parseEvent,
@@ -124,7 +133,7 @@ export {
   type GameEvent,
   type ParsedEvent,
   type PromptType,
-} from './events';
+} from './events.ts';
 export {
   advance,
   answerPractice,
@@ -141,7 +150,7 @@ export {
   type NextPickUp,
   type Rejection,
   type Result,
-} from './sim';
+} from './sim.ts';
 export {
   view,
   type EncounterOffer,
@@ -151,7 +160,7 @@ export {
   type Shop,
   type UpgradeOffer,
   type View,
-} from './view';
+} from './view.ts';
 export {
   initialState,
   ownedCount,
@@ -161,7 +170,7 @@ export {
   type Automation,
   type GameState,
   type Journey,
-} from './state';
+} from './state.ts';
 export {
   CEFR_LEVELS,
   resolveCourse,
@@ -181,4 +190,4 @@ export {
   type RegionData,
   type RegionOf,
   type Tier,
-} from './course';
+} from './course.ts';

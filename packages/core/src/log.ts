@@ -11,10 +11,10 @@
  * advancing and then applying differs from applying alone when the offline
  * cap clips.
  */
-import type { Course } from './course';
-import type { GameEvent } from './events';
-import { collectJourney, startJourney } from './journeys';
-import { setSail } from './sail';
+import type { Course } from './course.ts';
+import type { GameEvent } from './events.ts';
+import { collectJourney, startJourney } from './journeys.ts';
+import { setSail } from './sail.ts';
 import {
   advance,
   answerPractice,
@@ -27,8 +27,8 @@ import {
   setAutomation,
   type Rejection,
   type Result,
-} from './sim';
-import type { GameState } from './state';
+} from './sim.ts';
+import type { GameState } from './state.ts';
 
 /** A refused event of a replayed log: its `seq` and why. */
 export interface Refusal {
