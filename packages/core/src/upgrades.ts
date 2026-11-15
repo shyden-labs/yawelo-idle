@@ -11,11 +11,15 @@
  * effect is derived from them here, and each capped effect is also clamped,
  * so a level past the last (from an older balance table) cannot exceed it.
  */
-import { BALANCE, type InsightUpgradeId, type StampUpgradeId } from './balance';
-import type { Course, Encounter } from './course';
-import { purchaseCost } from './encounters';
-import { Num } from './num';
-import { ownedCount, type GameState } from './state';
+import {
+  BALANCE,
+  type InsightUpgradeId,
+  type StampUpgradeId,
+} from './balance.ts';
+import type { Course, Encounter } from './course.ts';
+import { purchaseCost } from './encounters.ts';
+import { Num } from './num.ts';
+import { ownedCount, type GameState } from './state.ts';
 
 export type UpgradeCurrency = 'insight' | 'stamps';
 

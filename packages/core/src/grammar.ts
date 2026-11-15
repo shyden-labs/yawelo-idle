@@ -10,10 +10,10 @@
  * Buying one is an action, so `buyGrammarNode` is in `sim.ts` with the
  * others.
  */
-import { BALANCE } from './balance';
-import type { Course, GrammarNode } from './course';
-import { Num } from './num';
-import type { GameState } from './state';
+import { BALANCE } from './balance.ts';
+import type { Course, GrammarNode } from './course.ts';
+import { Num } from './num.ts';
+import type { GameState } from './state.ts';
 
 const COST_C0 = Num.from(BALANCE.grammar.costC0);
 const COST_GROWTH = Num.from(BALANCE.grammar.costGrowth);

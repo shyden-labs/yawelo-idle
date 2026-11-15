@@ -18,17 +18,17 @@
  * restart there. A held festival card's window edge splits a bucket, since
  * the card's bonus doubles from that wall-clock millisecond (#30).
  */
-import { BALANCE } from './balance';
-import { DAY_MS, HOUR_MS, bucketStart, simMs, type SimMs } from './clock';
-import { cardFactor, heldCards, nextFestivalEdge, setFactor } from './cards';
-import type { Course, CultureCard, Encounter } from './course';
-import { encounterOutput, milestoneFactor } from './encounters';
-import { rootFactors } from './grammar';
-import { meanRetrievability } from './memory';
-import { Num } from './num';
-import { ownedCount, type GameState } from './state';
-import { globalMultiplier, phrasebookId, upgradeLevel } from './upgrades';
-import { lexiconItem, sharesTag, wordBonus } from './words';
+import { BALANCE } from './balance.ts';
+import { DAY_MS, HOUR_MS, bucketStart, simMs, type SimMs } from './clock.ts';
+import { cardFactor, heldCards, nextFestivalEdge, setFactor } from './cards.ts';
+import type { Course, CultureCard, Encounter } from './course.ts';
+import { encounterOutput, milestoneFactor } from './encounters.ts';
+import { rootFactors } from './grammar.ts';
+import { meanRetrievability } from './memory.ts';
+import { Num } from './num.ts';
+import { ownedCount, type GameState } from './state.ts';
+import { globalMultiplier, phrasebookId, upgradeLevel } from './upgrades.ts';
+import { lexiconItem, sharesTag, wordBonus } from './words.ts';
 
 const THOUSAND = Num.from(1000);
 const PHRASEBOOK = Num.from(BALANCE.insightUpgrades.phrasebookMultiplier);

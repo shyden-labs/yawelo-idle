@@ -19,7 +19,7 @@
  * ladder the pacing bots tuned (#35 AC8, operator 2026-10-04).
  */
 
-import { BALANCE } from './balance';
+import { BALANCE } from './balance.ts';
 
 /**
  * The CEFR levels v1 teaches (parent §5.2: A1 to B1), in order. The one
