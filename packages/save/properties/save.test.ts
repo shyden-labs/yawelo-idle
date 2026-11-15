@@ -70,19 +70,41 @@ const body: fc.Arbitrary<Record<string, unknown>> = fc.oneof(
   fc.constant({ type: 'setSail' }),
 );
 
-/** A played state: a start, then events at rising times. */
+type Step = readonly [fields: Record<string, unknown>, gapMinutes: number];
+
+/**
+ * A Journey sent out and collected once it is back: the only way to hold a
+ * culture card, which a single random event almost never reaches (a 2h
+ * Journey needs a later collect at least 120 minutes on, in the same slot).
+ */
+const journeyTrip: fc.Arbitrary<readonly Step[]> = fc
+  .tuple(
+    fc.integer({ min: 0, max: BALANCE.journeys.maxSlots - 1 }),
+    fc.integer({ min: 0, max: 30 }),
+    fc.integer({ min: 121, max: 300 }),
+  )
+  .map(([slot, before, away]) => [
+    [{ type: 'startJourney', slot, durationId: '2h' }, before],
+    [{ type: 'collectJourney', slot }, away],
+  ]);
+
+/** One move: a random event, or a whole Journey trip. */
+const move: fc.Arbitrary<readonly Step[]> = fc.oneof(
+  fc.tuple(body, fc.integer({ min: 0, max: 300 })).map((step) => [step]),
+  journeyTrip,
+);
+
+/** A played state: a start, then moves at rising times. */
 const playedState: fc.Arbitrary<GameState> = fc
   .tuple(
     fc.boolean(),
     fc.integer({ min: 0, max: 2 ** 31 }),
-    fc.array(fc.tuple(body, fc.integer({ min: 0, max: 300 })), {
-      maxLength: 30,
-    }),
+    fc.array(move, { maxLength: 30 }),
   )
-  .map(([isRich, seed, steps]) => {
+  .map(([isRich, seed, moves]) => {
     const start = isRich ? rich() : initialState(START, seed);
     let minutes = 0;
-    const events = steps.map(([fields, gap], index) => {
+    const events = moves.flat().map(([fields, gap], index) => {
       minutes += gap;
       return {
         ...fields,
@@ -95,11 +117,13 @@ const playedState: fc.Arbitrary<GameState> = fc
 
 describe('the save round trip', () => {
   it('reads back any played state deep-equal, with the same state hash', () => {
+    let withCards = 0;
     fc.assert(
       fc.property(
         playedState,
         fc.string({ minLength: 1 }),
         (state, contentVersion) => {
+          if (state.cards.length >= 2) withCards += 1;
           const written = save(state, {}, contentVersion);
           const result = load(JSON.parse(JSON.stringify(written)) as unknown);
           expect(result).toEqual({
@@ -114,5 +138,12 @@ describe('the save round trip', () => {
       ),
       { numRuns: RUNS },
     );
+    // The generator must reach states holding more than one culture card,
+    // or an order bug in `cards` goes unseen (#158: a reversed `cards`
+    // passed all 200 runs before Journey trips were drawn).
+    console.log(
+      `save round trip: ${String(withCards)} of ${String(RUNS)} states held 2+ cards`,
+    );
+    expect(withCards).toBeGreaterThan(0);
   });
 });
