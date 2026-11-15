@@ -1,12 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-16 00:15 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
+**Written:** 2026-11-16 00:30 WIB (session `yawelo-idle-f6`). Colima not used. **Shyden is AFK, possibly for days**: keep going without him.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
 ## In flight
 
-- **Ticket 128 (UI store, P3) on PR 982**, branch `128-ui-store`, worktree `../yawelo-idle-128`, head `7e641056` (pushed; read from `git rev-parse` at writing). Board: In Progress. Red tag `evidence/128-red` pushed. CI was running at writing (board-orphans green; build-and-test and sonarcloud in progress).
+- **Ticket 128 (UI store, P3) on PR 982**, branch `128-ui-store`, worktree `../yawelo-idle-128`, head `4a9b12bd` (pushed; read from `git rev-parse` at writing). Board: In Progress. Red tag `evidence/128-red` pushed. The first head `7e641056` failed one guard (`tests/guards/platform-only-config.test.ts`: platform now carries the wakeLock ban); `4a9b12bd` updates it to expect exactly `NO_WAKE_LOCK_SYNTAX` (predicate measured both ways in process, `.superpowers/sdd/128/cfg.ts`). CI was running at writing. Local unit run: 47 timeouts at load 524 (logged on #971), none in this branch's files.
 - Beyond the ACs: a visible page commits a `resume` every `COMMIT_MS` (60 s), or a window open past the 24 h offline cap stops earning (tests seen red first).
 - The browser-side hidden-page measurement is #154 AC3 (depends on 128); the store is mounted on no page until #130.
 - Evidence in `../yawelo-idle-128/.superpowers/sdd/128/` (git-ignored): red log, mutation scripts, sampled unit log.
