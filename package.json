@@ -38,7 +38,9 @@
     "licences": "node scripts/licence-check.ts",
     "notices": "node scripts/third-party-notices.ts",
     "pacing:calibrate": "node scripts/pacing-calibrate.ts",
-    "pacing:sweep": "node scripts/pacing-sweep.ts"
+    "pacing:sweep": "node scripts/pacing-sweep.ts",
+    "content": "node scripts/content.ts",
+    "content:check": "node scripts/content.ts check"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
