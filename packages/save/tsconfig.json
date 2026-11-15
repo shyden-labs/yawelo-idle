@@ -1,0 +1,23 @@
+{
+  // @yawelo-idle/save reads and writes a player's save (#158). It runs in
+  // browsers, Electron, Capacitor and Workers, so it sees ECMAScript alone:
+  // `types: []` keeps the hoisted @types/node out. The tests run in Node and
+  // have their own project (test/tsconfig.json).
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "types": [],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"]
+}
