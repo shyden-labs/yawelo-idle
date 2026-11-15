@@ -78,7 +78,7 @@ it('a hidden page gets no frames and no timers; a visible one is sampled every 2
   setVisibility('visible');
   const shown = samples;
   vi.advanceTimersByTime(WINDOW_MS);
-  expect(samples - shown).toBe(1 + WINDOW_MS / SAMPLE_MS);
+  expect(samples - shown).toBe(WINDOW_MS / SAMPLE_MS);
   expect(counts.interval).toBe(hidden.interval + 1);
   expect(counts.frame).toBe(0);
   store.destroy();

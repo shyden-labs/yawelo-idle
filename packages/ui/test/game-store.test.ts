@@ -13,6 +13,7 @@ import {
 import { syntheticCourse } from '@yawelo-idle/core/fixtures/synthetic-course';
 import type { PlatformLifecycle, Unsubscribe } from '@yawelo-idle/platform';
 import {
+  COMMIT_MS,
   createGameStore,
   SAMPLE_MS,
   type Every,
@@ -154,6 +155,42 @@ describe('the store samples the core about 4 times a second while visible (#128 
     expect(samples[1]?.view).toEqual(view(course, store.state(), h.clock.now));
   });
 
+  it('a page left visible past the offline cap keeps earning: each hour is credited in full', () => {
+    const h = host();
+    const { store } = start(h);
+    const before = store.state();
+    const hours = offlineCapMs(before) / HOUR_MS + 1;
+    // One scenario: an hour per tick, until past the cap.
+    for (let hour = 1; hour <= hours; hour += 1) {
+      h.clock.now = wallMs(START + hour * HOUR_MS);
+      h.tick();
+    }
+    expect(store.state().sim - before.sim).toBe(hours * HOUR_MS);
+  });
+
+  it('a sample within COMMIT_MS of the last event commits nothing', () => {
+    const h = host();
+    const { store } = start(h);
+    const before = store.state();
+    h.clock.now = wallMs(START + COMMIT_MS - 1);
+    h.tick();
+    expect(store.state()).toBe(before);
+  });
+
+  it('a sample COMMIT_MS after the last event commits a resume at the clock’s time', () => {
+    const h = host();
+    const { store } = start(h);
+    const before = store.state();
+    h.clock.now = wallMs(START + COMMIT_MS);
+    h.tick();
+    const resumed = apply(course, before, {
+      type: 'resume',
+      seq: before.seq + 1,
+      wallMs: h.clock.now,
+    });
+    expect(store.state()).toEqual(resumed.ok ? resumed.state : undefined);
+  });
+
   it('starting the store records a resume at the clock’s time (design §6.2)', () => {
     const h = host();
     const state = initialState(START, 7);
@@ -186,6 +223,13 @@ describe('while hidden the store runs no sampler (#128 AC2)', () => {
     const h = host();
     start(h);
     h.show(false);
+    h.show(true);
+    expect(running(h)).toBe(1);
+  });
+
+  it('a second visible signal while visible starts no second sampler', () => {
+    const h = host();
+    start(h);
     h.show(true);
     expect(running(h)).toBe(1);
   });

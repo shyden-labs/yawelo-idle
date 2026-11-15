@@ -8,6 +8,7 @@ import globals from 'globals';
 import svelteConfig from './apps/web/svelte.config.js';
 import { coreDeterminismBlock } from './eslint.core-determinism.ts';
 import { platformOnlyBlock } from './eslint.platform-only.ts';
+import { noWakeLockBlock } from './eslint.no-wake-lock.ts';
 
 /**
  * One flat config for the whole monorepo. `--max-warnings 0` in the lint
@@ -88,6 +89,8 @@ export default defineConfig(
   // Before core's block, which carries the same bans for core's source.
   platformOnlyBlock,
   coreDeterminismBlock,
+  // packages/platform, which platform-only skips, is refused wakeLock too (#128).
+  noWakeLockBlock,
   {
     files: ['**/*.js'],
     ...tseslint.configs.disableTypeChecked,
