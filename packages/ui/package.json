@@ -16,6 +16,8 @@
     "svelte-check": "^4.7.8"
   },
   "dependencies": {
-    "@yawelo-idle/content": "*"
+    "@yawelo-idle/content": "*",
+    "@yawelo-idle/core": "*",
+    "@yawelo-idle/platform": "*"
   }
 }
