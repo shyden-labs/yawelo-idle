@@ -31,6 +31,7 @@ const SCRIPTS = [
   'scripts/board-progress.ts',
   'scripts/board-setup.ts',
   'scripts/ci-scope.ts',
+  'scripts/content.ts',
   'scripts/coverage.ts',
   'scripts/d1-binding.ts',
   'scripts/dependabot-check.ts',

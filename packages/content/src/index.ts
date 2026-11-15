@@ -469,3 +469,5 @@ const LICENSED_KINDS = [
 export function licenceChecks(course: CoursePack): readonly StructureCheck[] {
   return LICENSED_KINDS.map((kind) => licenceCheck(kind, course[kind]));
 }
+
+export * from './evidence.ts';
