@@ -72,16 +72,30 @@ function canonicalJson(value: unknown, path: string): string {
       throw new TypeError(`${path} is of type ${typeof value}: not plain data`);
   }
   if (Array.isArray(value)) {
-    return `[${value.map((item: unknown, index) => canonicalJson(item, `${path}[${String(index)}]`)).join(',')}]`;
+    const items = value.map((item: unknown, index) =>
+      canonicalJson(item, path + '[' + String(index) + ']'),
+    );
+    return '[' + items.join(',') + ']';
   }
   const record = value as Readonly<Record<string, unknown>>;
   const entries = Object.keys(record)
-    .sort()
+    .sort(byCodeUnits)
     .map(
       (key) =>
-        `${JSON.stringify(key)}:${canonicalJson(record[key], `${path}.${key}`)}`,
+        JSON.stringify(key) +
+        ':' +
+        canonicalJson(record[key], path + '.' + key),
     );
-  return `{${entries.join(',')}}`;
+  return '{' + entries.join(',') + '}';
+}
+
+/**
+ * Code-unit order, as `sort()` with no compare function gives, written out:
+ * `localeCompare` would make the canonical bytes depend on the locale.
+ */
+function byCodeUnits(a: string, b: string): number {
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
 }
 
 /** The save's canonical bytes: UTF-8 JSON, object keys in code-unit order. */
