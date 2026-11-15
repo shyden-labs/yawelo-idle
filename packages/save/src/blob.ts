@@ -116,9 +116,8 @@ const corrupt = (reason: CorruptReason): LoadResult => ({
 /** The reason the header is unreadable, or null when it reads. */
 function headerFault(blob: Uint8Array): CorruptReason | null {
   if (blob.byteLength === 0) return 'empty';
-  // MUTATION (#159 proof, never merged): the magic's first byte is skipped.
-  const shown = blob.subarray(1, MAGIC.length);
-  if (!sameBytes(shown, MAGIC.subarray(1, 1 + shown.byteLength))) {
+  const shown = blob.subarray(0, MAGIC.length);
+  if (!sameBytes(shown, MAGIC.subarray(0, shown.byteLength))) {
     return 'notASaveBlob';
   }
   if (blob.byteLength <= MAGIC.length) return 'truncated';
