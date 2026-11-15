@@ -31,5 +31,5 @@
     "playwright.site.config.ts"
   ],
   // The browser specs see the DOM, so they have their own project.
-  "exclude": ["tests/web/**", "tests/site/**"]
+  "exclude": ["tests/web/**", "tests/site/**", "tests/engines/**"]
 }

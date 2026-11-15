@@ -29,7 +29,7 @@
     "prelint": "npm run --silent types",
     "lint": "eslint . --max-warnings 0",
     "pretypecheck": "npm run --silent types",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/web && tsc --noEmit -p tests/site && npm run typecheck --workspaces --if-present",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/web && tsc --noEmit -p tests/site && tsc --noEmit -p tests/engines && npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build": "npm run build --workspaces --if-present",

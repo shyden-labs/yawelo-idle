@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./game-store": "./src/game-store.ts"
+    "./game-store": "./src/game-store.ts",
+    "./backup-scheduler": "./src/backup-scheduler.ts"
   },
   "scripts": {
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && svelte-check --tsconfig ./test/tsconfig.json --fail-on-warnings"
