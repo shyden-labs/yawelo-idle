@@ -10,9 +10,16 @@
  * has a golden fixture its test loads. A save from a newer app is refused
  * with a typed reason and must never be written over.
  *
- * Compression and the checksum (#159) and the rotating backups (#160) wrap
- * this; they do not change it.
+ * A stored save is a blob (#159): the canonical bytes, compressed, behind a
+ * SHA-256 of them; `loadBlob` reads one and refuses a damaged one by a typed
+ * reason. The rotating backups (#160) wrap this; they do not change it.
  */
+export {
+  canonicalBytes,
+  loadBlob,
+  toBlob,
+  type CorruptReason,
+} from './blob.ts';
 export {
   load,
   mayReplace,
