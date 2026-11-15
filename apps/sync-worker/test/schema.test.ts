@@ -4,7 +4,7 @@ import { createTestHarness } from 'wrangler';
 /**
  * The first server tables (#162, spec §6.6 and §6.7): the migrations in
  * ../migrations, applied in order by wrangler's own migration runner to the
- * real local D1 of the real wrangler.jsonc (spec §12.4, no mocks), and the
+ * real local D1 of the real wrangler.jsonc (spec §12.4, nothing stood in), and the
  * schema read back from SQLite itself.
  */
 const ROOT = new URL('..', import.meta.url).pathname;
