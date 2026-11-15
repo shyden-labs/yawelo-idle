@@ -1,0 +1,655 @@
+{
+  "saveVersion": 1,
+  "contentVersion": "synthetic-1",
+  "state": {
+    "sim": 7920000,
+    "wall": 1799057520000,
+    "anchor": {
+      "sim": 7920000,
+      "understanding": [0, 0]
+    },
+    "owned": {},
+    "insight": [9.99999999911, 11],
+    "words": {
+      "r1-d0-w0": {
+        "rank": "recognised",
+        "card": {
+          "due": 1799050500000,
+          "stability": 3.9221,
+          "stabilityFast": 3.13768,
+          "difficulty": 3.53072398,
+          "scheduledDays": 0.006944444444444444,
+          "learningStep": 1,
+          "reps": 1,
+          "lapses": 0,
+          "state": 1,
+          "scheduleStatus": "learning",
+          "lastReview": 1799049900000
+        }
+      },
+      "r1-d0-w1": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w2": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w3": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w4": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w5": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w6": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w7": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w8": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w9": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w10": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w11": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w12": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w13": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w14": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w15": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w16": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w17": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w18": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w19": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w20": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w21": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w22": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w23": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w24": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w25": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w26": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w27": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w28": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w29": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w30": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w31": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w32": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w33": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w34": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w35": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w36": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049600000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      },
+      "r1-d0-w37": {
+        "rank": "heard",
+        "card": {
+          "due": 1799049840000,
+          "stability": 0,
+          "stabilityFast": 0,
+          "difficulty": 0,
+          "scheduledDays": 0,
+          "learningStep": 0,
+          "reps": 0,
+          "lapses": 0,
+          "state": 0,
+          "scheduleStatus": "new",
+          "lastReview": null
+        }
+      }
+    },
+    "memorySince": 300000,
+    "stamps": 455960753587,
+    "stampsEarned": 455960753587,
+    "upgrades": {
+      "offlineCap": 1
+    },
+    "rng": {
+      "cards": {
+        "s": [3902894960, 805923452, 3368395949, 4209801768]
+      }
+    },
+    "journeys": [null, null, null],
+    "cards": ["r1-card-1-1"],
+    "tutorialJourneyUsed": false,
+    "destination": 5,
+    "reached": 5,
+    "finale": false,
+    "replays": {},
+    "runSpent": [0, 0],
+    "playableRegions": 3,
+    "grammar": ["r0-gram-0"],
+    "automation": {
+      "enabled": true,
+      "intervalMs": 10000
+    },
+    "seq": 12
+  },
+  "settings": {},
+  "logHead": {
+    "seq": 12,
+    "stateHash": "905bbe585c82f13be0c9e97b13a657c5f6faf7e41ecbd5f4fcd4bd50523b981b"
+  }
+}

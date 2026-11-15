@@ -106,6 +106,7 @@ const ROOTS = [
   'packages/lockdown',
   'packages/platform',
   'packages/progress',
+  'packages/save',
   'packages/ui',
 ];
 
