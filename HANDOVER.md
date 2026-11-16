@@ -22,11 +22,11 @@
 
 ## Waiting on Shyden
 
-- #160's Indonesian (after the 15:00 WIB read-back). Sparked Host ticket #073955: his to close. S9382: optional, mark Accepted in SonarCloud. #783 at the next release cut. Real phones away.
+- #160's Indonesian (after the 15:00 WIB read-back). #783 waits for the first release with something to ship (Shyden, 2026-11-16). Real phones away. (Sparked Host #073955 already closed; S9382 no longer exists in SonarCloud.)
 
 ## Rulings this session (recorded on the tickets)
 
-- #830 Indonesian approved as written: close it after reading the ACs. #125 colours: en-id batik dyes (soga #B5651D, teal #2E8B8B, mengkudu #B03A2E on indigo/gold); id-en per country (England racing green #1F5E3B, USA denim #3B5B8C, Australia ochre #C46A2B on navy #0E1A33/gold #D4AF37). #106/#107: cut to what exists now, file the rest as follow-ups. #635: research the applicable law first (UU 27/2022 etc.), then ask about a professional review.
+- #830 Indonesian approved as written: close it after reading the ACs. #125 colours: en-id batik dyes (soga #B5651D, teal #2E8B8B, mengkudu #B03A2E on indigo/gold); id-en per country (England racing green #1F5E3B, USA denim #3B5B8C, Australia ochre #C46A2B on navy #0E1A33/gold #D4AF37). #106/#107: cut to what exists now, file the rest as follow-ups. #635: research the applicable law first (UU 27/2022 etc.), then ask about a professional review. Phone sign-off (#632): full suite on every phone, one at a time, results to Shyden, then he plays one phone briefly and signs off.
 
 ## Done this session (2026-11-16)
 
