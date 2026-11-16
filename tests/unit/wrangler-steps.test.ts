@@ -58,6 +58,13 @@ const CALLS = [
     start: 'the package root apps/site',
   },
   {
+    step: `${DEV}Upload the hostname adapter's secret to its Pages project`,
+    command: 'pages secret bulk',
+    from: 'apps/dev-hosts',
+    configArgs: [],
+    start: 'the package root apps/dev-hosts',
+  },
+  {
     step: `${DEV}Deploy the dev hostname adapter to its Pages main branch (dev account)`,
     command: 'pages deploy',
     from: 'apps/dev-hosts',

@@ -7,10 +7,13 @@
 // while a Pages custom domain needs only a proxied CNAME there, so dev
 // reaches its name with no dev credential in production (#395).
 //
-// Its one Function, functions/[[path]].ts, forwards each request unchanged
-// to the Worker its host names, through these service bindings. The domains
-// were attached once in the dashboard and are read back by verify-dev on
-// every deploy, so the deploy only uploads the Function.
+// Its one Function, functions/[[path]].ts, passes each request on to the
+// Worker its host names. Since DEV moved to the non-PROD account (#784,
+// Shyden 2026-11-16) that is over HTTPS, at the Worker's workers.dev address
+// on ORIGIN_DOMAIN, with the dev door secret (a Pages secret uploaded by the
+// deploy): a service binding reaches only its own account's Workers. The
+// domains were attached once in the dashboard and are read back by verify-dev
+// on every deploy, so the deploy only uploads the Function and its secret.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-dev-hosts",
@@ -18,9 +21,8 @@
   // directory empty, because git keeps no empty directory.
   "pages_build_output_dir": "./public",
   "compatibility_date": "2026-10-20",
-  "services": [
-    { "binding": "SITE", "service": "yawelo-idle-site-dev" },
-    { "binding": "SYNC", "service": "yawelo-idle-sync-dev" },
-    { "binding": "HOLDING", "service": "yawelo-idle-holding-dev" },
-  ],
+  "vars": {
+    // The non-PROD account's workers.dev domain (#784), read from the account.
+    "ORIGIN_DOMAIN": "yawelo-idle-non-prod.workers.dev",
+  },
 }

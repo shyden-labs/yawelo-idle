@@ -57,6 +57,7 @@ export interface ConfigRead {
 /** The wrangler commands the workflows run, longest first. */
 export const WRANGLER_COMMANDS = [
   'd1 migrations apply',
+  'pages secret bulk',
   'versions list',
   'pages deploy',
   'deploy',
@@ -89,6 +90,10 @@ export const WRANGLER_STEPS: readonly (MeantConfig & { step: string })[] = [
   {
     step: 'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
     config: 'apps/site/wrangler.jsonc',
+  },
+  {
+    step: "deploy-dev.yml / deploy / Upload the hostname adapter's secret to its Pages project",
+    config: 'apps/dev-hosts/wrangler.jsonc',
   },
   {
     step: 'deploy-dev.yml / deploy / Deploy the dev hostname adapter to its Pages main branch (dev account)',

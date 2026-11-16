@@ -16,18 +16,22 @@ const VALUES = {
   ROADMAP_WEBHOOK_SECRET: '0f1e2d3c4b5a69788796a5b4c3d2e1f0',
   ROADMAP_APP_KEY:
     '-----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAK\n-----END RSA PRIVATE KEY-----\n',
+  DOOR_SECRET: 'Zm9vYmFyYmF6cXV4+/=',
 };
 /** Each Worker secret, beside the dev environment secret it comes from. */
 const SOURCES = [
   ['DEV_PASSWORD', 'DEV_BASIC_AUTH_PASSWORD'],
   ['ROADMAP_WEBHOOK_SECRET', 'ROADMAP_WEBHOOK_SECRET'],
   ['ROADMAP_APP_KEY', 'ROADMAP_APP_KEY'],
+  // The site believes the door a request names only with it (#784): the
+  // dev hostname adapter carries it while it stands in for the doors.
+  ['DOOR_SECRET', 'DEV_DOOR_SECRET'],
 ] as const;
 const devDirectories = () =>
   readdirSync(tmpdir()).filter((entry) => entry.startsWith('dev-secrets-'));
 
 describe('writeSecretsFile', () => {
-  it('writes the three secrets, exactly, in JSON, and returns where', () => {
+  it('writes the four secrets, exactly, in JSON, and returns where', () => {
     const path = writeSecretsFile(VALUES);
     expect(JSON.parse(readFileSync(path, 'utf8'))).toStrictEqual(VALUES);
   });

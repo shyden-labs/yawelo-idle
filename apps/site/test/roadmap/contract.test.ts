@@ -10,7 +10,7 @@ import { differences, judged, spec } from '../../api/judge';
  * through wrangler's harness against the fake GitHub, on the dev host (behind
  * the password) and the production host.
  */
-const DEV = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const PROD = 'https://yawelo-idle.shyden.co.uk';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const { snapshot: SNAPSHOT, live: LIVE } = ROADMAP_PATHS;
