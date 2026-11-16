@@ -4,9 +4,12 @@
 import { stateHash, type GameState } from '@yawelo-idle/core';
 import { CHAIN, checkChain, type Chain } from './migrations.ts';
 import { saveSchema, type Save, type Settings } from './schema.ts';
+import type { CorruptReason } from './blob.ts';
 
 /** Why a save was not loaded. */
 export type LoadRefusal =
+  /** The stored bytes are damaged (#159): nothing of them is read. */
+  | { readonly kind: 'corrupt'; readonly reason: CorruptReason }
   /** Written by a newer app: the player must update; the save is kept as it is. */
   | {
       readonly kind: 'updateTheApp';
