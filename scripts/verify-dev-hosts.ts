@@ -19,10 +19,10 @@
  * Nothing is retried; each problem is named, with no header printed.
  */
 import { createHmac } from 'node:crypto';
-import { DEV_HOSTS, type DevBinding } from '../apps/dev-hosts/hosts.ts';
+import { DEV_HOSTS, type DevWorker } from '../apps/dev-hosts/hosts.ts';
 
-/** The dev hostname the adapter maps to `binding`. */
-function devHost(binding: DevBinding): string {
+/** The dev hostname the adapter maps to `worker`. */
+function devHost(binding: DevWorker): string {
   const host = [...DEV_HOSTS].find(([, b]) => b === binding)?.[0];
   if (host === undefined) throw new Error(`no dev hostname reaches ${binding}`);
   return `https://${host}`;

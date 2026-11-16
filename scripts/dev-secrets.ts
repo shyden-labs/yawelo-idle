@@ -2,7 +2,7 @@
  * Writes the dev site Worker's secrets file (#357, #341) and prints its path.
  *
  *     DEV_PASSWORD=… ROADMAP_WEBHOOK_SECRET=… ROADMAP_APP_KEY=… \
- *       node scripts/dev-secrets.ts
+ *       DEV_DOOR_SECRET=… node scripts/dev-secrets.ts
  *
  * The deploy then runs `wrangler deploy --secrets-file <path>`, which uploads
  * them with the Worker version itself. Each is kept in one place, a `dev`
@@ -17,6 +17,8 @@ const SOURCES = {
   DEV_PASSWORD: 'DEV_BASIC_AUTH_PASSWORD',
   ROADMAP_WEBHOOK_SECRET: 'ROADMAP_WEBHOOK_SECRET',
   ROADMAP_APP_KEY: 'ROADMAP_APP_KEY',
+  // The site believes the door a request names only with it (#784).
+  DOOR_SECRET: 'DEV_DOOR_SECRET',
 } as const;
 
 export function writeSecretsFile(
@@ -31,6 +33,7 @@ if (import.meta.main) {
       DEV_PASSWORD: process.env['DEV_PASSWORD'],
       ROADMAP_WEBHOOK_SECRET: process.env['ROADMAP_WEBHOOK_SECRET'],
       ROADMAP_APP_KEY: process.env['ROADMAP_APP_KEY'],
+      DOOR_SECRET: process.env['DEV_DOOR_SECRET'],
     }),
   );
 }

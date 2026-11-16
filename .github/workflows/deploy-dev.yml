@@ -72,18 +72,21 @@ jobs:
       # Labs Dev" account and nothing else (#395): Cloudflare cannot narrow a
       # Workers or D1 permission below an account, so a token that reached
       # another account could write to production. Any other reach stops here.
-      - name: Prove the dev token reaches the dev account alone
+      # DEV's Workers and D1 live in the non-PROD account (#784 AC2); its
+      # token is the dev environment's NONPROD_ secrets, under the names
+      # wrangler reads.
+      - name: Prove the non-PROD token reaches the non-PROD account alone
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/token-reach.ts
       # From the repository root, which has no wrangler config to write to.
       # Asia Pacific, near the players (operator, 2026-10-05): a database never
       # moves, and without a hint it lands near the runner, in North America.
       - name: Create the dev D1 database in Asia Pacific if it does not exist yet
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/ensure-d1.ts yawelo-idle-dev apac
       # Bound by name alone, a deploy after the database was recreated reuses
       # the deleted database's id and fails with 7404 (#391). This writes a
@@ -91,20 +94,20 @@ jobs:
       # the migrations and the deploy both read it.
       - name: Bind the sync Worker to the dev D1 database by id
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/d1-binding.ts yawelo-idle-dev apps/sync-worker/wrangler.jsonc apps/sync-worker/wrangler.deploy.jsonc
       - name: Apply D1 migrations (before the Worker, so new code never meets an old schema)
         working-directory: apps/sync-worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc
       - name: Deploy the sync Worker, stamped with this commit
         working-directory: apps/sync-worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"
       - name: Build the game, stamped with this commit
         env:
@@ -116,8 +119,8 @@ jobs:
       - name: Deploy the game Worker
         working-directory: apps/web
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
       # The holding page's dev copy (#621 AC8): the production holding build,
       # crawlers blocked and every response noindex, at
@@ -136,8 +139,8 @@ jobs:
       # 38889757344 redeployed the dev site here).
       - name: Deploy the holding page's dev copy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
       - name: Build the site, stamped with this commit
         env:
@@ -149,20 +152,21 @@ jobs:
       # and App key (#341). The script puts the file in a new directory in the
       # system's temp, outside the checkout, and prints where (SonarCloud
       # S8707 on #943); bash's -e stops the step if the write fails.
-      - name: Write the site's secrets file (the dev password, the roadmap's webhook secret and App key)
+      - name: Write the site's secrets file (the dev password, the roadmap's webhook secret and App key, the dev door secret)
         id: site-secrets
         env:
           DEV_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
           ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
           ROADMAP_APP_KEY: ${{ secrets.ROADMAP_APP_KEY }}
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
         run: |
           path="$(node scripts/dev-secrets.ts)"
           echo "path=$path" >> "$GITHUB_OUTPUT"
       - name: Deploy the site Worker with its secrets
         working-directory: apps/site
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
           SECRETS_FILE: ${{ steps.site-secrets.outputs.path }}
         run: npx wrangler deploy --secrets-file "$SECRETS_FILE"
       # The dev hostnames (#429): a Pages project whose one Function forwards
@@ -170,6 +174,31 @@ jobs:
       # copy by host, so it goes after all three. Its custom domains were attached once and are read back by the
       # verify below. Git keeps no empty directory, so the empty static one
       # Pages uploads is made here.
+      # The hostname adapter's Pages project stays in Shyden Labs Dev beside
+      # its custom domains (#784, Shyden 2026-11-16), so its steps alone hold
+      # that account's token. It reaches the Workers over HTTPS, as their
+      # door, with the dev door secret.
+      - name: Prove the Shyden Labs Dev token reaches its account alone
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/token-reach.ts
+      - name: Write the hostname adapter's secrets file (the dev door secret)
+        id: dev-hosts-secrets
+        env:
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+        run: |
+          path="$(node scripts/dev-hosts-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+      - name: Upload the hostname adapter's secret to its Pages project
+        working-directory: apps/dev-hosts
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SECRETS_FILE: ${{ steps.dev-hosts-secrets.outputs.path }}
+        # `--no`: only the wrangler installed from the lockfile, never a
+        # download (SonarCloud githubactions:S8543).
+        run: npx --no wrangler pages secret bulk "$SECRETS_FILE"
       - name: Make the hostname adapter's empty static directory
         working-directory: apps/dev-hosts
         run: mkdir -p public
@@ -223,9 +252,9 @@ jobs:
           DEV_SYNC_URL: https://dev-api.yawelo-idle.shyden.co.uk
           # The site Worker's own address, where the site being built stays
           # while the front door shows the holding page (#673).
-          DEV_SITE_URL: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/
+          DEV_SITE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           # The game's own address, which must serve nothing (#332).
-          DEV_GAME_URL: https://yawelo-idle-web-dev.shyden-labs-dev.workers.dev/
+          DEV_GAME_URL: https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev/
           EXPECTED_SHA: ${{ github.sha }}
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
@@ -334,7 +363,7 @@ jobs:
       options: --user 1001
     environment:
       name: dev
-      url: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/roadmap
+      url: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/roadmap
     permissions:
       contents: read
     steps:
@@ -357,7 +386,7 @@ jobs:
         # least 3 times its slowest run.
         timeout-minutes: 3
         env:
-          SITE_SMOKE_URL: https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/
+          SITE_SMOKE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:site:dev
       # Each failing test's screenshot and page snapshot (#864), only when

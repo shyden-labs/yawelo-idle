@@ -42,7 +42,7 @@ import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy'
  *
  * Absolute URLs set the hostname the Worker sees.
  */
-const DEV = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const PROD = SITE;
 const PASSWORD = 'test-only-password';
 const DOOR_SECRET = 'test-only-door-secret';

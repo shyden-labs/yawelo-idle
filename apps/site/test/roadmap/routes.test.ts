@@ -12,7 +12,7 @@ import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
  * gate applies; each call returns once the work it handed to `waitUntil` is
  * done (test/roadmap-worker/test-worker.ts).
  */
-const HOST = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const HOST = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 
 let world: RoadmapWorld;
