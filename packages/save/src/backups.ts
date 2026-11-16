@@ -69,9 +69,18 @@ const DIGITS = 12;
 const COPY_KEY = /^save\/\d{12}\.\d+$/;
 const KEPT = 1 + BACKUPS;
 
+/**
+ * Code-unit order, never locale order: the counter is fixed-width digits, so
+ * this is write order on every device whatever its language.
+ */
+const byCodeUnit = (a: string, b: string): number =>
+  a < b ? -1 : a > b ? 1 : 0;
+
 /** The copy keys held, oldest first. */
 async function copyKeys(storage: BackupStorage): Promise<string[]> {
-  return (await storage.keys()).filter((key) => COPY_KEY.test(key)).sort();
+  return (await storage.keys())
+    .filter((key) => COPY_KEY.test(key))
+    .sort(byCodeUnit);
 }
 
 const COUNTER_END = PREFIX.length + DIGITS;
