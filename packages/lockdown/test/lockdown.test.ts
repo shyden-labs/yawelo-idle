@@ -62,7 +62,7 @@ describe('isProdHost', () => {
 
   it.each([
     'dev.yawelo-idle.shyden.co.uk',
-    'yawelo-idle-web-dev.shyden-labs-dev.workers.dev',
+    'yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev',
     'yawelo-idle.shyden.co.uk.evil.com',
     'evilyawelo-idle.shyden.co.uk',
     'yawelo-idle.shyden.co',
@@ -127,7 +127,7 @@ describe('basicAuthOk', () => {
 });
 
 describe('gateWebRequest', () => {
-  const dev = 'https://yawelo-idle-web-dev.shyden-labs-dev.workers.dev';
+  const dev = 'https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev';
 
   /**
    * What the gate hands on for `url` with the right password: the working
@@ -229,7 +229,7 @@ describe('markApiRequest', () => {
     const { serve, calls } = recordingServe();
     const response = await markApiRequest(
       request(
-        'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev/health',
+        'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev/health',
       ),
       serve,
     );
@@ -240,7 +240,8 @@ describe('markApiRequest', () => {
 
   it('serves blocking robots.txt on a non-prod host', async () => {
     const { serve, calls } = recordingServe();
-    const sync = 'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev';
+    const sync =
+      'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev';
     const response = await markApiRequest(request(`${sync}/robots.txt`), serve);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
     // The working run: off robots.txt the same host hands the request on.
@@ -264,7 +265,7 @@ describe('markApiRequest', () => {
 });
 
 describe('the dev login cookie (#829)', () => {
-  const dev = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+  const dev = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 
   /** The cookie the gate sets when `password` is given. */
   async function loginCookie(password = PASSWORD): Promise<string> {

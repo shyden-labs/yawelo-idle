@@ -27,7 +27,7 @@ afterAll(async () => {
 it('names the missing App key in the health, the board never read', async () => {
   await world.resetFake();
   const response = await world.server.fetch(
-    'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/roadmap/health',
+    'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap/health',
     { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
   );
   expect(response.status).toBe(200);

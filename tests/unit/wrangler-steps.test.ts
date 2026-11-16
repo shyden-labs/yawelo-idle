@@ -58,6 +58,13 @@ const CALLS = [
     start: 'the package root apps/site',
   },
   {
+    step: `${DEV}Upload the hostname adapter's secret to its Pages project`,
+    command: 'pages secret bulk',
+    from: 'apps/dev-hosts',
+    configArgs: [],
+    start: 'the package root apps/dev-hosts',
+  },
+  {
     step: `${DEV}Deploy the dev hostname adapter to its Pages main branch (dev account)`,
     command: 'pages deploy',
     from: 'apps/dev-hosts',
@@ -190,6 +197,22 @@ describe('where npm starts a wrangler call (#627 AC2)', () => {
 });
 
 describe('the parse of a workflow (#627)', () => {
+  // `npx --no` runs only the installed (lockfile) wrangler and never
+  // downloads one (SonarCloud githubactions:S8543 on PR 988, #784).
+  it('reads npx --no wrangler as a wrangler call', () => {
+    const text = workflow([
+      { name: 'Upload', run: 'npx --no wrangler pages secret bulk "$F"' },
+    ]);
+    expect(wranglerCallsIn('w.yml', text)).toEqual([
+      {
+        step: 'w.yml / ship / Upload',
+        command: 'pages secret bulk',
+        from: '.',
+        configArgs: [],
+      },
+    ]);
+  });
+
   it('reads --config=, -c, --env and -e as config arguments', () => {
     const text = workflow([
       {

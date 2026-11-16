@@ -35,7 +35,7 @@ describe('showsHolding (#673)', () => {
   it('shows the site on the site Worker’s own workers.dev address', () => {
     expect(
       showsHolding(
-        'yawelo-idle-site-dev.shyden-labs-dev.workers.dev',
+        'yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev',
         undefined,
       ),
     ).toBe(false);
@@ -105,7 +105,7 @@ describe('servesPrivate (#846, #589)', () => {
 
   it('serves it on dev, behind the password', () => {
     expect(
-      servesPrivate('yawelo-idle-site-dev.shyden-labs-dev.workers.dev'),
+      servesPrivate('yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev'),
     ).toBe(true);
   });
 });
