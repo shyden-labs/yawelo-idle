@@ -71,12 +71,21 @@ function spoil(held: Map<string, Uint8Array>, key: string) {
   bytes[bytes.byteLength - 1] = (bytes[bytes.byteLength - 1] ?? 0) ^ 0xff;
 }
 
-/** A slot's key: `save/` and a 12-digit counter, so string order is write order. */
-const SLOT_KEY = /^save\/\d{12}$/;
+/**
+ * A slot's key: `save/`, a 12-digit counter, so string order is write order,
+ * then `.` and the time it was written, in ms since the epoch.
+ */
+const SLOT_KEY = /^save\/\d{12}\.\d+$/;
 
 /** The key the next write would take after `keys`. */
 const nextKey = (keys: readonly string[]): string =>
-  `save/${String(Number(keys.at(-1)?.slice(5) ?? '0') + 1).padStart(12, '0')}`;
+  `save/${String(Number(keys.at(-1)?.slice(5, 17) ?? '0') + 1).padStart(12, '0')}.0`;
+
+/** A clock that reads each of `times` in turn, then stays on the last. */
+const clock = (...times: number[]) => {
+  let i = 0;
+  return () => times[Math.min(i++, times.length - 1)] ?? 0;
+};
 
 const slotKeys = (held: Map<string, Uint8Array>) =>
   [...held.keys()].filter((k) => k.startsWith('save/')).sort();
@@ -96,10 +105,19 @@ describe('the latest save and its backups (#160 AC1)', () => {
     expect(await saveSlots(storage).write(saved)).toMatchObject({
       written: true,
     });
-    expect(await saveSlots(storage).read()).toEqual({
+    expect(await saveSlots(storage).read()).toMatchObject({
       kind: 'loaded',
       save: saved,
       back: 0,
+    });
+  });
+
+  it('a loaded save carries the time its slot was written', async () => {
+    const { storage } = memory();
+    await saveSlots(storage, undefined, clock(1_700_000_000_000)).write(nth(1));
+    expect(await saveSlots(storage).read()).toMatchObject({
+      kind: 'loaded',
+      savedAt: 1_700_000_000_000,
     });
   });
 
@@ -164,6 +182,20 @@ describe('a damaged save falls back to the newest backup that loads (#160 AC3)',
     await writeAll(storage, 1, 3);
     spoil(held, slotKeys(held)[2] ?? '');
     expect(await readBuild(storage)).toEqual({ build: 'build-2', back: 1 });
+  });
+
+  it('a fall-back carries the write time of the backup it loaded', async () => {
+    const { storage, held } = memory();
+    const slots = saveSlots(storage, undefined, clock(1_000, 31_000, 61_000));
+    for (let n = 1; n <= 3; n += 1) {
+      // runtime population: each slot's time is the clock's next reading
+      await slots.write(nth(n));
+    }
+    spoil(held, slotKeys(held)[2] ?? '');
+    expect(await saveSlots(storage).read()).toMatchObject({
+      back: 1,
+      savedAt: 31_000,
+    });
   });
 
   it('the latest and two backups damaged: 3 slots back', async () => {

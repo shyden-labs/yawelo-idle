@@ -5,9 +5,10 @@
  * drops the slots older than the newest six: the latest save and 5 backups.
  * No slot is ever written over, so a failed or interrupted write can spoil
  * at most the one slot it was writing, and every slot before it stays as it
- * was (AC4, AC5). A slot's key is `save/` and a 12-digit counter, so string
- * order is write order and the storage's sorted keys need no parsing beyond
- * the pattern.
+ * was (AC4, AC5). A slot's key is `save/`, a 12-digit counter, so string
+ * order is write order, then `.` and the time it was written in ms since the
+ * epoch, so the player can be told how old a restored backup is (AC3). The
+ * time is in the key, not the blob, so writing a slot stays one `set`.
  */
 import { loadBlob, toBlob } from './blob.ts';
 import { CHAIN, type Chain } from './migrations.ts';
@@ -31,9 +32,15 @@ export type SlotsRead =
   | { readonly kind: 'empty' }
   /**
    * The newest save that loads; `back` counts the newer slots that did not
-   * (0 when the latest save loaded).
+   * (0 when the latest save loaded); `savedAt` is when its slot was written,
+   * in ms since the epoch.
    */
-  | { readonly kind: 'loaded'; readonly save: Save; readonly back: number }
+  | {
+      readonly kind: 'loaded';
+      readonly save: Save;
+      readonly back: number;
+      readonly savedAt: number;
+    }
   /** Every slot is damaged: the player must choose; nothing is reset. */
   | { readonly kind: 'allCorrupt'; readonly slots: number }
   /** The latest save is from a newer app: never fall back past it. */
@@ -59,7 +66,7 @@ export interface SaveSlots {
 
 const PREFIX = 'save/';
 const DIGITS = 12;
-const SLOT_KEY = /^save\/\d{12}$/;
+const SLOT_KEY = /^save\/\d{12}\.\d+$/;
 const KEPT = 1 + BACKUPS;
 
 /** The slot keys held, oldest first. */
@@ -67,15 +74,22 @@ async function slotKeys(storage: SlotStorage): Promise<string[]> {
   return (await storage.keys()).filter((key) => SLOT_KEY.test(key)).sort();
 }
 
-const keyAfter = (keys: readonly string[]): string => {
+const COUNTER_END = PREFIX.length + DIGITS;
+
+const keyAfter = (keys: readonly string[], now: number): string => {
   const last = keys.at(-1);
-  const next = last === undefined ? 1 : Number(last.slice(PREFIX.length)) + 1;
-  return PREFIX + String(next).padStart(DIGITS, '0');
+  const next =
+    last === undefined ? 1 : Number(last.slice(PREFIX.length, COUNTER_END)) + 1;
+  return `${PREFIX}${String(next).padStart(DIGITS, '0')}.${String(now)}`;
 };
+
+/** When the slot under `key` was written. */
+const writtenAt = (key: string): number => Number(key.slice(COUNTER_END + 1));
 
 export function saveSlots(
   storage: SlotStorage,
   chain: Chain = CHAIN,
+  now: () => number = Date.now,
 ): SaveSlots {
   const read = async (): Promise<SlotsRead> => {
     const keys = await slotKeys(storage);
@@ -83,7 +97,14 @@ export function saveSlots(
     let back = 0;
     for (const key of [...keys].reverse()) {
       const result = loadBlob(await storage.get(key), chain);
-      if (result.ok) return { kind: 'loaded', save: result.save, back };
+      if (result.ok) {
+        return {
+          kind: 'loaded',
+          save: result.save,
+          back,
+          savedAt: writtenAt(key),
+        };
+      }
       if (back === 0 && result.refusal.kind === 'updateTheApp') {
         return { kind: 'updateTheApp', refusal: result.refusal };
       }
@@ -104,7 +125,7 @@ export function saveSlots(
           return { written: false, reason: 'updateTheApp' };
         }
       }
-      key = keyAfter(keys);
+      key = keyAfter(keys, now());
       await storage.set(key, blob);
     } catch (error) {
       return { written: false, reason: 'storageFailed', error };
