@@ -12,8 +12,8 @@
  *
  * A stored save is a blob (#159): the canonical bytes, compressed, behind a
  * SHA-256 of them; `loadBlob` reads one and refuses a damaged one by a typed
- * reason. The latest save and 5 rotating backups (#160) are slots of blobs:
- * `saveSlots` writes each save to a new slot and reads back the newest one
+ * reason. The latest save and 5 rotating backups (#160) are copies of blobs:
+ * `saveBackups` writes each save to a new copy and reads back the newest one
  * that loads.
  */
 export {
@@ -24,12 +24,12 @@ export {
 } from './blob.ts';
 export {
   BACKUPS,
-  saveSlots,
-  type SaveSlots,
-  type SlotStorage,
-  type SlotsRead,
-  type SlotWrite,
-} from './slots.ts';
+  saveBackups,
+  type SaveBackups,
+  type BackupStorage,
+  type BackupsRead,
+  type BackupWrite,
+} from './backups.ts';
 export {
   load,
   mayReplace,

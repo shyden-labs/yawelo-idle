@@ -1,5 +1,5 @@
 /**
- * When the save is written to its slots (#160 AC2; spec §6.5): on each
+ * When the save is written to its copies (#160 AC2; spec §6.5): on each
  * visibility change, on `pagehide`, and every `BACKUP_MS` while the page is
  * visible. A hidden page runs no timer.
  */

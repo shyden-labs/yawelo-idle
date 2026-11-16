@@ -4,16 +4,16 @@ import { describe, expect, it } from 'vitest';
 import {
   BACKUPS,
   save,
-  saveSlots,
+  saveBackups,
   type Save,
-  type SlotStorage,
+  type BackupStorage,
 } from '../src/index.ts';
 import { newGame } from './states.ts';
 
 /**
  * The latest save and its 5 rotating backups (#160 AC1, AC3 to AC5), over a
  * storage in memory whose failures are injected. Real IndexedDB on every
- * target is tests/engines/save-slots.spec.ts (AC6); when the writes happen,
+ * target is tests/engines/save-backups.spec.ts (AC6); when the writes happen,
  * packages/ui's backup scheduler (AC2).
  */
 
@@ -25,7 +25,7 @@ type Hook = (key: string, bytes?: Uint8Array) => void;
 /** A storage in memory; each hook runs before its call and may throw. */
 function memory(hooks: { set?: Hook; delete?: Hook; get?: Hook } = {}) {
   const held = new Map<string, Uint8Array>();
-  const storage: SlotStorage = {
+  const storage: BackupStorage = {
     get(key) {
       hooks.get?.(key);
       return Promise.resolve(held.get(key));
@@ -48,34 +48,34 @@ function memory(hooks: { set?: Hook; delete?: Hook; get?: Hook } = {}) {
 }
 
 /** The content build of what `read` loaded, or what it found instead. */
-async function readBuild(storage: SlotStorage): Promise<unknown> {
-  const read = await saveSlots(storage).read();
+async function readBuild(storage: BackupStorage): Promise<unknown> {
+  const read = await saveBackups(storage).read();
   return read.kind === 'loaded'
     ? { build: read.save.contentVersion, back: read.back }
     : read;
 }
 
-async function writeAll(storage: SlotStorage, from: number, to: number) {
-  const slots = saveSlots(storage);
+async function writeAll(storage: BackupStorage, from: number, to: number) {
+  const copies = saveBackups(storage);
   for (let n = from; n <= to; n += 1) {
     // runtime population: each write's effect depends on the ones before it
-    const result = await slots.write(nth(n));
+    const result = await copies.write(nth(n));
     expect(result.written, `write ${String(n)}`).toBe(true);
   }
 }
 
-/** Spoils the slot under `key` in place, as a damaged disk would. */
+/** Spoils the copy under `key` in place, as a damaged disk would. */
 function spoil(held: Map<string, Uint8Array>, key: string) {
   const bytes = held.get(key);
-  if (bytes === undefined) throw new Error(`no slot ${key}`);
+  if (bytes === undefined) throw new Error(`no copy ${key}`);
   bytes[bytes.byteLength - 1] = (bytes[bytes.byteLength - 1] ?? 0) ^ 0xff;
 }
 
 /**
- * A slot's key: `save/`, a 12-digit counter, so string order is write order,
+ * A copy's key: `save/`, a 12-digit counter, so string order is write order,
  * then `.` and the time it was written, in ms since the epoch.
  */
-const SLOT_KEY = /^save\/\d{12}\.\d+$/;
+const COPY_KEY = /^save\/\d{12}\.\d+$/;
 
 /** The key the next write would take after `keys`. */
 const nextKey = (keys: readonly string[]): string =>
@@ -87,7 +87,7 @@ const clock = (...times: number[]) => {
   return () => times[Math.min(i++, times.length - 1)] ?? 0;
 };
 
-const slotKeys = (held: Map<string, Uint8Array>) =>
+const copyKeys = (held: Map<string, Uint8Array>) =>
   [...held.keys()].filter((k) => k.startsWith('save/')).sort();
 
 const QUOTA = (): never => {
@@ -99,23 +99,25 @@ describe('the latest save and its backups (#160 AC1)', () => {
     expect(await readBuild(memory().storage)).toEqual({ kind: 'empty' });
   });
 
-  it('a written save reads back as the latest, 0 slots back', async () => {
+  it('a written save reads back as the latest, 0 copies back', async () => {
     const { storage } = memory();
     const saved = nth(1);
-    expect(await saveSlots(storage).write(saved)).toMatchObject({
+    expect(await saveBackups(storage).write(saved)).toMatchObject({
       written: true,
     });
-    expect(await saveSlots(storage).read()).toMatchObject({
+    expect(await saveBackups(storage).read()).toMatchObject({
       kind: 'loaded',
       save: saved,
       back: 0,
     });
   });
 
-  it('a loaded save carries the time its slot was written', async () => {
+  it('a loaded save carries the time its copy was written', async () => {
     const { storage } = memory();
-    await saveSlots(storage, undefined, clock(1_700_000_000_000)).write(nth(1));
-    expect(await saveSlots(storage).read()).toMatchObject({
+    await saveBackups(storage, undefined, clock(1_700_000_000_000)).write(
+      nth(1),
+    );
+    expect(await saveBackups(storage).read()).toMatchObject({
       kind: 'loaded',
       savedAt: 1_700_000_000_000,
     });
@@ -124,7 +126,7 @@ describe('the latest save and its backups (#160 AC1)', () => {
   it('keeps the latest save and 5 backups: the sixth write keeps all six', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 1 + BACKUPS);
-    expect.soft(slotKeys(held)).toHaveLength(1 + BACKUPS);
+    expect.soft(copyKeys(held)).toHaveLength(1 + BACKUPS);
     expect
       .soft(await readBuild(storage))
       .toEqual({ build: 'build-6', back: 0 });
@@ -133,26 +135,26 @@ describe('the latest save and its backups (#160 AC1)', () => {
   it('the seventh write drops the oldest, and only it', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 6);
-    const before = slotKeys(held);
+    const before = copyKeys(held);
     await writeAll(storage, 7, 7);
-    const after = slotKeys(held);
+    const after = copyKeys(held);
     expect.soft(after).toHaveLength(6);
     expect.soft(after).toEqual([...before.slice(1), after[5]]);
     expect.soft(after).not.toContain(before[0]);
   });
 
-  it('each write takes a key no slot has held, in order', async () => {
+  it('each write takes a key no copy has held, in order', async () => {
     const { storage } = memory();
     const keys: string[] = [];
-    const slots = saveSlots(storage);
+    const copies = saveBackups(storage);
     for (let n = 1; n <= 8; n += 1) {
       // runtime population: each key depends on the writes before it
-      const result = await slots.write(nth(n));
+      const result = await copies.write(nth(n));
       if (result.written) keys.push(result.key);
     }
     expect.soft(new Set(keys).size).toBe(8);
     expect.soft([...keys].sort()).toEqual(keys);
-    expect.soft(keys.filter((k) => !SLOT_KEY.test(k))).toEqual([]);
+    expect.soft(keys.filter((k) => !COPY_KEY.test(k))).toEqual([]);
   });
 
   it('leaves other keys in the storage alone and does not read them as saves', async () => {
@@ -165,11 +167,11 @@ describe('the latest save and its backups (#160 AC1)', () => {
       .toEqual({ build: 'build-8', back: 0 });
   });
 
-  it('a new set of slots over the same storage carries on from its keys', async () => {
+  it('a new set of copies over the same storage carries on from its keys', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 3);
     await writeAll(storage, 4, 4);
-    expect.soft(slotKeys(held)).toHaveLength(4);
+    expect.soft(copyKeys(held)).toHaveLength(4);
     expect
       .soft(await readBuild(storage))
       .toEqual({ build: 'build-4', back: 0 });
@@ -177,42 +179,46 @@ describe('the latest save and its backups (#160 AC1)', () => {
 });
 
 describe('a damaged save falls back to the newest backup that loads (#160 AC3)', () => {
-  it('the latest damaged: the backup before it, 1 slot back', async () => {
+  it('the latest damaged: the backup before it, 1 copy back', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 3);
-    spoil(held, slotKeys(held)[2] ?? '');
+    spoil(held, copyKeys(held)[2] ?? '');
     expect(await readBuild(storage)).toEqual({ build: 'build-2', back: 1 });
   });
 
   it('a fall-back carries the write time of the backup it loaded', async () => {
     const { storage, held } = memory();
-    const slots = saveSlots(storage, undefined, clock(1_000, 31_000, 61_000));
+    const copies = saveBackups(
+      storage,
+      undefined,
+      clock(1_000, 31_000, 61_000),
+    );
     for (let n = 1; n <= 3; n += 1) {
-      // runtime population: each slot's time is the clock's next reading
-      await slots.write(nth(n));
+      // runtime population: each copy's time is the clock's next reading
+      await copies.write(nth(n));
     }
-    spoil(held, slotKeys(held)[2] ?? '');
-    expect(await saveSlots(storage).read()).toMatchObject({
+    spoil(held, copyKeys(held)[2] ?? '');
+    expect(await saveBackups(storage).read()).toMatchObject({
       back: 1,
       savedAt: 31_000,
     });
   });
 
-  it('the latest and two backups damaged: 3 slots back', async () => {
+  it('the latest and two backups damaged: 3 copies back', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 6);
-    for (const key of slotKeys(held).slice(3)) spoil(held, key);
+    for (const key of copyKeys(held).slice(3)) spoil(held, key);
     expect(await readBuild(storage)).toEqual({ build: 'build-3', back: 3 });
   });
 
-  it('every slot damaged: allCorrupt, naming how many, and nothing is reset', async () => {
+  it('every copy damaged: allCorrupt, naming how many, and nothing is reset', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 4);
-    for (const key of slotKeys(held)) spoil(held, key);
+    for (const key of copyKeys(held)) spoil(held, key);
     const spoiled = new Map([...held].map(([k, v]) => [k, Uint8Array.from(v)]));
     expect.soft(await readBuild(storage)).toEqual({
       kind: 'allCorrupt',
-      slots: 4,
+      copies: 4,
     });
     expect.soft(held).toEqual(spoiled);
   });
@@ -221,7 +227,7 @@ describe('a damaged save falls back to the newest backup that loads (#160 AC3)',
     const { storage, held } = memory();
     await writeAll(storage, 1, 2);
     const newer = strToU8(JSON.stringify({ ...nth(3), saveVersion: 9 }));
-    held.set(nextKey(slotKeys(held)), toBlobAround(newer));
+    held.set(nextKey(copyKeys(held)), toBlobAround(newer));
     expect(await readBuild(storage)).toEqual({
       kind: 'updateTheApp',
       refusal: { kind: 'updateTheApp', saveVersion: 9, appSaveVersion: 1 },
@@ -232,22 +238,22 @@ describe('a damaged save falls back to the newest backup that loads (#160 AC3)',
     const { storage, held } = memory();
     await writeAll(storage, 1, 1);
     const newer = strToU8(JSON.stringify({ ...nth(2), saveVersion: 9 }));
-    held.set(nextKey(slotKeys(held)), toBlobAround(newer));
-    const before = slotKeys(held);
-    expect.soft(await saveSlots(storage).write(nth(3))).toEqual({
+    held.set(nextKey(copyKeys(held)), toBlobAround(newer));
+    const before = copyKeys(held);
+    expect.soft(await saveBackups(storage).write(nth(3))).toEqual({
       written: false,
       reason: 'updateTheApp',
     });
-    expect.soft(slotKeys(held)).toEqual(before);
+    expect.soft(copyKeys(held)).toEqual(before);
   });
 
-  it('a write after a damaged latest keeps the damaged slot as a backup', async () => {
+  it('a write after a damaged latest keeps the damaged copy as a backup', async () => {
     const { storage, held } = memory();
     await writeAll(storage, 1, 2);
-    const damaged = slotKeys(held)[1] ?? '';
+    const damaged = copyKeys(held)[1] ?? '';
     spoil(held, damaged);
     await writeAll(storage, 3, 3);
-    expect.soft(slotKeys(held)).toContain(damaged);
+    expect.soft(copyKeys(held)).toContain(damaged);
     expect
       .soft(await readBuild(storage))
       .toEqual({ build: 'build-3', back: 0 });
@@ -260,7 +266,7 @@ describe('a failing storage leaves the previous good save (#160 AC4)', () => {
     const { storage } = memory({ set: () => (full ? QUOTA() : undefined) });
     await writeAll(storage, 1, 2);
     full = true;
-    const result = await saveSlots(storage).write(nth(3));
+    const result = await saveBackups(storage).write(nth(3));
     expect.soft(result).toMatchObject({
       written: false,
       reason: 'storageFailed',
@@ -282,7 +288,7 @@ describe('a failing storage leaves the previous good save (#160 AC4)', () => {
     await writeAll(storage, 1, 2);
     blocked = true;
     expect
-      .soft(await saveSlots(storage).write(nth(3)))
+      .soft(await saveBackups(storage).write(nth(3)))
       .toMatchObject({ written: false, reason: 'storageFailed' });
     blocked = false;
     expect
@@ -300,14 +306,14 @@ describe('a failing storage leaves the previous good save (#160 AC4)', () => {
     await writeAll(storage, 1, 2);
     abort = true;
     expect
-      .soft(await saveSlots(storage).write(nth(3)))
+      .soft(await saveBackups(storage).write(nth(3)))
       .toMatchObject({ written: false, reason: 'storageFailed' });
     expect
       .soft(await readBuild(storage))
       .toEqual({ build: 'build-2', back: 0 });
   });
 
-  it('dropping an old slot failing after the new one is stored: the write stands', async () => {
+  it('dropping an old copy failing after the new one is stored: the write stands', async () => {
     let failDelete = false;
     const { storage, held } = memory({
       delete: () => {
@@ -317,17 +323,17 @@ describe('a failing storage leaves the previous good save (#160 AC4)', () => {
     await writeAll(storage, 1, 6);
     failDelete = true;
     expect
-      .soft(await saveSlots(storage).write(nth(7)))
+      .soft(await saveBackups(storage).write(nth(7)))
       .toMatchObject({ written: true });
-    expect.soft(slotKeys(held)).toHaveLength(7);
+    expect.soft(copyKeys(held)).toHaveLength(7);
     expect
       .soft(await readBuild(storage))
       .toEqual({ build: 'build-7', back: 0 });
   });
 });
 
-describe('a crash mid-write spoils at most the slot being written (#160 AC5)', () => {
-  /** A crash while the new slot is stored: half its bytes land, then it stops. */
+describe('a crash mid-write spoils at most the copy being written (#160 AC5)', () => {
+  /** A crash while the new copy is stored: half its bytes land, then it stops. */
   const crashingOnce = () => {
     let crash = false;
     const box = memory({
@@ -341,16 +347,16 @@ describe('a crash mid-write spoils at most the slot being written (#160 AC5)', (
     return { ...box, crashNext: () => (crash = true) };
   };
 
-  it('the crashed write leaves one damaged slot, and the save before it loads', async () => {
+  it('the crashed write leaves one damaged copy, and the save before it loads', async () => {
     const { storage, held, crashNext } = crashingOnce();
     await writeAll(storage, 1, 3);
     crashNext();
-    await saveSlots(storage).write(nth(4));
+    await saveBackups(storage).write(nth(4));
     const damaged = await Promise.all(
-      slotKeys(held).map(async (key) => {
+      copyKeys(held).map(async (key) => {
         const one = memory();
         await one.storage.set(key, held.get(key) ?? new Uint8Array());
-        return (await saveSlots(one.storage).read()).kind !== 'loaded';
+        return (await saveBackups(one.storage).read()).kind !== 'loaded';
       }),
     );
     expect.soft(damaged.filter(Boolean)).toHaveLength(1);
@@ -359,17 +365,17 @@ describe('a crash mid-write spoils at most the slot being written (#160 AC5)', (
       .toEqual({ build: 'build-3', back: 1 });
   });
 
-  it('the next write after a crash makes no second damaged slot', async () => {
+  it('the next write after a crash makes no second damaged copy', async () => {
     const { storage, held, crashNext } = crashingOnce();
     await writeAll(storage, 1, 3);
     crashNext();
-    await saveSlots(storage).write(nth(4));
+    await saveBackups(storage).write(nth(4));
     await writeAll(storage, 5, 5);
     const loads = await Promise.all(
-      slotKeys(held).map(async (key) => {
+      copyKeys(held).map(async (key) => {
         const one = memory();
         await one.storage.set(key, held.get(key) ?? new Uint8Array());
-        return (await saveSlots(one.storage).read()).kind === 'loaded';
+        return (await saveBackups(one.storage).read()).kind === 'loaded';
       }),
     );
     expect.soft(loads.filter((ok) => !ok)).toHaveLength(1);
