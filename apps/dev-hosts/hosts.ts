@@ -18,7 +18,7 @@
  * Maps, not object literals: a lookup by an arbitrary hostname must not find
  * a key every plain object inherits, such as `constructor`.
  */
-import { pass, type Fetch } from '../door/worker/door';
+import { pass, type Fetch } from '../door/worker/door.ts';
 
 export type DevWorker = 'SITE' | 'SYNC' | 'HOLDING';
 

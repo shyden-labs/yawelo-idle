@@ -36,6 +36,7 @@ const SCRIPTS = [
   'scripts/d1-binding.ts',
   'scripts/dependabot-check.ts',
   'scripts/dev-behind-develop.ts',
+  'scripts/dev-hosts-secrets.ts',
   'scripts/dev-secrets.ts',
   'scripts/develop-squash-only.ts',
   'scripts/door-check.ts',
