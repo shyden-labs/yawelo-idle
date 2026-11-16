@@ -1,39 +1,37 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-16 14:15 WIB (session `yawelo-idle-74`). Colima not used. A local wait on PR 988's verdict dies with `/clear` (re-run: `~/.claude/scripts/pr-verdict.sh 988`). No background subagent.
+**Written:** 2026-11-16 ~14:50 WIB for the laptop shutdown (session `yawelo-idle-74`). Colima, simulators and USB devices were not used, so there are no claims to release. Two local waiters died with the shutdown: a `gh run watch` on deploy-dev run 43824572283 and a `pr-verdict.sh 990` wait. The runs themselves continue on GitHub; re-read them with the commands in step 1. No background subagent.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`. board-next names #783 first; it waits for the next release cut (Shyden, 2026-11-05), so skip it. **Physical devices are unavailable** (Shyden, 2026-11-16): park device work.
 
 ## In flight
 
-- **#784 AC2, DEV into the non-PROD account: PR 988**, branch `784-move-dev`, worktree `../yawelo-idle-784`, head `13a46852` (pushed; read by `git ls-remote`). It switches the Workers and D1 steps to `NONPROD_CLOUDFLARE_*`. The workers.dev subdomain is `yawelo-idle-non-prod`. `apps/dev-hosts` (Pages, stays in Shyden Labs Dev) forwards over HTTPS through the door's `pass()` with `DEV_DOOR_SECRET`. **Proven:** deploy-dev dispatched on the branch at `21bb8205` (run 43811756555) passed every job, verify and verify-dev-hosts included. SonarCloud then failed on `21bb8205`: S8543 on `npx wrangler pages secret bulk`, and new coverage at 77.8 %. Fixed in `13a46852`: `npx --no wrangler` (Shyden's choice) and the Function's handler unit-tested. Unit 14,481 passed (sampled run, figures on #971). **Next:** `~/.claude/scripts/pr-verdict.sh 988`. If every check is green, squash-merge. Then ask Shyden before deleting the old Yawelo Workers and D1 in Shyden Labs Dev, then TEST.
-- **App permissions:** yawelo-idle-agent now holds Environments read+write (Shyden accepted). `DEV_DOOR_SECRET` was set by the App, value never shown. Manifest updated.
-- **Ticket 160 (rotating backups, P3) on draft PR 986**, branch `160-save-backups`, worktree `../yawelo-idle-160`, head `e83c9455` (pushed; read by `git ls-remote`; develop merged in). Red proven in CI (run 43775290374, tag `evidence/160-red`). Implementations in; each backup's write time is in its key and a loaded read returns `savedAt`; "slots" renamed to backups/copies (Shyden: one save per player per course, hidden backups only). Guard fixes: the engines spec no longer intercepts the network (`tests/engines/page-server.ts` + webServer in `playwright.engines.config.ts`), `tests/engines/tsconfig.json` listed in erasable-syntax. SonarCloud S2871 fixed (explicit code-unit sort). Unit 14,496 pass locally; typecheck and lint pass. On 95f2ea1a build-and-test passed (engines spec and guards included); board-orphans failed only on #162 being In Progress before its close (now Done). CI green on e83c9455, every check (build-and-test, coverage, sonar-coverage, sonarcloud, board-orphans). Stays draft until the AC3 notice lands.
-- **AC3 UI not built yet.** Approved English (Shyden, 2026-11-16): restored: "Your latest save was damaged, so the backup saved {when} was loaded." (`{when}` from `Intl.RelativeTimeFormat`, numeric auto); all damaged: "Your save and all its backups are damaged." with buttons "Start a new game" / "Keep the damaged save and close". Indonesian drafts in `../yawelo-idle-160/.superpowers/sdd/160/id.json`. **Google read-back refused: the 2026-11-15 Google day's 16,000 were spent (15,977); it resets at midnight Pacific = 15:00 WIB.** Then: read-back table, Shyden's approval, catalogue keys + review.ts evidence, a notice component, tests first.
-- AC6 (real IndexedDB on every target): the engines spec covers browsers in CI; real phones parked.
-- **#987** filed (P3, 5 pts, blocked by #160): automatic diagnostics report when every backup is damaged (diagnostics only, Shyden). #160's screen promises no report until it lands.
+- **#784 (environments), AC2's DEV half merged:** PR 988 squash-merged into develop as `236ac629` (every check and the SonarCloud gate green on head `13a46852`). DEV's Workers and D1 deploy into the non-PROD account (`NONPROD_CLOUDFLARE_*`); its workers.dev subdomain is `yawelo-idle-non-prod`. `apps/dev-hosts` (Pages, still in Shyden Labs Dev) forwards over HTTPS through the door's `pass()` with `DEV_DOOR_SECRET`, so the old dev.yawelo-idle.shyden.co.uk names keep working. A branch deploy at `21bb8205` (run 43811756555) passed every job. **The develop deploy of `236ac629` (run 43824572283) was still in progress at shutdown: read it first.** Board: Todo (no open branch). Still to do on #784: delete the old Yawelo Workers and D1 in Shyden Labs Dev (**ask Shyden first**), create TEST, the doors (AC4; a fresh door secret goes into dev AND production together, because nobody knows the current value), PROD (AC3).
+- **#989 (astro 7.4.12 and vite 8.3.8, P2), PR 990**, branch `989-astro-vite`, worktree `../yawelo-idle-989`, head `831f7f6d` (pushed; read by `git ls-remote`). One vite copy at 8.3.8 rather than 8.3.7; the reason is on #989. Local: builds with 0 warnings; typecheck, lint and unit (14,466) pass. CI had not reported at shutdown. If green, squash-merge it, and tell shyden.co.uk's session the projects should now move to vite 8.3.8.
+- **App permissions (2026-11-16):** yawelo-idle-agent holds Environments read and write plus Secrets read (Shyden accepted). `DEV_DOOR_SECRET` was set by the App and its value never shown. The pinned manifest is updated and its test green. After any App permission change, delete `~/.claude/state/github-app/yawelo-idle-agent-token.json`.
+- **#160 (rotating backups, P3) on draft PR 986**, branch `160-save-backups`, worktree `../yawelo-idle-160`, head `e83c9455`; CI green. It stays draft until the AC3 notice lands. Approved English: restored, "Your latest save was damaged, so the backup saved {when} was loaded."; all damaged, "Your save and all its backups are damaged." with buttons "Start a new game" / "Keep the damaged save and close". Indonesian drafts are in `../yawelo-idle-160/.superpowers/sdd/160/id.json`. The Google read-back resets at 15:00 WIB daily. AC6 phones parked. #987 (diagnostics report) is blocked by #160.
 
 ## Resume steps
 
-1. **#784:** finish PR 988 (above), then create TEST in the non-PROD account.
-2. After 15:00 WIB: `node scripts/google-read-back.ts id en < .superpowers/sdd/160/id.json` in `../yawelo-idle-160`; show Shyden the writer/reader table; then build the AC3 notice (failing tests first).
-3. Prove the engines spec red at the red stage by a mutation PR, as #159 did (the handover rule from last session), or record why CI's guard run is enough.
-4. Then: #127 (i18n runtime) or #163 (device registration, now unblocked by 162).
-5. **#130**: develop's first paint is 14,924 of 15,000 gzipped bytes; mounting the store crosses it.
-6. **#971**: three local timeout runs logged 2026-11-16. **#864**, **#888**: watches to 11-19 and 11-20.
+1. Read the waits: `gh run view 43824572283` (develop deploy of `236ac629`), then `~/.claude/scripts/pr-verdict.sh 990`. Tell Shyden about any failure that turn.
+2. #990 green: squash-merge (`--match-head-commit` from a file), clean up its branch and worktree, verify the dev deploy, then close #989 by hand after reading every AC.
+3. #784: ask Shyden about deleting the old Yawelo resources in Shyden Labs Dev, then plan TEST.
+4. #160: `node scripts/google-read-back.ts id en < .superpowers/sdd/160/id.json` in `../yawelo-idle-160`; show Shyden the writer/reader table; then build the AC3 notice, failing tests first.
+5. Then: #127 (i18n runtime) or #163 (device registration). #130: first paint is 14,924 of 15,000 gzipped bytes.
+6. #971: 2026-11-16 14:11 timeout (slice 394) posted, and a 2 s-sampled rerun passed; the cause is not named yet. #864 and #888 are watches to 11-19 and 11-20.
+7. shyden.co.uk PR 1175 (Node 26.13.1) and PR 1173 (wrangler 4.161.0): follow them once they land (version census).
 
 ## Waiting on Shyden
 
-- #160's Indonesian (after the 15:00 WIB read-back). #783 waits for the first release with something to ship (Shyden, 2026-11-16). Real phones away. (Sparked Host #073955 already closed; S9382 no longer exists in SonarCloud.)
+- Deleting the old Yawelo Workers and D1 in Shyden Labs Dev (#784). #160's Indonesian. #783 waits for a release with something to ship.
 
 ## Rulings this session (recorded on the tickets)
 
-- #830 Indonesian approved as written: close it after reading the ACs. #125 colours: en-id batik dyes (soga #B5651D, teal #2E8B8B, mengkudu #B03A2E on indigo/gold); id-en per country (England racing green #1F5E3B, USA denim #3B5B8C, Australia ochre #C46A2B on navy #0E1A33/gold #D4AF37). #106/#107: cut to what exists now, file the rest as follow-ups. #635: research the applicable law first (UU 27/2022 etc.), then ask about a professional review. Phone sign-off (#632): full suite on every phone, one at a time, results to Shyden, then he plays one phone briefly and signs off.
+- #784: keep the old dev names through the move; DEV starts empty; add the dev door secret; Environments read+write for the App; `npx --no wrangler` for the flagged line. Earlier: #830 approved as written; #125 colours; #106/#107 cut to what exists; #635 law research first; #632 phone sign-off protocol.
 
 ## Done this session (2026-11-16)
 
-- #162 D1 migrations: SQL excluded from Sonar coverage (Shyden), PR 983 squash-merged `1998b516`; dev deploy 43782785800 applied 0001 (✅); closed by hand, board Done.
-- #160 red proven and implemented on PR 986; #987 filed.
-- Progress page republished 08:10 WIB (version 51).
-- Cleanup: 12 merged/closed branches and the -162 worktree removed (Shyden approved); mutation/36-stryker deleted on GitHub.
-- #784: Yawelo Idle Non-Prod account created; its CI token saved in the dev environment.
+- #162 merged and closed. #160 implemented on PR 986. #987 filed.
+- #784: Non-Prod account, token, `DEV_DOOR_SECRET`, PR 988 merged (`236ac629`).
+- #989 filed (version census) and on PR 990. #971 occurrence and sampled figures posted.
+- Cleanup: 12 merged branches and the -162 and -784 worktrees removed.
