@@ -14,7 +14,7 @@
 ## Resume steps
 
 1. Read the waits: `gh run view 43824572283` (develop deploy of `236ac629`), then `~/.claude/scripts/pr-verdict.sh 990`. Tell Shyden about any failure that turn.
-2. #990 green: squash-merge (`--match-head-commit` from a file), clean up its branch and worktree, verify the dev deploy, then close #989 by hand after reading every AC.
+2. #990: every check was green on `831f7f6d` (read 14:58 WIB), but it is BEHIND develop after #988's merge. Update the branch (`gh pr update-branch 990`), wait for CI on the new head, then squash-merge (`--match-head-commit` from a file), clean up its branch and worktree, verify the dev deploy, then close #989 by hand after reading every AC.
 3. #784: ask Shyden about deleting the old Yawelo resources in Shyden Labs Dev, then plan TEST.
 4. #160: `node scripts/google-read-back.ts id en < .superpowers/sdd/160/id.json` in `../yawelo-idle-160`; show Shyden the writer/reader table; then build the AC3 notice, failing tests first.
 5. Then: #127 (i18n runtime) or #163 (device registration). #130: first paint is 14,924 of 15,000 gzipped bytes.
