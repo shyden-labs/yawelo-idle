@@ -70,3 +70,15 @@ export function forward(
     fetch,
   );
 }
+
+/**
+ * The Function's handler, re-exported by functions/[[path]].ts as
+ * onRequest: the Pages context's request and env, sent on with the runtime's
+ * own fetch.
+ */
+export function handle(context: {
+  readonly request: Request;
+  readonly env: DevHostsEnv;
+}): Promise<Response> {
+  return forward(context.request, context.env, (forwarded) => fetch(forwarded));
+}

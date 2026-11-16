@@ -149,11 +149,14 @@ function callOf(step: string, from: string, line: string): WranglerCall {
       `${step}: a wrangler call continued on the next line: ${line}`,
     );
   const words = wordsOf(line);
-  if (words[0] !== 'npx' || words[1] !== 'wrangler')
+  // `npx --no` runs only the installed (lockfile) wrangler, never a download
+  // (SonarCloud githubactions:S8543, #784).
+  const at = words[1] === '--no' ? 2 : 1;
+  if (words[0] !== 'npx' || words[at] !== 'wrangler')
     throw new Error(
       `${step}: wrangler is called in a form this guard cannot follow: ${line}`,
     );
-  const rest = words.slice(2);
+  const rest = words.slice(at + 1);
   const command = WRANGLER_COMMANDS.find(
     (each) => rest.slice(0, each.split(' ').length).join(' ') === each,
   );

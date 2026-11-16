@@ -406,7 +406,10 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
       ),
       holds('npx wrangler deploy --secrets-file "$SECRETS_FILE"'),
       holds('node scripts/token-reach.ts', SHYDEN_LABS_DEV),
-      holds('npx wrangler pages secret bulk "$SECRETS_FILE"', SHYDEN_LABS_DEV),
+      holds(
+        'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
+        SHYDEN_LABS_DEV,
+      ),
       holds(
         'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
         SHYDEN_LABS_DEV,
@@ -468,7 +471,7 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
     );
     const upload = steps.findIndex(
       (step) =>
-        runOf(step) === 'npx wrangler pages secret bulk "$SECRETS_FILE"',
+        runOf(step) === 'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
     );
     const deploy = steps.findIndex((step) =>
       runOf(step).startsWith('npx wrangler pages deploy'),

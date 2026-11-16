@@ -197,6 +197,22 @@ describe('where npm starts a wrangler call (#627 AC2)', () => {
 });
 
 describe('the parse of a workflow (#627)', () => {
+  // `npx --no` runs only the installed (lockfile) wrangler and never
+  // downloads one (SonarCloud githubactions:S8543 on PR 988, #784).
+  it('reads npx --no wrangler as a wrangler call', () => {
+    const text = workflow([
+      { name: 'Upload', run: 'npx --no wrangler pages secret bulk "$F"' },
+    ]);
+    expect(wranglerCallsIn('w.yml', text)).toEqual([
+      {
+        step: 'w.yml / ship / Upload',
+        command: 'pages secret bulk',
+        from: '.',
+        configArgs: [],
+      },
+    ]);
+  });
+
   it('reads --config=, -c, --env and -e as config arguments', () => {
     const text = workflow([
       {

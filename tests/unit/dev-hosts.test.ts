@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEV_DOORS,
   DEV_HOSTS,
   forward,
+  handle,
   type DevHostsEnv,
 } from '../../apps/dev-hosts/hosts';
 import {
@@ -142,5 +143,31 @@ describe.each(UNKNOWN_HOSTS)('%s (%s)', (host) => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.text()).toBe('not found');
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The Function's handler (functions/[[path]].ts re-exports it as onRequest):
+ * the Pages context's request and env, sent on with the runtime's own fetch.
+ */
+describe('handle', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('forwards the context’s request with the context’s env, through the global fetch', async () => {
+    const fetch = answering();
+    vi.stubGlobal('fetch', fetch);
+    const response = await handle({
+      request: new Request('https://dev-api.yawelo-idle.shyden.co.uk/health'),
+      env: ENV,
+    });
+    expect(await response.text()).toBe('origin');
+    const [[sent] = [new Request('https://nothing.invalid/')]] =
+      fetch.mock.calls;
+    expect(sent.url).toBe(
+      'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev/health',
+    );
+    expect(sent.headers.get(DOOR_SECRET_HEADER)).toBe('the-dev-door-secret');
   });
 });

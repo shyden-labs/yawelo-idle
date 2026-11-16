@@ -196,7 +196,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SECRETS_FILE: ${{ steps.dev-hosts-secrets.outputs.path }}
-        run: npx wrangler pages secret bulk "$SECRETS_FILE"
+        # `--no`: only the wrangler installed from the lockfile, never a
+        # download (SonarCloud githubactions:S8543).
+        run: npx --no wrangler pages secret bulk "$SECRETS_FILE"
       - name: Make the hostname adapter's empty static directory
         working-directory: apps/dev-hosts
         run: mkdir -p public
