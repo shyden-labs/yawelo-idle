@@ -102,11 +102,7 @@ describe('the audit judge', () => {
 });
 
 describe('the recorded exceptions', () => {
-  it('hold only the deepmerge advisory Shyden allowed on 2026-11-05', () => {
-    expect(EXCEPTIONS.map((entry) => entry.id)).toEqual([GHSA]);
-  });
-
-  it('expire no later than 60 days after the ruling', () => {
-    expect(EXCEPTIONS[0]?.expires).toBe('2027-01-04');
+  it('hold none since GitHub withdrew the deepmerge advisory on 2026-11-16 (#991)', () => {
+    expect(EXCEPTIONS).toEqual([]);
   });
 });
