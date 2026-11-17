@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-18 06:35 WIB, session `yawelo-idle-63`, before a laptop restart. Branch `handover/2026-10-17-d`; every worktree clean and pushed (`yawelo-idle-1015` at `6389f0f`, `yawelo-idle-160` at `35dd400`). No Colima, simulator or USB claim. Local background waiters (polling only) die with the restart: nothing is lost. Road to Launch page republished 05:45 WIB (version 62).
+**Written:** 2026-11-18 06:35 WIB, session `yawelo-idle-63`, before a laptop restart. Branch `handover/2026-10-17-d`; every worktree clean and pushed (`yawelo-idle-1015` at `6389f0f`, `yawelo-idle-160` at `35dd400`). No Colima, simulator or USB claim. Local background waiters (polling only) die with the restart: nothing is lost. Road to Launch page republished 06:41 WIB (version 63).
 
 ## Shyden
 
@@ -12,7 +12,7 @@
 
 ## Resume steps
 
-1. **TEST deploy** run 44199225894 (dispatched on the release cut after Shyden added `TEST_CLOUDFLARE_API_TOKEN`; `NONPROD_CLOUDFLARE_ACCOUNT_ID` set by the App, both read back): read it by job. If `token-reach` fails, the per-Worker key may need an account read permission (the key, "GitHub Actions: TEST deploys", is limited to `yawelo-idle-holding-test`, Editor). If green, curl `https://yawelo-idle-holding-test.yawelo-idle-non-prod.workers.dev/` and record on #784.
+1. **TEST is live** (deploy-test run 44199225894 green; the TEST address answers 200; recorded on #784). Nothing to do.
 2. **PR #1019** (#1015, new promo video): branch was updated onto develop; read its checks. When green and no dev deploy runs: copy `../yawelo-idle-1015/apps/site/media/yawelo-idle-promo*` to the scratchpad, upload all three to R2 `yawelo-idle-media-dev` (Yawelo Chrome profile, bucket page, file input), curl-compare with the repo copies, merge, read the dev deploy's verify-holding. Production bucket only at the next release, with Shyden's approval. Then check whether the new video settles #622.
 3. After the release: #1013's per-host curls, the 301s with shyden-co-uk-ec, the old Worker's custom domain removal (shyden.co.uk's account).
 4. **#1031** (P2): align versions with the other projects (census from steadyhand: 8+ items; run `census.py` for the full list).
