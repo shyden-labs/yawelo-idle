@@ -81,8 +81,10 @@ describe('showsHolding behind the doors (#784)', () => {
     expect(showsHolding(ORIGIN, HOLDING_DOOR)).toBe(true);
   });
 
-  it('shows the site through the test site’s door', () => {
-    expect(showsHolding(ORIGIN, doorTo('yawelo-idle-site-test'))).toBe(false);
+  it('shows the site through the TEST holding page’s door (#1021)', () => {
+    expect(showsHolding(ORIGIN, doorTo('yawelo-idle-holding-test'))).toBe(
+      false,
+    );
   });
 
   it('shows the site through the dev API’s door', () => {
