@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-17 14:12 WIB for session `yawelo-idle-d1`. Colima, simulators and USB phones were not claimed. No background subagent; nothing is waiting. Clean-up pass done today (ledger recorded). Road to Launch page republished 14:10 WIB (version 59; source `road-to-launch-live.html` in session 9e54eed1's scratchpad).
+**Written:** 2026-11-17 21:00 WIB for session `yawelo-idle-63`. Colima, simulators and USB phones were not claimed (the phones are plugged in, but Yawelo has no device run allowed until playwright-devices#7, #16, #17 land). No background subagent; nothing is waiting. Road to Launch page republished at this close-out.
 
 **Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
 
@@ -12,6 +12,7 @@ Totals: desktop chromium 17, firefox 17, webkit 17 (develop deploy run 439927053
 
 ## Done this session
 
+- **#784: old DEV deleted from Shyden Labs Dev** (Shyden, 2026-11-17: "Delete without a backup"): Workers site-dev, holding-dev, web-dev, sync-dev and D1 `yawelo-idle-dev`, with evidence on the ticket (comment 6950140035). Only the `yawelo-idle-dev-hosts` Pages project stays there, until the PROD move's doors go live. #784 stays open for TEST, PROD (Shyden's approval) and the doors.
 - **#1004, #1006, #1007 closed** with their evidence quoted. SonarCloud on develop `8f93f962` (run 44032624363): 0 bugs, 0 vulnerabilities, gate OK. The first gate read `NONE` only because there was no earlier analysis; `sonar-verdict.ts` is unchanged. `sonar-project.properties` marks S6505 (allowScripts proven) and S4036 (Shyden's choice) with their reasons.
 - **#1010 filed** (P3, 5 pts): triage the 114 Sonar code smells, starting with 16 S2699 (tests with no assertion).
 
@@ -26,4 +27,4 @@ Totals: desktop chromium 17, firefox 17, webkit 17 (develop deploy run 439927053
 
 1. #160: nothing to do until #992/#993; update the branch from develop when work resumes.
 2. Follow playwright-devices#7, #16, #17; when they land, start #992, #993, #1003.
-3. Later: #784 (ask Shyden about deleting the old Yawelo resources in Shyden Labs Dev), #127, #163.
+3. #784's remaining ACs (TEST environment in the non-PROD account; PROD move needs Shyden's approval), then #127, #163.
