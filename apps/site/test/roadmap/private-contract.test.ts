@@ -13,7 +13,7 @@ import { privateJudge, privateSpec } from '../../api/judge';
  * against the fake GitHub, on the dev host (behind the password) and the
  * production host, where the health report is a bare 404 (#846).
  */
-const DEV = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const PROD = 'https://yawelo-idle.shyden.co.uk';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const HEALTH = ROADMAP_PATHS.health;

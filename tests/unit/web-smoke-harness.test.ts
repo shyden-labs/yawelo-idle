@@ -222,7 +222,8 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
   });
 });
 
-const SITE_URL = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/';
+const SITE_URL =
+  'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/';
 const site = () =>
   siteSmokeConfig({
     SITE_SMOKE_URL: SITE_URL,

@@ -14,7 +14,7 @@ import { inlineTags, startTags } from '../../../tests/inline-tags';
  * it runs alone, because local workerd serves static assets for the harness's
  * primary Worker only (measured with wrangler 4.145.0, #332).
  */
-const HOST = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const HOST = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 
 const server = createTestHarness({
   root: new URL('..', import.meta.url).pathname,

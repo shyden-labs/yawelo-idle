@@ -9,7 +9,8 @@ import {
   type DeployConfig,
 } from './wrangler-configs';
 import { runOf } from './workflow-steps';
-import { DEV_HOSTS } from '../../apps/dev-hosts/hosts';
+import { DEV_DOORS, DEV_HOSTS } from '../../apps/dev-hosts/hosts';
+import { DOORS } from '../../apps/door/worker/door';
 import { HOLDING_HOST } from '../../apps/site/worker/routes';
 
 /**
@@ -21,11 +22,11 @@ import { HOLDING_HOST } from '../../apps/site/worker/routes';
 const ROOT = new URL('../..', import.meta.url).pathname;
 
 /**
- * The "Shyden Labs Dev" account's workers.dev subdomain, read from the
- * account 2026-10-05 (#395): dev lives there, beside dev only, never in the
- * production account.
+ * The non-PROD account's workers.dev subdomain, assigned by Cloudflare from
+ * the account's name and read from the account 2026-11-16 (#784): DEV's
+ * Workers live there, beside TEST only, never in the production account.
  */
-const DEV_WORKERS_SUBDOMAIN = 'shyden-labs-dev';
+const DEV_WORKERS_SUBDOMAIN = 'yawelo-idle-non-prod';
 
 // The five by name: that they are every wrangler config in the repo walks
 // the tree, a guard (#530, tests/guards/wrangler-configs.test.ts).
@@ -196,17 +197,17 @@ describe('the dev Workers’ deploy configs', () => {
     expect(workflow.jobs['verify']?.environment).toEqual(dev);
   });
 
-  it('serves the dev hostnames through a Pages project bound to the site, sync and holding dev copy Workers (#429, #768)', () => {
+  it('serves the dev hostnames through a Pages project that reaches the Workers at the non-PROD account’s workers.dev addresses, with no binding (#429, #768, #784)', () => {
     const adapter = byName('yawelo-idle-dev-hosts');
     expect(adapter.main).toBeUndefined();
     expect(adapter.pages_build_output_dir).toBe(
       join(ROOT, 'apps/dev-hosts/public'),
     );
-    expect(adapter.services).toEqual([
-      { binding: 'SITE', service: byName('yawelo-idle-site-dev').name },
-      { binding: 'SYNC', service: byName('yawelo-idle-sync-dev').name },
-      { binding: 'HOLDING', service: byName('yawelo-idle-holding-dev').name },
-    ]);
+    // A service binding reaches only its own account's Workers (#784).
+    expect(adapter.services).toEqual([]);
+    expect(adapter.vars).toEqual({
+      ORIGIN_DOMAIN: `${DEV_WORKERS_SUBDOMAIN}.workers.dev`,
+    });
   });
 
   // Indonesian providers block free shared domains (#768), and the media's
@@ -226,13 +227,16 @@ describe('the dev Workers’ deploy configs', () => {
     });
   });
 
-  it('binds every Worker a dev hostname names (#429)', () => {
-    const declared = byName('yawelo-idle-dev-hosts').services as {
-      binding: string;
-    }[];
-    expect([...new Set(DEV_HOSTS.values())].sort()).toEqual(
-      declared.map(({ binding }) => binding).sort(),
-    );
+  it('reaches a dev Worker this repo deploys from every dev hostname (#429, #784)', () => {
+    expect(
+      [...DEV_HOSTS.values()].map(
+        (worker) => byName(DOORS.get(DEV_DOORS[worker])?.worker ?? '').name,
+      ),
+    ).toEqual([
+      'yawelo-idle-site-dev',
+      'yawelo-idle-sync-dev',
+      'yawelo-idle-holding-dev',
+    ]);
   });
 
   it('declares no secret as a plain var (the password is a Worker secret)', () => {
@@ -338,8 +342,22 @@ describe('the dev D1 database, created by the pipeline (#357 AC1)', () => {
   });
 });
 
-describe('the dev Cloudflare token, proven and held only where it is used (#395)', () => {
-  const CLOUDFLARE = {
+describe('the dev Cloudflare tokens, proven and held only where they are used (#395, #784)', () => {
+  /**
+   * The non-PROD account's token: DEV's Workers and D1 (#784 AC2). Wrangler
+   * reads the CLOUDFLARE_ names, so each step maps them to the NONPROD_
+   * environment secrets.
+   */
+  const NONPROD = {
+    CLOUDFLARE_API_TOKEN: '${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}',
+    CLOUDFLARE_ACCOUNT_ID: '${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}',
+  };
+  /**
+   * Shyden Labs Dev's token, for the hostname adapter alone: its Pages
+   * project stays there, beside the custom domains attached to it (#784,
+   * Shyden 2026-11-16), until the doors go live.
+   */
+  const SHYDEN_LABS_DEV = {
     CLOUDFLARE_API_TOKEN: '${{ secrets.CLOUDFLARE_API_TOKEN }}',
     CLOUDFLARE_ACCOUNT_ID: '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}',
   };
@@ -353,10 +371,10 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
     ]);
   });
 
-  it('is held by exactly the steps that call Cloudflare, the reach check first', () => {
-    const holds = (run: string) => ({
+  it('are held by exactly the steps that call Cloudflare, each account’s reach check first', () => {
+    const holds = (run: string, token = NONPROD) => ({
       run,
-      env: expect.objectContaining(CLOUDFLARE) as unknown,
+      env: expect.objectContaining(token) as unknown,
     });
     expect(
       deploySteps()
@@ -387,22 +405,31 @@ describe('the dev Cloudflare token, proven and held only where it is used (#395)
         'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
       ),
       holds('npx wrangler deploy --secrets-file "$SECRETS_FILE"'),
+      holds('node scripts/token-reach.ts', SHYDEN_LABS_DEV),
+      holds(
+        'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
+        SHYDEN_LABS_DEV,
+      ),
       holds(
         'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
+        SHYDEN_LABS_DEV,
       ),
     ]);
   });
 
-  it('is proven to reach the dev account alone before any step that uses it', () => {
+  it('are each proven to reach their account alone before any step that uses them', () => {
     const steps = deploySteps();
-    const reach = steps.findIndex(
-      (step) => runOf(step) === 'node scripts/token-reach.ts',
-    );
-    const firstCloudflare = steps.findIndex((step) =>
-      /wrangler|ensure-d1|d1-binding/.test(runOf(step)),
-    );
-    expect(reach).toBeGreaterThanOrEqual(0);
-    expect(reach).toBeLessThan(firstCloudflare);
+    const tokenOf = (step: (typeof steps)[number]) =>
+      step.env?.['CLOUDFLARE_API_TOKEN'];
+    for (const token of [NONPROD, SHYDEN_LABS_DEV]) {
+      // one scenario: each account's first Cloudflare step is its reach check
+      const first = steps.find(
+        (step) => tokenOf(step) === token.CLOUDFLARE_API_TOKEN,
+      );
+      expect(first === undefined ? undefined : runOf(first)).toBe(
+        'node scripts/token-reach.ts',
+      );
+    }
   });
 });
 
@@ -429,9 +456,37 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
       DEV_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       ROADMAP_WEBHOOK_SECRET: '${{ secrets.ROADMAP_WEBHOOK_SECRET }}',
       ROADMAP_APP_KEY: '${{ secrets.ROADMAP_APP_KEY }}',
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
     });
     expect(deploy).toBeGreaterThan(write);
     expect(steps[deploy]?.['working-directory']).toBe('apps/site');
+  });
+
+  it('gives the hostname adapter the dev door secret from the dev environment, before its deploy (#784)', () => {
+    const steps = deploySteps();
+    const write = steps.findIndex(
+      (step) =>
+        runOf(step) ===
+        'path="$(node scripts/dev-hosts-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"',
+    );
+    const upload = steps.findIndex(
+      (step) =>
+        runOf(step) === 'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
+    );
+    const deploy = steps.findIndex((step) =>
+      runOf(step).startsWith('npx wrangler pages deploy'),
+    );
+    expect(steps[write]?.id).toBe('dev-hosts-secrets');
+    expect(steps[write]?.env).toEqual({
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
+    });
+    expect(steps[upload]?.env?.['SECRETS_FILE']).toBe(
+      '${{ steps.dev-hosts-secrets.outputs.path }}',
+    );
+    expect(steps[upload]?.['working-directory']).toBe('apps/dev-hosts');
+    expect(write).toBeGreaterThanOrEqual(0);
+    expect(upload).toBeGreaterThan(write);
+    expect(deploy).toBeGreaterThan(upload);
   });
 });
 

@@ -28,7 +28,7 @@ it('answers 503 with a plain sentence, never the error text, when the board has 
   await world.resetFake();
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
-    'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/roadmap.json',
+    'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap.json',
     { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
   );
   expect(response.status).toBe(503);
@@ -42,7 +42,7 @@ it('answers its 503 as the API spec says (#588)', async () => {
   await world.resetFake();
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
-    'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/roadmap.json',
+    'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap.json',
     { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
   );
   expect(response.status).toBe(503);
@@ -62,7 +62,7 @@ it('reports the failed read’s error text on the dev health report, as the priv
   await world.resetFake();
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
-    'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev/api/roadmap/health',
+    'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap/health',
     { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
   );
   expect(response.status).toBe(200);

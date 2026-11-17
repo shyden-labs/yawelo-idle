@@ -18,16 +18,7 @@ export interface AuditException {
   readonly expires: string;
 }
 
-export const EXCEPTIONS: readonly AuditException[] = [
-  {
-    id: 'GHSA-gcqx-w48m-w2h4',
-    reason:
-      'deepmerge 4.3.1 is the newest release and has no fix; it reaches the ' +
-      'build only, through @sveltejs/vite-plugin-svelte, and never ships to ' +
-      'players (Shyden, 2026-11-05, #873 route (c)).',
-    expires: '2027-01-04',
-  },
-];
+export const EXCEPTIONS: readonly AuditException[] = [];
 
 interface Advisory {
   readonly severity: string;
