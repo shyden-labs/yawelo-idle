@@ -23,7 +23,7 @@
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
 import { refusal, workerEqual } from '../../door/worker/origin';
-import { Roadmap, type RoadmapEnv } from './roadmap';
+import type { RoadmapEnv } from './roadmap';
 import {
   HOOK_PATH,
   isGamePath,
@@ -39,7 +39,7 @@ import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
 import privateSpec from '../api/private.openapi.json';
 
-export { Roadmap };
+export { Roadmap } from './roadmap';
 
 interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */
