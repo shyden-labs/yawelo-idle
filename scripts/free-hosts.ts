@@ -24,13 +24,11 @@ export const FREE_HOSTS: readonly string[] = [
   'firebaseapp.com',
 ];
 
-const escaped = FREE_HOSTS.map((h) => h.replaceAll('.', String.raw`\.`)).join(
-  '|',
-);
+const escaped = FREE_HOSTS.map((h) => h.replace(/\./g, '\\.')).join('|');
 // A host on a free domain, with or without a scheme, ending where a
 // hostname ends: a longer domain such as x.r2.develop.example is left alone.
 const ADDRESS = new RegExp(
-  String.raw`(?:https?:)?(?://)?(?:[a-z0-9-]+\.)+(?:${escaped})(?![a-z0-9.-])`,
+  `(?:https?:)?(?://)?(?:[a-z0-9-]+\\.)+(?:${escaped})(?![a-z0-9.-])`,
   'gi',
 );
 

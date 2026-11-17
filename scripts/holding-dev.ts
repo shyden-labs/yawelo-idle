@@ -34,9 +34,9 @@ export function devMedia(
   to: string,
 ): string {
   let moved = 0;
-  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const result = text.replace(
-    new RegExp(String.raw`${escaped}(?=[/;"'\s]|$)`, 'g'),
+    new RegExp(`${escaped}(?=[/;"'\\s]|$)`, 'g'),
     () => {
       moved += 1;
       return to;
