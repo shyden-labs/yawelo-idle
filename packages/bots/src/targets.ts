@@ -6,6 +6,7 @@
  * reports, so a re-tune can see its headroom before CI does.
  */
 
+import { byCodeUnit } from '@yawelo-idle/core';
 import type { PersonaRun, Sail } from './run';
 
 const MINUTES_PER_DAY = 1_440;
@@ -235,7 +236,7 @@ export function largestShift(
   baseline: ReadonlyMap<string, PersonaRun>,
 ): number {
   const names = (m: ReadonlyMap<string, PersonaRun>) =>
-    [...m.keys()].sort().join(', ');
+    [...m.keys()].sort(byCodeUnit).join(', ');
   if (names(variant) !== names(baseline)) {
     throw new Error(
       `the variant played ${names(variant)}, the baseline ${names(baseline)}`,

@@ -12,6 +12,7 @@
  * to ShydenMcM, or comments on the open one, naming both commits and the
  * newest deploy-dev run. Recovery is dispatching deploy-dev on develop.
  */
+import { oneLine } from './one-line.ts';
 
 export const ISSUE_TITLE = 'Dev is behind develop';
 const OWNER = 'ShydenMcM';
@@ -63,8 +64,12 @@ export interface CheckDeps {
   readonly readServed: () => Promise<string>;
 }
 
-/** Runs the check once and says what it found and did. */
+/** Runs the check once and says, on one line (#1007), what it found and did. */
 export async function checkDev(deps: CheckDeps): Promise<string> {
+  return oneLine(await runCheck(deps));
+}
+
+async function runCheck(deps: CheckDeps): Promise<string> {
   const { github, repo } = deps;
   const head = await readHead(github, repo);
   const served: Served = await deps.readServed().then(

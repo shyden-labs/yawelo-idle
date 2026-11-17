@@ -3,6 +3,7 @@
  * TypeScript with no DOM, timers, network or system clock, so the same code
  * runs in browsers, Electron, Capacitor and Workers and replays identically.
  */
+export { byCodeUnit } from './order.ts';
 export { exp, expm1, ln, log10, log1p, pow } from './det-math.ts';
 export { Num, type NumTuple } from './num.ts';
 export {
