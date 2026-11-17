@@ -13,7 +13,7 @@
  */
 import { markApiRequest } from '@yawelo-idle/lockdown';
 import { behindDoor, type OriginEnv } from '../../door/worker/origin';
-import { hashToken, newToken, registrationBody } from './devices';
+import { registerDevice, type SaveDevice } from './devices';
 
 const json = (
   body: unknown,
@@ -36,42 +36,33 @@ async function health(env: Env): Promise<Response> {
   return json({ ok: true, commit: env.COMMIT, db: 'ok' }, 200);
 }
 
-/**
- * POST /v1/devices (#163; spec §6.6, D6): a new anonymous player and its first
- * device. The token is returned once and only its SHA-256 is stored; the
- * answer carries nothing about any other player.
- */
-async function register(request: Request, env: Env): Promise<Response> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'invalid_body' }, 400);
-  }
-  if (!registrationBody.safeParse(body).success)
-    return json({ error: 'invalid_body' }, 400);
-  const playerId = crypto.randomUUID();
-  const token = newToken();
-  const now = Date.now();
-  await env.DB.batch([
-    env.DB.prepare('INSERT INTO players (id, created_at) VALUES (?, ?)').bind(
-      playerId,
-      now,
-    ),
-    env.DB.prepare(
-      'INSERT INTO devices (id, player_id, token_hash, created_at) VALUES (?, ?, ?, ?)',
-    ).bind(crypto.randomUUID(), playerId, await hashToken(token), now),
-  ]);
-  return json({ playerId, token }, 201);
-}
+/** Saves a registration: the player and its device, in one D1 batch. */
+const saveDevice =
+  (env: Env): SaveDevice =>
+  async (device) => {
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO players (id, created_at) VALUES (?, ?)').bind(
+        device.playerId,
+        device.createdAt,
+      ),
+      env.DB.prepare(
+        'INSERT INTO devices (id, player_id, token_hash, created_at) VALUES (?, ?, ?, ?)',
+      ).bind(
+        device.deviceId,
+        device.playerId,
+        device.tokenHash,
+        device.createdAt,
+      ),
+    ]);
+  };
 
 async function route(request: Request, env: Env): Promise<Response> {
   const { pathname } = new URL(request.url);
-  if (pathname === '/v1/devices') {
-    if (request.method !== 'POST')
-      return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
-    return register(request, env);
-  }
+  if (pathname === '/v1/devices')
+    return registerDevice(request, saveDevice(env), {
+      uuid: () => crypto.randomUUID(),
+      now: () => Date.now(),
+    });
   if (pathname !== '/health') {
     return json({ error: 'not_found' }, 404);
   }

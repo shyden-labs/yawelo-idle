@@ -5,9 +5,11 @@ import {
   authenticate,
   hashToken,
   newToken,
+  registerDevice,
   registrationBody,
   sameHash,
   type FindPlayer,
+  type NewDevice,
   type RandomSource,
 } from '../../apps/sync-worker/src/devices';
 
@@ -128,5 +130,73 @@ describe('authenticate (#163 AC2)', () => {
     expect(await refusal(`Token1 ${token()}`)).toEqual(
       await refusal(`Bearer ${newToken(filled(1))}`),
     );
+  });
+});
+
+describe('registerDevice (#163 AC1, AC3, AC4)', () => {
+  /** A registration with ids and the clock fixed, and what it saved. */
+  async function registered(method: string, body: string) {
+    const saved: NewDevice[] = [];
+    let next = 0;
+    const response = await registerDevice(
+      new Request('https://sync.test/v1/devices', {
+        method,
+        ...(method === 'POST' ? { body } : {}),
+      }),
+      (device) => {
+        saved.push(device);
+        return Promise.resolve();
+      },
+      {
+        uuid: () => `id-${String((next += 1))}`,
+        now: () => 1_000,
+        random: filled(5),
+      },
+    );
+    return { response, saved };
+  }
+
+  it('answers 201 with only the playerId and the token, never cached', async () => {
+    const { response } = await registered('POST', '{}');
+    expect({
+      status: response.status,
+      cache: response.headers.get('cache-control'),
+      body: await response.json(),
+    }).toEqual({
+      status: 201,
+      cache: 'no-store',
+      body: { playerId: 'id-1', token: newToken(filled(5)) },
+    });
+  });
+
+  it('saves one new player and device, keyed by the token hash', async () => {
+    const { saved } = await registered('POST', '{}');
+    expect(saved).toEqual([
+      {
+        playerId: 'id-1',
+        deviceId: 'id-2',
+        tokenHash: await hashToken(newToken(filled(5))),
+        createdAt: 1_000,
+      },
+    ]);
+  });
+
+  it('refuses a body with any field with 400, saving nothing', async () => {
+    const { response, saved } = await registered('POST', '{"name":"Ana"}');
+    expect([response.status, saved.length]).toEqual([400, 0]);
+  });
+
+  it('refuses a body that is not JSON with 400, saving nothing', async () => {
+    const { response, saved } = await registered('POST', '{not json');
+    expect([response.status, saved.length]).toEqual([400, 0]);
+  });
+
+  it('refuses any method but POST with 405, naming POST', async () => {
+    const { response, saved } = await registered('GET', '');
+    expect([
+      response.status,
+      response.headers.get('allow'),
+      saved.length,
+    ]).toEqual([405, 'POST', 0]);
   });
 });

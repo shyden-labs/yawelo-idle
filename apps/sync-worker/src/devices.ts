@@ -81,11 +81,70 @@ export async function authenticate(
   find: FindPlayer,
 ): Promise<Authenticated> {
   const token =
-    authorization !== null && authorization.startsWith(BEARER)
+    authorization?.startsWith(BEARER) === true
       ? authorization.slice(BEARER.length)
       : '';
   const playerId = await find(await hashToken(token));
   return playerId === null
     ? { ok: false, response: unauthorised() }
     : { ok: true, playerId };
+}
+
+/** The rows one registration adds: a new player and its first device. */
+export interface NewDevice {
+  readonly playerId: string;
+  readonly deviceId: string;
+  readonly tokenHash: Uint8Array;
+  readonly createdAt: number;
+}
+
+/** Stores a registration (two D1 inserts in one batch). */
+export type SaveDevice = (device: NewDevice) => Promise<void>;
+
+/** Ids, the clock and randomness, so tests can stand them in. */
+export interface RegisterDeps {
+  readonly uuid: () => string;
+  readonly now: () => number;
+  readonly random?: RandomSource;
+}
+
+const json = (
+  body: unknown,
+  status: number,
+  headers: Record<string, string> = {},
+): Response =>
+  Response.json(body, {
+    status,
+    headers: { 'cache-control': 'no-store', ...headers },
+  });
+
+/**
+ * POST /v1/devices (#163; spec §6.6, D6): a new anonymous player and its first
+ * device. The token is returned once and only its SHA-256 is saved; the
+ * answer carries nothing about any other player.
+ */
+export async function registerDevice(
+  request: Request,
+  save: SaveDevice,
+  deps: RegisterDeps,
+): Promise<Response> {
+  if (request.method !== 'POST')
+    return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'invalid_body' }, 400);
+  }
+  if (!registrationBody.safeParse(body).success)
+    return json({ error: 'invalid_body' }, 400);
+  const playerId = deps.uuid();
+  const token = newToken(deps.random);
+  await save({
+    playerId,
+    deviceId: deps.uuid(),
+    tokenHash: await hashToken(token),
+    createdAt: deps.now(),
+  });
+  return json({ playerId, token }, 201);
 }

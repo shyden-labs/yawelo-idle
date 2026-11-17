@@ -1,3 +1,4 @@
+import { strFromU8, strToU8 } from 'fflate';
 import { z } from 'zod';
 
 /**
@@ -28,7 +29,7 @@ function read(bytes: Uint8Array | undefined): DeviceIdentity | undefined {
   if (bytes === undefined) return undefined;
   let json: unknown;
   try {
-    json = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    json = JSON.parse(strFromU8(bytes));
   } catch {
     return undefined;
   }
@@ -47,9 +48,6 @@ export async function ensureDevice(
   const known = read(await storage.get(DEVICE_KEY));
   if (known !== undefined) return known;
   const identity = await register();
-  await storage.set(
-    DEVICE_KEY,
-    new TextEncoder().encode(JSON.stringify(identity)),
-  );
+  await storage.set(DEVICE_KEY, strToU8(JSON.stringify(identity)));
   return identity;
 }
