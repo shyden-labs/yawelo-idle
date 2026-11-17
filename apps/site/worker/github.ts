@@ -87,19 +87,11 @@ export async function importAppKey(pem: string): Promise<CryptoKey> {
   );
 }
 
-/** `text` without its trailing `=` padding, read from the end (no regex). */
-function withoutPadding(text: string): string {
-  let end = text.length;
-  while (end > 0 && text[end - 1] === '=') end -= 1;
-  return text.slice(0, end);
-}
-
 const base64url = (bytes: Uint8Array): string =>
-  withoutPadding(
-    btoa(String.fromCharCode(...bytes))
-      .replaceAll('+', '-')
-      .replaceAll('/', '_'),
-  );
+  btoa(String.fromCharCode(...bytes))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replace(/=+$/, '');
 
 const encodeJson = (value: unknown): string =>
   base64url(new TextEncoder().encode(JSON.stringify(value)));
