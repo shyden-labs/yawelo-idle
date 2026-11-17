@@ -117,7 +117,7 @@ describe('the production release (#621 AC4)', () => {
     );
     expect(deploy['working-directory']).toBeUndefined();
     expect(deploy.run).toBe(
-      'npx wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
+      'npx --no wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
     );
   });
 
@@ -170,7 +170,7 @@ describe('the production rollback (#621 AC6)', () => {
     expect(find['working-directory']).toBeUndefined();
     expect(find.env?.['COMMIT']).toBe('${{ inputs.commit }}');
     expect(find.run).toContain(
-      'npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
+      'npx --no wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
     );
     expect(find.run).toContain(
       'node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT"',
@@ -185,7 +185,7 @@ describe('the production rollback (#621 AC6)', () => {
     );
     expect(roll['working-directory']).toBeUndefined();
     expect(roll.run).toBe(
-      'npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
+      'npx --no wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
     );
   });
 
@@ -262,7 +262,7 @@ describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from 
       '${{ steps.door-secrets.outputs.path }}',
     );
     expect(deploy.run).toBe(
-      'npx wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
+      'npx --no wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
     );
   });
 
