@@ -142,7 +142,7 @@ describe('the production release (#621 AC4)', () => {
     );
     expect(verify.run).toBe('node scripts/verify-prod.ts');
     expect(verify.env).toEqual({
-      PROD_URL: 'https://yawelo-idle.shyden.co.uk',
+      PROD_URL: 'https://yaweloidle.com',
       EXPECTED_SHA: '${{ github.sha }}',
     });
   });
