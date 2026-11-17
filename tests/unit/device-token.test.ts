@@ -8,6 +8,7 @@ import {
   registrationBody,
   sameHash,
   type FindPlayer,
+  type RandomSource,
 } from '../../apps/sync-worker/src/devices';
 
 /**
@@ -18,8 +19,8 @@ import {
 
 /** A random source that fills every byte with `value`. */
 const filled =
-  (value: number) =>
-  (bytes: Uint8Array): Uint8Array =>
+  (value: number): RandomSource =>
+  (bytes) =>
     bytes.fill(value);
 
 describe('a device token (#163 AC1)', () => {

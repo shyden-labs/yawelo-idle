@@ -13,9 +13,14 @@ export const TOKEN_BYTES = 32;
 export const registrationBody = z.strictObject({});
 
 /** Fills `bytes` with random values; the Web Crypto source by default. */
-export type RandomSource = (bytes: Uint8Array) => Uint8Array;
+export type RandomSource = (
+  bytes: Uint8Array<ArrayBuffer>,
+) => Uint8Array<ArrayBuffer>;
 
-const defaultRandom: RandomSource = (bytes) => crypto.getRandomValues(bytes);
+const defaultRandom: RandomSource = (bytes) => {
+  crypto.getRandomValues(bytes);
+  return bytes;
+};
 
 /** Bytes as unpadded base64url, safe in a header and a URL. */
 function base64url(bytes: Uint8Array): string {
