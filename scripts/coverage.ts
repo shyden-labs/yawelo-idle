@@ -152,7 +152,7 @@ export function untestedScreens(
         ),
       ];
       return found
-        .sort((x, y) => x[0] - y[0])
+        .toSorted((x, y) => x[0] - y[0])
         .map(([line, what]) => `${path}:${String(line)}: ${what}`);
     });
 }

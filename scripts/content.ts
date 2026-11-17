@@ -106,7 +106,7 @@ const write = (
     io.err(edit.message);
     return 1;
   }
-  const reloaded = loadCourse(JSON.parse(JSON.stringify(edit.course)));
+  const reloaded = loadCourse(structuredClone(edit.course));
   if (!reloaded.ok)
     return printErrors(
       `the edited course does not load, so ${path} was not written:`,

@@ -136,7 +136,7 @@ export function recordSource(
 
 /** Lower case with runs of whitespace folded, for comparing two short texts. */
 const fold = (text: string): string =>
-  text.trim().split(/\s+/).join(' ').toLowerCase();
+  text.trim().replaceAll(/\s+/g, ' ').toLowerCase();
 
 /**
  * Records a back-translation as text, its method noted in the history line
