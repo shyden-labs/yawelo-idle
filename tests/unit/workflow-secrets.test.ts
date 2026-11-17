@@ -57,15 +57,21 @@ describe('scanWorkflow', () => {
     );
   });
 
+  // TEST (#784 AC2, AC5): the deploy of each release cut declares the test
+  // environment, which holds TEST's own key.
+  it('accepts a secret in a job that declares the test environment (#784)', () => {
+    expect(problems(workflow(job('    environment: test\n')))).toEqual([]);
+  });
+
   it('flags a secret in a job with no environment', () => {
     expect(problems(workflow(job('')))).toEqual([
-      'secrets.CLOUDFLARE_API_TOKEN in a job that declares no environment; it must be one of dev, production, board-read, sonarcloud, door-cron',
+      'secrets.CLOUDFLARE_API_TOKEN in a job that declares no environment; it must be one of dev, test, production, board-read, sonarcloud, door-cron',
     ]);
   });
 
   it('flags a secret in a job whose environment is not a protected one', () => {
     expect(problems(workflow(job('    environment: scratch\n')))).toEqual([
-      'secrets.CLOUDFLARE_API_TOKEN in a job that declares environment "scratch"; it must be one of dev, production, board-read, sonarcloud, door-cron',
+      'secrets.CLOUDFLARE_API_TOKEN in a job that declares environment "scratch"; it must be one of dev, test, production, board-read, sonarcloud, door-cron',
     ]);
   });
 
@@ -91,7 +97,7 @@ describe('scanWorkflow', () => {
       `  leak:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo "${expression}"\n`,
     );
     expect(problems(source)).toEqual([
-      `${reported} in a job that declares no environment; it must be one of dev, production, board-read, sonarcloud, door-cron`,
+      `${reported} in a job that declares no environment; it must be one of dev, test, production, board-read, sonarcloud, door-cron`,
     ]);
   });
 
@@ -100,7 +106,7 @@ describe('scanWorkflow', () => {
       '  call:\n    uses: ./.github/workflows/deploy.yml\n    secrets: inherit\n',
     );
     expect(problems(source)).toEqual([
-      'secrets in a job that declares no environment; it must be one of dev, production, board-read, sonarcloud, door-cron',
+      'secrets in a job that declares no environment; it must be one of dev, test, production, board-read, sonarcloud, door-cron',
     ]);
   });
 

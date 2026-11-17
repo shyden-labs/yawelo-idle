@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  // The holding page on TEST (#784 AC2, AC5; Shyden, 2026-11-17): each frozen
+  // release/* cut, before the same cut goes to PROD, in the non-PROD account
+  // at its own workers.dev address. TEST holds exactly what PROD deploys, and
+  // that is the holding page alone today. It is the dev copy's build (crawlers
+  // blocked, noindex, made by scripts/holding-dev.ts) under TEST's own name,
+  // so TEST's deploy key, limited to TEST's Workers, reaches nothing of DEV's.
+  // Every setting but the name equals ../holding-dev/wrangler.jsonc, which
+  // tests/unit/test-environment.test.ts pins. Deployed by deploy-test.yml.
+  "name": "yawelo-idle-holding-test",
+  "main": "../worker/holding.ts",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "../dist-holding-dev",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "404-page",
+  },
+  "vars": {
+    // "false" until the doors go live, as on DEV: the go-live sets "true"
+    // with DOOR_SECRET, and any other value requires the door.
+    "DOOR_REQUIRED": "false",
+  },
+}
