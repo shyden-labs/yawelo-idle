@@ -12,7 +12,9 @@
  *
  * A stored save is a blob (#159): the canonical bytes, compressed, behind a
  * SHA-256 of them; `loadBlob` reads one and refuses a damaged one by a typed
- * reason. The rotating backups (#160) wrap this; they do not change it.
+ * reason. The latest save and 5 rotating backups (#160) are copies of blobs:
+ * `saveBackups` writes each save to a new copy and reads back the newest one
+ * that loads.
  */
 export {
   canonicalBytes,
@@ -20,6 +22,14 @@ export {
   toBlob,
   type CorruptReason,
 } from './blob.ts';
+export {
+  BACKUPS,
+  saveBackups,
+  type SaveBackups,
+  type BackupStorage,
+  type BackupsRead,
+  type BackupWrite,
+} from './backups.ts';
 export {
   load,
   mayReplace,

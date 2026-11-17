@@ -9,8 +9,11 @@ import { describe, expect, it } from 'vitest';
  *
  * - Ceiling: everything the first paint fetches (the HTML and the assets it
  *   loads), gzipped at zlib's default level as an estimate of what Cloudflare
- *   sends, at most 15,000 bytes: about 1.5x the 9,682 this test measured
- *   for #123. A story that outgrows it raises it deliberately.
+ *   sends, at most 16,000 bytes. A tripwire, not a speed target: #123 set
+ *   15,000, about 1.5x the 9,682 it measured; Shyden raised it to 16,000 on
+ *   2026-11-17 (#160), when the save notice's strings took the first paint
+ *   from 14,924 to 15,164. The speed target (spec §12: cold start under 2 s on
+ *   a mid-range phone) is #154's. A story that outgrows it raises it deliberately.
  * - Floor: proof the check measured the game. The shell loads at least one
  *   asset, and each one must hold bytes. No exact byte figure: the Svelte
  *   runtime is in the bundle, so every Svelte or Vite update would move it.
@@ -19,7 +22,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const DIST = new URL('../dist/', import.meta.url);
-const CEILING_GZIP_BYTES = 15_000;
+const CEILING_GZIP_BYTES = 16_000;
 
 const shell = (): string =>
   readFileSync(new URL('play/index.html', DIST), 'utf8');

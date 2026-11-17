@@ -17,4 +17,8 @@ export const licences: Readonly<
   'shell.next': ORIGINAL,
   'shell.followRoadmap': ORIGINAL,
   'shell.joinLaunchList': ORIGINAL,
+  'save.restored': ORIGINAL,
+  'save.allDamaged': ORIGINAL,
+  'save.startNew': ORIGINAL,
+  'save.keepAndClose': ORIGINAL,
 };
