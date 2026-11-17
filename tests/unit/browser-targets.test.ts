@@ -31,13 +31,11 @@ const CONFIGS: [string, PlaywrightTestConfig][] = [
 ];
 
 describe('the supported targets (#883 AC1)', () => {
-  it('are the three desktop engines and two touch phones, from #323', () => {
+  it('are the three desktop engines only: no desktop browser emulates a phone (#995)', () => {
     expect(BROWSER_TARGETS).toEqual([
       { name: 'chromium', use: devices['Desktop Chrome'] },
       { name: 'firefox', use: devices['Desktop Firefox'] },
       { name: 'webkit', use: devices['Desktop Safari'] },
-      { name: 'chromium-phone', use: devices['Pixel 7'] },
-      { name: 'webkit-phone', use: devices['iPhone 14'] },
     ]);
   });
 

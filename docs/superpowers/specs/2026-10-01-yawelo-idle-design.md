@@ -469,10 +469,8 @@ TDD throughout: write the failing test first. Zero warnings policy across lint, 
    - `chromium`: Desktop Chrome.
    - `firefox`: Desktop Firefox.
    - `webkit`: Desktop Safari.
-   - `chromium-phone`: Pixel 7 (Chromium, touch, 412×915 screen; #323's Chromium phone).
-   - `webkit-phone`: iPhone 14 (WebKit, touch, 390×844 screen; #323's WebKit phone).
 
-   Real phones over USB are item 6 (#632).
+   No desktop browser emulates a phone (Shyden, 2026-11-17, #995): the Pixel 7 and iPhone 14 profiles of #323 AC13 were dropped. Phones and tablets form their own group that runs the identical set with equal totals: the real Android phone and iPhone over USB, and the devices Shyden does not own on their simulators and emulators (iPad and iPhone Duo in Xcode's iOS Simulator, an Android tablet and foldable in the Android emulator), #992, #993 and #997 to #1000. A test runs in one group only when tagged `phone` or `desktop` with a reason (#996). Device runs are item 6 (#632).
 
 6. **Devices:** a real Android phone and a real iPhone over USB (background/resume accrual, notifications, pairing by QR), and the Electron build with a real Steam client (achievements, Steam Cloud).
 7. **Load:** scripted load tests on the **dev** Worker before public launch, e.g. 1,000 concurrent syncs, a ranked-upload burst, and leaderboard reads. Record the limits found.
