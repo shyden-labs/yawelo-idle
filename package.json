@@ -40,6 +40,7 @@
     "pacing:calibrate": "node scripts/pacing-calibrate.ts",
     "pacing:sweep": "node scripts/pacing-sweep.ts",
     "content": "node scripts/content.ts",
+    "build:content": "node scripts/build-content.ts",
     "content:check": "node scripts/content.ts check"
   },
   "devDependencies": {
