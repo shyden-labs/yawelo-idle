@@ -31,6 +31,7 @@ describe('every workflow', () => {
       'deploy-dev.yml',
       'deploy-door.yml',
       'deploy-prod.yml',
+      'deploy-test.yml',
       'dev-behind-develop.yml',
       'door-check.yml',
       'logs.yml',

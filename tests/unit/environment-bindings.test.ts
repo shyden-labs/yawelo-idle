@@ -8,6 +8,7 @@ import {
 } from './environment-bindings';
 import {
   PROD_WRANGLER_CONFIGS,
+  TEST_WRANGLER_CONFIGS,
   readDeployConfig,
   WRANGLER_CONFIGS,
 } from './wrangler-configs';
@@ -257,7 +258,11 @@ describe('the configs as wrangler reads them (#784 AC1a)', () => {
 });
 
 describe('every deploy config in the repo (#784 AC1a)', () => {
-  for (const file of [...WRANGLER_CONFIGS, ...PROD_WRANGLER_CONFIGS]) {
+  for (const file of [
+    ...WRANGLER_CONFIGS,
+    ...TEST_WRANGLER_CONFIGS,
+    ...PROD_WRANGLER_CONFIGS,
+  ]) {
     it(`${file} crosses no environment`, () => {
       expect(
         crossEnvironmentBindings(readDeployConfig(join(ROOT, file))),

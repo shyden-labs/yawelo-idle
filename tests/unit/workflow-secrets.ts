@@ -23,6 +23,7 @@ import { parse } from 'yaml';
 
 export const PROTECTED_ENVIRONMENTS = [
   'dev',
+  'test',
   'production',
   'board-read',
   'sonarcloud',
