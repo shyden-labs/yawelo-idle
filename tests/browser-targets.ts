@@ -3,16 +3,16 @@ import { devices, type Project } from '@playwright/test';
 
 /**
  * Every target each browser suite runs on (#883 AC1), listed in the design
- * spec §12: the three desktop engines, and a touch phone in each mobile
- * engine (#323 AC13). Every suite runs unchanged on each, so a target carries
- * its name and its device only: never a grep, testIgnore or testMatch.
+ * spec §12: the three desktop engines. No desktop browser emulates a phone
+ * (Shyden, 2026-11-17, #995): phones and tablets are the real devices and
+ * their simulators and emulators. Every suite runs unchanged on each, so a
+ * target carries its name and its device only: never a grep, testIgnore or
+ * testMatch.
  */
 export const BROWSER_TARGETS: (Project & { name: string })[] = [
   { name: 'chromium', use: devices['Desktop Chrome'] },
   { name: 'firefox', use: devices['Desktop Firefox'] },
   { name: 'webkit', use: devices['Desktop Safari'] },
-  { name: 'chromium-phone', use: devices['Pixel 7'] },
-  { name: 'webkit-phone', use: devices['iPhone 14'] },
 ];
 
 /**
