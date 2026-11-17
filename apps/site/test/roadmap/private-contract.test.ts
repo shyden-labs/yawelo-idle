@@ -14,7 +14,7 @@ import { privateJudge, privateSpec } from '../../api/judge';
  * production host, where the health report is a bare 404 (#846).
  */
 const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
-const PROD = 'https://yawelo-idle.shyden.co.uk';
+const PROD = 'https://yaweloidle.com';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const HEALTH = ROADMAP_PATHS.health;
 const { judged } = privateJudge;

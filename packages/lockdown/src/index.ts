@@ -191,7 +191,7 @@ export function robotsResponse(): Response {
 export function challengeResponse(): Response {
   return new Response(
     'This is a non-prod Yawelo Idle environment for authorised testers. ' +
-      'The game is at https://yawelo-idle.shyden.co.uk.',
+      'The game is at https://yaweloidle.com.',
     {
       status: 401,
       headers: {

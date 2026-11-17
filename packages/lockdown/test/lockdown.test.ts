@@ -6,6 +6,7 @@ import {
   PROD_API_HOSTNAME,
   PROD_HOSTNAME,
   basicAuthOk,
+  challengeResponse,
   gateWebRequest,
   isProdHost,
   markApiRequest,
@@ -353,5 +354,14 @@ describe('the dev login cookie (#829)', () => {
       serve,
     );
     expect(response.headers.get('Set-Cookie')).toBeNull();
+  });
+});
+
+describe('the password challenge (#1013)', () => {
+  it('points testers at the game on yaweloidle.com', async () => {
+    expect(await challengeResponse().text()).toBe(
+      'This is a non-prod Yawelo Idle environment for authorised testers. ' +
+        'The game is at https://yaweloidle.com.',
+    );
   });
 });

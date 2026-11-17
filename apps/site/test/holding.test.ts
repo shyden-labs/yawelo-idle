@@ -86,7 +86,7 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
 
   it('links its language alternates', () => {
     expect(html(file)).toContain(
-      '<link rel="alternate" hreflang="id" href="https://yawelo-idle.shyden.co.uk/id/">',
+      '<link rel="alternate" hreflang="id" href="https://yaweloidle.com/id/">',
     );
   });
 });
