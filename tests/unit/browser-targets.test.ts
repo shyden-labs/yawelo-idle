@@ -23,6 +23,9 @@ const DEV = {
   DEV_BASIC_AUTH_PASSWORD: 'the dev password',
 };
 
+/** A desktop target runs untagged and @desktop tests, never @phone ones (#996). */
+const DESKTOP = { metadata: { group: 'desktop' }, grepInvert: /@phone\b/ };
+
 const CONFIGS: [string, PlaywrightTestConfig][] = [
   ['the cross-engine check', enginesConfig],
   ['the web suite, local', webSmokeConfig({})],
@@ -33,10 +36,19 @@ const CONFIGS: [string, PlaywrightTestConfig][] = [
 describe('the supported targets (#883 AC1)', () => {
   it('are the three desktop engines only: no desktop browser emulates a phone (#995)', () => {
     expect(BROWSER_TARGETS).toEqual([
-      { name: 'chromium', use: devices['Desktop Chrome'] },
-      { name: 'firefox', use: devices['Desktop Firefox'] },
-      { name: 'webkit', use: devices['Desktop Safari'] },
+      { name: 'chromium', use: devices['Desktop Chrome'], ...DESKTOP },
+      { name: 'firefox', use: devices['Desktop Firefox'], ...DESKTOP },
+      { name: 'webkit', use: devices['Desktop Safari'], ...DESKTOP },
     ]);
+  });
+
+  it('declare the desktop group and leave out only @phone tests (#996)', () => {
+    expect(BROWSER_TARGETS.map((t) => t.metadata)).toEqual(
+      BROWSER_TARGETS.map(() => ({ group: 'desktop' })),
+    );
+    expect(BROWSER_TARGETS.map((t) => String(t.grepInvert))).toEqual(
+      BROWSER_TARGETS.map(() => '/@phone\\b/'),
+    );
   });
 
   it.each(BROWSER_TARGETS.map((t) => [t.name] as const))(
@@ -71,8 +83,8 @@ describe('the supported targets (#883 AC1)', () => {
 });
 
 describe.each(CONFIGS)('%s (#883 AC2, AC3)', (_label, config) => {
-  // Exact equality also refuses a per-target grep, testIgnore or testMatch:
-  // a target carries its name and its device, nothing else.
+  // Exact equality also refuses any other per-target grep, testIgnore or
+  // testMatch: a target carries its name, its device and its group's filter.
   it('runs every supported target, and only those, unfiltered', () => {
     expect(config.projects).toEqual(BROWSER_TARGETS);
   });
