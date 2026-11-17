@@ -60,7 +60,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           COMMIT: ${{ inputs.commit }}
         run: |
-          npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"
+          npx --no wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"
           echo "id=$(node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT")" >> "$GITHUB_OUTPUT"
       - name: Roll production back to it
         env:
@@ -68,7 +68,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           VERSION: ${{ steps.version.outputs.id }}
           COMMIT: ${{ inputs.commit }}
-        run: npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes
+        run: npx --no wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes
 
   verify:
     needs: rollback

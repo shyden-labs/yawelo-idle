@@ -297,7 +297,7 @@ describe('the dev D1 database, created by the pipeline (#357 AC1)', () => {
     const migrate = runs.findIndex(
       ({ run }) =>
         run ===
-        `npx wrangler d1 migrations apply ${DATABASE} --remote --config ${DEPLOY_CONFIG}`,
+        `npx --no wrangler d1 migrations apply ${DATABASE} --remote --config ${DEPLOY_CONFIG}`,
     );
     expect(create).toBeGreaterThanOrEqual(0);
     expect(runs[create]?.cwd).toBeUndefined();
@@ -319,12 +319,12 @@ describe('the dev D1 database, created by the pipeline (#357 AC1)', () => {
         `node scripts/d1-binding.ts ${DATABASE} apps/sync-worker/wrangler.jsonc apps/sync-worker/${DEPLOY_CONFIG}`,
     );
     const migrate = runs.findIndex(({ run }) =>
-      run.startsWith(`npx wrangler d1 migrations apply ${DATABASE} `),
+      run.startsWith(`npx --no wrangler d1 migrations apply ${DATABASE} `),
     );
     const deploy = runs.findIndex(
       ({ run }) =>
         run ===
-        `npx wrangler deploy --config ${DEPLOY_CONFIG} --var "COMMIT:\${GITHUB_SHA}"`,
+        `npx --no wrangler deploy --config ${DEPLOY_CONFIG} --var "COMMIT:\${GITHUB_SHA}"`,
     );
     expect(create).toBeGreaterThanOrEqual(0);
     expect(bind).toBeGreaterThan(create);
@@ -391,27 +391,27 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
         'node scripts/d1-binding.ts yawelo-idle-dev apps/sync-worker/wrangler.jsonc apps/sync-worker/wrangler.deploy.jsonc',
       ),
       holds(
-        'npx wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc',
+        'npx --no wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc',
       ),
       holds(
-        'npx wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"',
+        'npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"',
       ),
-      holds('npx wrangler deploy'),
+      holds('npx --no wrangler deploy'),
       // The holding page's dev copy (#621 AC8), named from the repository
       // root: from its subfolder, npx would run wrangler at apps/site, which
       // reads the dev site's config (deploy-dev run 38889757344). Before
       // the site Worker, whose HOLDING binding names it (#673).
       holds(
-        'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
       ),
-      holds('npx wrangler deploy --secrets-file "$SECRETS_FILE"'),
+      holds('npx --no wrangler deploy --secrets-file "$SECRETS_FILE"'),
       holds('node scripts/token-reach.ts', SHYDEN_LABS_DEV),
       holds(
         'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
         SHYDEN_LABS_DEV,
       ),
       holds(
-        'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
+        'npx --no wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
         SHYDEN_LABS_DEV,
       ),
     ]);
@@ -445,7 +445,8 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
     );
     const deploy = steps.findIndex(
       (step) =>
-        runOf(step) === 'npx wrangler deploy --secrets-file "$SECRETS_FILE"',
+        runOf(step) ===
+        'npx --no wrangler deploy --secrets-file "$SECRETS_FILE"',
     );
     expect(steps[write]?.id).toBe('site-secrets');
     expect(steps[deploy]?.env?.['SECRETS_FILE']).toBe(
@@ -474,7 +475,7 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
         runOf(step) === 'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
     );
     const deploy = steps.findIndex((step) =>
-      runOf(step).startsWith('npx wrangler pages deploy'),
+      runOf(step).startsWith('npx --no wrangler pages deploy'),
     );
     expect(steps[write]?.id).toBe('dev-hosts-secrets');
     expect(steps[write]?.env).toEqual({
@@ -492,7 +493,7 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
 
 describe('the hostname adapter, deployed after the Workers it binds (#429)', () => {
   const DEPLOY =
-    'npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"';
+    'npx --no wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"';
 
   it('deploys to the project’s production branch from apps/dev-hosts, after the site and sync Workers', () => {
     const steps = deploySteps();
@@ -501,7 +502,7 @@ describe('the hostname adapter, deployed after the Workers it binds (#429)', () 
       steps.findIndex(
         (step) =>
           step['working-directory'] === dir &&
-          runOf(step).startsWith('npx wrangler deploy'),
+          runOf(step).startsWith('npx --no wrangler deploy'),
       );
     const site = workerIn('apps/site');
     const sync = workerIn('apps/sync-worker');
@@ -528,14 +529,14 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
     deploySteps().findIndex(
       (step) =>
         step['working-directory'] === dir &&
-        runOf(step).startsWith('npx wrangler deploy'),
+        runOf(step).startsWith('npx --no wrangler deploy'),
     );
   /** The holding page's dev copy, deployed from the repository root (#621 AC8). */
   const holdingDeploy = () =>
     deploySteps().findIndex(
       (step) =>
         runOf(step) ===
-        'npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
     );
 
   it('deploys the game before the site, whose GAME binding names it', () => {
