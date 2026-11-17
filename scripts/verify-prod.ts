@@ -14,7 +14,7 @@
  *    headers the host must send.
  *
  *     npm run build:holding --workspace @yawelo-idle/site   # stamped with EXPECTED_SHA
- *     PROD_URL=https://yawelo-idle.shyden.co.uk EXPECTED_SHA=… node scripts/verify-prod.ts
+ *     PROD_URL=https://yaweloidle.com EXPECTED_SHA=… node scripts/verify-prod.ts
  *
  * It reads the build, not the site's source, so it runs under Node's own
  * loader. A new Custom Domain needs time for its DNS record and certificate,

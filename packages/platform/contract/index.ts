@@ -206,7 +206,7 @@ export const PLATFORM_CONTRACT: readonly ContractCheck[] = [
           await platform.share.share({
             title: 'Yawelo Idle',
             text: 'A word learned today.',
-            url: 'https://yawelo-idle.shyden.co.uk/',
+            url: 'https://yaweloidle.com/',
           }),
         );
       }),

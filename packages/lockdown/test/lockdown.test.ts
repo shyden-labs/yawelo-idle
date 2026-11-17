@@ -6,6 +6,7 @@ import {
   PROD_API_HOSTNAME,
   PROD_HOSTNAME,
   basicAuthOk,
+  challengeResponse,
   gateWebRequest,
   isProdHost,
   markApiRequest,
@@ -48,25 +49,27 @@ function request(
 
 describe('isProdHost', () => {
   it('matches the production hostnames exactly', () => {
-    expect(PROD_HOSTNAME).toBe('yawelo-idle.shyden.co.uk');
-    expect(PROD_API_HOSTNAME).toBe('api.yawelo-idle.shyden.co.uk');
-    expect(isProdHost('yawelo-idle.shyden.co.uk', PROD_HOSTNAME)).toBe(true);
-    expect(isProdHost('api.yawelo-idle.shyden.co.uk', PROD_API_HOSTNAME)).toBe(
-      true,
-    );
+    expect(PROD_HOSTNAME).toBe('yaweloidle.com');
+    expect(PROD_API_HOSTNAME).toBe('api.yaweloidle.com');
+    expect(isProdHost('yaweloidle.com', PROD_HOSTNAME)).toBe(true);
+    expect(isProdHost('api.yaweloidle.com', PROD_API_HOSTNAME)).toBe(true);
   });
 
   it('ignores case, as DNS does', () => {
-    expect(isProdHost('Yawelo-Idle.Shyden.CO.UK', PROD_HOSTNAME)).toBe(true);
+    expect(isProdHost('YaweloIdle.COM', PROD_HOSTNAME)).toBe(true);
   });
 
   it.each([
-    'dev.yawelo-idle.shyden.co.uk',
+    'dev.yaweloidle.com',
+    'test.yaweloidle.com',
+    'www.yaweloidle.com',
     'yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev',
-    'yawelo-idle.shyden.co.uk.evil.com',
-    'evilyawelo-idle.shyden.co.uk',
-    'yawelo-idle.shyden.co',
-    'api.yawelo-idle.shyden.co.uk',
+    'yaweloidle.com.evil.com',
+    'evilyaweloidle.com',
+    'yaweloidle.co',
+    'api.yaweloidle.com',
+    // The old production host (#1013): it only redirects now.
+    'yawelo-idle.shyden.co.uk',
     '',
   ])('refuses the near-miss %j', (hostname) => {
     expect(isProdHost(hostname, PROD_HOSTNAME)).toBe(false);
@@ -147,13 +150,13 @@ describe('gateWebRequest', () => {
   it('serves the production host untouched, without asking for a password', async () => {
     const { serve, calls } = recordingServe();
     const response = await gateWebRequest(
-      request('https://YAWELO-IDLE.shyden.co.uk/index.html'),
+      request('https://YAWELOIDLE.com/index.html'),
       undefined,
       serve,
     );
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Robots-Tag')).toBeNull();
-    expect(calls).toEqual(['https://yawelo-idle.shyden.co.uk/index.html']);
+    expect(calls).toEqual(['https://yaweloidle.com/index.html']);
   });
 
   it.each([
@@ -255,7 +258,7 @@ describe('markApiRequest', () => {
     async (path) => {
       const { serve, calls } = recordingServe();
       const response = await markApiRequest(
-        request(`https://api.yawelo-idle.shyden.co.uk${path}`),
+        request(`https://api.yaweloidle.com${path}`),
         serve,
       );
       expect(response.headers.get('X-Robots-Tag')).toBeNull();
@@ -346,10 +349,19 @@ describe('the dev login cookie (#829)', () => {
   it('sets no cookie on the production host', async () => {
     const { serve } = recordingServe();
     const response = await gateWebRequest(
-      request('https://yawelo-idle.shyden.co.uk/', basic(`u:${PASSWORD}`)),
+      request('https://yaweloidle.com/', basic(`u:${PASSWORD}`)),
       PASSWORD,
       serve,
     );
     expect(response.headers.get('Set-Cookie')).toBeNull();
+  });
+});
+
+describe('the password challenge (#1013)', () => {
+  it('points testers at the game on yaweloidle.com', async () => {
+    expect(await challengeResponse().text()).toBe(
+      'This is a non-prod Yawelo Idle environment for authorised testers. ' +
+        'The game is at https://yaweloidle.com.',
+    );
   });
 });
