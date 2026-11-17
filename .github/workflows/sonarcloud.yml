@@ -24,8 +24,14 @@
 #
 # Every third-party `uses:` is a full commit SHA with its `# vX.Y.Z` comment.
 name: sonarcloud
+# Every pull request, and each push to develop, SonarCloud's main branch, so
+# develop holds real figures and each pull request is compared against an
+# analysed base (#1004: until then develop had 0 analyses). A push always
+# runs in full (scripts/ci-scope.ts).
 on:
   pull_request:
+  push:
+    branches: [develop]
 
 permissions:
   contents: read

@@ -98,7 +98,8 @@ describe('sonarcloud.yml', () => {
       >;
     };
 
-  it('runs on pull requests as two jobs, each with exactly its keys', () => {
+  // Each push to develop too, so SonarCloud's main branch holds real figures (#1004).
+  it('runs on pull requests and on pushes to develop as two jobs, each with exactly its keys', () => {
     const { on, jobs } = doc();
     expect({
       on,
@@ -106,7 +107,7 @@ describe('sonarcloud.yml', () => {
         Object.entries(jobs).map(([id, job]) => [id, Object.keys(job)]),
       ),
     }).toEqual({
-      on: { pull_request: null },
+      on: { pull_request: null, push: { branches: ['develop'] } },
       jobs: {
         'sonar-coverage': [
           'runs-on',
