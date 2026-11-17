@@ -224,3 +224,17 @@ describe('checkDev', () => {
     );
   });
 });
+
+describe('what the check prints is one line (#1007)', () => {
+  it("keeps an unreadable dev's error on one line", async () => {
+    const { github } = fakeGitHub([]);
+    const said = await checkDev({
+      github,
+      repo: 'o/r',
+      now: NOW,
+      readServed: () => Promise.reject(new Error('down\n::warning::planted')),
+    });
+    expect(said).not.toMatch(/[\r\n]/);
+    expect(said).toContain('down ::warning::planted');
+  });
+});

@@ -13,6 +13,7 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { isPlainObject } from './events.ts';
+import { byCodeUnit } from './order.ts';
 import type { GameState } from './state.ts';
 
 /** A finite number's IEEE-754 bits, big-endian, as 16 hex digits after `0x`. */
@@ -58,7 +59,7 @@ export function canonical(value: unknown, path = 'state'): string {
     throw new TypeError(`${path} is a class instance: not plain data`);
   }
   const entries = Object.keys(value)
-    .sort()
+    .sort(byCodeUnit)
     .map(
       (key) =>
         `${JSON.stringify(key)}:${canonical(value[key], `${path}.${key}`)}`,
