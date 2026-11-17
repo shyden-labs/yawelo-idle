@@ -20,7 +20,7 @@ describe('the site’s languages and pages (#332 AC1)', () => {
   });
 
   it('indexes production only', () => {
-    expect(SITE).toBe('https://yawelo-idle.shyden.co.uk');
+    expect(SITE).toBe('https://yaweloidle.com');
   });
 
   it.each([

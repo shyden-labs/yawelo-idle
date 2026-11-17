@@ -98,11 +98,11 @@ describe('showsHolding behind the doors (#784)', () => {
 
 describe('servesPrivate (#846, #589)', () => {
   it('keeps the health report and private docs off the production host', () => {
-    expect(servesPrivate('yawelo-idle.shyden.co.uk')).toBe(false);
+    expect(servesPrivate('yaweloidle.com')).toBe(false);
   });
 
   it('keeps it off the production host in any case', () => {
-    expect(servesPrivate('YAWELO-IDLE.shyden.co.uk')).toBe(false);
+    expect(servesPrivate('YAWELOIDLE.com')).toBe(false);
   });
 
   it('serves it on dev, behind the password', () => {

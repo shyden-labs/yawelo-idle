@@ -85,7 +85,7 @@ describe('the web platform shares through the browser (#124 AC1)', () => {
   const request = {
     title: 'Yawelo Idle',
     text: 'A word learned today.',
-    url: 'https://yawelo-idle.shyden.co.uk/',
+    url: 'https://yaweloidle.com/',
   };
 
   it('hands the request to navigator.share and reports it done', async () => {

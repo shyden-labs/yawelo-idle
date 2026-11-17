@@ -60,7 +60,7 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
       'aria-label',
     ]);
     expect(video).toContain(
-      'poster="https://media.shyden.co.uk/yawelo-idle-promo-poster.jpg"',
+      'poster="https://media.yaweloidle.com/yawelo-idle-promo-poster.jpg"',
     );
   });
 
@@ -73,8 +73,8 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
       ...html(file).matchAll(/<source src="([^"]+)" type="([^"]+)">/g),
     ].map(([, src, type]) => [src, type]);
     expect(sources).toEqual([
-      ['https://media.shyden.co.uk/yawelo-idle-promo.mp4', 'video/mp4'],
-      ['https://media.shyden.co.uk/yawelo-idle-promo.webm', 'video/webm'],
+      ['https://media.yaweloidle.com/yawelo-idle-promo.mp4', 'video/mp4'],
+      ['https://media.yaweloidle.com/yawelo-idle-promo.webm', 'video/webm'],
     ]);
   });
 
@@ -86,7 +86,7 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
 
   it('links its language alternates', () => {
     expect(html(file)).toContain(
-      '<link rel="alternate" hreflang="id" href="https://yawelo-idle.shyden.co.uk/id/">',
+      '<link rel="alternate" hreflang="id" href="https://yaweloidle.com/id/">',
     );
   });
 });

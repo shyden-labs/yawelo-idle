@@ -79,10 +79,10 @@ describe('the production holding page Worker (#621 AC2)', () => {
     });
   });
 
-  it('is reached only at yawelo-idle.shyden.co.uk, as a Custom Domain, with no workers.dev or preview address', () => {
+  it('is reached only at yaweloidle.com (#1013), as a Custom Domain, with no workers.dev or preview address', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     expect(config.routes).toEqual([
-      { pattern: 'yawelo-idle.shyden.co.uk', custom_domain: true },
+      { pattern: 'yaweloidle.com', custom_domain: true },
     ]);
     expect(config.workers_dev).toBe(false);
     expect(config.preview_urls).toBe(false);
@@ -95,7 +95,7 @@ describe('the holding page’s security headers (#621 AC2)', () => {
 
   it('sets a content security policy with no inline script or style, taking images and media from the media host alone (#713), on every path', () => {
     expect(rules().get('/*')?.get('content-security-policy')).toBe(
-      "default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.shyden.co.uk; media-src https://media.shyden.co.uk; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     );
   });
 
@@ -108,8 +108,8 @@ describe('the holding page’s security headers (#621 AC2)', () => {
     );
   });
 
-  // The media moved to media.shyden.co.uk (#713), whose zone rule sets
-  // Cross-Origin-Resource-Policy: same-site; verify-prod checks it live.
+  // The media are on media.yaweloidle.com (#713, #1013), whose zone rule sets
+  // Cross-Origin-Resource-Policy: cross-origin; verify-prod checks it live.
   it('declares only the every-path rule, since the page serves no media of its own', () => {
     expect([...rules().keys()]).toEqual(['/*']);
   });
