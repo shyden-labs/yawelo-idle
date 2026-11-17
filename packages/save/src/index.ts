@@ -42,3 +42,9 @@ export {
   type Save,
   type Settings,
 } from './schema.ts';
+export {
+  DEVICE_KEY,
+  ensureDevice,
+  type DeviceIdentity,
+  type IdentityStorage,
+} from './device.ts';
