@@ -37,8 +37,8 @@ interface Field {
   options?: { id: string; name: string }[];
 }
 
-const ESTIMATES = new Set([1, 2, 3, 5, 8, 13]);
-const PRIORITIES = new Set(['P0', 'P1', 'P2', 'P3', 'P4', 'P5']);
+const ESTIMATES = [1, 2, 3, 5, 8, 13];
+const PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'P4', 'P5'];
 const SECTIONS = [
   'Story',
   'Context',
@@ -72,12 +72,12 @@ export function parseStory(text: string): Story {
     fail('repo must be <owner>/<name>');
   if (typeof s.title !== 'string' || s.title.trim() === '')
     fail('the title is empty');
-  if (!ESTIMATES.has(s.estimate as number)) {
+  if (!ESTIMATES.includes(s.estimate as number)) {
     fail(
       `estimate ${String(s.estimate)} is not 1, 2, 3, 5, 8 or 13 (larger is an epic: split it)`,
     );
   }
-  if (!PRIORITIES.has(s.priority as string))
+  if (!PRIORITIES.includes(s.priority as string))
     fail(`priority ${String(s.priority)} is not P0 to P5`);
   const status = s.status ?? 'Todo';
   if (typeof status !== 'string')
