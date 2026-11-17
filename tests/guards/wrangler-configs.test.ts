@@ -2,6 +2,7 @@ import { relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   PROD_WRANGLER_CONFIGS,
+  TEST_WRANGLER_CONFIGS,
   WRANGLER_CONFIGS,
   wranglerConfigsOnDisk,
 } from '../unit/wrangler-configs';
@@ -13,11 +14,17 @@ import {
  */
 
 describe('the deploy configs (#530, #621)', () => {
-  it('finds the dev Workers, the hostname adapter, the front door and the production holding page on disk, and no other', () => {
+  it('finds the dev Workers, the hostname adapter, the TEST holding page, the front door and the production holding page on disk, and no other', () => {
     expect(
       wranglerConfigsOnDisk('.')
         .map((path) => relative('.', path))
         .sort(),
-    ).toEqual([...WRANGLER_CONFIGS, ...PROD_WRANGLER_CONFIGS].sort());
+    ).toEqual(
+      [
+        ...WRANGLER_CONFIGS,
+        ...TEST_WRANGLER_CONFIGS,
+        ...PROD_WRANGLER_CONFIGS,
+      ].sort(),
+    );
   });
 });
