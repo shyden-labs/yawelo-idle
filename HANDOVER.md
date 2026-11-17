@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-18 04:20 WIB, session `yawelo-idle-63` (worked overnight while Shyden slept). Colima, simulators and USB phones not claimed. Road to Launch page republished 04:12 WIB (version 61).
+**Written:** 2026-11-18 05:50 WIB, session `yawelo-idle-63` (worked overnight while Shyden slept). Colima, simulators and USB phones not claimed; no background job running. Road to Launch page republished 05:45 WIB (version 62).
 
 ## Morning list (Shyden)
 
@@ -25,11 +25,13 @@
 - Production key and account id saved in `production` (read back). R2 on in Yawelo's production account; `media.yaweloidle.com` and `dev-media.yaweloidle.com` live and proven (curl: byte-identical, 206, CORP cross-origin, nosniff). The shyden.co.uk session moved its pages to them.
 - #757: fix was already live; the release above is its last AC.
 - #106 re-scoped (Shyden's 2026-11-16 ruling); follow-ups #1025, #1026 filed and linked.
+- #106 closed (content build and contentVersion, PR #1027, dev deploy green); follow-ups #1025, #1026.
+- #163 closed (anonymous device registration, PR #1028; live on dev: `POST /v1/devices` 201, a field 400, GET 405). Follow-up #1029 (timing, after #166).
 - #864 and #888 tallies posted (no smoke failures); they close when their windows end (#864 after 2026-11-18 21:00 UTC, #888 after 2026-11-20 13:00 UTC).
 
 ## In flight
 
-- **PR #1027** (#106, content build): CI re-running on head `6c3d2e0f` after adding the script to the integration inventory. Merge when green; worktree `../yawelo-idle-106`.
+- **#164** (rate limits and validation for every sync endpoint) is next in M4 and now unblocked; it is larger than its 3 points (shared validation, D1-backed limits, a route guard, a 413 boundary). Weigh the D1 writes per request before starting.
 - **PR #1019** (#1015, new promo video): green on `5e9ba3f8`. Before merging, with no dev deploy running: upload the three files from `../yawelo-idle-1015/apps/site/media/` to R2 `yawelo-idle-media-dev` (Yawelo Chrome profile, bucket page, file input; copy them to the scratchpad first), curl-compare with the repo copies, merge, read the dev deploy's verify-holding. The production bucket gets them at the next release, with Shyden's approval (the yaweloidle.com release carries the old files). Then check whether the new video settles #622 (no Taj Mahal or Devanagari).
 - **#1013** after the release: curl each host, then the 301s with shyden-co-uk-ec; old Worker's custom domain removal is in shyden.co.uk's account.
 - **#160**: draft PR 986, waits on #992/#993.
