@@ -108,6 +108,10 @@ export const WRANGLER_STEPS: readonly (MeantConfig & { step: string })[] = [
     config: 'apps/site/holding/wrangler.jsonc',
   },
   {
+    step: "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
+    config: 'apps/site/holding-test/wrangler.jsonc',
+  },
+  {
     step: 'rollback-prod.yml / rollback / Find the version tagged with that commit',
     config: 'apps/site/holding/wrangler.jsonc',
   },

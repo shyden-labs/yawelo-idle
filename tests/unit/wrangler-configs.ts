@@ -29,6 +29,15 @@ export const PROD_WRANGLER_CONFIGS = [
   'apps/site/holding/wrangler.jsonc',
 ] as const;
 
+/**
+ * The TEST deploy configs (#784 AC2): the holding page's locked-down copy in
+ * the non-PROD account, deployed from each release/* cut by deploy-test.yml
+ * and read by test-environment.test.ts.
+ */
+export const TEST_WRANGLER_CONFIGS = [
+  'apps/site/holding-test/wrangler.jsonc',
+] as const;
+
 /** Every wrangler config under `dir`, found on disk rather than listed. */
 export function wranglerConfigsOnDisk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
-import { PROD_WRANGLER_CONFIGS, WRANGLER_CONFIGS } from './wrangler-configs';
+import {
+  PROD_WRANGLER_CONFIGS,
+  TEST_WRANGLER_CONFIGS,
+  WRANGLER_CONFIGS,
+} from './wrangler-configs';
 import {
   WRANGLER_STEPS,
   assetsReported,
@@ -86,6 +90,13 @@ const CALLS = [
     start: 'the repository root',
   },
   {
+    step: "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
+    command: 'deploy',
+    from: '.',
+    configArgs: ['--config', 'apps/site/holding-test/wrangler.jsonc'],
+    start: 'the repository root',
+  },
+  {
     step: 'rollback-prod.yml / rollback / Find the version tagged with that commit',
     command: 'versions list',
     from: '.',
@@ -164,6 +175,7 @@ describe('the wrangler calls in the workflows (#627)', () => {
       const meant = WRANGLER_STEPS.find((each) => each.step === step);
       const listed: readonly string[] = [
         ...WRANGLER_CONFIGS,
+        ...TEST_WRANGLER_CONFIGS,
         ...PROD_WRANGLER_CONFIGS,
       ];
       expect(listed).toContain(meant?.writtenFrom ?? meant?.config);
