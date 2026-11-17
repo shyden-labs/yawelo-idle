@@ -1,30 +1,35 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-17 21:00 WIB for session `yawelo-idle-63`. Colima, simulators and USB phones were not claimed (the phones are plugged in, but Yawelo has no device run allowed until playwright-devices#7, #16, #17 land). No background subagent; nothing is waiting. Road to Launch page republished at this close-out.
+**Written:** 2026-11-18 04:20 WIB, session `yawelo-idle-63` (worked overnight while Shyden slept). Colima, simulators and USB phones not claimed. Road to Launch page republished 04:12 WIB (version 61).
 
-**Next session:** `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh: `git -C ../yawelo-idle-dev-scripts fetch -q origin && git -C ../yawelo-idle-dev-scripts checkout -q --detach origin/develop`). Node: `~/.local/share/node/current/bin`.
+## Morning list (Shyden)
 
-## The rule that leads (Shyden, 2026-11-17)
+1. **Release yaweloidle.com** (3 min). The cut `release/2026-11-18-yaweloidle` (develop `8589170a`, dev deploy run 44156280034 green on every job) is pushed. Opening its PR into `main` was refused to Claude by the permission check, so:
+   a. Open https://github.com/shyden-labs/yawelo-idle/compare/main...release/2026-11-18-yaweloidle → **Create pull request**, title "Release 2026-11-18: yaweloidle.com", body from `.superpowers/sdd/1013-release-pr-body.md`.
+   b. When `release-cut` and the checks are green, **Merge pull request** (merge commit).
+   c. Actions → deploy-prod (the run it starts) → **Review deployments → production → Approve**.
+   It puts the holding page on https://yaweloidle.com in Yawelo's own account. Claude then proves it with curl and asks the shyden.co.uk session for the 301 from the old address. The push also started deploy-test, which fails at its key step until item 2 is done; it is not required for the release.
+2. **TEST key** (10 min), unblocks TEST deploys (#784). In the Yawelo Chrome profile, account **Yawelo Idle Non-Prod**:
+   a. Workers & Pages → Create → Start with Hello World → name `yawelo-idle-holding-test` → Deploy (a key limited to one Worker cannot create it).
+   b. Manage account → Account API tokens → Create Token → Custom → Workers → **Specified Workers: yawelo-idle-holding-test**, role **Editor** → name "GitHub Actions: TEST deploys" → Create.
+   c. https://github.com/shyden-labs/yawelo-idle/settings/environments → `test` (the release push may already have created it; else New environment) → add secrets `TEST_CLOUDFLARE_API_TOKEN` (the key) and `NONPROD_CLOUDFLARE_ACCOUNT_ID` (the Non-Prod account id from its dashboard URL).
+3. **Keep the Yawelo Chrome window unlocked** for a few minutes when convenient, so Claude can upload #1015's new video to the dev bucket (the locked screen blocked it overnight).
 
-`~/.claude/global-rules/same-tests-on-every-device-before-device-runs.md`: open `unified-tests` tickets first; no device run except one that measures them. shyden-labs/playwright-devices is now the shared package for phones AND desktop browsers. Yawelo keeps #996's check as is, not extended; switch-over is #1003.
+## Next session
 
-Totals: desktop chromium 17, firefox 17, webkit 17 (develop deploy run 43992705377); real phones and tablets 0.
+`ListAgents`; **`npm view picomatch version`: a release above 4.0.7 is applied at once and #1018's exception dropped (Shyden, 2026-11-18)**; then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (refresh it first). Node: `~/.local/share/node/current/bin`.
 
-## Done this session
+## Done overnight (2026-11-17/18)
 
-- **#784: old DEV deleted from Shyden Labs Dev** (Shyden, 2026-11-17: "Delete without a backup"): Workers site-dev, holding-dev, web-dev, sync-dev and D1 `yawelo-idle-dev`, with evidence on the ticket (comment 6950140035). Only the `yawelo-idle-dev-hosts` Pages project stays there, until the PROD move's doors go live. #784 stays open for TEST, PROD (Shyden's approval) and the doors.
-- **#1004, #1006, #1007 closed** with their evidence quoted. SonarCloud on develop `8f93f962` (run 44032624363): 0 bugs, 0 vulnerabilities, gate OK. The first gate read `NONE` only because there was no earlier analysis; `sonar-verdict.ts` is unchanged. `sonar-project.properties` marks S6505 (allowScripts proven) and S4036 (Shyden's choice) with their reasons.
-- **#1010 filed** (P3, 5 pts): triage the 114 Sonar code smells, starting with 16 S2699 (tests with no assertion).
+- Merged into develop: #1017 (#1013: production on yaweloidle.com, media on media.yaweloidle.com), #1020 (#1018 picomatch exception), #1022 (#1021 test door), #1023 and #1024 (#1010, closed: SonarCloud code smells 114 → 0).
+- Production key and account id saved in `production` (read back). R2 on in Yawelo's production account; `media.yaweloidle.com` and `dev-media.yaweloidle.com` live and proven (curl: byte-identical, 206, CORP cross-origin, nosniff). The shyden.co.uk session moved its pages to them.
+- #757: fix was already live; the release above is its last AC.
+- #106 re-scoped (Shyden's 2026-11-16 ruling); follow-ups #1025, #1026 filed and linked.
+- #864 and #888 tallies posted (no smoke failures); they close when their windows end (#864 after 2026-11-18 21:00 UTC, #888 after 2026-11-20 13:00 UTC).
 
 ## In flight
 
-- **#160 (backups), draft PR 986**, worktree `../yawelo-idle-160`, head `35dd4007`. AC3's notice is done (`SaveNotice.svelte`, `saved-ago.ts`, four `save.*` keys with review, licence and `docs/translations/2026-11-17-save-notice-id.md`). CI fixes: the Svelte-gates list (`266ed61`), and the first-paint tripwire in `apps/web/test/bundle.test.ts` raised 15,000 → 16,000 (Shyden, 2026-11-17: develop 14,924, branch 15,164, measured). CI on `35dd4007` green on every required check (board-orphans, build-and-test, coverage, sonar-coverage, sonarcloud); the PR is behind develop by #1004, #1006 and #1007 and stays a draft. Nothing mounts the notice yet: `/play/` is still the coming-soon shell. What is left (AC6 real IndexedDB on every target, the journey) waits on #992/#993.
-- **#1003** browser switch-over (P0, 3 pts): blocked by playwright-devices#16 and #17 (linked, read back). **#992/#993** blocked by playwright-devices#7 and #16. #997 to #1000 wait on them.
-- **#783 and #757** (P0, board-next's top) wait on the next release cut (Shyden, 2026-11-05); nothing to do before then.
-- **#971** (1 s unit timeouts under load): two more occurrences logged today, at load 160 and 73 with swap ~5.3 GB; each passed alone and on a full re-run.
-
-## Resume steps
-
-1. #160: nothing to do until #992/#993; update the branch from develop when work resumes.
-2. Follow playwright-devices#7, #16, #17; when they land, start #992, #993, #1003.
-3. #784's remaining ACs (TEST environment in the non-PROD account; PROD move needs Shyden's approval), then #127, #163.
+- **PR #1027** (#106, content build): CI re-running on head `6c3d2e0f` after adding the script to the integration inventory. Merge when green; worktree `../yawelo-idle-106`.
+- **PR #1019** (#1015, new promo video): green on `5e9ba3f8`. Before merging, with no dev deploy running: upload the three files from `../yawelo-idle-1015/apps/site/media/` to R2 `yawelo-idle-media-dev` (Yawelo Chrome profile, bucket page, file input; copy them to the scratchpad first), curl-compare with the repo copies, merge, read the dev deploy's verify-holding. The production bucket gets them at the next release, with Shyden's approval (the yaweloidle.com release carries the old files). Then check whether the new video settles #622 (no Taj Mahal or Devanagari).
+- **#1013** after the release: curl each host, then the 301s with shyden-co-uk-ec; old Worker's custom domain removal is in shyden.co.uk's account.
+- **#160**: draft PR 986, waits on #992/#993.
