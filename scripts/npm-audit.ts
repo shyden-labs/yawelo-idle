@@ -19,7 +19,17 @@ export interface AuditException {
   readonly expires: string;
 }
 
-export const EXCEPTIONS: readonly AuditException[] = [];
+export const EXCEPTIONS: readonly AuditException[] = [
+  {
+    id: 'GHSA-fc5q-39xc-vjpf',
+    reason:
+      'picomatch ReDoS (#1018): no fixed release exists (newest 4.0.7, measured 2026-11-18); ' +
+      'it reaches only build and test tools (astro, vite, vitest, svelte-check), whose patterns ' +
+      'come from this repo, and the production tree holds no copy. Shyden, 2026-11-18: checked ' +
+      'at every session start and dropped the day a fix ships.',
+    expires: '2026-12-01',
+  },
+];
 
 interface Advisory {
   readonly severity: string;

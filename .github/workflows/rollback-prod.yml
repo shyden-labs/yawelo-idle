@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: production
-      url: https://yawelo-idle.shyden.co.uk
+      url: https://yaweloidle.com
     env:
       WRANGLER_SEND_METRICS: 'false'
     steps:
@@ -99,6 +99,6 @@ jobs:
         run: npm run build:holding --workspace @yawelo-idle/site
       - name: Verify production serves the commit it was rolled back to
         env:
-          PROD_URL: https://yawelo-idle.shyden.co.uk
+          PROD_URL: https://yaweloidle.com
           EXPECTED_SHA: ${{ inputs.commit }}
         run: node scripts/verify-prod.ts

@@ -102,7 +102,11 @@ describe('the audit judge', () => {
 });
 
 describe('the recorded exceptions', () => {
-  it('hold none since GitHub withdrew the deepmerge advisory on 2026-11-16 (#991)', () => {
-    expect(EXCEPTIONS).toEqual([]);
+  // picomatch has no fixed release (#1018; Shyden, 2026-11-18: until
+  // 2026-12-01, checked at every session start and dropped the day a fix ships).
+  it('hold only the picomatch advisory, until 2026-12-01 (#1018)', () => {
+    expect(EXCEPTIONS.map(({ id, expires }) => ({ id, expires }))).toEqual([
+      { id: 'GHSA-fc5q-39xc-vjpf', expires: '2026-12-01' },
+    ]);
   });
 });

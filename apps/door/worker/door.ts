@@ -50,7 +50,7 @@ export const DOORS: ReadonlyMap<string, Door> = new Map([
   ],
   [
     'test.yaweloidle.com',
-    { worker: 'yawelo-idle-site-test', environment: 'test' },
+    { worker: 'yawelo-idle-holding-test', environment: 'test' },
   ],
 ]);
 

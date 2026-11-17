@@ -11,7 +11,7 @@ import { differences, judged, spec } from '../../api/judge';
  * the password) and the production host.
  */
 const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
-const PROD = 'https://yawelo-idle.shyden.co.uk';
+const PROD = 'https://yaweloidle.com';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const { snapshot: SNAPSHOT, live: LIVE } = ROADMAP_PATHS;
 

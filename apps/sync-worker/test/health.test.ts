@@ -134,16 +134,10 @@ describe('non-prod marking (#39)', () => {
   });
 
   it('leaves the production API host unmarked, robots.txt included', async () => {
-    const health = await host(
-      'https://api.yawelo-idle.shyden.co.uk',
-      '/health',
-    );
+    const health = await host('https://api.yaweloidle.com', '/health');
     expect(health.status).toBe(200);
     expect(health.headers.get('x-robots-tag')).toBeNull();
-    const robots = await host(
-      'https://api.yawelo-idle.shyden.co.uk',
-      '/robots.txt',
-    );
+    const robots = await host('https://api.yaweloidle.com', '/robots.txt');
     expect(robots.status).toBe(404);
     expect(robots.headers.get('x-robots-tag')).toBeNull();
   });
