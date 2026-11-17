@@ -30,6 +30,7 @@ const SCRIPTS = [
   'scripts/board-orphans.ts',
   'scripts/board-progress.ts',
   'scripts/board-setup.ts',
+  'scripts/build-content.ts',
   'scripts/ci-scope.ts',
   'scripts/content.ts',
   'scripts/coverage.ts',
