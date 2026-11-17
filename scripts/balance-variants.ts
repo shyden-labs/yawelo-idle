@@ -46,7 +46,7 @@ export const VARIANTS: readonly Variant[] = [
 ];
 
 const scale = (text: string, factor: number) =>
-  text.replace(/[0-9][0-9_.e+]*/g, (n) =>
+  text.replace(/\d[\d_.e+]*/g, (n) =>
     String(Number(n.replaceAll('_', '')) * factor),
   );
 

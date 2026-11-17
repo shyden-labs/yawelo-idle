@@ -123,7 +123,7 @@ export {
   type Unfold,
   type UnfoldFlag,
 } from './unfold.ts';
-export { stateHash } from './hash.ts';
+export { canonicalHash, stateHash } from './hash.ts';
 export { apply, replay, type Refusal, type Replayed } from './log.ts';
 export {
   EVENT_TYPES,

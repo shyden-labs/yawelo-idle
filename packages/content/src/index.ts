@@ -471,3 +471,4 @@ export function licenceChecks(course: CoursePack): readonly StructureCheck[] {
 }
 
 export * from './evidence.ts';
+export * from './build.ts';

@@ -1,7 +1,8 @@
 /**
- * The Yawelo Idle sync Worker. In M0 it serves one route, `GET /health`, which
- * the dev deploy's verify job reads to prove two things about the live Worker:
- * it is the commit that was just deployed, and its D1 binding answers a query.
+ * The Yawelo Idle sync Worker. `GET /health` is what the dev deploy's verify
+ * job reads to prove two things about the live Worker: it is the commit that
+ * was just deployed, and its D1 binding answers a query. `POST /v1/devices`
+ * registers an anonymous device (#163).
  *
  * On any host but the production API host, every response carries the
  * noindex header and `/robots.txt` blocks crawlers (#39). There is no password:
@@ -12,6 +13,7 @@
  */
 import { markApiRequest } from '@yawelo-idle/lockdown';
 import { behindDoor, type OriginEnv } from '../../door/worker/origin';
+import { registerDevice, type SaveDevice } from './devices';
 
 const json = (
   body: unknown,
@@ -34,8 +36,33 @@ async function health(env: Env): Promise<Response> {
   return json({ ok: true, commit: env.COMMIT, db: 'ok' }, 200);
 }
 
+/** Saves a registration: the player and its device, in one D1 batch. */
+const saveDevice =
+  (env: Env): SaveDevice =>
+  async (device) => {
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO players (id, created_at) VALUES (?, ?)').bind(
+        device.playerId,
+        device.createdAt,
+      ),
+      env.DB.prepare(
+        'INSERT INTO devices (id, player_id, token_hash, created_at) VALUES (?, ?, ?, ?)',
+      ).bind(
+        device.deviceId,
+        device.playerId,
+        device.tokenHash,
+        device.createdAt,
+      ),
+    ]);
+  };
+
 async function route(request: Request, env: Env): Promise<Response> {
   const { pathname } = new URL(request.url);
+  if (pathname === '/v1/devices')
+    return registerDevice(request, saveDevice(env), {
+      uuid: () => crypto.randomUUID(),
+      now: () => Date.now(),
+    });
   if (pathname !== '/health') {
     return json({ error: 'not_found' }, 404);
   }

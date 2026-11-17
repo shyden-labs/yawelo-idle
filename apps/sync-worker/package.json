@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@yawelo-idle/lockdown": "*"
+    "@yawelo-idle/lockdown": "*",
+    "zod": "^4.6.5"
   }
 }
