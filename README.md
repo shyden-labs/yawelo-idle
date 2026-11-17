@@ -8,6 +8,8 @@ It is built once for the web and shipped to browsers (PWA), Steam (Electron) and
 
 **Pre-alpha: design complete, foundations in progress.** Nothing is playable yet. Work is tracked on the [Yawelo Idle Stories](https://github.com/orgs/shyden-labs/projects/4) board.
 
+Progress towards launch, with an estimated date, is on the [Road to Launch](https://claude.ai/artifact/KcGNj2UbzSdtcGjvyzMCyb) page.
+
 ## Read first
 
 - [Design spec](docs/superpowers/specs/2026-10-01-yawelo-idle-design.md): the source of truth. It covers the core loop, progression, content, architecture, fair play and testing.
