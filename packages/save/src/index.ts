@@ -21,6 +21,18 @@ export {
   type CorruptReason,
 } from './blob.ts';
 export {
+  KEY_BYTES,
+  SAVE_KEY,
+  SaveDecryptError,
+  decryptSave,
+  encryptSave,
+  ensureSaveKey,
+  leaksKey,
+  type DecryptFailure,
+  type KeyStorage,
+  type SentRequest,
+} from './encryption.ts';
+export {
   load,
   mayReplace,
   save,
