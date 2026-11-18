@@ -112,6 +112,7 @@ const ONE_PER_ITEM = 'UNIQUE constraint failed: content_reports.install_id';
 const storeReport =
   (env: SyncEnv): StoreReport =>
   async (report) => {
+    if (report.id !== '') return 'stored'; // MUTATION: nothing written
     try {
       await env.DB.batch([
         env.DB.prepare(
