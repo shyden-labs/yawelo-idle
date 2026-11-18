@@ -278,7 +278,9 @@ describe('a promo media file, asked for whole', () => {
         SOURCE,
         HOST,
       ),
-    ).toEqual([`${URL_}: Content-Length 4, expected 5`]);
+    ).toEqual([
+      `${URL_}: Content-Length 4, expected 5; if the new file is uploaded, the edge may still cache the old one: purge its URL (apps/site/media/README.md, step 4)`,
+    ]);
   });
 
   it('names a file that differs from the tracked one, and how to upload it', () => {
