@@ -9,13 +9,10 @@ import {
   type DeployConfig,
 } from './wrangler-configs';
 import { runOf } from './workflow-steps';
-import { DEV_DOORS, DEV_HOSTS } from '../../apps/dev-hosts/hosts';
 import { DOORS } from '../../apps/door/worker/door';
-import { HOLDING_HOST } from '../../apps/site/worker/routes';
 
 /**
- * The dev deploy configs (three Workers and the Pages hostname adapter,
- * #429), read the way wrangler reads them
+ * The dev deploy configs (four Workers, #429, #784), read the way wrangler reads them
  * (comments stripped, defaults applied), so no comment can satisfy or trip a
  * guard (#39 AC2, AC7).
  */
@@ -38,11 +35,10 @@ const configs = (): { file: string; config: DeployConfig }[] =>
     config: readDeployConfig(join(ROOT, file)),
   })));
 
-/** The dev hostname that reaches a binding (apps/dev-hosts/hosts.ts). */
-function devHost(binding: string): string {
-  const found = [...DEV_HOSTS].find(([, each]) => each === binding);
-  if (found === undefined)
-    throw new Error(`no dev hostname reaches ${binding}`);
+/** The dev door that reaches `worker` (apps/door/worker/door.ts, #1013). */
+function devHost(worker: string): string {
+  const found = [...DOORS].find(([, door]) => door.worker === worker);
+  if (found === undefined) throw new Error(`no dev door reaches ${worker}`);
   return found[0];
 }
 
@@ -105,10 +101,6 @@ describe('the dev Workers’ deploy configs', () => {
     ]);
   });
 
-  it('shows the holding page on the hostname that reaches the site Worker (#673)', () => {
-    expect(HOLDING_HOST).toBe(devHost('SITE'));
-  });
-
   it('runs the game’s script before its files, so every response carries the CSP (#123, #332)', () => {
     const game = byName('yawelo-idle-web-dev');
     expect(game.main).toMatch(/apps\/web\/worker\/index\.ts$/);
@@ -141,8 +133,6 @@ describe('the dev Workers’ deploy configs', () => {
   });
 
   it('keeps each public dev Worker’s workers.dev address, the holding page’s dev copy’s too for its door, and the game at none, with no preview URLs (#395, #332, #429, #768, #784)', () => {
-    // The Pages adapter sets neither key: Pages has no workers.dev address,
-    // and its own pages.dev address answers 404 (scripts/verify-dev-hosts.ts, after each dev deploy).
     expect(
       configs()
         .map(({ config }) => [
@@ -152,7 +142,6 @@ describe('the dev Workers’ deploy configs', () => {
         ])
         .sort(),
     ).toEqual([
-      ['yawelo-idle-dev-hosts', undefined, undefined],
       ['yawelo-idle-holding-dev', true, false],
       ['yawelo-idle-site-dev', true, false],
       ['yawelo-idle-sync-dev', true, false],
@@ -167,9 +156,9 @@ describe('the dev Workers’ deploy configs', () => {
     const game = `https://${byName('yawelo-idle-web-dev').name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
     const site = `https://${byName('yawelo-idle-site-dev').name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
     expect(verify?.env).toMatchObject({
-      DEV_WEB_URL: `https://${devHost('SITE')}/`,
+      DEV_WEB_URL: `https://${devHost('yawelo-idle-site-dev')}/`,
       DEV_SITE_URL: `${site}/`,
-      DEV_SYNC_URL: `https://${devHost('SYNC')}`,
+      DEV_SYNC_URL: `https://${devHost('yawelo-idle-sync-dev')}`,
       DEV_GAME_URL: `${game}/`,
     });
   });
@@ -192,30 +181,12 @@ describe('the dev Workers’ deploy configs', () => {
     const workflow = parse(
       readFileSync(join(ROOT, '.github/workflows/deploy-dev.yml'), 'utf8'),
     ) as { jobs: Record<string, { environment?: unknown }> };
-    const dev = { name: 'dev', url: `https://${devHost('SITE')}` };
+    const dev = {
+      name: 'dev',
+      url: `https://${devHost('yawelo-idle-site-dev')}`,
+    };
     expect(workflow.jobs['deploy']?.environment).toEqual(dev);
     expect(workflow.jobs['verify']?.environment).toEqual(dev);
-  });
-
-  it('serves the dev hostnames through a Pages project that reaches the Workers at the non-PROD account’s workers.dev addresses, with no binding (#429, #768, #784)', () => {
-    const adapter = byName('yawelo-idle-dev-hosts');
-    expect(adapter.main).toBeUndefined();
-    expect(adapter.pages_build_output_dir).toBe(
-      join(ROOT, 'apps/dev-hosts/public'),
-    );
-    // A service binding reaches only its own account's Workers (#784).
-    expect(adapter.services).toEqual([]);
-    expect(adapter.vars).toEqual({
-      ORIGIN_DOMAIN: `${DEV_WORKERS_SUBDOMAIN}.workers.dev`,
-    });
-  });
-
-  // Indonesian providers block free shared domains (#768), and the media's
-  // CORP same-site lets only shyden.co.uk pages show it.
-  it('serves every dev hostname on shyden.co.uk (#768)', () => {
-    expect(
-      [...DEV_HOSTS.keys()].filter((host) => !host.endsWith('.shyden.co.uk')),
-    ).toEqual([]);
   });
 
   it('verifies the holding page’s dev copy at its dev hostname (#768)', () => {
@@ -223,15 +194,15 @@ describe('the dev Workers’ deploy configs', () => {
       (step) => runOf(step) === 'node scripts/verify-prod.ts --dev-copy',
     );
     expect(verify?.env).toMatchObject({
-      DEV_HOLDING_URL: `https://${devHost('HOLDING')}`,
+      DEV_HOLDING_URL: `https://${devHost('yawelo-idle-holding-dev')}`,
     });
   });
 
-  it('reaches a dev Worker this repo deploys from every dev hostname (#429, #784)', () => {
+  it('reaches a dev Worker this repo deploys from every dev door (#429, #784, #1013)', () => {
     expect(
-      [...DEV_HOSTS.values()].map(
-        (worker) => byName(DOORS.get(DEV_DOORS[worker])?.worker ?? '').name,
-      ),
+      [...DOORS.values()]
+        .filter((door) => door.environment === 'dev')
+        .map((door) => byName(door.worker).name),
     ).toEqual([
       'yawelo-idle-site-dev',
       'yawelo-idle-sync-dev',
@@ -352,15 +323,6 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
     CLOUDFLARE_API_TOKEN: '${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}',
     CLOUDFLARE_ACCOUNT_ID: '${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}',
   };
-  /**
-   * Shyden Labs Dev's token, for the hostname adapter alone: its Pages
-   * project stays there, beside the custom domains attached to it (#784,
-   * Shyden 2026-11-16), until the doors go live.
-   */
-  const SHYDEN_LABS_DEV = {
-    CLOUDFLARE_API_TOKEN: '${{ secrets.CLOUDFLARE_API_TOKEN }}',
-    CLOUDFLARE_ACCOUNT_ID: '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}',
-  };
 
   it('is not in the deploy job’s own env, so npm ci and the build never hold it', () => {
     const workflow = parse(
@@ -405,31 +367,17 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
         'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
       ),
       holds('npx --no wrangler deploy --secrets-file "$SECRETS_FILE"'),
-      holds('node scripts/token-reach.ts', SHYDEN_LABS_DEV),
-      holds(
-        'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
-        SHYDEN_LABS_DEV,
-      ),
-      holds(
-        'npx --no wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"',
-        SHYDEN_LABS_DEV,
-      ),
     ]);
   });
 
-  it('are each proven to reach their account alone before any step that uses them', () => {
-    const steps = deploySteps();
-    const tokenOf = (step: (typeof steps)[number]) =>
-      step.env?.['CLOUDFLARE_API_TOKEN'];
-    for (const token of [NONPROD, SHYDEN_LABS_DEV]) {
-      // one scenario: each account's first Cloudflare step is its reach check
-      const first = steps.find(
-        (step) => tokenOf(step) === token.CLOUDFLARE_API_TOKEN,
-      );
-      expect(first === undefined ? undefined : runOf(first)).toBe(
-        'node scripts/token-reach.ts',
-      );
-    }
+  it('is proven to reach its account alone before any step that uses it', () => {
+    const first = deploySteps().find(
+      (step) =>
+        step.env?.['CLOUDFLARE_API_TOKEN'] === NONPROD.CLOUDFLARE_API_TOKEN,
+    );
+    expect(first === undefined ? undefined : runOf(first)).toBe(
+      'node scripts/token-reach.ts',
+    );
   });
 });
 
@@ -461,66 +409,6 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
     });
     expect(deploy).toBeGreaterThan(write);
     expect(steps[deploy]?.['working-directory']).toBe('apps/site');
-  });
-
-  it('gives the hostname adapter the dev door secret from the dev environment, before its deploy (#784)', () => {
-    const steps = deploySteps();
-    const write = steps.findIndex(
-      (step) =>
-        runOf(step) ===
-        'path="$(node scripts/dev-hosts-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"',
-    );
-    const upload = steps.findIndex(
-      (step) =>
-        runOf(step) === 'npx --no wrangler pages secret bulk "$SECRETS_FILE"',
-    );
-    const deploy = steps.findIndex((step) =>
-      runOf(step).startsWith('npx --no wrangler pages deploy'),
-    );
-    expect(steps[write]?.id).toBe('dev-hosts-secrets');
-    expect(steps[write]?.env).toEqual({
-      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
-    });
-    expect(steps[upload]?.env?.['SECRETS_FILE']).toBe(
-      '${{ steps.dev-hosts-secrets.outputs.path }}',
-    );
-    expect(steps[upload]?.['working-directory']).toBe('apps/dev-hosts');
-    expect(write).toBeGreaterThanOrEqual(0);
-    expect(upload).toBeGreaterThan(write);
-    expect(deploy).toBeGreaterThan(upload);
-  });
-});
-
-describe('the hostname adapter, deployed after the Workers it binds (#429)', () => {
-  const DEPLOY =
-    'npx --no wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"';
-
-  it('deploys to the project’s production branch from apps/dev-hosts, after the site and sync Workers', () => {
-    const steps = deploySteps();
-    const adapter = steps.findIndex((step) => runOf(step) === DEPLOY);
-    const workerIn = (dir: string) =>
-      steps.findIndex(
-        (step) =>
-          step['working-directory'] === dir &&
-          runOf(step).startsWith('npx --no wrangler deploy'),
-      );
-    const site = workerIn('apps/site');
-    const sync = workerIn('apps/sync-worker');
-    expect(steps[adapter]?.['working-directory']).toBe('apps/dev-hosts');
-    expect(site).toBeGreaterThanOrEqual(0);
-    expect(sync).toBeGreaterThanOrEqual(0);
-    expect(adapter).toBeGreaterThan(site);
-    expect(adapter).toBeGreaterThan(sync);
-  });
-
-  it('makes the empty static directory it uploads, holding no token, just before', () => {
-    const steps = deploySteps();
-    const adapter = steps.findIndex((step) => runOf(step) === DEPLOY);
-    expect(steps[adapter - 1]).toMatchObject({
-      'working-directory': 'apps/dev-hosts',
-      run: 'mkdir -p public',
-    });
-    expect(steps[adapter - 1]?.env).toBeUndefined();
   });
 });
 
@@ -604,7 +492,7 @@ describe('the roadmap, judged once the deployed code has checked the board (#708
     expect(job?.needs).toBe('deploy');
     expect(job?.environment).toStrictEqual({
       name: 'dev',
-      url: 'https://dev.yawelo-idle.shyden.co.uk',
+      url: 'https://dev.yaweloidle.com',
     });
     // 12 minutes of looks, under the step's 13 and the job's 15.
     expect(roadmapStep()?.['timeout-minutes']).toBe(13);
@@ -613,7 +501,7 @@ describe('the roadmap, judged once the deployed code has checked the board (#708
 
   it('hands the check the deploy time, the front door and the password', () => {
     expect(roadmapStep()?.env).toStrictEqual({
-      DEV_WEB_URL: 'https://dev.yawelo-idle.shyden.co.uk/',
+      DEV_WEB_URL: 'https://dev.yaweloidle.com/',
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       DEPLOYED_AT: '${{ needs.deploy.outputs.deployed-at }}',
     });

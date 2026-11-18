@@ -2,7 +2,7 @@
   "$schema": "../../../node_modules/wrangler/config-schema.json",
   // The production holding page (#621): yaweloidle.com (#1013), in Yawelo's
   // own production account, which holds the yaweloidle.com zone; the old
-  // yawelo-idle.shyden.co.uk redirects to it from the shyden.co.uk zone. Assets only: no
+  // shyden.co.uk host redirects to it from that zone (#1013). Assets only: no
   // script runs, so no page view counts against a request limit ("Requests to
   // static assets are free and unlimited", Cloudflare, read 2026-10-16) and
   // its security headers come from public/_headers. The full site replaces it

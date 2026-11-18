@@ -23,8 +23,7 @@ const SOURCES = [
   ['DEV_PASSWORD', 'DEV_BASIC_AUTH_PASSWORD'],
   ['ROADMAP_WEBHOOK_SECRET', 'ROADMAP_WEBHOOK_SECRET'],
   ['ROADMAP_APP_KEY', 'ROADMAP_APP_KEY'],
-  // The site believes the door a request names only with it (#784): the
-  // dev hostname adapter carries it while it stands in for the doors.
+  // The site believes the door a request names only with it (#784, #1013).
   ['DOOR_SECRET', 'DEV_DOOR_SECRET'],
 ] as const;
 const devDirectories = () =>

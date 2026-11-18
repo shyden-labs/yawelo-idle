@@ -68,8 +68,6 @@ describe('isProdHost', () => {
     'evilyaweloidle.com',
     'yaweloidle.co',
     'api.yaweloidle.com',
-    // The old production host (#1013): it only redirects now.
-    'yawelo-idle.shyden.co.uk',
     '',
   ])('refuses the near-miss %j', (hostname) => {
     expect(isProdHost(hostname, PROD_HOSTNAME)).toBe(false);
