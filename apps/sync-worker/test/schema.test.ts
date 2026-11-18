@@ -100,7 +100,7 @@ const addPlayer = (id: string) =>
     .bind(id)
     .run();
 
-describe('the migrations create exactly the first tables (#162 AC1, AC2)', () => {
+describe('the migrations create exactly these tables (#162 AC1, AC2; #52)', () => {
   it('and no others', async () => {
     const tables = await rows<{ name: string }>(
       `SELECT name FROM sqlite_schema WHERE type = 'table'
