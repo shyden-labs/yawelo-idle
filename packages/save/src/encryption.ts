@@ -37,8 +37,11 @@ export type DecryptFailure =
 
 /** A save that could not be decrypted, and why. */
 export class SaveDecryptError extends Error {
-  constructor(readonly reason: DecryptFailure) {
+  readonly reason: DecryptFailure;
+
+  constructor(reason: DecryptFailure) {
     super(`save could not be decrypted: ${reason}`);
+    this.reason = reason;
     this.name = 'SaveDecryptError';
   }
 }
