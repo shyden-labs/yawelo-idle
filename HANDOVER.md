@@ -1,10 +1,10 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-18 10:50 WIB, session `yawelo-idle-de`. Shyden AFK again from ~10:20 WIB (park what needs him, carry on by Priority). Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-165` (pushed, PR #1037), `yawelo-idle-52` (pushed a9500f9, no PR yet), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim.
+**Written:** 2026-11-18 11:05 WIB, session `yawelo-idle-de`. Shyden AFK again from ~10:20 WIB (park what needs him, carry on by Priority). Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-165` (pushed, PR #1037), `yawelo-idle-52` (pushed a9500f9, no PR yet), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim.
 
 ## Shyden (when back)
 
-1. **Two production approvals waiting** (open in tabs of his Yawelo Chrome): deploy-prod run 44228785359 (holding page onto yaweloidle.com) and deploy-door run 44228839542 (dev., dev-api., dev holding, test.yaweloidle.com). Release #1030 is merged (main b3f8c4b). Door secrets were set 2026-11-18 03:07 UTC (DEV_DOOR_SECRET in dev + production, TEST_DOOR_SECRET in test + production, DOOR_ORIGIN_DOMAIN in production) and dev was redeployed with the new one. After both deploys: curl/dig yaweloidle.com, dev., dev-api., test.; read dev-api /health; record on #784, #1013, #1021; ask shyden-co-uk for the 301s.
+1. **Live since ~11:00 WIB** (Shyden approved deploy-prod 44228785359 and deploy-door 44228839542): yaweloidle.com 200 (b3f8c4b), dev. 401/200 with password (377cde9), dev-api /health ok, dev-holding 200. **test.yaweloidle.com 404**: main's door still maps it to the non-existent yawelo-idle-site-test; the fix (007b7ae) missed the cut by 20 minutes, so it needs the next release (blocked by #1038) and a deploy-door re-run. Evidence on #784, #1013, #1021. Old-host 301s asked of shyden-co-uk-d6 (msg 11:05); record its curl results on #1013.
    1b. **Queued question, #1038 (P1): release #1030 was squashed into main**, so release-cut check (d) refuses the next cut. Options in the ticket (restrict main to merge commits and/or widen check (d)).
 2. **Queued question, #164 AC5 (where the rate-limit counts live).** Ask with AskUserQuestion, plain words:
    - **D1 counter** (recommended for simplicity): exact; one database write per request, sharing the free plan's 100,000 writes/day with the game.
