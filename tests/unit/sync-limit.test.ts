@@ -4,8 +4,8 @@ import {
   networkKey,
   networkOf,
   windowOf,
-  type Counts,
 } from '../../apps/sync-worker/src/limit';
+import { memoryCounts } from './memory-counts';
 
 /**
  * Request limits (#164 AC2; spec §12.9). A request with no device token is
@@ -67,19 +67,6 @@ describe('the window a request falls in (#164 AC2)', () => {
     expect(windowOf(nowMs, perSeconds)).toEqual(window);
   });
 });
-
-/** Counts held in memory, as D1 holds them: by route, key and window end. */
-function memoryCounts(): Counts {
-  const counts = new Map<string, number>();
-  return {
-    add: (routePath, key, windowEnd) => {
-      const id = `${routePath} ${key} ${windowEnd}`;
-      const count = (counts.get(id) ?? 0) + 1;
-      counts.set(id, count);
-      return Promise.resolve(count);
-    },
-  };
-}
 
 describe('a limit at its exact boundary (#164 AC2)', () => {
   const limit = { requests: 3, perSeconds: 60 };

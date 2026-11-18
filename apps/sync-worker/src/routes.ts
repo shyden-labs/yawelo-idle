@@ -5,17 +5,26 @@
  * nothing the table does not list. A route that takes a body reads it through
  * `readBody` with its own size limit (validate.ts).
  *
- * The limits are declared here; where their counts are kept is #164 AC5.
+ * The limits are enforced before a route's input is checked (#164 AC2), and
+ * their counts are kept in D1 (#164 AC5, Shyden 2026-11-18; d1-counts.ts).
  */
 import { z } from 'zod';
 import { registerDevice, type SaveDevice } from './devices';
+import {
+  clientAddressOf,
+  workerEqual,
+  type Equal,
+} from '../../door/worker/origin';
+import { d1Counts } from './d1-counts';
+import {
+  checkLimit,
+  networkKey,
+  networkOf,
+  type Counts,
+  type Limit,
+} from './limit';
 import { readQuery } from './validate';
 
-/** At most `requests` from one device (or network) every `perSeconds`. */
-export interface RouteLimit {
-  readonly requests: number;
-  readonly perSeconds: number;
-}
 
 /** A prepared D1 statement, as far as the routes use one. */
 interface Statement {
@@ -29,6 +38,10 @@ interface Statement {
  */
 export interface SyncEnv {
   readonly COMMIT: string;
+  /** The key request counts are hashed under (#164 AC2); a deploy secret. */
+  readonly RATE_KEY?: string;
+  /** This environment's door secret, so the door's address is believed. */
+  readonly DOOR_SECRET?: string;
   readonly DB: {
     prepare(query: string): Statement;
     batch(statements: Statement[]): Promise<unknown>;
@@ -38,7 +51,7 @@ export interface SyncEnv {
 export interface Route {
   readonly method: 'GET' | 'POST';
   readonly query: z.ZodType;
-  readonly limit: RouteLimit;
+  readonly limit: Limit;
   readonly handle: (request: Request, env: SyncEnv) => Promise<Response>;
 }
 
@@ -115,17 +128,59 @@ export const ROUTES: Readonly<Record<'/health' | '/v1/devices', Route>> = {
 const isListed = (path: string): path is keyof typeof ROUTES =>
   Object.hasOwn(ROUTES, path);
 
-/** Serves a request through the table: 404, 405, 422, or the route's answer. */
-export function route(request: Request, env: SyncEnv): Promise<Response> {
+/** What the router counts with: D1, the clock and the runtime's comparison by default. */
+export interface RouteOptions {
+  readonly counts?: Counts;
+  readonly now?: () => number;
+  readonly equal?: Equal;
+}
+
+/**
+ * The key a request is counted under: the keyed hash of its network
+ * (#164 AC2). An address that is not one counts under one shared network.
+ */
+async function requestKey(
+  request: Request,
+  secret: string,
+  doorSecret: string | undefined,
+  equal: Equal,
+): Promise<string> {
+  const address = await clientAddressOf(request, doorSecret, equal);
+  const network = networkOf(address ?? '') ?? 'unknown';
+  return networkKey(network, secret);
+}
+
+/**
+ * Serves a request through the table: 404, 405, then the route's limit (429
+ * with Retry-After), 422, or the route's answer. A request is counted before
+ * its input is checked, so refused input still counts.
+ */
+export async function route(
+  request: Request,
+  env: SyncEnv,
+  options: RouteOptions = {},
+): Promise<Response> {
   const url = new URL(request.url);
-  if (!isListed(url.pathname))
-    return Promise.resolve(json({ error: 'not_found' }, 404));
+  if (!isListed(url.pathname)) return json({ error: 'not_found' }, 404);
   const listed = ROUTES[url.pathname];
   if (request.method !== listed.method)
-    return Promise.resolve(
-      json({ error: 'method_not_allowed' }, 405, { allow: listed.method }),
-    );
+    return json({ error: 'method_not_allowed' }, 405, {
+      allow: listed.method,
+    });
+  if (env.RATE_KEY === undefined || env.RATE_KEY.length === 0)
+    return json({ error: 'not_configured', missing: 'RATE_KEY' }, 500);
+  const {
+    counts = d1Counts(env.DB),
+    now = Date.now,
+    equal = workerEqual,
+  } = options;
+  const key = await requestKey(request, env.RATE_KEY, env.DOOR_SECRET, equal);
+  const wait = await checkLimit(counts, url.pathname, key, listed.limit, now());
+  if (wait !== undefined)
+    return json({ error: 'too_many_requests' }, 429, {
+      'retry-after': String(wait),
+    });
   const query = readQuery(url, listed.query);
-  if (!query.ok) return Promise.resolve(query.response);
+  if (!query.ok) return query.response;
   return listed.handle(request, env);
 }
