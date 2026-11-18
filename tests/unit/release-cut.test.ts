@@ -4,6 +4,7 @@ import { onlyJob, workflow, type WorkflowStep } from './workflow-file';
 import { runOf } from './workflow-steps';
 import {
   RELEASE_CUT,
+  SQUASHED_RELEASES,
   auditReleaseCut,
   gatherFacts,
   main,
@@ -129,6 +130,25 @@ describe('auditReleaseCut', () => {
       }),
     ).toEqual([
       `main holds ${STRAY}, which has 1 parent, not a merge of a release cut`,
+    ]);
+  });
+
+  it('passes a main holding release #1030, squashed before main admitted merge commits only (#1038)', () => {
+    const squashed = 'b3f8c4bf35457c5a52d7093def80f7c1cf8357e6';
+    expect(
+      auditReleaseCut({
+        ...good,
+        mainCommits: [
+          { sha: squashed, parents: [OLD_MAIN], secondParentOnDevelop: null },
+          ...good.mainCommits,
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it('names release #1030 as the only squash main may hold (#1038)', () => {
+    expect(SQUASHED_RELEASES).toEqual([
+      'b3f8c4bf35457c5a52d7093def80f7c1cf8357e6',
     ]);
   });
 
