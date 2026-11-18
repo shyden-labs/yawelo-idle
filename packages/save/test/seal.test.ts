@@ -14,8 +14,9 @@ import {
 
 /**
  * #165: the device's save key `K` and sealed saves (AES-256-GCM). The chosen
- * cases live here; any save and any changed byte are the properties suite's
- * (properties/seal.test.ts).
+ * cases live here; any save, any changed byte and the 10,000-seal IV count
+ * are the properties suite's (properties/seal.test.ts): the count takes over
+ * a second on CI's runner, past the unit suite's limit.
  */
 
 /** A store backed by a Map, recording which keys were written. */
@@ -112,15 +113,6 @@ describe('a sealed save (#165 AC2, AC3)', () => {
   it('does not show the save in the clear', async () => {
     const sealed = await sealSave(K, SAVE);
     expect(Buffer.from(sealed).toString('latin1')).not.toContain('coins');
-  });
-
-  it('uses a fresh IV every time: 10,000 seals, 10,000 IVs', async () => {
-    const seen = new Set<string>();
-    for (let n = 0; n < 10_000; n += 1) {
-      const sealed = await sealSave(K, SAVE);
-      seen.add(Buffer.from(sealed.subarray(5, PREFIX)).toString('hex'));
-    }
-    expect(seen.size).toBe(10_000);
   });
 
   it('will not open under another key: tampered', async () => {
