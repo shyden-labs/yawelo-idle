@@ -17,11 +17,29 @@ export interface RouteLimit {
   readonly perSeconds: number;
 }
 
+/** A prepared D1 statement, as far as the routes use one. */
+interface Statement {
+  bind(...values: unknown[]): Statement;
+  run(): Promise<unknown>;
+}
+
+/**
+ * What the routes read from the Worker's env: the generated `Env` fits it, and
+ * a unit test can stand it in without the generated types (#164).
+ */
+export interface SyncEnv {
+  readonly COMMIT: string;
+  readonly DB: {
+    prepare(query: string): Statement;
+    batch(statements: Statement[]): Promise<unknown>;
+  };
+}
+
 export interface Route {
   readonly method: 'GET' | 'POST';
   readonly query: z.ZodType;
   readonly limit: RouteLimit;
-  readonly handle: (request: Request, env: Env) => Promise<Response>;
+  readonly handle: (request: Request, env: SyncEnv) => Promise<Response>;
 }
 
 const json = (
@@ -38,7 +56,7 @@ const json = (
  * `GET /health`: what the dev deploy's verify job reads to prove the live
  * Worker is the commit just deployed and its D1 binding answers a query.
  */
-async function health(_request: Request, env: Env): Promise<Response> {
+async function health(_request: Request, env: SyncEnv): Promise<Response> {
   try {
     await env.DB.prepare('SELECT 1').run();
   } catch (error) {
@@ -51,7 +69,7 @@ async function health(_request: Request, env: Env): Promise<Response> {
 
 /** Saves a registration: the player and its device, in one D1 batch. */
 const saveDevice =
-  (env: Env): SaveDevice =>
+  (env: SyncEnv): SaveDevice =>
   async (device) => {
     await env.DB.batch([
       env.DB.prepare('INSERT INTO players (id, created_at) VALUES (?, ?)').bind(
@@ -70,7 +88,7 @@ const saveDevice =
   };
 
 /** `POST /v1/devices` (#163): a new anonymous player and its first device. */
-const devices = (request: Request, env: Env): Promise<Response> =>
+const devices = (request: Request, env: SyncEnv): Promise<Response> =>
   registerDevice(request, saveDevice(env), {
     uuid: () => crypto.randomUUID(),
     now: () => Date.now(),
@@ -98,7 +116,7 @@ const isListed = (path: string): path is keyof typeof ROUTES =>
   Object.hasOwn(ROUTES, path);
 
 /** Serves a request through the table: 404, 405, 422, or the route's answer. */
-export function route(request: Request, env: Env): Promise<Response> {
+export function route(request: Request, env: SyncEnv): Promise<Response> {
   const url = new URL(request.url);
   if (!isListed(url.pathname))
     return Promise.resolve(json({ error: 'not_found' }, 404));

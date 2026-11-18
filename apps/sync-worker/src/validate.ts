@@ -51,18 +51,13 @@ async function bytesUpTo(
   maxBytes: number,
 ): Promise<Uint8Array | null> {
   if (request.body === null) return new Uint8Array();
-  const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    length += value.length;
-    if (length > maxBytes) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
+  // Leaving the loop early cancels the stream, so the rest is never read.
+  for await (const chunk of request.body as AsyncIterable<Uint8Array>) {
+    length += chunk.length;
+    if (length > maxBytes) return null;
+    chunks.push(chunk);
   }
   const bytes = new Uint8Array(length);
   let at = 0;

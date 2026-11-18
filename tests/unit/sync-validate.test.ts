@@ -26,7 +26,7 @@ const streamed = (text: string) =>
       },
     }),
     duplex: 'half',
-  } as RequestInit);
+  });
 
 /** A JSON body exactly `length` bytes long: {"name":"aaa…"}. */
 const bodyOf = (length: number) => {
@@ -38,7 +38,7 @@ const refusal = async (checked: Awaited<ReturnType<typeof readBody>>) => {
   if (checked.ok) throw new Error('expected a refusal');
   return {
     status: checked.response.status,
-    body: (await checked.response.json()) as unknown,
+    body: await checked.response.json(),
     cache: checked.response.headers.get('cache-control'),
   };
 };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ROUTES, route } from '../../apps/sync-worker/src/routes';
+import { ROUTES, route, type SyncEnv } from '../../apps/sync-worker/src/routes';
 
 /**
  * Every route the sync Worker serves is in one table, each with its input
@@ -8,17 +8,16 @@ import { ROUTES, route } from '../../apps/sync-worker/src/routes';
  */
 const PATHS = ['/health', '/v1/devices'] as const;
 
-/** An env whose D1 answers every query, so a route can run in Node. */
-const env = {
+/** A D1 statement that answers every query, so a route can run in Node. */
+const statement: ReturnType<SyncEnv['DB']['prepare']> = {
+  bind: () => statement,
+  run: () => Promise.resolve({}),
+};
+
+const env: SyncEnv = {
   COMMIT: 'test',
-  DB: {
-    prepare: () => ({
-      run: () => Promise.resolve({}),
-      bind: () => ({}),
-    }),
-    batch: () => Promise.resolve([]),
-  },
-} as unknown as Env;
+  DB: { prepare: () => statement, batch: () => Promise.resolve([]) },
+};
 
 const fetchRoute = (path: string, method = 'GET', body?: string) =>
   route(
