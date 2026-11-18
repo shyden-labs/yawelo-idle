@@ -94,6 +94,19 @@ describe('the sync route table (#164 AC3)', () => {
   );
 
   it.each(PATHS)(
+    '%s says whether it serves or refuses a request it could not count',
+    (path) => {
+      expect(['serve', 'refuse']).toContain(ROUTES[path].whenUncounted);
+    },
+  );
+
+  it('serves only /health uncounted: every route that changes state refuses', () => {
+    expect(
+      PATHS.filter((path) => ROUTES[path].whenUncounted === 'serve'),
+    ).toEqual(['/health']);
+  });
+
+  it.each(PATHS)(
     '%s refuses an unknown query parameter with 422',
     async (path) => {
       const { method } = ROUTES[path];
@@ -267,7 +280,7 @@ describe('the request limits (#164 AC2)', () => {
     ]);
   });
 
-  it('serves the request and logs when the counts cannot be read', async () => {
+  it('serves /health uncounted and logs when the counts cannot be read, so it reports D1 itself', async () => {
     const error = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
@@ -275,6 +288,42 @@ describe('the request limits (#164 AC2)', () => {
     const response = await send('/health', { counts: broken });
     expect([response.status, error.mock.calls[0]?.[0]]).toEqual([
       200,
+      'limit: the request count failed',
+    ]);
+    error.mockRestore();
+  });
+
+  it('refuses /v1/devices with 503, registering nothing, when the counts cannot be read', async () => {
+    const error = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const batches: unknown[] = [];
+    const watched: SyncEnv = {
+      ...env,
+      DB: {
+        prepare: () => statement,
+        batch: (statements) => {
+          batches.push(statements);
+          return Promise.resolve([]);
+        },
+      },
+    };
+    const broken: Counts = { add: () => Promise.reject(new Error('D1 down')) };
+    const response = await send('/v1/devices', {
+      method: 'POST',
+      body: '{}',
+      counts: broken,
+      withEnv: watched,
+    });
+    expect([
+      response.status,
+      await response.json(),
+      batches.length,
+      error.mock.calls[0]?.[0],
+    ]).toEqual([
+      503,
+      { error: 'unavailable' },
+      0,
       'limit: the request count failed',
     ]);
     error.mockRestore();

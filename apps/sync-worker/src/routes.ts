@@ -51,6 +51,12 @@ export interface Route {
   readonly method: 'GET' | 'POST';
   readonly query: z.ZodType;
   readonly limit: Limit;
+  /**
+   * What a request gets when its count cannot be made (D1 failing): `serve`
+   * only for a route that changes nothing and reports D1 itself (/health),
+   * `refuse` (503) for every other, so no route that writes runs unlimited.
+   */
+  readonly whenUncounted: 'serve' | 'refuse';
   readonly handle: (request: Request, env: SyncEnv) => Promise<Response>;
 }
 
@@ -113,6 +119,7 @@ export const ROUTES: Readonly<Record<'/health' | '/v1/devices', Route>> = {
     method: 'GET',
     query: NO_QUERY,
     limit: { requests: 60, perSeconds: 60 },
+    whenUncounted: 'serve',
     handle: health,
   },
   '/v1/devices': {
@@ -120,6 +127,7 @@ export const ROUTES: Readonly<Record<'/health' | '/v1/devices', Route>> = {
     query: NO_QUERY,
     // Registration makes a new player each time: a few per hour per network.
     limit: { requests: 10, perSeconds: 3600 },
+    whenUncounted: 'refuse',
     handle: devices,
   },
 };
@@ -178,9 +186,10 @@ export async function route(
   try {
     wait = await checkLimit(counts, url.pathname, key, listed.limit, now());
   } catch (error) {
-    // Served uncounted: a route that needs D1 reports the failure itself
-    // (/health answers 503), and the cause goes to the Worker logs.
+    // The cause goes to the Worker logs; the answer says only `unavailable`.
     console.error('limit: the request count failed', error);
+    if (listed.whenUncounted === 'refuse')
+      return json({ error: 'unavailable' }, 503);
   }
   if (wait !== undefined)
     return json({ error: 'too_many_requests' }, 429, {
