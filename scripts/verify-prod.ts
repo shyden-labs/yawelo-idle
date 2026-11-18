@@ -231,7 +231,7 @@ export function mediaJudgement(
       problem: () =>
         length === size
           ? undefined
-          : `${url}: Content-Length ${length ?? 'missing'}, expected ${size}`,
+          : `${url}: Content-Length ${length ?? 'missing'}, expected ${size}; if the new file is uploaded, the edge may still cache the old one: purge its URL (apps/site/media/README.md, step 4)`,
     },
     {
       name: `${url} bytes`,
