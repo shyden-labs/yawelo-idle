@@ -10,7 +10,8 @@
  *   (b) the head is on `origin/develop`, where CI tested it;
  *   (c) the pull request's merge ref is GitHub's merge of the head into main,
  *       and it lands exactly the head's tree;
- *   (d) every commit `main` holds beyond `develop` is a two-parent merge whose
+ *   (d) every commit `main` holds beyond `develop` (but the one squashed
+ *       release named in SQUASHED_RELEASES, #1038) is a two-parent merge whose
  *       second parent is on `develop`, so `main` never took anything else.
  *
  * Run by `.github/workflows/check-release-cut.yml` from the default branch's
@@ -61,6 +62,16 @@ const DEVELOP = 'origin/develop';
 const DEVELOP_BRANCH = 'refs/heads/develop';
 const BEYOND_DEVELOP = 'origin/develop..origin/main';
 
+/**
+ * Release merges main took as a squash, accepted by name (#1038): release
+ * #1030 (2026-11-18) landed as one commit whose tree is exactly its cut's,
+ * before main's ruleset admitted merge commits only. Nothing else may join
+ * this list: main now refuses a squash itself.
+ */
+export const SQUASHED_RELEASES: readonly string[] = [
+  'b3f8c4bf35457c5a52d7093def80f7c1cf8357e6',
+];
+
 /** Every reason the merge is not a release cut, in the order (a)-(d); empty when it is one. */
 export function auditReleaseCut(facts: ReleaseCutFacts): string[] {
   const problems: string[] = [];
@@ -91,6 +102,7 @@ export function auditReleaseCut(facts: ReleaseCutFacts): string[] {
     );
   }
   for (const c of facts.mainCommits) {
+    if (SQUASHED_RELEASES.includes(c.sha)) continue;
     if (c.parents.length !== 2) {
       const n = c.parents.length;
       problems.push(
