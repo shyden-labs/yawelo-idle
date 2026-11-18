@@ -54,3 +54,39 @@ export const reportBody = z.strictObject({
 });
 
 export type ReportBody = z.infer<typeof reportBody>;
+
+/** The largest report body read, in bytes. */
+export const REPORT_MAX_BYTES = 0;
+
+/** A report as stored: the body without its honeypot, plus id and times. */
+export interface NewReport {
+  readonly id: string;
+  readonly createdAt: number;
+  readonly utcDay: string;
+  readonly course: (typeof COURSES)[number];
+  readonly kind: (typeof KINDS)[number];
+  readonly itemId: string;
+  readonly problem: (typeof PROBLEMS)[number];
+  readonly suggestion: string | null;
+  readonly note: string | null;
+  readonly appVersion: string;
+  readonly contentVersion: string;
+  readonly installId: string;
+}
+
+export type ReportOutcome = 'stored' | 'over_quota' | 'duplicate';
+
+export type StoreReport = (report: NewReport) => Promise<ReportOutcome>;
+
+export interface ReportDeps {
+  readonly uuid: () => string;
+  readonly now: () => number;
+}
+
+export function submitReport(
+  _request: Request,
+  _store: StoreReport,
+  _deps: ReportDeps,
+): Promise<Response> {
+  throw new Error('not yet written');
+}

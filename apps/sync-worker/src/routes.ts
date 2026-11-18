@@ -96,12 +96,36 @@ const devices = (request: Request, env: SyncEnv): Promise<Response> =>
 
 const NO_QUERY = z.strictObject({});
 
-export const ROUTES: Readonly<Record<'/health' | '/v1/devices', Route>> = {
+const notYetWritten = (): Promise<Response> => {
+  throw new Error('not yet written');
+};
+
+export const ROUTES: Readonly<
+  Record<
+    | '/health'
+    | '/v1/content-reports'
+    | '/v1/content-reports/health'
+    | '/v1/devices',
+    Route
+  >
+> = {
   '/health': {
     method: 'GET',
     query: NO_QUERY,
     limit: { requests: 60, perSeconds: 60 },
     handle: health,
+  },
+  '/v1/content-reports': {
+    method: 'POST',
+    query: NO_QUERY,
+    limit: { requests: 10, perSeconds: 60 },
+    handle: notYetWritten,
+  },
+  '/v1/content-reports/health': {
+    method: 'GET',
+    query: NO_QUERY,
+    limit: { requests: 60, perSeconds: 60 },
+    handle: notYetWritten,
   },
   '/v1/devices': {
     method: 'POST',

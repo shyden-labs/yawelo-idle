@@ -6,7 +6,12 @@ import { ROUTES, route, type SyncEnv } from '../../apps/sync-worker/src/routes';
  * checks and its request limit (#164 AC3; spec §12.9), and the router serves
  * nothing the table does not list.
  */
-const PATHS = ['/health', '/v1/devices'] as const;
+const PATHS = [
+  '/health',
+  '/v1/content-reports',
+  '/v1/content-reports/health',
+  '/v1/devices',
+] as const;
 
 /** A D1 statement that answers every query, so a route can run in Node. */
 const statement: ReturnType<SyncEnv['DB']['prepare']> = {
@@ -79,6 +84,30 @@ describe('the sync route table (#164 AC3)', () => {
 
   it('serves /health through the table', async () => {
     expect((await fetchRoute('/health')).status).toBe(200);
+  });
+
+  it('serves /v1/content-reports through the table', async () => {
+    const body = JSON.stringify({
+      course: 'en-id',
+      kind: 'lexicon',
+      itemId: 'lex.a',
+      problem: 'other',
+      appVersion: '0.1.0',
+      contentVersion: 'c1',
+      installId: 'install-a',
+      website: '',
+    });
+    expect((await fetchRoute('/v1/content-reports', 'POST', body)).status).toBe(
+      201,
+    );
+  });
+
+  it('serves /v1/content-reports/health through the table', async () => {
+    const response = await fetchRoute('/v1/content-reports/health');
+    expect([response.status, await response.json()]).toEqual([
+      200,
+      { ok: true },
+    ]);
   });
 
   it('serves /v1/devices through the table', async () => {
