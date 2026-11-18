@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  REGISTRATION_MAX_BYTES,
   TOKEN_BYTES,
   authenticate,
   hashToken,
@@ -181,9 +182,25 @@ describe('registerDevice (#163 AC1, AC3, AC4)', () => {
     ]);
   });
 
-  it('refuses a body with any field with 400, saving nothing', async () => {
+  it('refuses a body with any field with 422 naming it, saving nothing (#164)', async () => {
     const { response, saved } = await registered('POST', '{"name":"Ana"}');
-    expect([response.status, saved.length]).toEqual([400, 0]);
+    expect([response.status, await response.json(), saved.length]).toEqual([
+      422,
+      { error: 'invalid_field', field: 'name' },
+      0,
+    ]);
+  });
+
+  it('accepts a body of exactly REGISTRATION_MAX_BYTES (#164)', async () => {
+    const body = `{${' '.repeat(REGISTRATION_MAX_BYTES - 2)}}`;
+    const { response } = await registered('POST', body);
+    expect(response.status).toBe(201);
+  });
+
+  it('refuses a body one byte over REGISTRATION_MAX_BYTES with 413, saving nothing (#164)', async () => {
+    const body = `{${' '.repeat(REGISTRATION_MAX_BYTES - 1)}}`;
+    const { response, saved } = await registered('POST', body);
+    expect([response.status, saved.length]).toEqual([413, 0]);
   });
 
   it('refuses a body that is not JSON with 400, saving nothing', async () => {

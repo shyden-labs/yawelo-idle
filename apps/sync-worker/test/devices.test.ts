@@ -120,7 +120,10 @@ describe('POST /v1/devices refuses (#163 AC3)', () => {
   it('a body with any field, adding no row', async () => {
     const before = [await count('players'), await count('devices')];
     const response = await register('{"name":"Ana"}');
-    expect(response.status).toBe(400);
+    expect([response.status, await response.json()]).toEqual([
+      422,
+      { error: 'invalid_field', field: 'name' },
+    ]);
     expect([await count('players'), await count('devices')]).toEqual(before);
   });
 

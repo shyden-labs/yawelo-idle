@@ -5,10 +5,16 @@
  * unit suite runs it in Node and the Worker runs it in workerd.
  */
 import { z } from 'zod';
+import { readBody } from './validate';
 
 /** The token's entropy: 32 random bytes, 256 bits. */
 export const TOKEN_BYTES = 32;
 
+/**
+ * The largest registration body accepted (#164): the body is `{}`, so 64
+ * bytes leaves room for whitespace a client may add and nothing more.
+ */
+export const REGISTRATION_MAX_BYTES = 64;
 /** A registration's body: nothing, strictly (no personal data, spec D6). */
 export const registrationBody = z.strictObject({});
 
@@ -130,14 +136,12 @@ export async function registerDevice(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'invalid_body' }, 400);
-  }
-  if (!registrationBody.safeParse(body).success)
-    return json({ error: 'invalid_body' }, 400);
+  const body = await readBody(
+    request,
+    registrationBody,
+    REGISTRATION_MAX_BYTES,
+  );
+  if (!body.ok) return body.response;
   const playerId = deps.uuid();
   const token = newToken(deps.random);
   await save({
