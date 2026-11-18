@@ -18,7 +18,7 @@ import {
  */
 
 const DEV = {
-  WEB_SMOKE_URL: 'https://dev.yawelo-idle.shyden.co.uk/',
+  WEB_SMOKE_URL: 'https://dev.yaweloidle.com/',
   SITE_SMOKE_URL: 'https://dev.shyden.co.uk/',
   DEV_BASIC_AUTH_PASSWORD: 'the dev password',
 };

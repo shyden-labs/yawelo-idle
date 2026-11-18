@@ -433,8 +433,9 @@ const workflowNpx = () =>
 
 describe('a workflow never downloads a tool npx cannot find (#1006)', () => {
   it('there are npx calls to check', () => {
-    // Measured 11 at a1fa1f85. Lower it only in the commit that removes one.
-    expect(workflowNpx().length).toBeGreaterThan(10);
+    // Measured 10 after #1013 removed the dev adapter's two Pages calls.
+    // Lower it only in the commit that removes one.
+    expect(workflowNpx().length).toBeGreaterThan(9);
   });
 
   // runtime population: the npx lines are read from the workflows at run time
