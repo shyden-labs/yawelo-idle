@@ -8,6 +8,7 @@
  * The limits are declared here; where their counts are kept is #164 AC5.
  */
 import { z } from 'zod';
+import { submitReport, type StoreReport } from './content-reports';
 import { registerDevice, type SaveDevice } from './devices';
 import { readQuery } from './validate';
 
@@ -96,9 +97,77 @@ const devices = (request: Request, env: SyncEnv): Promise<Response> =>
 
 const NO_QUERY = z.strictObject({});
 
-const notYetWritten = (): Promise<Response> => {
-  throw new Error('not yet written');
-};
+/** The CHECK on content_report_quota.n (migration 0002) refusing the 11th. */
+const DAILY_LIMIT_CHECK = 'CHECK constraint failed: content_report_daily_limit';
+/** SQLite's message when content_reports_one_per_item refuses a row. */
+const ONE_PER_ITEM = 'UNIQUE constraint failed: content_reports.install_id';
+
+/**
+ * Stores a report in one D1 batch, which D1 runs as a transaction (§B.2): the
+ * day's count rises by one, the report is inserted, and the install's quota
+ * rows for earlier days go (AC6). The 11th of a day breaks the count's CHECK
+ * and a second open report on an item breaks the unique index; either rolls
+ * the whole batch back, so a refused report uses none of the quota.
+ */
+const storeReport =
+  (env: SyncEnv): StoreReport =>
+  async (report) => {
+    try {
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO content_report_quota (install_id, utc_day, n) VALUES (?, ?, 1)
+           ON CONFLICT (install_id, utc_day) DO UPDATE SET n = n + 1`,
+        ).bind(report.installId, report.utcDay),
+        env.DB.prepare(
+          `INSERT INTO content_reports (id, created_at, course, kind, item_id,
+             problem, suggestion, note, app_version, content_version, install_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          report.id,
+          report.createdAt,
+          report.course,
+          report.kind,
+          report.itemId,
+          report.problem,
+          report.suggestion,
+          report.note,
+          report.appVersion,
+          report.contentVersion,
+          report.installId,
+        ),
+        env.DB.prepare(
+          'DELETE FROM content_report_quota WHERE install_id = ? AND utc_day < ?',
+        ).bind(report.installId, report.utcDay),
+      ]);
+      return 'stored';
+    } catch (error) {
+      const message = String(error);
+      if (message.includes(DAILY_LIMIT_CHECK)) return 'over_quota';
+      if (message.includes(ONE_PER_ITEM)) return 'duplicate';
+      throw error;
+    }
+  };
+
+/** `POST /v1/content-reports` (#52). */
+const contentReports = (request: Request, env: SyncEnv): Promise<Response> =>
+  submitReport(request, storeReport(env), {
+    uuid: () => crypto.randomUUID(),
+    now: () => Date.now(),
+  });
+
+/** `GET /v1/content-reports/health` (#52 AC7): 200 when D1 answers. */
+async function contentReportsHealth(
+  _request: Request,
+  env: SyncEnv,
+): Promise<Response> {
+  try {
+    await env.DB.prepare('SELECT 1 FROM content_reports LIMIT 1').run();
+  } catch (error) {
+    console.error('content reports health: D1 query failed', error);
+    return json({ ok: false }, 503);
+  }
+  return json({ ok: true }, 200);
+}
 
 export const ROUTES: Readonly<
   Record<
@@ -119,13 +188,13 @@ export const ROUTES: Readonly<
     method: 'POST',
     query: NO_QUERY,
     limit: { requests: 10, perSeconds: 60 },
-    handle: notYetWritten,
+    handle: contentReports,
   },
   '/v1/content-reports/health': {
     method: 'GET',
     query: NO_QUERY,
     limit: { requests: 60, perSeconds: 60 },
-    handle: notYetWritten,
+    handle: contentReportsHealth,
   },
   '/v1/devices': {
     method: 'POST',

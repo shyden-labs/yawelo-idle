@@ -28,10 +28,12 @@ CREATE UNIQUE INDEX content_reports_one_per_item
 
 -- The day's count per install, kept apart from the reports because resolving
 -- a report deletes its row: a count of stored rows would let a quickly
--- triaged install send more than ten a day (§B.2).
+-- triaged install send more than ten a day (§B.2). The CHECK refuses the
+-- 11th, which rolls back the report's whole D1 batch.
 CREATE TABLE content_report_quota (
   install_id TEXT NOT NULL,
   utc_day TEXT NOT NULL,
-  n INTEGER NOT NULL,
+  n INTEGER NOT NULL
+    CONSTRAINT content_report_daily_limit CHECK (n BETWEEN 1 AND 10),
   PRIMARY KEY (install_id, utc_day)
 );

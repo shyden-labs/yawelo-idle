@@ -6,6 +6,7 @@
  * name, validate.ts), and stores no personal data.
  */
 import { z } from 'zod';
+import { readBody } from './validate';
 
 /** The longest suggestion or note, counted in Unicode code points (§B.1). */
 export const MAX_TEXT = 1_000;
@@ -55,8 +56,11 @@ export const reportBody = z.strictObject({
 
 export type ReportBody = z.infer<typeof reportBody>;
 
-/** The largest report body read, in bytes. */
-export const REPORT_MAX_BYTES = 0;
+/**
+ * The largest report body read, in bytes: two texts of 1,000 code points sent
+ * as escaped surrogate pairs (12 bytes each) are 24,000, and the rest is short.
+ */
+export const REPORT_MAX_BYTES = 32_768;
 
 /** A report as stored: the body without its honeypot, plus id and times. */
 export interface NewReport {
@@ -83,10 +87,40 @@ export interface ReportDeps {
   readonly now: () => number;
 }
 
-export function submitReport(
-  _request: Request,
-  _store: StoreReport,
-  _deps: ReportDeps,
+const answer = (body: Record<string, string>, status: number): Response =>
+  Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+
+/** The UTC calendar day of a Unix-millisecond time, as YYYY-MM-DD. */
+const utcDayOf = (time: number): string =>
+  new Date(time).toISOString().slice(0, 10);
+
+/**
+ * POST /v1/content-reports (§B.1), checked in the design's order: the body
+ * (413, 400, 422), the honeypot (201 like a stored report, nothing written,
+ * so a bot learns nothing), then the store, whose one D1 batch holds the
+ * daily quota (429) and the one open report per item (409).
+ */
+export async function submitReport(
+  request: Request,
+  store: StoreReport,
+  deps: ReportDeps,
 ): Promise<Response> {
-  throw new Error('not yet written');
+  const body = await readBody(request, reportBody, REPORT_MAX_BYTES);
+  if (!body.ok) return body.response;
+  const id = deps.uuid();
+  const { website, suggestion, note, ...fields } = body.data;
+  if (website !== '') return answer({ id }, 201);
+  const createdAt = deps.now();
+  const outcome = await store({
+    ...fields,
+    id,
+    createdAt,
+    utcDay: utcDayOf(createdAt),
+    suggestion: suggestion ?? null,
+    note: note ?? null,
+  });
+  if (outcome === 'over_quota') return answer({ error: 'daily_limit' }, 429);
+  if (outcome === 'duplicate')
+    return answer({ error: 'already_reported' }, 409);
+  return answer({ id }, 201);
 }
