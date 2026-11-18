@@ -6,7 +6,11 @@
  *
  * Shared by every origin behind a door, so each judges the same way.
  */
-import { DOOR_HOST_HEADER, DOOR_SECRET_HEADER } from './door';
+import {
+  DOOR_CLIENT_HEADER,
+  DOOR_HOST_HEADER,
+  DOOR_SECRET_HEADER,
+} from './door';
 
 /**
  * A constant-time comparison: the runtime's `crypto.subtle.timingSafeEqual`
@@ -49,6 +53,23 @@ export async function doorOf(
 ): Promise<string | undefined> {
   if (!(await carriesSecret(request, secret, equal))) return undefined;
   return request.headers.get(DOOR_HOST_HEADER) ?? undefined;
+}
+
+/**
+ * The caller's address (#164 AC2): the one the door names, when `request`
+ * carries the origin's own door secret, else Cloudflare's `CF-Connecting-IP`
+ * (a caller reaching the origin directly), else undefined. A named address
+ * without the secret is never believed: any caller can send the header.
+ */
+export async function clientAddressOf(
+  request: Request,
+  secret: string | undefined,
+  equal: Equal,
+): Promise<string | undefined> {
+  const named = request.headers.get(DOOR_CLIENT_HEADER);
+  if (named !== null && (await carriesSecret(request, secret, equal)))
+    return named;
+  return request.headers.get('cf-connecting-ip') ?? undefined;
 }
 
 /** What an origin behind a door is given by its deploy (#784 AC4). */

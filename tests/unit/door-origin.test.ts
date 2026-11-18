@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  DOOR_CLIENT_HEADER,
   DOOR_HOST_HEADER,
   DOOR_SECRET_HEADER,
   DOORS,
 } from '../../apps/door/worker/door';
 import {
   behindDoor,
+  clientAddressOf,
   doorOf,
   refusal,
   workerEqual,
@@ -105,6 +107,43 @@ describe('a request not believed (#784 AC4)', () => {
  * "false", so today's dev addresses keep working; any other value, or none,
  * requires the door, so a forgotten setting fails closed.
  */
+describe('the caller’s address (#164 AC2)', () => {
+  const withAddresses = (secret: string | undefined, sent: string | undefined) =>
+    request({
+      'cf-connecting-ip': '2a06:98c0:3600::103',
+      ...(secret === undefined ? {} : { [DOOR_SECRET_HEADER]: secret }),
+      ...(sent === undefined ? {} : { [DOOR_CLIENT_HEADER]: sent }),
+    });
+
+  it('is the one the door names, when the secret matches', async () => {
+    expect(
+      await clientAddressOf(withAddresses(SECRET, '203.0.113.7'), SECRET, sameBytes),
+    ).toBe('203.0.113.7');
+  });
+
+  it('is Cloudflare’s when the secret matches but the door names none', async () => {
+    expect(
+      await clientAddressOf(withAddresses(SECRET, undefined), SECRET, sameBytes),
+    ).toBe('2a06:98c0:3600::103');
+  });
+
+  it('is Cloudflare’s, never the one named, when the secret is wrong', async () => {
+    expect(
+      await clientAddressOf(withAddresses('forged', '203.0.113.7'), SECRET, sameBytes),
+    ).toBe('2a06:98c0:3600::103');
+  });
+
+  it('is Cloudflare’s, never the one named, when the origin has no secret', async () => {
+    expect(
+      await clientAddressOf(withAddresses('', '203.0.113.7'), undefined, sameBytes),
+    ).toBe('2a06:98c0:3600::103');
+  });
+
+  it('is unknown when nothing names one', async () => {
+    expect(await clientAddressOf(request({}), SECRET, sameBytes)).toBeUndefined();
+  });
+});
+
 describe('refusal (#784 AC4)', () => {
   const live = { DOOR_REQUIRED: 'true', DOOR_SECRET: SECRET };
 

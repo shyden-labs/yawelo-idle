@@ -4,6 +4,7 @@ import { readDeployConfig } from './wrangler-configs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 import {
+  DOOR_CLIENT_HEADER,
   DOOR_HOST_HEADER,
   DOOR_SECRET_HEADER,
   DOORS,
@@ -125,6 +126,45 @@ describe('a request to a door (#784 AC4)', () => {
     const { fetch, sent } = origin();
     await pass(new Request(`https://${SITE_DEV}/`), ENV, fetch);
     expect(sent().headers.get(DOOR_HOST_HEADER)).toBe(SITE_DEV);
+  });
+
+  it('names the caller’s address, as Cloudflare gave it to the door (#164 AC2)', async () => {
+    const { fetch, sent } = origin();
+    await pass(
+      new Request(`https://${SITE_DEV}/`, {
+        headers: { 'cf-connecting-ip': '203.0.113.7' },
+      }),
+      ENV,
+      fetch,
+    );
+    expect(sent().headers.get(DOOR_CLIENT_HEADER)).toBe('203.0.113.7');
+  });
+
+  it('replaces an address the caller sent with Cloudflare’s (#164 AC2)', async () => {
+    const { fetch, sent } = origin();
+    await pass(
+      new Request(`https://${SITE_DEV}/`, {
+        headers: {
+          'cf-connecting-ip': '203.0.113.7',
+          [DOOR_CLIENT_HEADER]: '198.51.100.1',
+        },
+      }),
+      ENV,
+      fetch,
+    );
+    expect(sent().headers.get(DOOR_CLIENT_HEADER)).toBe('203.0.113.7');
+  });
+
+  it('drops an address the caller sent when Cloudflare gave none (#164 AC2)', async () => {
+    const { fetch, sent } = origin();
+    await pass(
+      new Request(`https://${SITE_DEV}/`, {
+        headers: { [DOOR_CLIENT_HEADER]: '198.51.100.1' },
+      }),
+      ENV,
+      fetch,
+    );
+    expect(sent().headers.has(DOOR_CLIENT_HEADER)).toBe(false);
   });
 
   it('replaces a secret and a door name the caller sent', async () => {
