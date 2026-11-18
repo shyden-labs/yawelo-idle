@@ -206,14 +206,17 @@ export interface LegalText {
   soon: string;
   /** Says, in this text's own language, which text governs for whom (#928 AC2). */
   governs: string;
+  /** How the sync server counts requests to stop abuse (#164 AC2). */
+  requestCounts: string;
 }
 
 /**
  * The legal pages' text, written in English and Indonesian alone (Shyden,
  * 2026-11-08, global rule; #928). It sits outside `COPY`, so no general copy
  * holds legal text. Each Indonesian line is written from the approved English,
- * read back by Google Cloud Translation (table on #928), and read by Shyden
- * before it ships.
+ * read back by Google Cloud Translation (tables on #928 and #164); Shyden
+ * does not read Indonesian, so nothing waits for his reading (global rule,
+ * 2026-11-17).
  */
 export const LEGAL: Record<LegalLocale, Record<LegalPage, LegalText>> = {
   en: {
@@ -222,6 +225,9 @@ export const LEGAL: Record<LegalLocale, Record<LegalPage, LegalText>> = {
       soon: 'The privacy notice will be published here before the launch list opens.',
       governs:
         'For residents of Indonesia, the Indonesian text of this page governs. For everyone else, the English text governs.',
+      // Approved by Shyden 2026-11-19 (#164 AC2).
+      requestCounts:
+        "To stop abuse, the game's server counts requests. Requests made without a device code are counted under a scrambled code made from the network part of the internet address, never the address itself, and each count is deleted the next time the server is used after its time window ends.",
     },
   },
   id: {
@@ -233,6 +239,9 @@ export const LEGAL: Record<LegalLocale, Record<LegalPage, LegalText>> = {
       // Google read-back 2026-11-08: "For Indonesian residents, the Indonesian text on this page applies. For everyone else, the English text applies."
       governs:
         'Bagi penduduk Indonesia, yang berlaku adalah teks halaman ini dalam bahasa Indonesia. Bagi semua orang lainnya, yang berlaku adalah teks dalam bahasa Inggris.',
+      // Google read-back 2026-11-19: "To prevent abuse, this game server counts requests. Requests without a device code are counted using a pseudonym generated from the network portion of the internet address, never the address itself, and each count is cleared when the server is used again after its count period has expired."
+      requestCounts:
+        'Untuk mencegah penyalahgunaan, server permainan ini menghitung permintaan. Permintaan tanpa kode perangkat dihitung dengan kode samaran yang dibuat dari bagian jaringan alamat internet, tidak pernah dari alamat itu sendiri, dan setiap hitungan dihapus saat server digunakan lagi setelah periode hitungannya berakhir.',
     },
   },
 };
