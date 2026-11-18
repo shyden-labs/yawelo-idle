@@ -176,7 +176,7 @@ text they ship follows the list, printed once with the packages it covers.
 - `path-parse` 1.0.7 (MIT)
 - `resolve` 1.22.12 (MIT)
 - `supports-preserve-symlinks-flag` 1.0.0 (MIT)
-- `swagger-ui-dist` 5.34.1 (Apache-2.0)
+- `swagger-ui-dist` 5.35.0 (Apache-2.0)
 - `ts-fsrs` 6.0.0 (MIT)
 - `zod` 4.6.7 (MIT)
 
