@@ -21,6 +21,18 @@ export {
   type CorruptReason,
 } from './blob.ts';
 export {
+  SAVE_KEY_LENGTH,
+  SAVE_KEY_NAME,
+  SaveOpenError,
+  findKeyLeak,
+  loadOrCreateSaveKey,
+  openSave,
+  sealSave,
+  type OpenFailure,
+  type OutgoingRequest,
+  type SaveKeyStore,
+} from './seal.ts';
+export {
   load,
   mayReplace,
   save,

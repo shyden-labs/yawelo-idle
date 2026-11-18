@@ -163,36 +163,38 @@ describe('a sealed save (#165 AC2, AC3)', () => {
 });
 
 describe('findKeyLeak (#165 AC4)', () => {
+  // Hex with letters in it, so an upper-case leak differs from lower case.
+  const LEAKY = new Uint8Array(SAVE_KEY_LENGTH).fill(0xab);
   const clean: OutgoingRequest = {
     url: 'https://dev-api.yaweloidle.com/v1/devices',
     headers: { 'content-type': 'application/json' },
     body: '{}',
   };
-  const asHex = Buffer.from(K).toString('hex');
-  const asBase64 = Buffer.from(K).toString('base64');
-  const asBase64Url = Buffer.from(K).toString('base64url');
+  const asHex = Buffer.from(LEAKY).toString('hex');
+  const asBase64 = Buffer.from(LEAKY).toString('base64');
+  const asBase64Url = Buffer.from(LEAKY).toString('base64url');
 
   it('finds nothing in requests that do not carry K', () => {
-    expect(findKeyLeak(K, [clean])).toBeUndefined();
+    expect(findKeyLeak(LEAKY, [clean])).toBeUndefined();
   });
 
   it('finds K as hex in a body', () => {
     const leak = { ...clean, body: `{"x":"${asHex}"}` };
-    expect(findKeyLeak(K, [clean, leak])).toBe(leak);
+    expect(findKeyLeak(LEAKY, [clean, leak])).toBe(leak);
   });
 
   it('finds K as upper-case hex', () => {
     const leak = { ...clean, body: asHex.toUpperCase() };
-    expect(findKeyLeak(K, [leak])).toBe(leak);
+    expect(findKeyLeak(LEAKY, [leak])).toBe(leak);
   });
 
   it('finds K as base64 in a header', () => {
     const leak = { ...clean, headers: { 'x-k': asBase64 } };
-    expect(findKeyLeak(K, [leak])).toBe(leak);
+    expect(findKeyLeak(LEAKY, [leak])).toBe(leak);
   });
 
   it('finds K as base64url in a URL', () => {
     const leak = { ...clean, url: `${clean.url}?k=${asBase64Url}` };
-    expect(findKeyLeak(K, [leak])).toBe(leak);
+    expect(findKeyLeak(LEAKY, [leak])).toBe(leak);
   });
 });
