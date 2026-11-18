@@ -1,7 +1,7 @@
 // The DEV site Worker (website spec §7.2, #332, #673), all behind the shared
 // dev password (#39, W15): /play/* forwarded to the game Worker by service
-// binding, the roadmap API and webhook, and the pages. On the front door,
-// dev.yawelo-idle.shyden.co.uk, the pages are the holding page production
+// binding, the roadmap API and webhook, and the pages. Through the front
+// door, dev.yaweloidle.com (#1013), the pages are the holding page production
 // shows (HOLDING below); at the workers.dev address they are the prerendered
 // site being built, from ./dist.
 //
@@ -15,12 +15,11 @@
   "name": "yawelo-idle-site-dev",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-20",
-  // Deployed to the "Shyden Labs Dev" account, which holds dev only (#395),
-  // with no Custom Domain: dev.yawelo-idle.shyden.co.uk reaches it through
-  // the Pages adapter's SITE binding (apps/dev-hosts, #429). Its workers.dev
-  // address is where the site being built is seen (#673), behind the same
-  // gate, and it also tells an adapter fault from a Worker fault. No preview
-  // URLs.
+  // Deployed to the non-PROD account (#784) with no Custom Domain:
+  // dev.yaweloidle.com reaches it through the front door (apps/door, #1013).
+  // Its workers.dev address is where the site being built is seen (#673),
+  // behind the same gate, and it also tells a door fault from a Worker fault.
+  // No preview URLs.
   "workers_dev": true,
   "preview_urls": false,
   "assets": {

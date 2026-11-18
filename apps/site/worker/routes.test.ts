@@ -10,7 +10,6 @@ import {
   HOLDING_DOOR,
   pagesFor,
   servePages,
-  HOLDING_HOST,
   isPrivatePath,
   PRIVATE_PATHS,
   servesPrivate,
@@ -19,44 +18,19 @@ import {
 } from './routes';
 
 /**
- * Which pages a host shows (#673): the dev front door shows the holding page
- * production shows, and the site Worker's own address keeps the site being
- * built. Names are judged exactly, never by prefix or suffix.
+ * A host name alone never shows the holding page (#1013): the dev front door
+ * is dev.yaweloidle.com's door, and only a believed door does.
  */
-describe('showsHolding (#673)', () => {
-  it('names the dev front door', () => {
-    expect(HOLDING_HOST).toBe('dev.yawelo-idle.shyden.co.uk');
-  });
-
-  it('shows the holding page on the dev front door', () => {
-    expect(showsHolding('dev.yawelo-idle.shyden.co.uk', undefined)).toBe(true);
-  });
-
-  it('shows the site on the site Worker’s own workers.dev address', () => {
+describe('pagesFor by host name (#673, #1013)', () => {
+  const sameBytes: Equal = () => true;
+  it.each([
+    'dev.yaweloidle.com',
+    'yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev',
+    'dev-api.yaweloidle.com',
+  ])('gives the site being built on %s with no door', async (hostname) => {
     expect(
-      showsHolding(
-        'yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev',
-        undefined,
-      ),
-    ).toBe(false);
-  });
-
-  it('shows the site on the dev API host', () => {
-    expect(showsHolding('dev-api.yawelo-idle.shyden.co.uk', undefined)).toBe(
-      false,
-    );
-  });
-
-  it('shows the site on a host that only starts with the front door', () => {
-    expect(
-      showsHolding('dev.yawelo-idle.shyden.co.uk.evil.example', undefined),
-    ).toBe(false);
-  });
-
-  it('shows the site on a host that only ends with the front door', () => {
-    expect(showsHolding('evil-dev.yawelo-idle.shyden.co.uk', undefined)).toBe(
-      false,
-    );
+      await pagesFor(new Request(`https://${hostname}/`), 'secret', sameBytes),
+    ).toBe('site');
   });
 });
 
@@ -66,7 +40,6 @@ describe('showsHolding (#673)', () => {
  * named only once its door secret is believed (apps/door/worker/origin.ts).
  */
 describe('showsHolding behind the doors (#784)', () => {
-  const ORIGIN = 'yawelo-idle-site-dev.origins.example.workers.dev';
   const doorTo = (worker: string): string => {
     const found = [...DOORS].find(([, door]) => door.worker === worker);
     if (found === undefined) throw new Error(`no door for ${worker}`);
@@ -78,21 +51,19 @@ describe('showsHolding behind the doors (#784)', () => {
   });
 
   it('shows the holding page through the dev site’s door', () => {
-    expect(showsHolding(ORIGIN, HOLDING_DOOR)).toBe(true);
+    expect(showsHolding(HOLDING_DOOR)).toBe(true);
   });
 
   it('shows the site through the TEST holding page’s door (#1021)', () => {
-    expect(showsHolding(ORIGIN, doorTo('yawelo-idle-holding-test'))).toBe(
-      false,
-    );
+    expect(showsHolding(doorTo('yawelo-idle-holding-test'))).toBe(false);
   });
 
   it('shows the site through the dev API’s door', () => {
-    expect(showsHolding(ORIGIN, doorTo('yawelo-idle-sync-dev'))).toBe(false);
+    expect(showsHolding(doorTo('yawelo-idle-sync-dev'))).toBe(false);
   });
 
   it('shows the site at the workers.dev address with no door believed', () => {
-    expect(showsHolding(ORIGIN, undefined)).toBe(false);
+    expect(showsHolding(undefined)).toBe(false);
   });
 });
 
@@ -191,16 +162,6 @@ describe('pagesFor (#784)', () => {
       },
     });
 
-  it('gives the holding page on the dev front door’s host', async () => {
-    expect(
-      await pagesFor(
-        new Request(`https://${HOLDING_HOST}/`),
-        SECRET,
-        sameBytes,
-      ),
-    ).toBe('holding');
-  });
-
   it('gives the holding page through the dev site’s door with its secret', async () => {
     expect(await pagesFor(throughDoor(SECRET), SECRET, sameBytes)).toBe(
       'holding',
@@ -241,9 +202,17 @@ describe('servePages (#784)', () => {
     },
   });
 
-  it('answers from the holding binding on the dev front door’s host', async () => {
+  it('answers from the holding binding through the dev site’s door', async () => {
     const seen: Request[] = [];
-    const request = new Request(`https://${HOLDING_HOST}/`);
+    const request = new Request(
+      'https://yawelo-idle-site-dev.origins.example.workers.dev/',
+      {
+        headers: {
+          [DOOR_SECRET_HEADER]: SECRET,
+          [DOOR_HOST_HEADER]: HOLDING_DOOR,
+        },
+      },
+    );
     const response = await servePages(
       request,
       SECRET,
