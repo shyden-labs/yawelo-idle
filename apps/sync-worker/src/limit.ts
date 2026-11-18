@@ -51,3 +51,90 @@ export function networkOf(address: string): string | undefined {
     .map((group) => Number.parseInt(group, 16).toString(16));
   return `${prefix.join(':')}::/64`;
 }
+
+const toHex = (bytes: ArrayBuffer): string =>
+  Array.from(new Uint8Array(bytes), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('');
+
+/**
+ * The keyed one-way hash a network is counted under: HMAC-SHA-256 of its
+ * text under `secret` (the Worker's RATE_KEY), in hex. Without the key the
+ * network cannot be recovered or tested against a guess. An empty key would
+ * hash every network the same way anyone could, so it is refused.
+ */
+export async function networkKey(
+  network: string,
+  secret: string,
+): Promise<string> {
+  if (secret.length === 0) throw new Error('RATE_KEY is not set');
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  return toHex(await crypto.subtle.sign('HMAC', key, encoder.encode(network)));
+}
+
+/** A request's window: when it ends, and the whole seconds left until then. */
+export interface Window {
+  /** The window's end, in whole seconds since the epoch. */
+  readonly end: number;
+  /** Seconds until the end, rounded up: the Retry-After a refusal sends. */
+  readonly retryAfter: number;
+}
+
+/**
+ * The fixed window of `perSeconds` that `nowMs` falls in: windows start at
+ * whole multiples of `perSeconds` since the epoch, so every isolate agrees.
+ */
+export function windowOf(nowMs: number, perSeconds: number): Window {
+  const now = nowMs / 1000;
+  const end = (Math.floor(now / perSeconds) + 1) * perSeconds;
+  return { end, retryAfter: Math.ceil(end - now) };
+}
+
+/** Where counts are kept: D1 in the Worker (#164 AC5), memory in a unit test. */
+export interface Counts {
+  /**
+   * Adds one to the count of `key` on `routePath` in the window ending at
+   * `windowEnd`, and gives back the new count. Counts whose window ended by
+   * `nowSeconds` may be deleted on the way (Shyden, 2026-11-19).
+   */
+  add(
+    routePath: string,
+    key: string,
+    windowEnd: number,
+    nowSeconds: number,
+  ): Promise<number>;
+}
+
+/** A route's limit: at most `requests` every `perSeconds`. */
+export interface Limit {
+  readonly requests: number;
+  readonly perSeconds: number;
+}
+
+/**
+ * Counts one request of `key` on `routePath`: undefined while it is within
+ * `limit` (the Nth is accepted), else the seconds until its window ends.
+ */
+export async function checkLimit(
+  counts: Counts,
+  routePath: string,
+  key: string,
+  limit: Limit,
+  nowMs: number,
+): Promise<number | undefined> {
+  const window = windowOf(nowMs, limit.perSeconds);
+  const count = await counts.add(
+    routePath,
+    key,
+    window.end,
+    Math.floor(nowMs / 1000),
+  );
+  return count > limit.requests ? window.retryAfter : undefined;
+}
