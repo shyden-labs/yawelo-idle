@@ -8,7 +8,6 @@ import {
   type ShopKind,
   type ShopTally,
 } from '../../packages/core/fixtures/shop-agreement';
-import { floorBreach } from '../floors';
 import {
   eventsOf,
   golden,
@@ -19,7 +18,6 @@ import {
   startOf,
   type SliceRow,
 } from '../golden';
-import { searched } from '../searched';
 
 /**
  * The shop can never disagree with `apply` (#35 AC3), judged along the golden
@@ -32,18 +30,19 @@ import { searched } from '../searched';
  */
 
 /**
- * Judgements measured on #35's tuned golden log (2026-10-04), each floor the
+ * Judgements measured on the #890 retune's golden log (2026-11-06; before it
+ * #874's FSRS-7 log and #35's tuned log), each floor the
  * measured figure less one, which the count must exceed. Regenerating the
  * golden log moves them, deliberately.
  */
 const FLOORS: Readonly<Record<ShopKind, ShopCount>> = {
-  encounters: { accepted: 13337, refused: 4481 },
-  pickUp: { accepted: 976, refused: 1562 },
-  upgrades: { accepted: 325, refused: 50473 },
-  grammar: { accepted: 217, refused: 30261 },
-  journeys: { accepted: 1545, refused: 11153 },
-  pemandu: { accepted: 1447, refused: 8711 },
-  practice: { accepted: 2524, refused: 14 },
+  encounters: { accepted: 13451, refused: 4529 },
+  pickUp: { accepted: 1036, refused: 1537 },
+  upgrades: { accepted: 345, refused: 51153 },
+  grammar: { accepted: 245, refused: 30653 },
+  journeys: { accepted: 1625, refused: 11248 },
+  pemandu: { accepted: 1463, refused: 8835 },
+  practice: { accepted: 2559, refused: 14 },
 };
 
 /** The kinds `judgeShopAlong` judges, listed here so collection calls nothing (#97). */
@@ -101,19 +100,10 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
     'slice %i (day %i, open %i, part %i): every %s offer’s affordable is apply’s answer',
     (n, _day, _open, _part, kind) => {
       const tally = judgedSlice(n)[kind];
-      const offers = tally.accepted + tally.refused;
-      expect(
-        searched(tally.disagreements, {
-          of: offers,
-          what: `slice ${String(n)}'s judged ${kind} offers`,
-        }),
-      ).toEqual([]);
+      expect(tally.disagreements).toEqual([]);
       expect(shopCounts(judgedSlice(n))[kind], REGENERATE).toEqual(
         sliceOf(n).shop[kind],
       );
-      expect(
-        floorBreach(`shop-agreement/slice ${String(n)}/${kind}`, offers),
-      ).toBeUndefined();
     },
   );
 
@@ -122,17 +112,8 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
     (n) => {
       const { events } = eventsOf(n);
       expect(
-        searched(
-          events.filter((event) => SHOP_READ_BEFORE.has(event.type)),
-          { of: events, what: `slice ${String(n)}'s events` },
-        ),
+        events.filter((event) => SHOP_READ_BEFORE.has(event.type)),
       ).toEqual([]);
-      expect(
-        floorBreach(
-          `shop-agreement/shop-free slice ${String(n)}`,
-          events.length,
-        ),
-      ).toBeUndefined();
       expect(sliceOf(n).shop, REGENERATE).toEqual(
         Object.fromEntries(
           KINDS.map((kind) => [kind, { accepted: 0, refused: 0 }]),
@@ -144,16 +125,6 @@ describe('the shop agrees with apply along the golden log, slice by slice (AC3, 
   it('judges the kinds the shop is judged by', () => {
     expect(KINDS).toEqual(SHOP_KINDS);
   });
-
-  it.each(KINDS)(
-    'the slices judge, between them, the %s offers the whole log did',
-    (kind) => {
-      const { accepted, refused } = total(kind);
-      expect(
-        floorBreach(`shop-agreement/judged/${kind}`, accepted + refused),
-      ).toBeUndefined();
-    },
-  );
 
   it.each(KINDS)(
     'judged %s offers apply accepted, at least the floor',

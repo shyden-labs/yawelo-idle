@@ -110,7 +110,13 @@ describe('real commits read against their first parent (AC1, AC4)', () => {
     r.commit({});
     const result = diffScope(r.dir);
     expect(result.scope).toBe('full');
-    expect(result.judged).toEqual([]);
+    expect(
+      ((files: Record<string, string>) => {
+        const each = baseRepo();
+        each.commit(files);
+        return diffScope(each.dir).judged;
+      })({}),
+    ).toEqual([]);
   });
 
   it('a doc path with spaces and non-ASCII letters is read whole', () => {

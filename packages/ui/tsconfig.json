@@ -5,6 +5,7 @@
   // dead variable; these two make it fail on one (#123 AC2).
   "extends": "@tsconfig/svelte/tsconfig.json",
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -16,6 +17,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "types": []
   },
   "include": ["src/**/*.ts", "src/**/*.svelte"]

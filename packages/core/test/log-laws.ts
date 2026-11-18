@@ -208,6 +208,17 @@ export const TYPES = [
 ] as const;
 
 /**
+ * The two types `direct()` accepts whatever the state, so their counts are
+ * fixed by construction (#84, spec §4), and the others, whose counts are
+ * measured. Built here, beside `TYPES`, so no test file calls a method on an
+ * imported name while it is collected.
+ */
+export const ACCEPTED_BY_CONSTRUCTION = ['resume', 'listen'] as const;
+export const MEASURED_TYPES = TYPES.filter(
+  (type) => !(ACCEPTED_BY_CONSTRUCTION as readonly string[]).includes(type),
+);
+
+/**
  * `partial`, an event of any kind at a wall-clock offset, applied to the
  * scenario's state before event `index`: `apply` never throws, never writes
  * to its input, and answers as the action called directly does. Returns the

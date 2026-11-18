@@ -260,12 +260,15 @@ export const BALANCE: Balance = deepFreeze({
   },
   grammar: { rootGain: 0.5, costC0: 50, costGrowth: 1.5, opensAtRegion: 2 },
   automation: { intervalsMs: [10_000, 5_000, 2_000, 1_000], opensAtRegion: 2 },
-  // Goals fitted by `npm run pacing:calibrate` on the Casual Learner (#35, M1 design §5).
+  // Goals fitted by `npm run pacing:calibrate` on the Casual Learner (#35, M1 design §5),
+  // then retuned by hand under FSRS-7 (#890): the fifth to tenth goals at 0.9x,
+  // the ninth then to 2.75e21, the last two to 8.8e21 and 1.2e22, each read
+  // from the pacing sweep against the tuning targets.
   sail: {
     goals: [
       2120000000, 20700000000000, 142000000000000, 473000000000000,
-      481000000000000000, 1130000000000000000, 2490000000000000000,
-      2980000000000000000, 3.18e21, 5.65e21, 8.02e21, 1.35e22,
+      432900000000000000, 1017000000000000000, 2241000000000000000,
+      2682000000000000000, 2.75e21, 5.08e21, 8.8e21, 1.2e22,
     ],
     wordsBase: 8,
     wordsStep: 2,

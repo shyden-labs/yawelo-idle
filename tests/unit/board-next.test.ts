@@ -3,12 +3,13 @@ import {
   boardNext,
   NEXT_QUERY,
   nextTicket,
+  nextStart,
   offBoardBlockers,
   type NextItem,
   parseNextItems,
 } from '../../scripts/board-next';
+import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
 import type { Gh } from '../../scripts/board-progress';
-import { againstControl } from '../searched';
 
 /**
  * scripts/board-next.ts (#576): the board's Priority, not the handover, names
@@ -182,23 +183,26 @@ describe('offBoardBlockers names each blocker the board does not hold (operator 
       { number: n, repository: 'shyden-labs/yawelo-idle' },
     ];
     expect(
-      againstControl(
-        (missing: number[]) =>
-          offBoardBlockers([
-            item(1),
-            item(2, {
-              blockedBy: [...blockedBy(1), ...missing.flatMap(blockedBy)],
-            }),
-          ]),
-        { input: [], control: [40] },
-      ),
+      offBoardBlockers([
+        item(1),
+        item(2, {
+          blockedBy: [...blockedBy(1), ...[].flatMap(blockedBy)],
+        }),
+      ]),
     ).toEqual([]);
   });
 });
 
-/** One board page as GitHub returns it, holding these item nodes. */
-function page(nodes: unknown[], title = TITLE): unknown {
-  return { data: { node: { title, items: { nodes } } } };
+/**
+ * One board page as GitHub returns it, holding these item nodes, with the
+ * board's item count (#703): by default a board these nodes are all of.
+ */
+function page(
+  nodes: unknown[],
+  title = TITLE,
+  totalCount = nodes.length,
+): unknown {
+  return { data: { node: { title, items: { totalCount, nodes } } } };
 }
 
 /** A raw item node for an open issue. */
@@ -286,20 +290,115 @@ describe('parseNextItems reads the board whole (#576)', () => {
   });
 });
 
+describe('parseNextItems refuses a read that is not the whole board (#703)', () => {
+  it('asks GitHub how many items the board holds', () => {
+    expect(NEXT_QUERY).toMatch(
+      /\bitems\(first: 100, after: \$endCursor\) \{ totalCount pageInfo\b/,
+    );
+  });
+
+  it('reads a whole board of two pages', () => {
+    const read = parseNextItems(
+      [
+        page([rawIssue(1), rawIssue(2)], TITLE, 3),
+        page([rawIssue(3)], TITLE, 3),
+      ],
+      TITLE,
+    );
+    expect(read.map((item) => item.number)).toEqual([1, 2, 3]);
+  });
+
+  it('refuses a short page, giving both numbers', () => {
+    expect(() =>
+      parseNextItems(
+        [page([rawIssue(1)], TITLE, 3), page([rawIssue(3)], TITLE, 3)],
+        TITLE,
+      ),
+    ).toThrow('the board has 3 items and 2 were read: nothing read');
+  });
+
+  it('refuses a read missing a page, giving both numbers', () => {
+    expect(() =>
+      parseNextItems([page([rawIssue(1), rawIssue(2)], TITLE, 3)], TITLE),
+    ).toThrow('the board has 3 items and 2 were read: nothing read');
+  });
+
+  it('names a board that changed while it was read', () => {
+    expect(() =>
+      parseNextItems(
+        [
+          page([rawIssue(1), rawIssue(2)], TITLE, 3),
+          page([rawIssue(3)], TITLE, 4),
+        ],
+        TITLE,
+      ),
+    ).toThrow(
+      'the board changed while it was read (its pages report 3, then 4 items): nothing read',
+    );
+  });
+});
+
 describe('boardNext (#576)', () => {
-  /** A `gh` that records each call and prints the given pages. */
-  function ghPrinting(pages: unknown[]): { gh: Gh; calls: string[][] } {
+  /**
+   * The repository's issues as REPO_ISSUES_QUERY returns them, naming on the
+   * board `numbers` (#751).
+   */
+  function issuesNaming(numbers: number[]): unknown[] {
+    return [
+      {
+        data: {
+          repository: {
+            issues: {
+              totalCount: numbers.length,
+              nodes: numbers.map((number) => ({
+                number,
+                // Older than any read (#877).
+                createdAt: '2026-01-01T00:00:00Z',
+                projectItems: {
+                  totalCount: 1,
+                  nodes: [{ project: { id: 'PVT_fixture' } }],
+                },
+              })),
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  /** The numbers of the issues on board pages built by `page`. */
+  function cardedOn(pages: unknown[]): number[] {
+    return (
+      pages as {
+        data: { node: { items: { nodes: { content: { number: number } }[] } } };
+      }[]
+    ).flatMap((board) =>
+      board.data.node.items.nodes.map((node) => node.content.number),
+    );
+  }
+
+  /**
+   * A `gh` that records each call and prints the board's pages, or for
+   * REPO_ISSUES_QUERY the repository's issues, by default naming exactly the
+   * board's issues (#751).
+   */
+  function ghPrinting(
+    pages: unknown[],
+    issues: unknown[] = issuesNaming(cardedOn(pages)),
+  ): { gh: Gh; calls: string[][] } {
     const calls: string[][] = [];
     return {
       calls,
       gh: (args) => {
         calls.push([...args]);
-        return JSON.stringify(pages);
+        return JSON.stringify(
+          args.includes(`query=${REPO_ISSUES_QUERY}`) ? issues : pages,
+        );
       },
     };
   }
 
-  it('asks gh once for every page of the board, slurped into one array', () => {
+  it('asks gh for every page of the board, then of the repository’s issues, each slurped into one array', () => {
     const { gh, calls } = ghPrinting([page([rawIssue(1)])]);
     boardNext(['PVT_fixture', TITLE], gh);
     expect(calls).toEqual([
@@ -312,6 +411,18 @@ describe('boardNext (#576)', () => {
         `query=${NEXT_QUERY}`,
         '-f',
         'id=PVT_fixture',
+      ],
+      [
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        `query=${REPO_ISSUES_QUERY}`,
+        '-f',
+        'owner=shyden-labs',
+        '-f',
+        'name=yawelo-idle',
       ],
     ]);
   });
@@ -338,7 +449,7 @@ describe('boardNext (#576)', () => {
     );
   });
 
-  it('says when the next ticket is itself blocked (its blocker is an epic still open)', () => {
+  it('names a ticket whose blocker is an epic still open as blocked, saying why (#772)', () => {
     const blocked = rawIssue(2, {
       blockedBy: {
         totalCount: 1,
@@ -354,7 +465,33 @@ describe('boardNext (#576)', () => {
     const epic = rawIssue(1, { subIssuesSummary: { total: 4, completed: 1 } });
     const { gh } = ghPrinting([page([blocked, epic])]);
     expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
-      'Next: #2 story 2 (P3, Todo, blocked by #1).',
+      'Next: #2 story 2 (P3, Todo, blocked by #1). Nothing it waits on can start: #1 is an epic with open sub-issues, whose stories are the work.',
+    );
+  });
+
+  it('names the start of the chain and the chain it walked (#772)', () => {
+    const blocker = (n: number) => ({
+      totalCount: 1,
+      nodes: [
+        {
+          number: n,
+          state: 'OPEN',
+          repository: { nameWithOwner: 'shyden-labs/yawelo-idle' },
+        },
+      ],
+    });
+    const { gh } = ghPrinting([
+      page([
+        {
+          ...(rawIssue(3, { blockedBy: blocker(2) }) as object),
+          status: { name: 'In Progress' },
+        },
+        rawIssue(2, { blockedBy: blocker(1) }),
+        rawIssue(1),
+      ]),
+    ]);
+    expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
+      'Next: #1 story 1 (P3, Todo), which blocks #2, which blocks #3.',
     );
   });
 
@@ -373,7 +510,7 @@ describe('boardNext (#576)', () => {
     });
     const { gh } = ghPrinting([page([blocked])]);
     expect(boardNext(['PVT_fixture', TITLE], gh)).toEqual({
-      line: 'Next: #2 story 2 (P3, Todo, blocked by #1).',
+      line: 'Next: #2 story 2 (P3, Todo, blocked by #1). Nothing it waits on can start: #2 waits only on issues off this board (shyden-labs/repo-template#1).',
       notes: [
         'note: #2 is blocked by shyden-labs/repo-template#1, which is not an open issue on this board',
       ],
@@ -381,20 +518,70 @@ describe('boardNext (#576)', () => {
   });
 
   it('says when nothing is open', () => {
-    const { gh } = ghPrinting([page([])]);
+    const { gh } = ghPrinting([page([rawIssue(1, { state: 'CLOSED' })])]);
     expect(boardNext(['PVT_fixture', TITLE], gh).line).toBe(
       'Next: nothing is open.',
+    );
+  });
+
+  // GitHub's incident of 2026-10-22: board-next printed "Next: nothing is
+  // open." from a board read of 0 items whose own count said 0.
+  it('refuses an empty board read, never saying nothing is open (#751)', () => {
+    const { gh } = ghPrinting([page([])], issuesNaming([1]));
+    expect(() => boardNext(['PVT_fixture', TITLE], gh)).toThrow(
+      'the board lists 0 of shyden-labs/yawelo-idle’s issues and the repository’s own issues (Repository.issues) name 1 on it; missing from the board’s listing: #1: nothing read',
+    );
+  });
+
+  it('refuses a listing short of the repository’s issues, its own count agreeing, naming no ticket (#751)', () => {
+    const p2 = { ...(rawIssue(2) as object), priority: { name: 'P2' } };
+    const { gh } = ghPrinting([page([p2])], issuesNaming([1, 2]));
+    expect(() => boardNext(['PVT_fixture', TITLE], gh)).toThrow(
+      'missing from the board’s listing: #1: nothing read',
+    );
+  });
+
+  it('reads the repository it is given (#751)', () => {
+    const { gh, calls } = ghPrinting([page([])], issuesNaming([]));
+    try {
+      boardNext(['PVT_fixture', TITLE, 'shyden-labs/elsewhere'], gh);
+    } catch {
+      // An empty board is refused; this test reads the call made first.
+    }
+    expect(calls[1]?.slice(-4)).toEqual([
+      '-f',
+      'owner=shyden-labs',
+      '-f',
+      'name=elsewhere',
+    ]);
+  });
+
+  it('refuses a repository not written owner/name, before calling gh (#751)', () => {
+    const gh: Gh = () => {
+      throw new Error('gh was called');
+    };
+    expect(() => boardNext(['PVT_fixture', TITLE, 'yawelo-idle'], gh)).toThrow(
+      'the repository is "yawelo-idle", not owner/name',
+    );
+  });
+
+  it('refuses a short read, naming no ticket (#703)', () => {
+    // As on 2026-10-20: the board's P0 was not in the read, and a P2 was named.
+    const p2 = { ...(rawIssue(2) as object), priority: { name: 'P2' } };
+    const { gh } = ghPrinting([page([p2], TITLE, 2)]);
+    expect(() => boardNext(['PVT_fixture', TITLE], gh)).toThrow(
+      'the board has 2 items and 1 were read: nothing read',
     );
   });
 
   it('refuses before calling gh when the title is missing', () => {
     const { gh } = ghPrinting([]);
     expect(() => boardNext(['PVT_fixture'], gh)).toThrow(
-      'usage: node scripts/board-next.ts <board-node-id> "<board title>"',
+      'usage: node scripts/board-next.ts <board-node-id> "<board title>" [owner/repo]',
     );
   });
 
-  it('calls gh for nothing when the title is missing, and once when it is given', () => {
+  it('calls gh for nothing when the title is missing, and reads when it is given', () => {
     /** The gh calls made for the node id followed by `rest`, the refusal swallowed. */
     const callsWith = (rest: string[]) => {
       const { gh, calls } = ghPrinting([page([])]);
@@ -405,8 +592,118 @@ describe('boardNext (#576)', () => {
       }
       return calls;
     };
-    expect(againstControl(callsWith, { input: [], control: [TITLE] })).toEqual(
-      [],
+    expect(callsWith([])).toEqual([]);
+  });
+});
+
+/** `over`, blocked by each of `numbers` on this board. */
+const blockedBy = (...numbers: number[]): Partial<NextItem> => ({
+  blockedBy: numbers.map((number) => ({
+    number,
+    repository: 'shyden-labs/yawelo-idle',
+  })),
+});
+
+const startOf = (items: NextItem[]) => {
+  const found = nextStart(items);
+  return found === null
+    ? null
+    : {
+        ticket: found.ticket.number,
+        chain: found.chain.map((i) => i.number),
+        waiting: found.waiting,
+      };
+};
+
+describe('nextStart walks the Blocked-by chain to work that can start (#772)', () => {
+  it('names the top ticket itself when nothing blocks it', () => {
+    expect(startOf([item(1, { priority: 'P1' }), item(2)])).toEqual({
+      ticket: 1,
+      chain: [],
+      waiting: null,
+    });
+  });
+
+  it('names the blocker of a blocked top ticket, a chain of two', () => {
+    expect(
+      startOf([
+        item(2, { priority: 'P1', status: 'In Progress', ...blockedBy(1) }),
+        item(1, { priority: 'P1' }),
+      ]),
+    ).toEqual({ ticket: 1, chain: [2], waiting: null });
+  });
+
+  it('follows a chain of three to its unblocked end', () => {
+    expect(
+      startOf([
+        item(3, { priority: 'P0', status: 'In Progress', ...blockedBy(2) }),
+        item(2, { priority: 'P0', ...blockedBy(1) }),
+        item(1, { priority: 'P0' }),
+        item(9, { priority: 'P0' }),
+      ]),
+    ).toEqual({ ticket: 1, chain: [2, 3], waiting: null });
+  });
+
+  it('breaks a tie between two unblocked blockers by the board’s rank', () => {
+    expect(
+      startOf([
+        item(3, { priority: 'P1', status: 'In Progress', ...blockedBy(4, 5) }),
+        item(4, { priority: 'P1', createdAt: '2026-01-20T00:00:00Z' }),
+        item(5, { priority: 'P1', createdAt: '2026-01-02T00:00:00Z' }),
+      ]),
+    ).toEqual({ ticket: 5, chain: [3], waiting: null });
+  });
+
+  it('takes the blocker whose own chain can start when another one’s cannot', () => {
+    expect(
+      startOf([
+        item(3, {
+          priority: 'P1',
+          status: 'In Progress',
+          createdAt: '2026-01-01T00:00:00Z',
+          ...blockedBy(4, 5),
+        }),
+        item(4, {
+          priority: 'P1',
+          status: 'In Progress',
+          createdAt: '2026-01-02T00:00:00Z',
+          blockedBy: [{ number: 7, repository: 'shyden-labs/shydesk' }],
+        }),
+        item(5, { priority: 'P1', createdAt: '2026-01-20T00:00:00Z' }),
+      ]),
+    ).toEqual({ ticket: 5, chain: [3], waiting: null });
+  });
+
+  it('refuses a cycle, naming it', () => {
+    expect(() =>
+      startOf([
+        item(1, { priority: 'P1', status: 'In Progress', ...blockedBy(2) }),
+        item(2, { priority: 'P1', ...blockedBy(3) }),
+        item(3, { priority: 'P1', ...blockedBy(2) }),
+      ]),
+    ).toThrow(
+      'Blocked-by links form a cycle: #2 → #3 → #2. Break it on the board.',
     );
+  });
+
+  it('names the blocked top ticket when its chain ends only off this board, saying why (operator 2026-10-13)', () => {
+    expect(
+      startOf([
+        item(1, { priority: 'P1', status: 'In Progress', ...blockedBy(2) }),
+        item(2, {
+          priority: 'P1',
+          blockedBy: [{ number: 27, repository: 'shyden-labs/shydesk' }],
+        }),
+      ]),
+    ).toEqual({
+      ticket: 1,
+      chain: [],
+      waiting:
+        '#2 waits only on issues off this board (shyden-labs/shydesk#27)',
+    });
+  });
+
+  it('gives null when nothing is open', () => {
+    expect(startOf([])).toBeNull();
   });
 });

@@ -6,15 +6,25 @@
  *
  * The highest `Priority` (P0 first) among open issues; within a level, what
  * is In Progress first, then what no open issue blocks, then the oldest, then
- * the lowest number. An issue with open sub-issues is passed over: an epic's
+ * the lowest number. When that ticket is blocked, the walk follows its
+ * "Blocked by" links to the open ticket on this board that can start, and
+ * names the chain it walked (#772). An issue with open sub-issues is passed over: an epic's
  * work is its stories, so an epic is named only when it has none left open
  * (it needs breaking down). It refuses while any open issue has no Priority,
  * and while any open blocker sits below an issue it blocks, because a blocker
  * takes at least the level of what waits on it (operator 2026-10-13, #578).
  */
 import { execFileSync } from 'node:child_process';
-import { assertTitle } from '../packages/progress/src/index.ts';
-import type { Gh } from './board-progress.ts';
+import {
+  assertBoard,
+  assertNamedByRepo,
+} from '../packages/progress/src/index.ts';
+import {
+  type Gh,
+  ownerAndName,
+  REPO,
+  repoIssuePages,
+} from './board-progress.ts';
 import { PRIORITY_LEVELS } from './board-setup.ts';
 
 /** An open issue that blocks another, as GitHub's "Blocked by" link names it. */
@@ -117,33 +127,105 @@ export function offBoardBlockers(items: NextItem[]): string[] {
   );
 }
 
-/** The next ticket, or `null` when nothing is open. */
-export function nextTicket(items: NextItem[]): NextItem | null {
-  const open = items.filter((i) => i.state === 'OPEN');
-  assertScored(open);
-  assertBlockersInherit(open);
-  const rank = (i: NextItem): number[] => [
+/**
+ * The board's order within everything open: Priority, then In Progress, then
+ * unblocked, then the oldest, then the lowest number.
+ */
+function rankOf(i: NextItem): number[] {
+  return [
     LEVELS.indexOf(i.priority as string),
     i.status === 'In Progress' ? 0 : 1,
     i.blockedBy.length === 0 ? 0 : 1,
     Date.parse(i.createdAt),
     i.number,
   ];
-  const sorted = open
-    .filter((i) => i.openSubIssues === 0)
-    .sort((a, b) => {
-      const [ra, rb] = [rank(a), rank(b)];
-      for (let k = 0; k < ra.length; k++) {
-        if (ra[k] !== rb[k]) return (ra[k] as number) - (rb[k] as number);
-      }
-      return 0;
-    });
+}
+
+function byRank(a: NextItem, b: NextItem): number {
+  const [ra, rb] = [rankOf(a), rankOf(b)];
+  for (let k = 0; k < ra.length; k++) {
+    if (ra[k] !== rb[k]) return (ra[k] as number) - (rb[k] as number);
+  }
+  return 0;
+}
+
+/** The top-ranked ticket, blocked or not, or `null` when nothing is open. */
+export function nextTicket(items: NextItem[]): NextItem | null {
+  const open = items.filter((i) => i.state === 'OPEN');
+  assertScored(open);
+  assertBlockersInherit(open);
+  const sorted = open.filter((i) => i.openSubIssues === 0).sort(byRank);
   return sorted[0] ?? null;
+}
+
+/** Where work can start, and the tickets it unblocks, nearest first. */
+export interface Start {
+  ticket: NextItem;
+  chain: NextItem[];
+  /** Why no chain can start, when the ticket named is the blocked top one. */
+  waiting: string | null;
+}
+
+const ref = (i: NextItem): string => `#${String(i.number)}`;
+
+/**
+ * The work that can start for the board's top ticket (#772): the ticket
+ * itself when nothing blocks it, else the first open ticket on this board
+ * that nothing blocks at the end of its "Blocked by" links, taking blockers
+ * in the board's rank. A cycle is refused by name. When every chain ends off
+ * this board or at an epic with open sub-issues, the top ticket is named as
+ * before, with its blockers and why (`waiting`): an off-board blocker is a
+ * note, never a refusal (operator 2026-10-13).
+ */
+export function nextStart(items: NextItem[]): Start | null {
+  const top = nextTicket(items);
+  if (top === null) return null;
+  const onBoard = byKey(items.filter((i) => i.state === 'OPEN'));
+  const ends: string[] = [];
+  const walk = (current: NextItem, path: NextItem[]): NextItem[] | null => {
+    const here = [...path, current];
+    if (path.length > 0 && current.openSubIssues > 0) {
+      ends.push(
+        `${ref(current)} is an epic with open sub-issues, whose stories are the work`,
+      );
+      return null;
+    }
+    if (current.blockedBy.length === 0) return here;
+    const blockers = current.blockedBy
+      .map((b) => onBoard.get(`${b.repository}#${String(b.number)}`))
+      .filter((b): b is NextItem => b !== undefined)
+      .sort(byRank);
+    if (blockers.length === 0) {
+      const off = current.blockedBy
+        .map((b) => `${b.repository}#${String(b.number)}`)
+        .join(', ');
+      ends.push(`${ref(current)} waits only on issues off this board (${off})`);
+      return null;
+    }
+    for (const blocker of blockers) {
+      const seen = here.indexOf(blocker);
+      if (seen !== -1) {
+        const loop = [...here.slice(seen), blocker].map(ref).join(' → ');
+        throw new Error(
+          `Blocked-by links form a cycle: ${loop}. Break it on the board.`,
+        );
+      }
+      const found = walk(blocker, here);
+      if (found !== null) return found;
+    }
+    return null;
+  };
+  const path = walk(top, []);
+  if (path === null) {
+    return { ticket: top, chain: [], waiting: ends[0] ?? null };
+  }
+  const ticket = path[path.length - 1] as NextItem;
+  return { ticket, chain: path.slice(0, -1).reverse(), waiting: null };
 }
 
 export const NEXT_QUERY = `query($id: ID!, $endCursor: String) {
   node(id: $id) { ... on ProjectV2 { title
-    items(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor }
+    items(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
       nodes {
         status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
         priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
@@ -184,13 +266,14 @@ interface RawPage {
 
 /**
  * The board's issues from the pages `gh api graphql --paginate --slurp`
- * returns for NEXT_QUERY, every page's title asserted first. Anything that
- * is not a whole issue is refused by name, and so is an issue with more
- * blockers than one read returns.
+ * returns for NEXT_QUERY, every page's title asserted first and the pages
+ * proved to hold the whole board (#703). Anything that is not a whole issue
+ * is refused by name, and so is an issue with more blockers than one read
+ * returns.
  */
 export function parseNextItems(pages: unknown[], title: string): NextItem[] {
+  assertBoard(pages, title);
   const typed = pages as RawPage[];
-  for (const page of typed) assertTitle(page.data.node.title, title);
   return typed.flatMap((page) =>
     page.data.node.items.nodes.map((node): NextItem => {
       const c = node.content;
@@ -234,18 +317,25 @@ export function parseNextItems(pages: unknown[], title: string): NextItem[] {
 }
 
 const USAGE =
-  'usage: node scripts/board-next.ts <board-node-id> "<board title>"';
+  'usage: node scripts/board-next.ts <board-node-id> "<board title>" [owner/repo]';
 
 /**
  * The line naming the next ticket on the board `args` names
- * (`<node-id> <title>`), and a note for each blocker the board does not hold.
+ * (`<node-id> <title> [owner/repo]`, the repository defaulting to this one),
+ * and a note for each blocker the board does not hold. The board's issues are
+ * checked against the issues the repository names on it before any ticket
+ * is named, so a short listing never picks one (#751).
  */
 export function boardNext(
   args: readonly string[],
   gh: Gh,
 ): { line: string; notes: string[] } {
-  const [id, title] = args;
+  const [id, title, repo = REPO] = args;
   if (id === undefined || title === undefined) throw new Error(USAGE);
+  ownerAndName(repo);
+  // Before the board is read: an issue filed after it is left out of the
+  // cross-check (#877).
+  const readStartedAt = new Date();
   const out = gh([
     'api',
     'graphql',
@@ -256,16 +346,22 @@ export function boardNext(
     '-f',
     `id=${id}`,
   ]);
-  const items = parseNextItems(JSON.parse(out) as unknown[], title);
+  const pages = JSON.parse(out) as unknown[];
+  const items = parseNextItems(pages, title);
+  assertNamedByRepo(pages, repoIssuePages(gh, repo), id, repo, readStartedAt);
   const notes = offBoardBlockers(items);
-  const next = nextTicket(items);
-  if (next === null) return { line: 'Next: nothing is open.', notes };
+  const start = nextStart(items);
+  if (start === null) return { line: 'Next: nothing is open.', notes };
+  const { ticket: next, chain, waiting } = start;
+  const unblocks = chain.map((i) => `, which blocks ${ref(i)}`).join('');
   const blocked =
-    next.blockedBy.length > 0
-      ? `, blocked by ${next.blockedBy.map((b) => `#${String(b.number)}`).join(', ')}`
-      : '';
+    waiting === null
+      ? ''
+      : `, blocked by ${next.blockedBy.map((b) => `#${String(b.number)}`).join(', ')}`;
+  const why =
+    waiting === null ? '' : ` Nothing it waits on can start: ${waiting}.`;
   return {
-    line: `Next: #${String(next.number)} ${next.title} (${String(next.priority)}, ${next.status ?? 'no status'}${blocked}).`,
+    line: `Next: #${String(next.number)} ${next.title} (${String(next.priority)}, ${next.status ?? 'no status'}${blocked})${unblocks}.${why}`,
     notes,
   };
 }

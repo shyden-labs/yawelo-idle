@@ -66,8 +66,9 @@ import {
  */
 
 /**
- * Accepted events by type in the fixture, measured when #35's tuned balance
- * regenerated it (2026-10-04); each floor is the measured figure less one and
+ * Accepted events by type in the fixture, measured when #890's retune
+ * regenerated it (2026-11-06; before it #874's FSRS-7 log and #35's tuned
+ * balance); each floor is the measured figure less one and
  * the count must exceed it, so it may not fall below the measurement and a
  * type measured once cannot vanish. Regenerating the log may move them,
  * deliberately. On this balance Insight comes early, so Pemandu opens with
@@ -75,14 +76,14 @@ import {
  */
 const ACCEPTED_FLOORS: Readonly<Record<GameEvent['type'], number>> = {
   resume: 174, // 175
-  listen: 114, // 115
-  buyEncounter: 1664, // 1665
-  pickUpWord: 282, // 283
-  answerReview: 2011, // 2012
-  answerPractice: 123, // 124
+  listen: 113, // 114
+  buyEncounter: 1687, // 1688
+  pickUpWord: 273, // 274
+  answerReview: 2914, // 2915
+  answerPractice: 118, // 119
   buyUpgrade: 27, // 28
-  startJourney: 315, // 316
-  collectJourney: 312, // 313
+  startJourney: 336, // 337
+  collectJourney: 333, // 334
   setSail: 7, // 8
   buyGrammarNode: 11, // 12
   setAutomation: 0, // 1
@@ -90,14 +91,14 @@ const ACCEPTED_FLOORS: Readonly<Record<GameEvent['type'], number>> = {
 
 /** Refused events by kind in the fixture, measured likewise, less one. */
 const REFUSED_FLOORS: Readonly<Record<string, number>> = {
-  staleSeq: 29, // 30
-  notDue: 30, // 31
-  unknownWord: 34, // 35
-  unknownEncounter: 27, // 28
-  slotEmpty: 11, // 12
-  unknownSlot: 10, // 11
-  sailGoalUnmet: 28, // 29
-  unknownUpgrade: 31, // 32
+  staleSeq: 24, // 25
+  notDue: 22, // 23
+  unknownWord: 26, // 27
+  unknownEncounter: 32, // 33
+  slotEmpty: 20, // 21
+  unknownSlot: 12, // 13
+  sailGoalUnmet: 30, // 31
+  unknownUpgrade: 26, // 27
 };
 
 /** Every slice, one per open, known before the run: one test each. */
@@ -179,7 +180,7 @@ describe('the golden log fixture (AC5)', () => {
       minParts: 2,
       workPerPart: 4000,
       heavyPurchases: 1000,
-      slices: 380,
+      slices: 409,
       measured: expect.stringContaining('#553') as unknown,
     });
   });

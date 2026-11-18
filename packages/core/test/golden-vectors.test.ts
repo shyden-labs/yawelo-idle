@@ -25,8 +25,8 @@ const PINNED: Record<GoldenFunction, string> = {
   log10: '944c073543f8818b',
   expm1: 'c2bfeca84f46d8ef',
   log1p: '19c6d2a1befbf596',
-  meanR: 'adcc0a32108d07dd',
-  review: 'dd73d4b1f739c442',
+  meanR: 'a61363f9b48f09c6',
+  review: '20d69d2c61aba900',
 };
 
 /**

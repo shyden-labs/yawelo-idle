@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
 import { committableFiles } from '../unit/tracked-files';
 
 /**
@@ -32,23 +31,35 @@ const SCRIPTS = [
   'scripts/board-progress.ts',
   'scripts/board-setup.ts',
   'scripts/ci-scope.ts',
-  'scripts/ci-scripts.ts',
+  'scripts/content.ts',
+  'scripts/coverage.ts',
   'scripts/d1-binding.ts',
+  'scripts/dependabot-check.ts',
+  'scripts/dev-behind-develop.ts',
+  'scripts/dev-hosts-secrets.ts',
   'scripts/dev-secrets.ts',
+  'scripts/develop-squash-only.ts',
+  'scripts/door-check.ts',
+  'scripts/door-secrets.ts',
   'scripts/ensure-d1.ts',
-  'scripts/every-commit.ts',
-  'scripts/fetch-floors.ts',
+  'scripts/file-story.ts',
+  'scripts/google-read-back.ts',
   'scripts/holding-dev.ts',
+  'scripts/licence-check.ts',
+  'scripts/npm-audit.ts',
   'scripts/prod-version.ts',
-  'scripts/record-floors.ts',
+  'scripts/release-cut.ts',
+  'scripts/sonar-verdict.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
+  'scripts/verify-dev-hosts.ts',
   'scripts/verify-dev.ts',
   'scripts/verify-prod.ts',
+  'scripts/verify-roadmap.ts',
 ] as const;
 
 describe('the scripts load under Node’s own loader (#391)', () => {
-  it('lists every script with a main, as git has them, at the recorded floor', () => {
+  it('lists every script with a main, as git has them', () => {
     const derived = committableFiles().filter(isScript).filter(hasMain);
     const grep = spawnSync(
       'git',
@@ -67,7 +78,6 @@ describe('the scripts load under Node’s own loader (#391)', () => {
     const grepped = grep.stdout.split('\n').filter((line) => line !== '');
     expect(derived).toEqual(grepped.filter(isScript));
     expect(SCRIPTS).toEqual(derived);
-    expect(floorBreach('script-loads/scripts', derived.length)).toBeUndefined();
   });
 
   for (const script of SCRIPTS)

@@ -309,11 +309,13 @@ describe('a refused event leaves state unchanged (AC2)', () => {
     ];
     const plain = replay(c, rich(c), renumbered);
     const noisy = replay(c, rich(c), withRefusal);
+    // Before the exact checks, so a replay that loses or doubles its
+    // refusals is named by this search and its floor (#375).
+    expect(plain.refused).toEqual([]);
     expect(noisy.state).toEqual(plain.state);
     expect(noisy.refused).toEqual([
       { seq: 11, rejection: { kind: 'unknownUpgrade', id: 'noSuchUpgrade' } },
     ]);
-    expect(plain.refused).toEqual([]);
   });
 });
 

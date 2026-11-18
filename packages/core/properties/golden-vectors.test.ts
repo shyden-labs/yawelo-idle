@@ -15,7 +15,8 @@ import {
  * tests/engines proves each browser engine gives Node's bits; this pin proves
  * Node's bits have not moved. A det-math change that alters any result, such
  * as swapping in Math.pow, moves a digest. Measured 2026-10-01 (det-math) and
- * 2026-10-02 (meanR, review).
+ * 2026-10-02 (meanR, review); meanR and review re-measured 2026-11-06 for
+ * ts-fsrs 6's FSRS-7 model (#874), macOS and CI equal.
  */
 
 const PINNED: Record<GoldenFunction, string> = {
@@ -25,8 +26,8 @@ const PINNED: Record<GoldenFunction, string> = {
   log10: '7975fd2b8f7c506e',
   expm1: '2c1250daae88b5ac',
   log1p: '2b1b9cb3cddb4cb2',
-  meanR: 'ec29edb532f4e19d',
-  review: '1856bc56fcfef272',
+  meanR: '917503c4513ffebc',
+  review: '5c28a3aa50f07515',
 };
 
 describe('golden vectors', () => {

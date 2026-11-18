@@ -18,6 +18,7 @@
  * One request, with a time limit and no retry (operator rule, 2026-10-02): a
  * listing that does not arrive is a failed proof, not a reason to ask again.
  */
+import { oneLine } from './one-line.ts';
 
 /** Cloudflare's v4 account listing; one page holds every account a token reaches. */
 const ACCOUNTS = 'https://api.cloudflare.com/client/v4/accounts?per_page=50';
@@ -36,7 +37,20 @@ export interface Verdict {
 }
 
 /** What Cloudflare's `GET /accounts` answer says about the token's reach. */
+/** The verdict, its reason made one line for the log (#1007). */
 export function reachVerdict(body: unknown, devAccountId: string): Verdict {
+  const { ok, reason } = judgeReach(body, devAccountId);
+  return { ok, reason: oneLine(reason) };
+}
+
+/** What the log says when the account listing never arrived (#1007). */
+export function fetchFailure(error: unknown): string {
+  return oneLine(
+    `::error::the account listing did not arrive: ${error instanceof Error ? error.message : String(error)}`,
+  );
+}
+
+function judgeReach(body: unknown, devAccountId: string): Verdict {
   if (!isRecord(body) || typeof body['success'] !== 'boolean')
     return { ok: false, reason: NOT_A_LISTING };
   if (!body['success']) {
@@ -102,9 +116,7 @@ if (import.meta.main) {
     });
     body = await response.json();
   } catch (error) {
-    console.error(
-      `::error::the account listing did not arrive: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(fetchFailure(error));
     process.exit(1);
   }
   const { ok, reason } = reachVerdict(body, account);

@@ -127,9 +127,9 @@ export function played(): GameState {
 
 /** Exact R of a word at wall time `wall`, straight from the curve. */
 export function exactWordR(word: WordMemory, wall: Decimal): Decimal {
-  const { lastReview, stability } = word.card;
+  const { lastReview } = word.card;
   if (lastReview === null) return new D(0);
-  return exactR(stability, wall.minus(lastReview).div(DAY_MS));
+  return exactR(word.card, wall.minus(lastReview).div(DAY_MS));
 }
 
 /**
@@ -161,12 +161,12 @@ export function continuous(
   const span = new D(to - from);
   // Each word's term is integrated once and shared by every Encounter.
   const terms = Object.entries(state.words).map(([id, word]) => {
-    const { lastReview, stability } = word.card;
+    const { lastReview } = word.card;
     const integralOfR =
       lastReview === null
         ? new D(0)
         : exactMean(
-            stability,
+            word.card,
             new D(from + skew - lastReview).div(DAY_MS),
             span.div(DAY_MS),
           ).mul(span);

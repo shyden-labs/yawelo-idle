@@ -51,10 +51,12 @@ describe('a 1-minute return with Pemandu at 1 s (stand-in for #33 AC5)', () => {
 });
 
 describe('a late-game 3-minute catch-up with Pemandu at 1 s (stand-in for #297 AC3)', () => {
-  it('buys the 138 units it was measured to buy', () => {
+  it('buys the 130 units it was measured to buy', () => {
+    // Measured under FSRS-7 (#874, 2026-11-06): the fixture's words are
+    // reviewed by the scheduler, so their ranks and R moved; FSRS-6 bought 138.
     const from = lateGameReturn(course());
     const { state } = advance(course(), from, returnsAt(from, 0.05));
-    expect(units(state) - units(from)).toBe(138);
+    expect(units(state) - units(from)).toBe(130);
   });
 });
 

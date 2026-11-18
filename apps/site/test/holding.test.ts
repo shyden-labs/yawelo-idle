@@ -3,9 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COPY } from '../src/copy';
 import type { Locale } from '../src/i18n';
-import { floorBreach } from '../../../tests/floors';
 import { inlineTags, startTags } from '../../../tests/inline-tags';
-import { searched } from '../../../tests/searched';
 
 /**
  * The built holding page (#621 AC1, AC2), read from dist-holding/ after
@@ -61,20 +59,22 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
       'poster',
       'aria-label',
     ]);
-    expect(video).toContain('poster="/media/yawelo-idle-promo-poster.jpg"');
+    expect(video).toContain(
+      'poster="https://media.yaweloidle.com/yawelo-idle-promo-poster.jpg"',
+    );
   });
 
   // MP4 first: Safari on a physical iPhone Air played the WebM once, restarted
   // once, then froze on its end card for good, while the MP4 looped for 35 s
   // (three variants measured on 2026-10-16, #621). Chrome on Android loops
   // either.
-  it('offers MP4 first, then WebM', () => {
+  it('offers MP4 first, then WebM, both from the media host (#713)', () => {
     const sources = [
       ...html(file).matchAll(/<source src="([^"]+)" type="([^"]+)">/g),
     ].map(([, src, type]) => [src, type]);
     expect(sources).toEqual([
-      ['/media/yawelo-idle-promo.mp4', 'video/mp4'],
-      ['/media/yawelo-idle-promo.webm', 'video/webm'],
+      ['https://media.yaweloidle.com/yawelo-idle-promo.mp4', 'video/mp4'],
+      ['https://media.yaweloidle.com/yawelo-idle-promo.webm', 'video/webm'],
     ]);
   });
 
@@ -86,7 +86,7 @@ describe.each(HOMES)('the holding home page %s', (file, locale) => {
 
   it('links its language alternates', () => {
     expect(html(file)).toContain(
-      '<link rel="alternate" hreflang="id" href="https://yawelo-idle.shyden.co.uk/id/">',
+      '<link rel="alternate" hreflang="id" href="https://yaweloidle.com/id/">',
     );
   });
 });
@@ -108,8 +108,7 @@ describe.each(ALL)('the built page %s', (file) => {
       ...inlineTags(tags),
       ...tags.filter((tag) => /=\s*["']?data:/i.test(tag)),
     ];
-    expect(searched(unsafe, { of: tags, what: `tags in ${file}` })).toEqual([]);
-    expect(floorBreach(`holding-html/${file}`, tags.length)).toBeUndefined();
+    expect(unsafe).toEqual([]);
   });
 
   it('links only the two home pages production has, in order', () => {
@@ -121,14 +120,10 @@ describe.each(ALL)('the built page %s', (file) => {
 });
 
 describe('the built holding files', () => {
-  it.each([
-    '_headers',
-    'robots.txt',
-    'holding-video.js',
-    'media/yawelo-idle-promo.mp4',
-    'media/yawelo-idle-promo.webm',
-    'media/yawelo-idle-promo-poster.jpg',
-  ])('ships %s', (file) => {
-    expect(existsSync(join(DIST, file))).toBe(true);
-  });
+  it.each(['_headers', 'robots.txt', 'holding-video.js'])(
+    'ships %s',
+    (file) => {
+      expect(existsSync(join(DIST, file))).toBe(true);
+    },
+  );
 });

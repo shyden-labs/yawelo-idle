@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  boardOrphans,
-  type OrphanReads,
-  SKIPPED_AUTHOR,
-} from '../../scripts/board-orphans';
+import { REPO_ISSUES_QUERY } from '../../packages/progress/src/index';
+import { boardOrphans, type OrphanReads } from '../../scripts/board-orphans';
 import type { Gh } from '../../scripts/board-progress';
 
 /**
@@ -63,15 +60,96 @@ const thisPull: Pull = {
   head: { ref: 'chore/unrelated' },
 };
 
+/** develop's head commit in every fixture's branch list. */
+const DEVELOP_SHA = 'd'.repeat(40);
+
+/** A closed pull request in the whole-repository read (#702). */
+interface ClosedPull {
+  number: number;
+  merged_at: string | null;
+  merge_commit_sha: string | null;
+  head: { ref: string; repo: { full_name: string } | null };
+}
+
+/** A merged pull request whose branch was in this repository. */
+const mergedPull = (
+  number: number,
+  ref: string,
+  over: Partial<ClosedPull> = {},
+): ClosedPull => ({
+  number,
+  merged_at: '2026-10-19T00:00:00Z',
+  merge_commit_sha: 'e'.repeat(40),
+  head: { ref, repo: { full_name: REPO } },
+  ...over,
+});
+
+/** The merged pull request develop's head came from, naming nothing: the read's known positive. */
+const developPull = mergedPull(899, 'chore/earlier', {
+  merge_commit_sha: DEVELOP_SHA,
+});
+
 interface Fixture {
   items: unknown[];
+  /** The board's item count GitHub reports (#703); by default, `items` is all of it. */
+  totalCount?: number;
   title?: string;
   branches?: string[];
   pulls?: Pull[];
   /** Each branch's closed pull requests, merged or closed without merging. */
   closed?: Readonly<Record<string, ReadonlyArray<'merged' | 'unmerged'>>>;
+  /** Every closed pull request of the repository, branches deleted or not (#702). */
+  allClosed?: unknown[];
+  /**
+   * The issues the repository's own issues name on the board (#751); by
+   * default, every issue of this repository the board's listing holds.
+   */
+  named?: number[];
   /** A read named here throws as `gh` does when it exits non-zero. */
-  failing?: 'board' | 'branches' | 'pulls' | 'closed';
+  failing?: 'board' | 'issues' | 'branches' | 'pulls' | 'closed' | 'allClosed';
+}
+
+/** The numbers of this repository's issues among raw board items. */
+function issuesOf(items: unknown[]): number[] {
+  return (
+    items as {
+      content?: {
+        __typename?: string;
+        number?: number;
+        repository?: { nameWithOwner?: string };
+      };
+    }[]
+  ).flatMap(({ content }) =>
+    content?.__typename === 'Issue' &&
+    content.repository?.nameWithOwner === REPO &&
+    content.number !== undefined
+      ? [content.number]
+      : [],
+  );
+}
+
+/** The repository's issues as REPO_ISSUES_QUERY returns them, each naming the board. */
+function issuesNaming(numbers: number[]): unknown[] {
+  return [
+    {
+      data: {
+        repository: {
+          issues: {
+            totalCount: numbers.length,
+            nodes: numbers.map((number) => ({
+              number,
+              // Older than any read (#877).
+              createdAt: '2026-01-01T00:00:00Z',
+              projectItems: {
+                totalCount: 1,
+                nodes: [{ project: { id: 'PVT_fixture' } }],
+              },
+            })),
+          },
+        },
+      },
+    },
+  ];
 }
 
 const BRANCHES_CALL = [
@@ -85,6 +163,25 @@ const PULLS_CALL = [
   '--paginate',
   '--slurp',
   `repos/${REPO}/pulls?state=open&per_page=100`,
+];
+const ALL_CLOSED_CALL = [
+  'api',
+  '--paginate',
+  '--slurp',
+  `repos/${REPO}/pulls?state=closed&per_page=100`,
+];
+/** The repository's issues, read with the board's token: only it can read their boards (#751). */
+const ISSUES_CALL = [
+  'api',
+  'graphql',
+  '--paginate',
+  '--slurp',
+  '-f',
+  `query=${REPO_ISSUES_QUERY}`,
+  '-f',
+  'owner=shyden-labs',
+  '-f',
+  'name=yawelo-idle',
 ];
 const closedCall = (branch: string) => [
   'api',
@@ -104,21 +201,42 @@ function reads(f: Fixture): OrphanReads {
   const board: Gh = (args) => {
     if (args[0] !== 'api' || args[1] !== 'graphql')
       throw new Error(`unexpected board call: ${args.join(' ')}`);
+    if (same(args, ISSUES_CALL)) {
+      if (f.failing === 'issues') throw new Error('HTTP 502: Bad Gateway');
+      return JSON.stringify(issuesNaming(f.named ?? issuesOf(f.items)));
+    }
     if (f.failing === 'board') throw new Error('HTTP 401: Bad credentials');
     return JSON.stringify([
       {
-        data: { node: { title: f.title ?? TITLE, items: { nodes: f.items } } },
+        data: {
+          node: {
+            title: f.title ?? TITLE,
+            items: {
+              totalCount: f.totalCount ?? f.items.length,
+              nodes: f.items,
+            },
+          },
+        },
       },
     ]);
   };
   const repo: Gh = (args) => {
     if (same(args, BRANCHES_CALL)) {
       if (f.failing === 'branches') throw new Error('HTTP 502: Bad Gateway');
-      return JSON.stringify([branches.map((name) => ({ name }))]);
+      return JSON.stringify([
+        branches.map((name) => ({
+          name,
+          commit: { sha: name === 'develop' ? DEVELOP_SHA : 'f'.repeat(40) },
+        })),
+      ]);
     }
     if (same(args, PULLS_CALL)) {
       if (f.failing === 'pulls') throw new Error('HTTP 502: Bad Gateway');
       return JSON.stringify([pulls]);
+    }
+    if (same(args, ALL_CLOSED_CALL)) {
+      if (f.failing === 'allClosed') throw new Error('HTTP 502: Bad Gateway');
+      return JSON.stringify([f.allClosed ?? [developPull]]);
     }
     const branch = branches.find((b) => same(args, closedCall(b)));
     if (branch !== undefined) {
@@ -158,7 +276,7 @@ describe('boardOrphans passes a ticket something names (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12: branch board/12-orphan-check',
       ],
     });
@@ -207,7 +325,7 @@ describe('boardOrphans passes a ticket something names (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 2 board items, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 2 board items, 2 branches, 1 open pull request, 1 merged pull request.',
         '#13: branch x/13-y',
       ],
     });
@@ -224,7 +342,7 @@ describe('boardOrphans fails on an orphan, by name (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: false,
       lines: [
-        '1 orphan: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 1 board item, 2 branches, 1 open pull request.',
+        '1 orphan: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12 story 12',
       ],
     });
@@ -257,7 +375,7 @@ describe('boardOrphans fails on an orphan, by name (#580 AC1, AC3)', () => {
     expect(result).toEqual({
       ok: true,
       lines: [
-        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request.',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
         '#12: branch board/12-orphan-check (merged, awaiting close)',
       ],
     });
@@ -311,10 +429,71 @@ describe('boardOrphans fails on an orphan, by name (#580 AC1, AC3)', () => {
       }),
     );
     expect(result.lines).toEqual([
-      '2 orphans: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 2 board items, 2 branches, 1 open pull request.',
+      '2 orphans: In Progress, but no branch or open pull request names it. Move each back to Todo, or push its branch. Read 2 board items, 2 branches, 1 open pull request, 1 merged pull request.',
       '#12 story 12',
       '#14 story 14',
     ]);
+  });
+});
+
+describe('boardOrphans counts a merged pull request whose branch is gone (#702)', () => {
+  /** #12 In Progress, its branch deleted at merge, so only `allClosed` can name it. */
+  const judge = (allClosed: unknown[]) =>
+    boardOrphans(
+      ARGS,
+      ENV,
+      reads({ items: [rawIssue(12, 'In Progress')], allClosed }),
+    );
+
+  it("passes a ticket a merged pull request's branch names, until the ticket closes", () => {
+    expect(judge([developPull, mergedPull(850, 'ci/12-orphan-check')])).toEqual(
+      {
+        ok: true,
+        lines: [
+          'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 2 merged pull requests.',
+          '#12: pull request #850 (merged, awaiting close)',
+        ],
+      },
+    );
+  });
+
+  it('does not count a pull request closed without merging', () => {
+    const abandoned = mergedPull(850, 'ci/12-orphan-check', {
+      merged_at: null,
+      merge_commit_sha: null,
+    });
+    const result = judge([developPull, abandoned]);
+    expect(result.ok).toBe(false);
+    expect(result.lines[0]).toContain('1 merged pull request.');
+  });
+
+  it('does not take a merged branch /120- as naming #12', () => {
+    expect(judge([developPull, mergedPull(850, 'ci/120-other')]).ok).toBe(
+      false,
+    );
+  });
+
+  it('does not take #12 in a merged title or body as naming it: history keeps every mention', () => {
+    const mention = {
+      ...mergedPull(850, 'docs/unrelated'),
+      title: 'docs: unrelated (Refs #12)',
+      body: 'Refs #12',
+    };
+    expect(judge([developPull, mention]).ok).toBe(false);
+  });
+
+  it("does not count a merged pull request from another repository's branch", () => {
+    const fork = mergedPull(850, 'ci/12-orphan-check', {
+      head: { ref: 'ci/12-orphan-check', repo: { full_name: 'someone/fork' } },
+    });
+    expect(judge([developPull, fork]).ok).toBe(false);
+  });
+
+  it('does not count a merged pull request whose head repository is gone', () => {
+    const gone = mergedPull(850, 'ci/12-orphan-check', {
+      head: { ref: 'ci/12-orphan-check', repo: null },
+    });
+    expect(judge([developPull, gone]).ok).toBe(false);
   });
 });
 
@@ -323,6 +502,19 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     expect(() =>
       boardOrphans(ARGS, ENV, reads({ items: [], failing: 'board' })),
     ).toThrow('could not read the board: HTTP 401: Bad credentials');
+  });
+
+  // The board holds an orphan the read lost: passing would let it through.
+  it('fails, naming the board, when the read is short of the board (#703)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(12, 'Todo')], totalCount: 2 }),
+      ),
+    ).toThrow(
+      'could not read the board: the board has 2 items and 1 were read: nothing read',
+    );
   });
 
   it('fails, naming the branches, when they cannot be read', () => {
@@ -396,6 +588,41 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     );
   });
 
+  // GitHub's incident of 2026-10-22: the board's listing and its own count
+  // shrank together, so #703's count check agreed with a short read.
+  it('refuses a listing short of the repository’s issues, its own count agreeing, judging no orphan (#751)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(1, 'In Progress')], named: [1, 2] }),
+      ),
+    ).toThrow(
+      'could not read the board: the board lists 1 of shyden-labs/yawelo-idle’s issues and the repository’s own issues (Repository.issues) name 2 on it; missing from the board’s listing: #2: nothing read',
+    );
+  });
+
+  it('reads the repository’s issues with the board’s token, which can read their boards (#751)', () => {
+    const r = reads({ items: [rawIssue(1, 'Todo')] });
+    const calls: string[][] = [];
+    const board: Gh = (args) => {
+      calls.push([...args]);
+      return r.board(args);
+    };
+    boardOrphans(ARGS, ENV, { board, repo: r.repo });
+    expect(calls.filter((call) => same(call, ISSUES_CALL))).toHaveLength(1);
+  });
+
+  it('refuses when the repository’s issues cannot be read, by name (#751)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(1, 'Todo')], failing: 'issues' }),
+      ),
+    ).toThrow('could not read the repository’s issues: HTTP 502: Bad Gateway');
+  });
+
   it('refuses a branch list without develop, its known positive', () => {
     expect(() =>
       boardOrphans(
@@ -418,6 +645,74 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     ).toThrow(
       `the open pull requests read does not hold this one, #${String(THIS_PR)}, so it is not the whole list`,
     );
+  });
+
+  it('fails, naming the read, when the closed pull requests cannot be read (#702)', () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(12, 'Todo')], failing: 'allClosed' }),
+      ),
+    ).toThrow('could not read the closed pull requests: HTTP 502: Bad Gateway');
+  });
+
+  it("refuses a closed pull request list without develop's head, its known positive (#702)", () => {
+    expect(() =>
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(12, 'Todo')], allClosed: [] }),
+      ),
+    ).toThrow(
+      `the closed pull requests read holds no merged pull request for develop's head ${DEVELOP_SHA}, so it is not the whole list`,
+    );
+  });
+
+  it('refuses a develop branch entry with no commit SHA (#702)', () => {
+    const r = reads({ items: [rawIssue(12, 'Todo')] });
+    const repo: Gh = (args) =>
+      same(args, BRANCHES_CALL)
+        ? JSON.stringify([[{ name: 'develop', commit: {} }]])
+        : r.repo(args);
+    expect(() => boardOrphans(ARGS, ENV, { ...r, repo })).toThrow(
+      'could not read the branches: develop has no commit SHA',
+    );
+  });
+
+  const withClosed = (entry: unknown) => () =>
+    boardOrphans(
+      ARGS,
+      ENV,
+      reads({ items: [rawIssue(12, 'Todo')], allClosed: [developPull, entry] }),
+    );
+  const CLOSED_SHAPE =
+    'could not read the closed pull requests: an entry has no number, merged_at, merge_commit_sha, head branch and head repository';
+  const closedWithout = (key: keyof ClosedPull) =>
+    Object.fromEntries(
+      Object.entries(mergedPull(850, 'x/1-y')).filter(([k]) => k !== key),
+    );
+
+  it('refuses a closed pull request entry with no number (#702)', () => {
+    expect(withClosed(closedWithout('number'))).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no merged_at field (#702)', () => {
+    expect(withClosed(closedWithout('merged_at'))).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no merge_commit_sha field (#702)', () => {
+    expect(withClosed(closedWithout('merge_commit_sha'))).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no head branch (#702)', () => {
+    const entry = { ...mergedPull(850, 'x/1-y'), head: { repo: null } };
+    expect(withClosed(entry)).toThrow(CLOSED_SHAPE);
+  });
+
+  it('refuses a closed pull request entry with no head repository field (#702)', () => {
+    const entry = { ...mergedPull(850, 'x/1-y'), head: { ref: 'x/1-y' } };
+    expect(withClosed(entry)).toThrow(CLOSED_SHAPE);
   });
 
   it('refuses a branch entry with no name', () => {
@@ -472,8 +767,14 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
     const elsewhere = rawIssue(12, 'In Progress', {
       repository: { nameWithOwner: 'shyden-labs/repo-template' },
     });
+    // Beside one of this repository's, as on the real board, so the
+    // cross-check against this repository's issues has one to find (#751).
     expect(() =>
-      boardOrphans(ARGS, ENV, reads({ items: [elsewhere] })),
+      boardOrphans(
+        ARGS,
+        ENV,
+        reads({ items: [rawIssue(1, 'Todo'), elsewhere] }),
+      ),
     ).toThrow(
       'shyden-labs/repo-template#12 is In Progress, and this check reads only shyden-labs/yawelo-idle',
     );
@@ -500,33 +801,39 @@ describe('boardOrphans fails closed when it cannot look (#580 AC2, AC3)', () => 
   });
 });
 
-describe("boardOrphans skips Dependabot's pull requests by name (#580, operator 2026-10-15)", () => {
-  it('names the author it skips', () => {
-    expect(SKIPPED_AUTHOR).toBe('dependabot[bot]');
+/**
+ * A check is green only when it ran (Shyden, 2026-10-18, every project):
+ * Dependabot's pull requests are read like anyone else's, with the key from
+ * the repository's Dependabot secret, since its runs get no environment
+ * secrets (#661).
+ */
+describe("boardOrphans reads Dependabot's pull requests too (#661)", () => {
+  const DEPENDABOT = { ...ENV, PR_AUTHOR: 'dependabot[bot]' };
+
+  it('fails, naming the Dependabot secret, when a Dependabot pull request has no token', () => {
+    expect(() =>
+      boardOrphans(ARGS, { ...DEPENDABOT, BOARD_TOKEN: '' }, neverCalled),
+    ).toThrow(
+      "no board token: BOARD_TOKEN is empty, so the board cannot be read (Dependabot's runs read the repository's Dependabot secret ROADMAP_APP_KEY, #661)",
+    );
   });
 
-  it('passes without reading anything, saying it skipped and why', () => {
+  it('reads the board for a Dependabot pull request as for anyone else', () => {
     expect(
       boardOrphans(
         ARGS,
-        { PR_AUTHOR: 'dependabot[bot]', PR_NUMBER: '7', BOARD_TOKEN: '' },
-        neverCalled,
+        DEPENDABOT,
+        reads({
+          items: [rawIssue(12, 'In Progress')],
+          branches: ['develop', 'board/12-orphan-check'],
+        }),
       ),
     ).toEqual({
       ok: true,
       lines: [
-        'Skipped: Dependabot opened this pull request, and its runs get no environment secrets, so the board cannot be read. The next pull request anyone else opens checks it (#580).',
+        'No orphans: 1 ticket In Progress, each named. Read 1 board item, 2 branches, 1 open pull request, 1 merged pull request.',
+        '#12: branch board/12-orphan-check',
       ],
     });
-  });
-
-  it('skips no other author: one with an empty token fails', () => {
-    expect(() =>
-      boardOrphans(
-        ARGS,
-        { PR_AUTHOR: 'dependabot', PR_NUMBER: '7', BOARD_TOKEN: '' },
-        neverCalled,
-      ),
-    ).toThrow('no board token');
   });
 });

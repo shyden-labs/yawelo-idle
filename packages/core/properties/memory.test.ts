@@ -3,16 +3,21 @@ import fc from 'fast-check';
 import { checkMeanBetween } from '../test/memory-laws';
 
 /**
- * The mean retrievability on random windows (#28 AC3), at the full count
- * (#543). The unit suite checks chosen windows, the counterexample this
- * property found among them, through the same check (test/memory.test.ts).
+ * The mean retrievability on random windows (#874 AC3, first #28 AC3), at
+ * the full count (#543). The unit suite checks chosen windows, and the
+ * counterexample this property found among them, through the same check
+ * (test/memory.test.ts). States span FSRS-7's bounds.
  */
 
 describe('the mean retrievability over a window', () => {
   it('lies between R at the window’s end and R at its start', () => {
     fc.assert(
       fc.property(
-        fc.double({ min: 0.001, max: 36_500, noNaN: true }),
+        fc.record({
+          stability: fc.double({ min: 0.0001, max: 36_500, noNaN: true }),
+          stabilityFast: fc.double({ min: 0.0001, max: 36_500, noNaN: true }),
+          difficulty: fc.double({ min: 1, max: 10, noNaN: true }),
+        }),
         fc.double({ min: 0, max: 1e5, noNaN: true }),
         fc.double({ min: 1e-9, max: 1e5, noNaN: true }),
         checkMeanBetween,

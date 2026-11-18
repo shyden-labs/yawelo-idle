@@ -7,8 +7,6 @@ import {
   readDeployConfig,
   type DeployConfig,
 } from './wrangler-configs';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { headerRules, type HeaderRules } from '../../scripts/headers-file';
 
 /**
@@ -42,8 +40,9 @@ function holds(value: unknown): boolean {
 }
 
 describe('the production holding page Worker (#621 AC2)', () => {
-  it('is one production config, at the holding page', () => {
+  it('is a production config, beside the front door’s (#784)', () => {
     expect([...PROD_WRANGLER_CONFIGS]).toEqual([
+      'apps/door/wrangler.jsonc',
       'apps/site/holding/wrangler.jsonc',
     ]);
   });
@@ -57,15 +56,7 @@ describe('the production holding page Worker (#621 AC2)', () => {
   it('runs no script and holds no binding, schedule or variable: assets only', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     const declared = CODE_FIELDS.filter((field) => holds(config[field]));
-    expect(
-      searched(declared, {
-        of: CODE_FIELDS,
-        what: 'fields that run or bind code',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('prod-config/code-fields', CODE_FIELDS.length),
-    ).toBeUndefined();
+    expect(declared).toEqual([]);
   });
 
   it('finds what the dev site Worker declares in those fields, so the check is alive', () => {
@@ -88,10 +79,10 @@ describe('the production holding page Worker (#621 AC2)', () => {
     });
   });
 
-  it('is reached only at yawelo-idle.shyden.co.uk, as a Custom Domain, with no workers.dev or preview address', () => {
+  it('is reached only at yaweloidle.com (#1013), as a Custom Domain, with no workers.dev or preview address', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     expect(config.routes).toEqual([
-      { pattern: 'yawelo-idle.shyden.co.uk', custom_domain: true },
+      { pattern: 'yaweloidle.com', custom_domain: true },
     ]);
     expect(config.workers_dev).toBe(false);
     expect(config.preview_urls).toBe(false);
@@ -102,9 +93,9 @@ describe('the holding page’s security headers (#621 AC2)', () => {
   const rules = (): HeaderRules =>
     headerRules(read('apps/site/holding/public/_headers'));
 
-  it('sets a content security policy with no inline script or style, on every path', () => {
+  it('sets a content security policy with no inline script or style, taking images and media from the media host alone (#713), on every path', () => {
     expect(rules().get('/*')?.get('content-security-policy')).toBe(
-      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     );
   });
 
@@ -117,14 +108,10 @@ describe('the holding page’s security headers (#621 AC2)', () => {
     );
   });
 
-  it('lets only Shyden’s own sites embed the video (same site)', () => {
-    expect(rules().get('/media/*')?.get('cross-origin-resource-policy')).toBe(
-      'same-site',
-    );
-  });
-
-  it('declares exactly these two rule paths', () => {
-    expect([...rules().keys()]).toEqual(['/*', '/media/*']);
+  // The media are on media.yaweloidle.com (#713, #1013), whose zone rule sets
+  // Cross-Origin-Resource-Policy: cross-origin; verify-prod checks it live.
+  it('declares only the every-path rule, since the page serves no media of its own', () => {
+    expect([...rules().keys()]).toEqual(['/*']);
   });
 });
 
@@ -165,7 +152,7 @@ describe('the holding page’s words (#621 AC1)', () => {
 describe('the promo video’s terms (#621)', () => {
   it('is listed as not licensed, all rights reserved', () => {
     expect(read('LICENSE-CONTENT.md')).toContain(
-      'The promo video in `apps/site/holding/public/media/` (all rights reserved, operator 2026-10-16)',
+      'The promo video in `apps/site/media/` (all rights reserved, operator 2026-10-16)',
     );
   });
 });

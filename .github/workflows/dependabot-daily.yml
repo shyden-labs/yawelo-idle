@@ -1,0 +1,55 @@
+# Dependabot never stops updating silently (#458): once a day, read every
+# ecosystem in .github/dependabot.yml and Dependabot's update runs. An
+# ecosystem silent past its interval plus two days, or a run in its last
+# interval that ended other than success or skipped, opens an issue assigned
+# to ShydenMcM (or comments on the open one) and the run goes red
+# (scripts/dependabot-check.ts).
+#
+# It reads only this repository's Actions runs with the run's own token, so it
+# holds no stored secret and names no environment. Cost: one run of about a
+# minute a day on a public repository's free minutes, and a few API calls.
+# A dispatch may plant a failed run: the planted failure that proves the
+# issue path on GitHub itself (#458 AC3).
+name: dependabot-daily
+on:
+  schedule:
+    - cron: '53 1 * * *'
+  workflow_dispatch:
+    inputs:
+      plant_failure:
+        description: 'Planted failure (#458 AC3): add a failed run of the first ecosystem before judging'
+        required: false
+        default: ''
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: 'npm'
+      # The check parses the config with the yaml package; no install
+      # script is needed for that.
+      - run: npm ci --ignore-scripts
+      - name: Read Dependabot's runs and report a stopped ecosystem
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PLANT_FAILURE: ${{ inputs.plant_failure }}
+        run: node scripts/dependabot-check.ts

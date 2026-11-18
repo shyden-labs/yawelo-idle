@@ -1,0 +1,37 @@
+---
+/**
+ * The roadmap API docs (#588): Swagger UI rendering the hand-written spec,
+ * every file served from the site's own origin (Shyden, 2026-10-15:
+ * `swagger-ui-dist`, self-hosted, never a CDN). Vite copies the script,
+ * stylesheet and spec into the build as they are (`?url`), unbundled.
+ * Swagger UI's own text is English, so the page is English only.
+ */
+import bundle from 'swagger-ui-dist/swagger-ui-bundle.js?url';
+import styles from 'swagger-ui-dist/swagger-ui.css?url';
+import specUrl from '../../../api/roadmap.openapi.json?url';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="yawelo-idle-commit" content="%YAWELO_IDLE_COMMIT%" />
+    <title>Yawelo Idle roadmap API</title>
+    <link rel="stylesheet" href={styles} />
+  </head>
+  <body>
+    <main id="swagger"></main>
+    <script is:inline src={bundle}></script>
+    <script is:inline define:vars={{ specUrl }}>
+      SwaggerUIBundle({
+        url: specUrl,
+        dom_id: '#swagger',
+        // Off: the badge would ask validator.swagger.io to judge the spec.
+        validatorUrl: null,
+        // Both operations only read, so both can be tried here.
+        supportedSubmitMethods: ['get'],
+      });
+    </script>
+  </body>
+</html>

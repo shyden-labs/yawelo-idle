@@ -1,0 +1,19 @@
+{
+  // The door's harness tests and their config: they run in Node and start
+  // Workers with wrangler. The Worker itself is worker/tsconfig.json.
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2024", "DOM"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["test/**/*.ts", "*.ts"]
+}

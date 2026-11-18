@@ -1,24 +1,31 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  assertNamedByRepo,
   parseItems,
   roadmapItems,
 } from '../../../../packages/progress/src/index';
 import {
   boardPages,
+  FIXTURE_BOARD_ID,
   FIXTURE_REPO,
+  repoPages,
 } from '../../../../packages/progress/test/board-fixture';
 import {
   FAKE_APP_ID,
   FAKE_BOARD_ID,
+  FAKE_INSTALLATION_ID,
   FAKE_ORG,
   FAKE_REPO_NAME,
   FAKE_TOKEN,
+  INSTALLED,
+  READ_ONLY,
 } from '../github-fake/contract';
 import {
   appJwt,
   importAppKey,
   installationToken,
   readBoardPages,
+  readRepoIssuePages,
   USER_AGENT,
   type App,
 } from '../../worker/github';
@@ -26,8 +33,8 @@ import { roadmapWorld, type RoadmapWorld } from './harness';
 
 /**
  * The roadmap's read-only GitHub App (#341, spec §5.2 item 3): a JWT signed
- * with the App's key, an installation token for the one repository whose
- * rights must be exactly the three reads, and every page of the board.
+ * with the App's key, an installation holding the three reads (#797), a token for the one repository asking for
+ * and holding exactly the three reads (#704), and every page of the board.
  * worker/github.ts runs here in Node with every `fetch` answered by the fake
  * GitHub (test/github-fake), which verifies the JWT with the App's public key
  * as GitHub would; the same module runs inside workerd, with the PKCS#1 key
@@ -133,27 +140,40 @@ describe('installationToken', () => {
     );
   });
 
+  it('mints from the installation as it stands, the three reads alone (#797)', async () => {
+    await expect(installationToken(app(), NOW())).resolves.toBe(FAKE_TOKEN);
+  });
+
   it('refuses an installation that may write issues', async () => {
     await configureFake({
-      installationPermissions: {
-        issues: 'write',
-        metadata: 'read',
-        organization_projects: 'read',
-      },
+      installationPermissions: { ...INSTALLED, issues: 'write' },
     });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
       'the roadmap App’s installation has {"issues":"write","metadata":"read","organization_projects":"read"}, not exactly {"issues":"read","metadata":"read","organization_projects":"read"}',
     );
   });
 
-  it('refuses an installation with a right beyond the three reads', async () => {
+  it('refuses an installation that may write administration (#704)', async () => {
     await configureFake({
-      installationPermissions: {
-        contents: 'read',
-        issues: 'read',
-        metadata: 'read',
-        organization_projects: 'read',
-      },
+      installationPermissions: { ...INSTALLED, administration: 'write' },
+    });
+    await expect(installationToken(app(), NOW())).rejects.toThrow(
+      'the roadmap App’s installation has {"administration":"write","issues":"read","metadata":"read","organization_projects":"read"}',
+    );
+  });
+
+  it('refuses an installation that still holds Administration: read, so a change to the App is seen (#797)', async () => {
+    await configureFake({
+      installationPermissions: { ...INSTALLED, administration: 'read' },
+    });
+    await expect(installationToken(app(), NOW())).rejects.toThrow(
+      'the roadmap App’s installation has {"administration":"read","issues":"read","metadata":"read","organization_projects":"read"}, not exactly',
+    );
+  });
+
+  it('refuses an installation with a right beyond the three', async () => {
+    await configureFake({
+      installationPermissions: { ...INSTALLED, contents: 'read' },
     });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
       'the roadmap App’s installation has {"contents":"read","issues":"read","metadata":"read","organization_projects":"read"}',
@@ -162,10 +182,22 @@ describe('installationToken', () => {
 
   it('refuses an installation without the Projects read', async () => {
     await configureFake({
-      installationPermissions: { issues: 'read', metadata: 'read' },
+      installationPermissions: {
+        issues: 'read',
+        metadata: 'read',
+      },
     });
     await expect(installationToken(app(), NOW())).rejects.toThrow(
       'the roadmap App’s installation has {"issues":"read","metadata":"read"}',
+    );
+  });
+
+  it('refuses an issued token that carries Administration, as one minted without naming its rights would (#704)', async () => {
+    await configureFake({
+      tokenPermissions: { ...INSTALLED, administration: 'read' },
+    });
+    await expect(installationToken(app(), NOW())).rejects.toThrow(
+      'the roadmap App’s token has {"administration":"read","issues":"read","metadata":"read","organization_projects":"read"}, not exactly {"issues":"read","metadata":"read","organization_projects":"read"}',
     );
   });
 
@@ -193,6 +225,60 @@ describe('installationToken', () => {
     await expect(installationToken(app({ appId: '1' }), NOW())).rejects.toThrow(
       'GitHub refused GET /orgs/shyden-labs/installation: HTTP 401',
     );
+  });
+});
+
+describe('the fake GitHub issues tokens as GitHub does (#704)', () => {
+  /** The fake's answer to a token request with this body. */
+  const mint = async (body: unknown) => {
+    const jwt = await appJwt(FAKE_APP_ID, world.appKey.pkcs1, NOW());
+    return world.github(
+      new Request(
+        `https://api.github.com/app/installations/${String(FAKE_INSTALLATION_ID)}/access_tokens`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+            'User-Agent': USER_AGENT,
+          },
+          body: JSON.stringify(body),
+        },
+      ),
+    );
+  };
+
+  it('narrows the token to the permissions the request names', async () => {
+    const response = await mint({
+      repositories: [FAKE_REPO_NAME],
+      permissions: READ_ONLY,
+    });
+    expect(response.status).toBe(201);
+    expect(
+      (await response.json<{ permissions: unknown }>()).permissions,
+    ).toEqual(READ_ONLY);
+  });
+
+  it('gives the token every right of the installation when the request names none', async () => {
+    const response = await mint({ repositories: [FAKE_REPO_NAME] });
+    expect(
+      (await response.json<{ permissions: unknown }>()).permissions,
+    ).toEqual(INSTALLED);
+  });
+
+  it('refuses a request for more than the installation holds', async () => {
+    const response = await mint({
+      repositories: [FAKE_REPO_NAME],
+      permissions: { ...READ_ONLY, issues: 'write' },
+    });
+    expect(response.status).toBe(422);
+  });
+
+  it('refuses a request for a right the installation lacks', async () => {
+    const response = await mint({
+      repositories: [FAKE_REPO_NAME],
+      permissions: { contents: 'read' },
+    });
+    expect(response.status).toBe(422);
   });
 });
 
@@ -246,6 +332,95 @@ describe('readBoardPages', () => {
     await configureFake({ endlessPages: true });
     await expect(readBoardPages(FAKE_TOKEN, FAKE_BOARD_ID)).rejects.toThrow(
       'the board PVT_fixture has more than 20 pages',
+    );
+    expect(await seenByFake()).toHaveLength(20);
+  });
+});
+
+describe('readRepoIssuePages (#751)', () => {
+  it('reads every page of the repository’s issues, following each endCursor', async () => {
+    await configureFake({ repoPages: repoPages() });
+    const pages = await readRepoIssuePages(
+      FAKE_TOKEN,
+      FAKE_ORG,
+      FAKE_REPO_NAME,
+    );
+    expect(pages).toHaveLength(2);
+    expect(
+      (await seenByFake()).map((s) => [s.query, s.cursor] as const),
+    ).toEqual([
+      ['issues', null],
+      ['issues', '1'],
+    ]);
+  });
+
+  it('gives pages the shared cross-check reads as naming the fixture board’s issues', async () => {
+    await configureFake({ repoPages: repoPages() });
+    const pages = await readRepoIssuePages(
+      FAKE_TOKEN,
+      FAKE_ORG,
+      FAKE_REPO_NAME,
+    );
+    const today = new Date().toISOString().slice(0, 10);
+    expect(() => {
+      assertNamedByRepo(
+        boardPages(today),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        new Date(),
+      );
+    }).not.toThrow();
+  });
+
+  it('sends its User-Agent on every page', async () => {
+    await configureFake({ repoPages: repoPages() });
+    await readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME);
+    expect((await seenByFake()).map((s) => s.userAgent)).toEqual([
+      USER_AGENT,
+      USER_AGENT,
+    ]);
+  });
+
+  it('refuses an answer carrying GraphQL errors, naming the first', async () => {
+    await configureFake({
+      graphqlErrors: [{ message: 'Something went wrong' }],
+    });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow(
+      'GitHub’s GraphQL answered with errors: Something went wrong',
+    );
+  });
+
+  it('names the status of a failed GraphQL request', async () => {
+    await configureFake({ graphqlStatus: 502 });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow('GitHub refused POST /graphql: HTTP 502');
+  });
+
+  it('refuses a repository GitHub does not know, by GitHub’s own error', async () => {
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, 'other'),
+    ).rejects.toThrow(
+      "GitHub’s GraphQL answered with errors: Could not resolve to a Repository with the name 'shyden-labs/other'.",
+    );
+  });
+
+  it('refuses an answer without the repository’s issues', async () => {
+    await configureFake({ repoPages: [{ data: { repository: null } }] });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow('GitHub found no issues for shyden-labs/fixture');
+  });
+
+  it('stops at 20 pages rather than follow a repository that never ends', async () => {
+    await configureFake({ endlessPages: true });
+    await expect(
+      readRepoIssuePages(FAKE_TOKEN, FAKE_ORG, FAKE_REPO_NAME),
+    ).rejects.toThrow(
+      'the repository shyden-labs/fixture has more than 20 pages of issues',
     );
     expect(await seenByFake()).toHaveLength(20);
   });

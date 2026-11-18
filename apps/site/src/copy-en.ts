@@ -282,7 +282,7 @@ export const COPY_EN = {
         'Nearly there: check your inbox and confirm your address.',
         'site §6.1',
       ),
-      privacy: line('How we handle your email', 'site §6.3'),
+      privacy: line('How your email is handled', 'site §6.3'),
     },
     follow: line('Follow development on GitHub', 'D17', 'site §3'),
     footer: line(
@@ -303,9 +303,18 @@ export const COPY_EN = {
   roadmap: {
     title: line('Roadmap', 'site §5'),
     intro: line(
-      'This is the game’s development board, live. It updates by itself as work moves, with no need to reload.',
+      'This is where the work on Yawelo Idle stands, read live from the development board. It updates by itself as work moves, with no need to reload.',
       'W5',
       'site §5',
+      'file:docs/translations/2026-11-14-roadmap-id.md',
+    ),
+    launch: line(
+      'Launch is the day Yawelo Idle opens to everyone, free to play in your browser.',
+      'file:docs/translations/2026-11-14-roadmap-id.md',
+    ),
+    howToRead: line(
+      'The percentage counts finished stories out of all the stories planned so far. A story is one piece of work. New stories are added as the game grows, so the figure can fall as well as rise. Points show the size of the work left: a bigger job has more points. The date is a forecast from the last seven days’ pace, not a promise.',
+      'file:docs/translations/2026-11-14-roadmap-id.md',
     ),
     byTickets: line('By stories', 'site §5'),
     byEffort: line('By effort', 'site §5'),
@@ -318,13 +327,13 @@ export const COPY_EN = {
 
   privacy: {
     title: line('Privacy', 'site §6.3'),
-    collected: line('What we collect', 'site §6.3'),
-    basis: line('Why we may hold it', 'site §6.3'),
+    collected: line('What is collected', 'site §6.3'),
+    basis: line('Why it may be held', 'site §6.3'),
     withdraw: line('How to withdraw your consent', 'site §6.3'),
-    logging: line('What our servers log', 'site §6.3'),
+    logging: line('What the servers log', 'site §6.3'),
     cookies: line('Cookies and analytics', 'site §6.3'),
     noCookies: line(
-      'This site sets no cookies. We count visits with Cloudflare Web Analytics, which stores nothing on your device and does not fingerprint you.',
+      'This site sets no cookies. Visits are counted with Cloudflare Web Analytics, which stores nothing on your device and does not fingerprint you.',
       'W17',
       'site §3',
       'site §6.3',

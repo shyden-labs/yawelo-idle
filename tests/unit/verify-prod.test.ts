@@ -1,18 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import type { Probe } from '../../scripts/verify-dev';
 import {
+  DEV_MEDIA,
+  PROD_MEDIA,
+  type MediaHost,
+} from '../../apps/site/src/media';
+import {
   mediaJudgement,
   mediaProblems,
   notFoundJudgement,
   notFoundProblems,
   pageJudgement,
   pageProblems,
+  pastEndJudgement,
+  pastEndProblems,
+  rangeJudgement,
+  rangeProblems,
   reportedCommit,
   robotsJudgement,
   robotsProblems,
+  printVerdict,
+  verdictLines,
+  type MediaProbe,
+  type MediaSource,
 } from '../../scripts/verify-prod';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The production verify's judgements (#621 AC5), each fed a constructed
@@ -42,12 +53,7 @@ const answer = (
 describe('a holding home page', () => {
   it('passes when it is 200 HTML of this commit, exactly as built, with every header', () => {
     const judged = pageJudgement('/', answer(200, BUILT), BUILT, SHA, RULES);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'page checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/page-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a status other than 200, and judges nothing else', () => {
@@ -138,15 +144,7 @@ describe('the holding page’s dev copy (#621 AC8)', () => {
 
   it('passes a noindex page when the copy is not meant to be indexed', () => {
     const judged = pageJudgement('/', devAnswer, BUILT, SHA, DEV_RULES, false);
-    expect(
-      searched(judged.problems, {
-        of: judged.checked,
-        what: 'dev copy page checks',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/dev-page-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a dev copy that a search engine could index', () => {
@@ -168,12 +166,7 @@ describe('a holding 404 page', () => {
       NOT_FOUND,
       RULES,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: '404 checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/not-found-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a status other than 404', () => {
@@ -191,66 +184,275 @@ describe('a holding 404 page', () => {
   });
 });
 
-describe('a promo video file', () => {
-  const media = (
-    type: string,
-    length: string,
-    corp: string | undefined,
-  ): Probe =>
-    answer(200, '', {
-      'content-type': type,
-      'content-length': length,
-      ...(corp === undefined ? {} : { 'cross-origin-resource-policy': corp }),
-    });
+/**
+ * The promo media on their R2 host (#713): the tracked file, the host's
+ * headers, and a constructed answer. Production's zone rule must add both
+ * headers; a host can also require a header to be absent.
+ */
+const SOURCE: MediaSource = {
+  file: 'm.mp4',
+  type: 'video/mp4',
+  bytes: new Uint8Array([1, 2, 3, 4, 5]),
+};
+const HOST: MediaHost = {
+  origin: 'https://media.example',
+  headers: {
+    'cross-origin-resource-policy': 'same-site',
+    'x-content-type-options': 'nosniff',
+  },
+};
+const URL_ = 'https://media.example/m.mp4';
+const SENT = {
+  'cross-origin-resource-policy': 'same-site',
+  'x-content-type-options': 'nosniff',
+};
+const mediaAnswer = (
+  status: number,
+  bytes: readonly number[],
+  headers: Record<string, string>,
+): MediaProbe => ({
+  status,
+  headers: new Headers(headers),
+  bytes: new Uint8Array(bytes),
+});
+const WHOLE = {
+  'content-type': 'video/mp4',
+  'content-length': '5',
+  ...SENT,
+};
+const RANGE = {
+  'content-type': 'video/mp4',
+  'content-range': 'bytes 0-1/5',
+  ...SENT,
+};
+const PAST_END = { 'content-range': 'bytes */5', ...SENT };
+const without = (
+  headers: Record<string, string>,
+  name: string,
+): Record<string, string> =>
+  Object.fromEntries(Object.entries(headers).filter(([key]) => key !== name));
 
-  it('passes when it is 200 of its type and built size, embeddable by the same site only', () => {
+describe('a promo media file, asked for whole', () => {
+  it('passes when it is 200 of its type, byte for byte the tracked file, with the host’s headers', () => {
     const judged = mediaJudgement(
-      '/m.mp4',
-      media('video/mp4', '42', 'same-site'),
-      'video/mp4',
-      42,
+      URL_,
+      mediaAnswer(200, [1, 2, 3, 4, 5], WHOLE),
+      SOURCE,
+      HOST,
     );
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'media checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/media-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
+  });
+
+  it('names a status other than 200 and judges nothing after it', () => {
+    const judged = mediaJudgement(
+      URL_,
+      mediaAnswer(404, [], { 'content-type': 'text/plain' }),
+      SOURCE,
+      HOST,
+    );
+    expect(judged).toEqual({
+      checked: [`${URL_} status`],
+      problems: [`${URL_}: status 404, expected 200`],
+    });
   });
 
   it('names the wrong type', () => {
     expect(
       mediaProblems(
-        '/m.mp4',
-        media('text/html', '42', 'same-site'),
-        'video/mp4',
-        42,
+        URL_,
+        mediaAnswer(200, [1, 2, 3, 4, 5], {
+          ...WHOLE,
+          'content-type': 'text/html',
+        }),
+        SOURCE,
+        HOST,
       ),
-    ).toEqual(['/m.mp4: content-type text/html, expected video/mp4']);
+    ).toEqual([`${URL_}: content-type text/html, expected video/mp4`]);
   });
 
-  it('names a size other than the built file’s', () => {
+  it('names a size other than the tracked file’s', () => {
     expect(
       mediaProblems(
-        '/m.mp4',
-        media('video/mp4', '41', 'same-site'),
-        'video/mp4',
-        42,
+        URL_,
+        mediaAnswer(200, [1, 2, 3, 4, 5], { ...WHOLE, 'content-length': '4' }),
+        SOURCE,
+        HOST,
       ),
-    ).toEqual(['/m.mp4: Content-Length 41, expected 42']);
+    ).toEqual([`${URL_}: Content-Length 4, expected 5`]);
   });
 
-  it('names a missing embed rule', () => {
+  it('names a file that differs from the tracked one, and how to upload it', () => {
     expect(
       mediaProblems(
-        '/m.mp4',
-        media('video/mp4', '42', undefined),
-        'video/mp4',
-        42,
+        URL_,
+        mediaAnswer(200, [1, 2, 3, 4, 6], WHOLE),
+        SOURCE,
+        HOST,
       ),
     ).toEqual([
-      '/m.mp4: Cross-Origin-Resource-Policy is missing, expected same-site',
+      `${URL_}: differs from apps/site/media/m.mp4; upload it (apps/site/media/README.md)`,
     ]);
+  });
+
+  it('names a missing Cross-Origin-Resource-Policy, which would let any site embed it', () => {
+    expect(
+      mediaProblems(
+        URL_,
+        mediaAnswer(
+          200,
+          [1, 2, 3, 4, 5],
+          without(WHOLE, 'cross-origin-resource-policy'),
+        ),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([
+      `${URL_}: cross-origin-resource-policy is missing, expected same-site`,
+    ]);
+  });
+
+  it('names a missing nosniff', () => {
+    expect(
+      mediaProblems(
+        URL_,
+        mediaAnswer(
+          200,
+          [1, 2, 3, 4, 5],
+          without(WHOLE, 'x-content-type-options'),
+        ),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([`${URL_}: x-content-type-options is missing, expected nosniff`]);
+  });
+});
+
+describe('a promo media file, asked for bytes=0-1', () => {
+  it('passes when it is 206 of exactly those two bytes, of its type, with the host’s headers', () => {
+    const judged = rangeJudgement(
+      URL_,
+      mediaAnswer(206, [1, 2], RANGE),
+      SOURCE,
+      HOST,
+    );
+    expect(judged.problems).toEqual([]);
+  });
+
+  it('names a whole-file 200, which a range-less server sends, and judges nothing after it', () => {
+    const judged = rangeJudgement(
+      URL_,
+      mediaAnswer(200, [1, 2, 3, 4, 5], WHOLE),
+      SOURCE,
+      HOST,
+    );
+    expect(judged).toEqual({
+      checked: [`${URL_} bytes=0-1 status`],
+      problems: [`${URL_} bytes=0-1: status 200, expected 206`],
+    });
+  });
+
+  it('names a Content-Range other than the two bytes of the tracked size', () => {
+    expect(
+      rangeProblems(
+        URL_,
+        mediaAnswer(206, [1, 2], { ...RANGE, 'content-range': 'bytes 0-1/6' }),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([
+      `${URL_} bytes=0-1: Content-Range bytes 0-1/6, expected bytes 0-1/5`,
+    ]);
+  });
+
+  it('names bytes other than the tracked file’s first two', () => {
+    expect(
+      rangeProblems(URL_, mediaAnswer(206, [1, 3], RANGE), SOURCE, HOST),
+    ).toEqual([
+      `${URL_} bytes=0-1: the 2 bytes served are not the first 2 of apps/site/media/m.mp4`,
+    ]);
+  });
+
+  it('names the wrong type', () => {
+    expect(
+      rangeProblems(
+        URL_,
+        mediaAnswer(206, [1, 2], { ...RANGE, 'content-type': 'text/html' }),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([
+      `${URL_} bytes=0-1: content-type text/html, expected video/mp4`,
+    ]);
+  });
+
+  it('names a missing header', () => {
+    expect(
+      rangeProblems(
+        URL_,
+        mediaAnswer(206, [1, 2], without(RANGE, 'x-content-type-options')),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([
+      `${URL_} bytes=0-1: x-content-type-options is missing, expected nosniff`,
+    ]);
+  });
+});
+
+describe('a promo media file, asked for a range past its end', () => {
+  it('passes when it is 416 naming the tracked size, with the host’s headers', () => {
+    const judged = pastEndJudgement(
+      URL_,
+      mediaAnswer(416, [], PAST_END),
+      SOURCE,
+      HOST,
+    );
+    expect(judged.problems).toEqual([]);
+  });
+
+  it('names a status other than 416 and judges nothing after it', () => {
+    const judged = pastEndJudgement(
+      URL_,
+      mediaAnswer(200, [1, 2, 3, 4, 5], WHOLE),
+      SOURCE,
+      HOST,
+    );
+    expect(judged).toEqual({
+      checked: [`${URL_} bytes=5- status`],
+      problems: [`${URL_} bytes=5-: status 200, expected 416`],
+    });
+  });
+
+  it('names a Content-Range other than the tracked size', () => {
+    expect(
+      pastEndProblems(
+        URL_,
+        mediaAnswer(416, [], { ...PAST_END, 'content-range': 'bytes */6' }),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([
+      `${URL_} bytes=5-: Content-Range bytes */6, expected bytes */5`,
+    ]);
+  });
+
+  it('names a missing header', () => {
+    expect(
+      pastEndProblems(
+        URL_,
+        mediaAnswer(416, [], without(PAST_END, 'cross-origin-resource-policy')),
+        SOURCE,
+        HOST,
+      ),
+    ).toEqual([
+      `${URL_} bytes=5-: cross-origin-resource-policy is missing, expected same-site`,
+    ]);
+  });
+
+  it('names a missing Content-Range from a host that names the size', () => {
+    expect(
+      pastEndProblems(URL_, mediaAnswer(416, [], SENT), SOURCE, HOST),
+    ).toEqual([`${URL_} bytes=5-: Content-Range missing, expected bytes */5`]);
   });
 });
 
@@ -259,12 +461,7 @@ describe('the production robots file', () => {
 
   it('passes when it is the built robots file', () => {
     const judged = robotsJudgement(answer(200, ALLOW, {}), ALLOW);
-    expect(
-      searched(judged.problems, { of: judged.checked, what: 'robots checks' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('verify-prod/robots-checks', judged.checked.length),
-    ).toBeUndefined();
+    expect(judged.problems).toEqual([]);
   });
 
   it('names a robots file that differs from the build', () => {
@@ -282,5 +479,64 @@ describe('the commit a page reports', () => {
 
   it('is undefined on a page with no stamp', () => {
     expect(reportedCommit('<html></html>')).toBeUndefined();
+  });
+});
+
+describe('verdictLines (#715): every line names the environment it checked', () => {
+  it('a passing production check names production and its media host', () => {
+    expect(verdictLines('production', PROD_MEDIA, [])).toEqual([
+      `✓ production serves exactly what this commit builds, in English and Indonesian, with its headers, 404 pages, robots file and promo video from ${PROD_MEDIA.origin}`,
+    ]);
+  });
+
+  it('a passing dev-copy check names the dev copy and its media host', () => {
+    expect(verdictLines('dev copy', DEV_MEDIA, [])).toEqual([
+      `✓ the holding page's dev copy serves exactly what this commit builds, in English and Indonesian, with its headers, 404 pages, robots file and promo video from ${DEV_MEDIA.origin}`,
+    ]);
+  });
+
+  it('a failing production check names production on each problem', () => {
+    expect(
+      verdictLines('production', PROD_MEDIA, [
+        '/ answered 500',
+        'robots.txt differs',
+      ]),
+    ).toEqual([
+      '✗ production: / answered 500',
+      '✗ production: robots.txt differs',
+    ]);
+  });
+
+  it('a failing dev-copy check names the dev copy on each problem', () => {
+    expect(verdictLines('dev copy', DEV_MEDIA, ['/ answered 500'])).toEqual([
+      "✗ the holding page's dev copy: / answered 500",
+    ]);
+  });
+});
+
+describe('printVerdict (#715): from the --dev-copy flag, prints the lines and gives the exit code', () => {
+  const recorder = () => {
+    const out: string[] = [];
+    const err: string[] = [];
+    return {
+      out,
+      err,
+      log: (line: string) => out.push(line),
+      error: (line: string) => err.push(line),
+    };
+  };
+
+  it('prints the success line and exits 0 when nothing failed', () => {
+    const console = recorder();
+    expect(printVerdict(true, [], console)).toBe(0);
+    expect(console.out).toEqual(verdictLines('dev copy', DEV_MEDIA, []));
+    expect(console.err).toEqual([]);
+  });
+
+  it('prints each failure as an error and exits 1', () => {
+    const console = recorder();
+    expect(printVerdict(false, ['/ answered 500'], console)).toBe(1);
+    expect(console.err).toEqual(['✗ production: / answered 500']);
+    expect(console.out).toEqual([]);
   });
 });

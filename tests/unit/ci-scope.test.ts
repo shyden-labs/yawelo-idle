@@ -7,13 +7,10 @@ import {
   scopeFor,
   type Change,
 } from '../../scripts/ci-scope';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The docs-only fast path (#360). build-and-test classifies the change it
- * tests (the pull request's merge commit, or one commit under every-commit)
- * against its first parent. Docs-only means every changed path is
+ * tests (the pull request's merge commit) against its first parent. Docs-only means every changed path is
  * HANDOVER.md or Markdown under docs/, and then only Format and the unit
  * suite run. Anything else, and anything the classifier cannot read, is
  * full: every step runs as before.
@@ -106,10 +103,10 @@ describe('the classification (AC1, AC4)', () => {
   });
 
   it('is full for one code path, and names it', () => {
-    const result = classify([change('M', 'scripts/every-commit.ts')]);
+    const result = classify([change('M', 'scripts/ci-scope.ts')]);
     expect(result.scope).toBe('full');
-    expect(result.reason).toContain('scripts/every-commit.ts');
-    expect(result.judged).toEqual(['scripts/every-commit.ts']);
+    expect(result.reason).toContain('scripts/ci-scope.ts');
+    expect(result.judged).toEqual(['scripts/ci-scope.ts']);
   });
 
   it('is full for a deletion off the allowlist', () => {
@@ -123,7 +120,11 @@ describe('the classification (AC1, AC4)', () => {
     ]);
     expect(result.scope).toBe('full');
     expect(result.reason).toContain('package.json');
-    expect(result.reason).not.toContain('HANDOVER.md');
+    expect(
+      result.judged.filter(
+        (path) => path !== 'package.json' && result.reason.includes(path),
+      ),
+    ).toEqual([]);
     expect(result.judged).toEqual(['package.json', 'HANDOVER.md']);
   });
 
@@ -146,7 +147,7 @@ describe('the classification (AC1, AC4)', () => {
     const result = classify([]);
     expect(result.scope).toBe('full');
     expect(result.reason).toMatch(/empty/);
-    expect(result.judged).toEqual([]);
+    expect(classify([]).judged).toEqual([]);
   });
 
   it('is full for a rename record, which --no-renames never asks git for', () => {
@@ -181,10 +182,7 @@ describe('the event decides whether the fast path applies at all (AC3)', () => {
       });
       expect(result.scope).toBe('full');
       expect(result.reason).toContain(JSON.stringify(event));
-      expect(searched(reads, { of: FULL_EVENTS, what: 'events' })).toEqual([]);
-      expect(
-        floorBreach('ci-scope/full-events', FULL_EVENTS.length),
-      ).toBeUndefined();
+      expect(reads).toEqual([]);
     },
   );
 

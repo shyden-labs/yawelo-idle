@@ -1,12 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
-import {
-  PASSWORD,
-  roadmapWorld,
-  WEBHOOK_SECRET,
-  type RoadmapWorld,
-} from './harness';
+import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
 
 /**
  * The site Worker's roadmap routes (#341): the webhook's door at
@@ -17,7 +12,7 @@ import {
  * gate applies; each call returns once the work it handed to `waitUntil` is
  * done (test/roadmap-worker/test-worker.ts).
  */
-const HOST = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const HOST = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 
 let world: RoadmapWorld;
@@ -44,22 +39,6 @@ type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
   world.server.fetch(`${HOST}${path}`, init);
 
-async function sign(body: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(WEBHOOK_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const mac = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(body),
-  );
-  return `sha256=${[...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
-}
-
 async function deliver(event: string, payload: unknown, signature?: string) {
   const body = JSON.stringify(payload);
   return call('/hooks/github', {
@@ -74,9 +53,8 @@ async function deliver(event: string, payload: unknown, signature?: string) {
 }
 
 const boardReads = async () =>
-  (await seenByFake()).filter(
-    (s) => s.url.endsWith('/graphql') && s.cursor === null,
-  ).length;
+  (await seenByFake()).filter((s) => s.query === 'board' && s.cursor === null)
+    .length;
 
 beforeEach(async () => {
   await resetFake();
@@ -97,6 +75,25 @@ describe('/hooks/github', () => {
     });
     expect(response.status).toBe(202);
     expect(await boardReads()).toBe(1);
+  });
+
+  // #689: the hook hands the delivery's card and time to the roadmap. A
+  // change stamped far ahead of the fixture is one no read can show yet.
+  it('hands the delivery’s card and time to the roadmap, which counts a read behind it as late', async () => {
+    const staleReads = async () =>
+      (
+        (await (
+          await call('/api/roadmap/health', { headers: AUTH })
+        ).json()) as { staleReads: number }
+      ).staleReads;
+    const before = await staleReads();
+    const response = await deliver('issues', {
+      action: 'edited',
+      issue: { number: 9, updated_at: '2999-01-01T00:00:00Z' },
+      repository: { full_name: FIXTURE_REPO },
+    });
+    expect(response.status).toBe(202);
+    expect(await staleReads()).toBe(before + 1);
   });
 
   it('answers a signed ping without reading', async () => {
@@ -175,12 +172,53 @@ describe('/api/roadmap*', () => {
     const response = await call('/api/roadmap.json', { headers: AUTH });
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    const snapshot = (await response.json()) as {
-      version: number;
-      lines: string[];
-    };
+    const snapshot = (await response.json()) as { version: number };
     expect(snapshot.version).toBeGreaterThanOrEqual(1);
-    expect(snapshot.lines).toHaveLength(2);
+  });
+
+  it('serves nothing the public page does not show (#840)', async () => {
+    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const served = await response.text();
+    expect({
+      postLaunchStory: served.includes('"number":7,'),
+      notPlannedStory: served.includes('"number":8,'),
+      rawTitle: served.includes('Story '),
+      epicTicketTitle: served.includes('Epic'),
+      labels: served.includes('labels'),
+      closeOutLines: served.includes('By tickets'),
+    }).toEqual({
+      postLaunchStory: false,
+      notPlannedStory: false,
+      rawTitle: false,
+      epicTicketTitle: false,
+      labels: false,
+      closeOutLines: false,
+    });
+  });
+
+  /** The snapshot's card for issue `number`, as the Worker serves it. */
+  const servedItem = async (number: number) => {
+    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const snapshot = (await response.json()) as {
+      items: { number: number }[];
+    };
+    return snapshot.items.find((item) => item.number === number);
+  };
+
+  it('serves each story’s epic and Public title (#826)', async () => {
+    expect(await servedItem(2)).toMatchObject({
+      parent: 1,
+      publicTitle: 'Your village grows',
+      publicSummary: null,
+    });
+  });
+
+  it('serves each epic’s Public summary (#826)', async () => {
+    expect(await servedItem(1)).toMatchObject({
+      parent: null,
+      publicTitle: null,
+      publicSummary: 'The heart of the game.',
+    });
   });
 
   it('serves the health as JSON, never cached', async () => {

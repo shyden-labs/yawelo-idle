@@ -15,7 +15,6 @@ import {
 import { stateHash } from '../../core/src/hash';
 import { apply, replay } from '../../core/src/log';
 import type { GameState } from '../../core/src/state';
-import { floorBreach } from '../../../tests/floors';
 import {
   allEvents,
   eventsOf,
@@ -28,7 +27,6 @@ import {
   totals,
   type SliceRow,
 } from '../../../tests/golden';
-import { searched } from '../../../tests/searched';
 
 /**
  * The golden log's runs that do not fit the unit suite (#542): each heavy
@@ -154,19 +152,10 @@ describe('each heavy slice, from its start (#542)', () => {
     'slice %i (day %i, open %i, part %i): every %s offer’s affordable is apply’s answer',
     (n, _day, _open, _part, kind) => {
       const tally = judgedSlice(n)[kind];
-      const offers = tally.accepted + tally.refused;
-      expect(
-        searched(tally.disagreements, {
-          of: offers,
-          what: `slice ${String(n)}'s judged ${kind} offers`,
-        }),
-      ).toEqual([]);
+      expect(tally.disagreements).toEqual([]);
       expect(shopCounts(judgedSlice(n))[kind], REGENERATE).toEqual(
         sliceOf(n).shop[kind],
       );
-      expect(
-        floorBreach(`shop-agreement/slice ${String(n)}/${kind}`, offers),
-      ).toBeUndefined();
     },
   );
 });
@@ -188,13 +177,7 @@ describe('the whole golden log, from the first state (#542 AC4)', () => {
     'judged whole, every %s offer’s affordable is apply’s answer, as many as the slices judged',
     (kind) => {
       const tally = judgedWhole()[kind];
-      const offers = tally.accepted + tally.refused;
-      expect(
-        searched(tally.disagreements, {
-          of: offers,
-          what: `the whole log's judged ${kind} offers`,
-        }),
-      ).toEqual([]);
+      expect(tally.disagreements).toEqual([]);
       let accepted = 0;
       let refused = 0;
       for (const slice of golden().slices) {
@@ -205,9 +188,6 @@ describe('the whole golden log, from the first state (#542 AC4)', () => {
         accepted,
         refused,
       });
-      expect(
-        floorBreach(`shop-agreement/whole log/${kind}`, offers),
-      ).toBeUndefined();
     },
   );
 });

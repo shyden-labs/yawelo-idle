@@ -10,7 +10,7 @@ import { runOf } from './workflow-steps';
  * there at its full count, and the unit suite keeps only stand-ins of each
  * (global rule, 2026-10-12), so a CI step removed, or a glob that lets the
  * properties run nowhere, would let them pass by not running; this suite
- * fails instead. Its time limit is held in suite-limits.test.ts (#476). The
+ * fails instead. The
  * workflow is read as parsed YAML, so a comment naming a command cannot
  * stand in for a step.
  */
@@ -55,5 +55,9 @@ describe('the properties suite in CI (#543)', () => {
     expect(
       root.test?.include?.filter((glob) => glob.startsWith('packages/')),
     ).toEqual(['packages/*/test/**/*.test.ts']);
+  });
+
+  it('seeds every file from the one seeding home, so a reach count’s breach names its seed (#84)', () => {
+    expect(properties.test?.setupFiles).toEqual(['tests/properties-setup.ts']);
   });
 });

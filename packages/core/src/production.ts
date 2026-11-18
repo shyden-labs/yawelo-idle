@@ -18,17 +18,17 @@
  * restart there. A held festival card's window edge splits a bucket, since
  * the card's bonus doubles from that wall-clock millisecond (#30).
  */
-import { BALANCE } from './balance';
-import { DAY_MS, HOUR_MS, bucketStart, simMs, type SimMs } from './clock';
-import { cardFactor, heldCards, nextFestivalEdge, setFactor } from './cards';
-import type { Course, CultureCard, Encounter } from './course';
-import { encounterOutput, milestoneFactor } from './encounters';
-import { rootFactors } from './grammar';
-import { meanRetrievability } from './memory';
-import { Num } from './num';
-import { ownedCount, type GameState } from './state';
-import { globalMultiplier, phrasebookId, upgradeLevel } from './upgrades';
-import { lexiconItem, sharesTag, wordBonus } from './words';
+import { BALANCE } from './balance.ts';
+import { DAY_MS, HOUR_MS, bucketStart, simMs, type SimMs } from './clock.ts';
+import { cardFactor, heldCards, nextFestivalEdge, setFactor } from './cards.ts';
+import type { Course, CultureCard, Encounter } from './course.ts';
+import { encounterOutput, milestoneFactor } from './encounters.ts';
+import { rootFactors } from './grammar.ts';
+import { meanRetrievability } from './memory.ts';
+import { Num } from './num.ts';
+import { ownedCount, type GameState } from './state.ts';
+import { globalMultiplier, phrasebookId, upgradeLevel } from './upgrades.ts';
+import { lexiconItem, sharesTag, wordBonus } from './words.ts';
 
 const THOUSAND = Num.from(1000);
 const PHRASEBOOK = Num.from(BALANCE.insightUpgrades.phrasebookMultiplier);
@@ -84,12 +84,12 @@ function bucketBonuses(
   const skew = state.wall - state.sim;
   const factors = rootFactors(course, state);
   return sortedWords(state.words).map(([id, word]) => {
-    const { lastReview, stability } = word.card;
+    const { lastReview } = word.card;
     const meanR =
       lastReview === null
         ? 0
         : meanRetrievability(
-            stability,
+            word.card,
             (from + skew - lastReview) / DAY_MS,
             spanDays,
           );
@@ -531,12 +531,7 @@ function edgeAfter(book: RateBook, wall: number): number | undefined {
   return edge;
 }
 
-function contextAt(
-  course: Course,
-  state: GameState,
-  book: RateBook,
-  t: SimMs,
-): RateContext {
+function contextAt(course: Course, book: RateBook, t: SimMs): RateContext {
   const wall = t + book.skew;
   const byEdge = within(
     book.contexts,
@@ -666,7 +661,7 @@ export function rateGainAt(
   t: SimMs,
 ): (i: number) => Num {
   const book = rateBook(course, state);
-  const context = contextAt(course, state, book, t);
+  const context = contextAt(course, book, t);
   const { list } = encountersOf(course);
   const counts = ownedCounts(course, state);
   return (i) => {
@@ -720,7 +715,7 @@ export function totalRate(breakdown: readonly EncounterRate[]): Num {
  */
 export function rateAt(course: Course, state: GameState, t: SimMs): Num {
   const book = rateBook(course, state);
-  const context = contextAt(course, state, book, t);
+  const context = contextAt(course, book, t);
   const { list } = encountersOf(course);
   const counts = ownedCounts(course, state);
   let from = 0;

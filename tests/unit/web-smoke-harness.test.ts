@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { webSmokeConfig } from '../../playwright.web.config';
+import { siteSmokeConfig } from '../site/smoke-config';
 import { runOf } from './workflow-steps';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
+import { BROWSER_TARGETS } from '../browser-targets';
 
 /**
  * The web smoke suite stays wired (#123 AC3), locally and against dev (#123
@@ -18,6 +18,10 @@ import { searched } from '../searched';
 
 interface Step {
   name?: string;
+  id?: string;
+  if?: string;
+  uses?: string;
+  with?: Record<string, unknown>;
   // YAML may type it otherwise: read it through runOf.
   run?: unknown;
   env?: Record<string, unknown>;
@@ -62,11 +66,8 @@ const jobsRunning = (run: string): [string, Job][] =>
   );
 
 describe('the web smoke suite (#123 AC3)', () => {
-  it('runs on Chromium, Firefox and WebKit', () => {
-    const engines = (local().projects ?? []).map(
-      (p) => p.use?.defaultBrowserType,
-    );
-    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+  it('runs on every supported target (#883)', () => {
+    expect(local().projects).toEqual(BROWSER_TARGETS);
   });
 
   it('loads the built game from its own Worker config, started fresh', () => {
@@ -123,11 +124,8 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     );
   });
 
-  it('runs on the same three engines, retrying nothing', () => {
-    const engines = (dev().projects ?? []).map(
-      (p) => p.use?.defaultBrowserType,
-    );
-    expect([...engines].sort()).toEqual(['chromium', 'firefox', 'webkit']);
+  it('runs on every supported target (#883), retrying nothing', () => {
+    expect(dev().projects).toEqual(BROWSER_TARGETS);
     expect(dev().retries).toBe(0);
     expect(dev().forbidOnly).toBe(true);
   });
@@ -159,16 +157,12 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
     });
     const installs = steps.filter((s) => /playwright install/.test(runOf(s)));
-    expect(
-      searched(installs, { of: steps, what: 'smoke job steps' }),
-      'no step installs browsers: the image has them',
-    ).toEqual([]);
-    expect(
-      floorBreach('web-smoke-harness/dev-smoke-steps', steps.length),
-    ).toBeUndefined();
+    expect(installs, 'no step installs browsers: the image has them').toEqual(
+      [],
+    );
   });
 
-  it('posts dev-verified only once the dev smoke and the holding page’s dev copy have passed (#621)', () => {
+  it('posts dev-verified only once the dev smoke, the site suite (#827), the holding page’s dev copy (#621) and the roadmap (#708) have passed', () => {
     const posting = Object.entries(deployDev.jobs).filter(([, job]) =>
       (job.steps ?? []).some((step) =>
         /context=dev-verified\b/.test(runOf(step)),
@@ -177,7 +171,168 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     expect(posting.map(([name]) => name)).toEqual(['dev-verified']);
     expect(needsOf(deployDev.jobs['dev-verified'])).toEqual([
       'smoke',
+      'site-smoke',
       'verify-holding',
+      'verify-roadmap',
     ]);
+  });
+
+  it('keeps a screenshot of each failing test (#888)', () => {
+    expect(dev().use?.screenshot).toBe('only-on-failure');
+  });
+
+  // A trace records each request's headers, the dev password's
+  // Authorization among them, and test-results is uploaded to a public
+  // repository's run (#888).
+  it('records no trace and no video against dev, which would carry the dev password', () => {
+    expect(dev().use?.trace).toBe('off');
+    expect(dev().use?.video).toBe('off');
+  });
+
+  it('uploads test-results when the dev smoke itself fails, and only then (#888)', () => {
+    const steps = deployDev.jobs['smoke']?.steps ?? [];
+    const suiteAt = steps.findIndex((s) => runOf(s) === 'npm run test:web:dev');
+    const suite = steps[suiteAt];
+    expect(suite?.id).toBe('suite');
+    const uploads = steps.filter((s) =>
+      (s.uses ?? '').startsWith('actions/upload-artifact@'),
+    );
+    expect(uploads).toHaveLength(1);
+    const upload = uploads[0];
+    expect(steps.indexOf(upload as Step)).toBe(suiteAt + 1);
+    expect(upload?.if).toBe(
+      "${{ failure() && steps.suite.outcome == 'failure' }}",
+    );
+    expect(upload?.with).toEqual({
+      name: 'smoke-failures',
+      path: 'test-results/',
+      'retention-days': 14,
+      'if-no-files-found': 'error',
+    });
+  });
+
+  it('pins the dev smoke upload action to the commit ci.yml pins', () => {
+    const pinned = (job: Job | undefined) =>
+      (job?.steps ?? [])
+        .map((s) => s.uses ?? '')
+        .filter((u) => u.startsWith('actions/upload-artifact@'));
+    const ciPins = Object.values(ci.jobs).flatMap(pinned);
+    expect(ciPins.length).toBeGreaterThan(0);
+    expect(pinned(deployDev.jobs['smoke'])).toEqual([ciPins[0]]);
+  });
+});
+
+const SITE_URL =
+  'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/';
+const site = () =>
+  siteSmokeConfig({
+    SITE_SMOKE_URL: SITE_URL,
+    DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+  });
+
+describe('the site suite against dev (#827)', () => {
+  it('targets the address it is given and answers its password challenge', () => {
+    expect(site().use?.baseURL).toBe(SITE_URL);
+    expect(site().use?.httpCredentials).toEqual({
+      username: 'site-smoke',
+      password: 'the dev password',
+    });
+    expect(site().webServer).toBeUndefined();
+  });
+
+  it('runs the specs in tests/site', () => {
+    expect(site().testDir).toBe('tests/site');
+  });
+
+  it('refuses to run with no address: it runs against dev only', () => {
+    expect(() => siteSmokeConfig({})).toThrow(/SITE_SMOKE_URL is not set/);
+  });
+
+  it('refuses a dev address without the dev password', () => {
+    expect(() => siteSmokeConfig({ SITE_SMOKE_URL: SITE_URL })).toThrow(
+      /SITE_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not/,
+    );
+  });
+
+  it('runs on every supported target (#883), retrying nothing', () => {
+    expect(site().projects).toEqual(BROWSER_TARGETS);
+    expect(site().retries).toBe(0);
+    expect(site().forbidOnly).toBe(true);
+  });
+
+  it('is npm run test:site:dev', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts['test:site:dev']).toBe(
+      'playwright test -c playwright.site.config.ts',
+    );
+  });
+
+  it('runs once in deploy-dev, after verify and the roadmap’s first read, in CI’s Playwright image, with the dev password', () => {
+    const running = jobsRunning('npm run test:site:dev');
+    expect(running.map(([name]) => name)).toEqual(['site-smoke']);
+    const job = deployDev.jobs['site-smoke'];
+    expect(needsOf(job)).toEqual(['verify', 'verify-roadmap']);
+    expect(job?.container?.image).toBe(
+      ci.jobs['build-and-test']?.container?.image,
+    );
+    expect(job?.environment).toMatchObject({ name: 'dev' });
+    const steps = job?.steps ?? [];
+    const suite = steps.filter((s) => runOf(s) === 'npm run test:site:dev');
+    expect(suite).toHaveLength(1);
+    expect(suite[0]?.env).toEqual({
+      SITE_SMOKE_URL: SITE_URL,
+      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
+    });
+    expect(steps.filter((s) => /playwright install/.test(runOf(s)))).toEqual(
+      [],
+    );
+  });
+
+  it('keeps a screenshot of each failing test (#864)', () => {
+    expect(site().use?.screenshot).toBe('only-on-failure');
+  });
+
+  // A trace records each request's headers, the dev password's
+  // Authorization among them, and test-results is uploaded to a public
+  // repository's run (#864).
+  it('records no trace and no video, which would carry the dev password', () => {
+    expect(site().use?.trace).toBe('off');
+    expect(site().use?.video).toBe('off');
+  });
+
+  it('uploads test-results when the suite itself fails, and only then (#864)', () => {
+    const steps = deployDev.jobs['site-smoke']?.steps ?? [];
+    const suiteAt = steps.findIndex(
+      (s) => runOf(s) === 'npm run test:site:dev',
+    );
+    const suite = steps[suiteAt];
+    expect(suite?.id).toBe('suite');
+    const uploads = steps.filter((s) =>
+      (s.uses ?? '').startsWith('actions/upload-artifact@'),
+    );
+    expect(uploads).toHaveLength(1);
+    const upload = uploads[0];
+    expect(steps.indexOf(upload as Step)).toBe(suiteAt + 1);
+    expect(upload?.if).toBe(
+      "${{ failure() && steps.suite.outcome == 'failure' }}",
+    );
+    expect(upload?.with).toEqual({
+      name: 'site-smoke-failures',
+      path: 'test-results/',
+      'retention-days': 14,
+      'if-no-files-found': 'error',
+    });
+  });
+
+  it('pins the upload action to the commit ci.yml pins', () => {
+    const pinned = (job: Job | undefined) =>
+      (job?.steps ?? [])
+        .map((s) => s.uses ?? '')
+        .filter((u) => u.startsWith('actions/upload-artifact@'));
+    const ciPins = Object.values(ci.jobs).flatMap(pinned);
+    expect(ciPins.length).toBeGreaterThan(0);
+    expect(pinned(deployDev.jobs['site-smoke'])).toEqual([ciPins[0]]);
   });
 });

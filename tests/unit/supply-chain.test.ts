@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import semver from 'semver';
 import { parse } from 'yaml';
 import { withoutYamlComments, withoutYamlQuotes } from './source-text';
+
 import { isRecord } from './workflow-secrets';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The CI supply chain is pinned, and something keeps it current.
@@ -68,21 +68,9 @@ const dependabot = () =>
  * is checked for — the sub-path note spells out `patterns: ["actions/cache*"]`
  * verbatim. Matched against the raw text, that prose SATISFIES the sub-path
  * guard on its own: the repo could reference `actions/cache` at three
- * sub-paths with no group whatsoever and still go green, and the position of
- * the comment (above the groups) makes the ordering check pass too. Caught by
- * mutation while adding that ordering check.
+ * sub-paths with no group whatsoever and still go green.
  */
 const configBody = () => withoutYamlComments(dependabot());
-
-/**
- * The config split into one text block per `package-ecosystem:` entry, so a
- * group's position is judged against the catch-all of ITS OWN ecosystem
- * rather than whichever one happens to appear first in the file.
- */
-const ecosystemBlocks = () =>
-  configBody()
-    .split(/(?=^\s*-\s*package-ecosystem:)/m)
-    .filter((block) => /package-ecosystem:/.test(block));
 
 /**
  * Every external `uses` value in the PARSED workflows, job calls and steps
@@ -147,13 +135,7 @@ describe('the CI supply chain is pinned', () => {
       .filter(({ text }) => !/@[0-9a-f]{40}(?=\s|$)/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(
-      searched(unpinned, { of: uses, what: 'third-party uses' }),
-      'a mutable tag can be repointed under us',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/pinned-uses', uses.length),
-    ).toBeUndefined();
+    expect(unpinned, 'a mutable tag can be repointed under us').toEqual([]);
   });
 
   it('every pinned action names the version its SHA resolves to', () => {
@@ -162,13 +144,7 @@ describe('the CI supply chain is pinned', () => {
       .filter(({ text }) => !/@[0-9a-f]{40}\s+#\s*v\d/.test(text))
       .map(({ where, text }) => `${where} ${text}`);
 
-    expect(
-      searched(opaque, { of: uses, what: 'third-party uses' }),
-      'a bare SHA bump is unreviewable by a human',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/versioned-uses', uses.length),
-    ).toBeUndefined();
+    expect(opaque, 'a bare SHA bump is unreviewable by a human').toEqual([]);
   });
 });
 
@@ -212,13 +188,7 @@ describe('the browser image is pinned and matches the test runner (#44)', () => 
     const unpinned = images
       .filter(({ image }) => !/@sha256:[0-9a-f]{64}$/.test(image))
       .map(({ where, image }) => `${where} ${image}`);
-    expect(
-      searched(unpinned, { of: images, what: 'container images' }),
-      'a tag can be re-pushed under us',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/digest-images', images.length),
-    ).toBeUndefined();
+    expect(unpinned, 'a tag can be re-pushed under us').toEqual([]);
   });
 
   it('the Playwright image is the version of @playwright/test the lockfile installs', () => {
@@ -238,12 +208,9 @@ describe('the browser image is pinned and matches the test runner (#44)', () => 
       )
       .map(({ where, image }) => `${where} ${image}`);
     expect(
-      searched(stale, { of: playwrightImages, what: 'Playwright images' }),
+      stale,
       `a browser build the runner was not made for fails to launch; move the tag to v${String(version)}-noble and re-read its digest from https://mcr.microsoft.com/v2/playwright/manifests/v${String(version)}-noble`,
     ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/playwright-images', playwrightImages.length),
-    ).toBeUndefined();
   });
 });
 
@@ -270,7 +237,7 @@ describe('Dependabot keeps the pins from rotting', () => {
   it('an action repo used at more than one sub-path is grouped into one PR', () => {
     const config = configBody();
     // Searched over every action repo: the sub-path ones are drawn from them,
-    // and there are none today (dormant, see below).
+    // and there are none today (dormant, see above).
     const repos = actionRepos();
     const ungrouped = repos
       .filter(isSubPath)
@@ -281,50 +248,9 @@ describe('Dependabot keeps the pins from rotting', () => {
       );
 
     expect(
-      searched(ungrouped, { of: repos, what: 'action repos' }),
+      ungrouped,
       'separate PRs per sub-path break the one-SHA-per-repo invariant',
     ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/grouped-action-repos', repos.length),
-    ).toBeUndefined();
-  });
-
-  /**
-   * Declaring the group is not enough — it has to WIN.
-   *
-   * Dependabot assigns a dependency to the FIRST group whose patterns match
-   * and then stops looking. `patch-updates` is a catch-all keyed on
-   * update-type, so it swallows a patch bump of `actions/cache/restore`
-   * before an `actions/cache*` group declared BELOW it is ever consulted.
-   * The group is present, the config reads correct, and the sub-paths still
-   * arrive in separate PRs — SHY-0226 all over again. Order is the control,
-   * not presence, so the presence test above cannot stand alone.
-   *
-   * Dormant today (this repo uses no sub-path actions) and verified by
-   * mutation, not by watching it pass.
-   */
-  it('a sub-path group is declared before the catch-all that would swallow it', () => {
-    const repos = actionRepos();
-    const misordered = repos.filter(isSubPath).flatMap(([key]) =>
-      ecosystemBlocks()
-        .filter((block) => withoutYamlQuotes(block).includes(`${key}*`))
-        .filter((block) => {
-          const catchAll = block.indexOf('patch-updates:');
-          return (
-            catchAll !== -1 &&
-            catchAll < withoutYamlQuotes(block).indexOf(`${key}*`)
-          );
-        })
-        .map(() => `${key} grouped after patch-updates`),
-    );
-
-    expect(
-      searched(misordered, { of: repos, what: 'action repos' }),
-      'Dependabot assigns to the FIRST matching group and stops',
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/ordered-action-repos', repos.length),
-    ).toBeUndefined();
   });
 
   it('a Dependabot config exists', () => {
@@ -354,12 +280,7 @@ describe('Dependabot keeps the pins from rotting', () => {
       'an ecosystem defaults to the default branch, bypassing the develop gate',
     ).toBe(ecosystems);
     const onMain = config.match(/target-branch:\s*["']?main["']?/g) ?? [];
-    expect(
-      searched(onMain, { of: ecosystems, what: 'Dependabot ecosystems' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('supply-chain/dependabot-ecosystems', ecosystems),
-    ).toBeUndefined();
+    expect(onMain).toEqual([]);
   });
 
   /**
@@ -368,7 +289,7 @@ describe('Dependabot keeps the pins from rotting', () => {
    * which types APIs the runtime lacks. Parsed, not read as text, so the
    * comment above the rule cannot satisfy it.
    */
-  it('does not offer @types/node majors above the .nvmrc line', () => {
+  it('does not offer @types/node majors above the Dockerfile line', () => {
     const doc: unknown = parse(dependabot());
     const updates =
       isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
@@ -379,7 +300,11 @@ describe('Dependabot keeps the pins from rotting', () => {
     const entry: unknown = npm[0];
     const ignore =
       isRecord(entry) && Array.isArray(entry.ignore) ? entry.ignore : [];
-    const above = `>=${String(Number(readFileSync('.nvmrc', 'utf8').trim()) + 1)}.0.0`;
+    // The Dockerfile holds an exact version (#785, #793); semver throws on anything else.
+    const node = readFileSync('docker/node/Dockerfile', 'utf8')
+      .trim()
+      .replace(/^FROM node:/, '');
+    const above = `>=${String(semver.major(node) + 1)}.0.0`;
     expect(ignore).toContainEqual({
       'dependency-name': '@types/node',
       versions: [above],
@@ -426,5 +351,218 @@ describe('the install is reproducible', () => {
     expect(lock.lockfileVersion).toBe(3);
     expect(lock.name).toBe(pkg().name);
     expect(lock.packages['']?.devDependencies).toEqual(pkg().devDependencies);
+  });
+});
+
+/**
+ * No dependency runs an install script (#788, Shyden's route (b), 2026-11-07).
+ *
+ * npm 11 reads `allowScripts`: `true` lets a package's install script run,
+ * and a bare name approves every future version, so a new esbuild or workerd
+ * release would run its script on an approval given to an older one. Denying
+ * every script removes that reach at a measured cost of about 0.05 s per
+ * start (the JavaScript launcher instead of the native binary; table on
+ * #788). A key with a version, range or dist-tag would leave every other
+ * version unnamed, so each key is a bare name, and each is denied.
+ */
+const allowScripts = (): Record<string, unknown> => {
+  const doc: unknown = JSON.parse(readFileSync('package.json', 'utf8'));
+  return isRecord(doc) && isRecord(doc.allowScripts) ? doc.allowScripts : {};
+};
+
+const BARE_PACKAGE_NAME = /^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/;
+
+const lockedInstallScripts = (): string[] => {
+  const lock: unknown = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  const packages =
+    isRecord(lock) && isRecord(lock.packages) ? lock.packages : {};
+  return Object.entries(packages)
+    .filter(
+      ([path, entry]) =>
+        // The root and the workspaces are this repo's own scripts, not a
+        // dependency's.
+        path.includes('node_modules/') &&
+        isRecord(entry) &&
+        entry.hasInstallScript === true,
+    )
+    .map(([path]) =>
+      path.slice(path.lastIndexOf('node_modules/') + 'node_modules/'.length),
+    );
+};
+
+describe('no dependency runs an install script (#788)', () => {
+  it('the lockfile holds packages with install scripts to check', () => {
+    expect(lockedInstallScripts().length).toBeGreaterThan(0);
+  });
+
+  it.each(Object.keys(allowScripts()))(
+    'allowScripts names %s bare, never with a version, range or dist-tag',
+    (key) => {
+      expect(key).toMatch(BARE_PACKAGE_NAME);
+    },
+  );
+
+  it.each(Object.keys(allowScripts()))('allowScripts denies %s', (key) => {
+    expect(allowScripts()[key], `${key} must be false, not approved`).toBe(
+      false,
+    );
+  });
+
+  it.each(lockedInstallScripts())(
+    'allowScripts names %s, which the lockfile says has an install script',
+    (name) => {
+      expect(Object.keys(allowScripts())).toContain(name);
+    },
+  );
+});
+
+/**
+ * A workflow runs only the tools the lockfile installed (#1006). Plain `npx x`
+ * downloads `x` from the registry when no local copy is found, at whatever
+ * version is newest, in a job that may hold a deploy token. `npx --no` refuses
+ * instead, so a missing install fails the step by name.
+ */
+const workflowNpx = () =>
+  workflowFiles().flatMap((file) =>
+    readFileSync(join(WORKFLOWS, file), 'utf8')
+      .split('\n')
+      .map((text, i) => ({ where: `${file}:${String(i + 1)}`, text }))
+      .filter(({ text }) => !text.trim().startsWith('#'))
+      .filter(({ text }) => /\bnpx\s/.test(text)),
+  );
+
+describe('a workflow never downloads a tool npx cannot find (#1006)', () => {
+  it('there are npx calls to check', () => {
+    // Measured 11 at a1fa1f85. Lower it only in the commit that removes one.
+    expect(workflowNpx().length).toBeGreaterThan(10);
+  });
+
+  // runtime population: the npx lines are read from the workflows at run time
+  it.each(workflowNpx())('$where runs npx --no', ({ text }) => {
+    expect(text).toMatch(/\bnpx --no\s/);
+  });
+});
+
+/**
+ * The coverage tool is pinned to the test runner (#728). `@vitest/coverage-v8`
+ * peers on one exact Vitest version, and Vitest warns that "running mixed
+ * versions is not supported" when they differ. So a Vitest bump that leaves
+ * the coverage package behind fails here, and Dependabot moves them together.
+ */
+const npmUpdate = (): Record<string, unknown> => {
+  const doc: unknown = parse(dependabot());
+  const updates =
+    isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+  const npm: unknown = updates.find(
+    (u) => isRecord(u) && u['package-ecosystem'] === 'npm',
+  );
+  return isRecord(npm) ? npm : {};
+};
+
+const stringsAt = (record: unknown, key: string): unknown[] =>
+  isRecord(record) && Array.isArray(record[key]) ? record[key] : [];
+
+describe('the coverage tool is pinned to the test runner (#728)', () => {
+  it('package.json names @vitest/coverage-v8 at the installed Vitest version, exactly', () => {
+    const installed = lockedVersion('vitest');
+    expect(installed, 'positive control: the lockfile names vitest').toMatch(
+      /^\d+\.\d+\.\d+$/,
+    );
+    const manifest = JSON.parse(
+      readFileSync('package.json', 'utf8'),
+    ) as PackageJson;
+    expect(manifest.devDependencies['@vitest/coverage-v8']).toBe(installed);
+  });
+
+  it('the lockfile installs @vitest/coverage-v8 at the installed Vitest version', () => {
+    expect(lockedVersion('@vitest/coverage-v8')).toBe(lockedVersion('vitest'));
+  });
+
+  it('Dependabot moves vitest and every @vitest package in one group', () => {
+    const groups = npmUpdate()['groups'];
+    const vitest = isRecord(groups) ? groups['vitest'] : undefined;
+    expect(stringsAt(vitest, 'patterns')).toEqual(['vitest', '@vitest/*']);
+  });
+
+  it("the patch catch-all excludes the vitest group's patterns, since Dependabot scores groups and order decides nothing", () => {
+    const groups = npmUpdate()['groups'];
+    const patch = isRecord(groups) ? groups['patch-updates'] : undefined;
+    expect(stringsAt(patch, 'exclude-patterns')).toEqual([
+      'vitest',
+      '@vitest/*',
+    ]);
+  });
+});
+
+/**
+ * Dependabot scores groups, and the order they are written in decides
+ * nothing (global rule 2026-10-20, #705). So every group with no `patterns`
+ * (a catch-all such as `patch-updates`) lists every pattern group's patterns
+ * under `exclude-patterns`, or it can swallow a dependency that group exists
+ * to hold together.
+ */
+const ECOSYSTEMS = ['npm', 'github-actions'] as const;
+
+const updateFor = (ecosystem: string): Record<string, unknown> => {
+  const doc: unknown = parse(dependabot());
+  const updates =
+    isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+  const found: unknown = updates.find(
+    (u) => isRecord(u) && u['package-ecosystem'] === ecosystem,
+  );
+  return isRecord(found) ? found : {};
+};
+
+describe('every catch-all group excludes every pattern group (#705)', () => {
+  it('names each ecosystem dependabot.yml carries', () => {
+    const doc: unknown = parse(dependabot());
+    const updates: unknown[] =
+      isRecord(doc) && Array.isArray(doc.updates) ? doc.updates : [];
+    expect(
+      updates.map((u): unknown => (isRecord(u) ? u['package-ecosystem'] : u)),
+    ).toEqual([...ECOSYSTEMS, 'docker']);
+  });
+
+  it.each(ECOSYSTEMS)(
+    '%s: every group with no patterns excludes every other group’s patterns',
+    (ecosystem) => {
+      const groups = updateFor(ecosystem)['groups'];
+      const entries = isRecord(groups) ? Object.entries(groups) : [];
+      const patterns = entries.flatMap(([, g]) => stringsAt(g, 'patterns'));
+      const catchAlls = entries.filter(
+        ([, g]) => stringsAt(g, 'patterns').length === 0,
+      );
+      expect(
+        catchAlls.length,
+        'positive control: a catch-all group',
+      ).toBeGreaterThan(0);
+      expect(
+        patterns.length,
+        'positive control: a pattern group',
+      ).toBeGreaterThan(0);
+      const missing = catchAlls.flatMap(([name, g]) =>
+        patterns
+          .filter((p) => !stringsAt(g, 'exclude-patterns').includes(p))
+          .map((p) => `${name} does not exclude ${String(p)}`),
+      );
+      expect(missing).toEqual([]);
+    },
+  );
+});
+
+describe('Dependabot bumps the Node pin (#793)', () => {
+  it('watches the Dockerfile for develop and never offers a new Node major', () => {
+    expect(updateFor('docker')).toEqual({
+      'package-ecosystem': 'docker',
+      directory: '/docker/node',
+      'target-branch': 'develop',
+      schedule: { interval: 'weekly' },
+      ignore: [
+        {
+          'dependency-name': 'node',
+          'update-types': ['version-update:semver-major'],
+        },
+      ],
+    });
   });
 });

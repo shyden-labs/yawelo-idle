@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ESLint, type Linter } from 'eslint';
 import { parse } from 'jsonc-parser';
-import { floorBreach } from '../floors';
 import { committableFiles } from '../unit/tracked-files';
 
 /**
@@ -32,8 +31,14 @@ import { committableFiles } from '../unit/tracked-files';
  * code at collection (tests/guards/collection-calls.test.ts). The first test
  * derives both lists from git and fails on any difference, either way.
  */
-const COMPONENTS = ['packages/ui/src/Shell.svelte'] as const;
-const WORKSPACES = ['packages/ui'] as const;
+const COMPONENTS = [
+  'apps/site/src/roadmap/Island.svelte',
+  'apps/site/src/roadmap/RoadmapSummary.svelte',
+  'apps/site/src/roadmap/VoyageMap.svelte',
+  'packages/ui/src/Shell.svelte',
+  'packages/ui/test/fixtures/Counter.svelte',
+] as const;
+const WORKSPACES = ['apps/site', 'packages/ui'] as const;
 
 /** The workspace (`apps/x`, `packages/x`) holding a path. */
 const workspaceOf = (path: string): string =>
@@ -54,7 +59,7 @@ async function lint(
 }
 
 describe('the Svelte gates (#123 AC2)', () => {
-  it('lists every component and its workspace, as git has them, at the recorded floor', () => {
+  it('lists every component and its workspace, as git has them', () => {
     // Every path git tracks or would at the next `git add -A`, so a new
     // component is judged before its first commit.
     const derived = committableFiles(['*.svelte']);
@@ -70,9 +75,6 @@ describe('the Svelte gates (#123 AC2)', () => {
     expect(derived).toEqual(grepped);
     expect(COMPONENTS).toEqual(derived);
     expect(WORKSPACES).toEqual([...new Set(derived.map(workspaceOf))]);
-    expect(
-      floorBreach('svelte-gates/components', derived.length),
-    ).toBeUndefined();
   });
 
   it.each(COMPONENTS)(

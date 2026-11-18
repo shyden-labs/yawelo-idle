@@ -2,8 +2,6 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { COPY_EN } from '../../apps/site/src/copy-en';
 import { CopyLine, line, type Source } from '../../apps/site/src/copy-line';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import {
   NUMBER_WORDS,
   TIME_PHRASES,
@@ -34,9 +32,8 @@ const COPY_FILE = 'apps/site/src/copy-en.ts';
 
 describe('the English copy cites its sources (#334)', () => {
   it('every text in the copy is a sourced, non-blank line', () => {
-    const { leaves, loose } = copyLeaves(COPY_EN);
-    expect(searched(loose, { of: leaves, what: 'copy texts' })).toEqual([]);
-    expect(floorBreach('site-copy/leaves', leaves.length)).toBeUndefined();
+    const { loose } = copyLeaves(COPY_EN);
+    expect(loose).toEqual([]);
   });
 
   it('every source names a real section, decision, issue or file', () => {
@@ -46,13 +43,7 @@ describe('the English copy cites its sources (#334)', () => {
         ? [{ path, source: '(none)' as Source }]
         : l.sources.map((source) => ({ path, source })),
     );
-    expect(
-      searched(
-        sources.filter(({ source }) => !resolves(source, docs)),
-        { of: sources, what: 'copy sources' },
-      ),
-    ).toEqual([]);
-    expect(floorBreach('site-copy/sources', sources.length)).toBeUndefined();
+    expect(sources.filter(({ source }) => !resolves(source, docs))).toEqual([]);
   });
 
   it('the walk reads as many lines as the file writes line( calls', () => {
@@ -186,16 +177,10 @@ describe('the English copy stays in sync with the game (#443)', () => {
   it('every figure read from the game has approved words for its value', () => {
     const figures = copyLeaves(COPY_EN).figures;
     expect(
-      searched(
-        figures.flatMap(({ path, figure }) =>
-          figure.missing === undefined ? [] : [`${path}: ${figure.missing}`],
-        ),
-        { of: figures, what: 'figures read from the game' },
+      figures.flatMap(({ path, figure }) =>
+        figure.missing === undefined ? [] : [`${path}: ${figure.missing}`],
       ),
     ).toEqual([]);
-    expect(
-      floorBreach('site-copy/figures-bound', figures.length),
-    ).toBeUndefined();
   });
 
   it('the walk reads as many figures as the file binds', () => {
@@ -209,16 +194,10 @@ describe('the English copy stays in sync with the game (#443)', () => {
       figureTokens(unbound).map((token) => ({ path, token, texts })),
     );
     expect(
-      searched(
-        figures
-          .filter(({ token, texts }) => !attestedFigure(token, texts))
-          .map(({ path, token }) => `${path}: ${token}`),
-        { of: figures, what: 'figures typed into the copy' },
-      ),
+      figures
+        .filter(({ token, texts }) => !attestedFigure(token, texts))
+        .map(({ path, token }) => `${path}: ${token}`),
     ).toEqual([]);
-    expect(
-      floorBreach('site-copy/figures-quoted', figures.length),
-    ).toBeUndefined();
   });
 
   it('every name in a line appears in one of its sources', () => {
@@ -226,14 +205,10 @@ describe('the English copy stays in sync with the game (#443)', () => {
       nameTokens(unbound).map((token) => ({ path, token, texts })),
     );
     expect(
-      searched(
-        names
-          .filter(({ token, texts }) => !attestedName(token, texts))
-          .map(({ path, token }) => `${path}: ${token}`),
-        { of: names, what: 'names in the copy' },
-      ),
+      names
+        .filter(({ token, texts }) => !attestedName(token, texts))
+        .map(({ path, token }) => `${path}: ${token}`),
     ).toEqual([]);
-    expect(floorBreach('site-copy/names', names.length)).toBeUndefined();
   });
 
   it('two readers find the same figures in every line', () => {

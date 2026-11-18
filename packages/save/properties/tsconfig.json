@@ -1,0 +1,10 @@
+{
+  // The properties run in Node under vitest, like the unit tests
+  // (test/tsconfig.json), whose chosen states they share.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../test/**/*.ts", "../src/**/*.ts"]
+}

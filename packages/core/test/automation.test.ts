@@ -330,7 +330,7 @@ describe('integrate with Pemandu (AC2)', () => {
 
   it('buys nothing when nothing is owned and nothing is affordable', () => {
     const s = pemandu(at(4, { held: 9 }));
-    expect(integrate(course, s, 3_600_000).owned).toEqual({});
+    expect(Object.keys(integrate(course, s, 3_600_000).owned)).toEqual([]);
   });
 
   it('pays what a purchase by hand pays, with the stamp discount', () => {

@@ -2,11 +2,10 @@ import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
+import { watched } from '../../../tests/watched';
 import { PERSONAS } from '../src/personas';
 import { pacingReport } from '../src/report';
-import type { PersonaRun } from '../src/run';
+import type { PersonaRun, Sail } from '../src/run';
 import {
   CI_BOUNDS,
   clickingNeverWins,
@@ -20,6 +19,7 @@ import {
   longWaits,
   sailTiming,
   sanity,
+  TUNING_TARGETS,
 } from '../src/targets';
 
 /**
@@ -87,6 +87,16 @@ async function run(name: string): Promise<PersonaRun> {
   return runOf(await played, name);
 }
 
+/**
+ * `name`'s run with watched sails: `read` is the sails a check read `key` of
+ * (#368, #370), so each floor counts what the check read, not the run.
+ */
+async function watchingSails(name: string, key: keyof Sail) {
+  const r = await run(name);
+  const { items, read } = watched(r.sails, key);
+  return { run: { ...r, sails: items }, read };
+}
+
 describe('the pacing suite', () => {
   it('asserts exactly the personas marked asserted', () => {
     expect(ASSERTED).toEqual(
@@ -99,22 +109,28 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
   it.each(ASSERTED)(
     '(a) %s sets sail for the first time after 30 to 60 minutes',
     async (name) => {
-      expect(firstSail(await run(name), CI_BOUNDS)).toEqual([]);
+      const first = await watchingSails(name, 'day');
+      expect(firstSail(first.run, CI_BOUNDS)).toEqual([]);
     },
   );
 
   it('(b) the Casual Learner reaches each later destination 1 to 3 days after the one before', async () => {
-    expect(gaps(await run('casual'), CI_BOUNDS)).toEqual([]);
+    const casual = await watchingSails('casual', 'day');
+    expect(gaps(casual.run, CI_BOUNDS)).toEqual([]);
   });
 
   it('(c) the Casual Learner reaches the finale in 3 to 5 weeks', async () => {
-    expect(finale(await run('casual'), CI_BOUNDS)).toEqual([]);
+    const { items } = watched([await run('casual')], 'finaleDay');
+    expect(items.flatMap((r) => finale(r, CI_BOUNDS))).toEqual([]);
   });
 
   it('(d) the Idler reaches the finale within 10 weeks', async () => {
-    expect(idlerFinishes(await run('idler'), CI_BOUNDS)).toEqual([]);
+    const { items } = watched([await run('idler')], 'finaleDay');
+    expect(items.flatMap((r) => idlerFinishes(r, CI_BOUNDS))).toEqual([]);
   });
 
+  // The opens are judged as the run plays them, each recorded in openDays
+  // (run.ts), so openDays is the population decisions reports on.
   it.each(ASSERTED)(
     '(e) every open of %s offers a meaningful decision',
     async (name) => {
@@ -125,27 +141,38 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
   );
 
   it('(f) learning pays: the Casual Learner reaches the finale at least 20% sooner than the Non-learner', async () => {
+    const {
+      items: [casual, nonlearner],
+    } = watched([await run('casual'), await run('nonlearner')], 'finaleDay');
     expect(
-      learningPays(await run('casual'), await run('nonlearner'), CI_BOUNDS),
+      casual && nonlearner
+        ? learningPays(casual, nonlearner, CI_BOUNDS)
+        : ['a run was not watched'],
     ).toEqual([]);
   });
 
   it('(f) the Diligent Learner finishes no later than the Casual Learner, nor the Casual Learner than the Idler', async () => {
+    const {
+      items: [diligent, casual, idler],
+    } = watched(
+      [await run('diligent'), await run('casual'), await run('idler')],
+      'finaleDay',
+    );
     expect(
-      learnersOrder(
-        await run('diligent'),
-        await run('casual'),
-        await run('idler'),
-      ),
+      diligent && casual && idler
+        ? learnersOrder(diligent, casual, idler)
+        : ['a run was not watched'],
     ).toEqual([]);
   });
 
   it('(g) clicking never beats idling: the Clicker takes at least 95% of the Casual Learner’s time to reach each sail’s goal', async () => {
+    const clicker = await watchingSails('clicker', 'reachedDay');
     expect(
-      clickingNeverWins(await run('clicker'), await run('casual'), CI_BOUNDS),
+      clickingNeverWins(clicker.run, await run('casual'), CI_BOUNDS),
     ).toEqual([]);
   });
 
+  // `views` counts every view the run judged for insane values (run.ts).
   it.each(ASSERTED)(
     '(h) %s meets no NaN, negative or infinite value',
     async (name) => {
@@ -163,16 +190,28 @@ describe('the pacing targets (AC4), at the spec’s bounds', () => {
     '(h) %s meets each sail’s goal after the sail before and no later than its own',
     async (name) => {
       const r = await run(name);
-      expect(searched(sailTiming(r), { of: r.sails, what: 'sails' })).toEqual(
-        [],
-      );
-      expect(
-        floorBreach(`pacing-sails/${name}`, r.sails.length),
-      ).toBeUndefined();
+      expect(sailTiming(r)).toEqual([]);
     },
   );
 
   it('(h) the Idler waits hours with its goal met before an open lets it sail', async () => {
     expect(longWaits(await run('idler')).length).toBeGreaterThan(0);
+  });
+});
+
+// The tuning's own targets for the two figures FSRS-7 moved (#890, after
+// #874): CI holds them as tightly as the tuning aims, so a retune that
+// drifts out of them is seen here, not only in the sweep's report.
+describe('the tuning targets the retune holds (#890)', () => {
+  it('(b) the Casual Learner reaches each later destination 1.4 to 2.8 days after the one before', async () => {
+    const casual = await watchingSails('casual', 'day');
+    expect(gaps(casual.run, TUNING_TARGETS)).toEqual([]);
+  });
+
+  it('(g) the Clicker takes at least 97% of the Casual Learner’s time to reach each sail’s goal', async () => {
+    const clicker = await watchingSails('clicker', 'reachedDay');
+    expect(
+      clickingNeverWins(clicker.run, await run('casual'), TUNING_TARGETS),
+    ).toEqual([]);
   });
 });

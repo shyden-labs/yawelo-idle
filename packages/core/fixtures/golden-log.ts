@@ -82,7 +82,7 @@ export const GOLDEN = {
  * Vitest collects it (#97); the recorder refuses to write a log whose heavy
  * slices differ, and a unit test holds this list to the recorded one.
  */
-export const GOLDEN_HEAVY_SLICES: readonly number[] = [226, 248, 280, 317, 347];
+export const GOLDEN_HEAVY_SLICES: readonly number[] = [242, 263, 295, 339, 379];
 
 /**
  * The slices that read no shop (#553): parts of an open between its
@@ -93,8 +93,10 @@ export const GOLDEN_HEAVY_SLICES: readonly number[] = [226, 248, 280, 317, 347];
  * for the same reason as the heavy slices, and held the same way.
  */
 export const GOLDEN_SHOP_FREE_SLICES: readonly number[] = [
-  1, 27, 134, 227, 231, 283, 290, 295, 306, 307, 318, 319, 320, 331, 336, 341,
-  344, 345, 348, 351, 360, 368, 369, 376,
+  1, 15, 25, 29, 61, 82, 93, 100, 115, 116, 156, 160, 169, 174, 211, 247, 258,
+  259, 270, 279, 282, 293, 304, 305, 312, 317, 320, 325, 328, 330, 337, 342,
+  349, 353, 354, 355, 362, 367, 368, 375, 376, 377, 380, 383, 384, 385, 390,
+  397, 400, 405,
 ];
 
 /**
@@ -104,30 +106,51 @@ export const GOLDEN_SHOP_FREE_SLICES: readonly number[] = [
  * heavy slices, and held the same way.
  */
 export const GOLDEN_OPEN_PARTS: Readonly<Record<number, number>> = {
-  47: 3,
-  50: 3,
-  55: 3,
-  65: 3,
+  30: 3,
+  40: 3,
+  45: 3,
+  48: 3,
+  55: 4,
+  72: 3,
+  74: 4,
   75: 3,
   76: 3,
   77: 3,
+  78: 3,
+  80: 4,
+  81: 3,
+  83: 3,
   85: 3,
-  87: 3,
+  88: 3,
   90: 3,
-  95: 3,
+  95: 4,
+  99: 3,
   100: 3,
-  135: 3,
+  103: 3,
+  105: 3,
+  110: 3,
+  115: 4,
+  120: 3,
+  124: 3,
+  125: 3,
+  130: 3,
+  135: 4,
   138: 3,
   140: 3,
-  145: 4,
-  150: 5,
-  155: 3,
-  157: 3,
-  159: 3,
+  141: 3,
+  143: 3,
+  145: 3,
+  148: 3,
+  150: 3,
+  155: 5,
+  158: 3,
   160: 4,
-  161: 3,
-  162: 3,
-  170: 4,
+  163: 5,
+  164: 3,
+  165: 5,
+  167: 3,
+  170: 3,
+  171: 3,
   173: 3,
 };
 
@@ -235,6 +258,7 @@ const REFUSALS = [
 
 class Player {
   state: GameState;
+  private readonly course: Course;
   private rng: RngState;
   private seq: number;
   private t: number;
@@ -242,10 +266,8 @@ class Player {
   private accepted: Record<string, number> = {};
   private refused: Record<string, number> = {};
 
-  constructor(
-    private readonly course: Course,
-    start: PlayerStart,
-  ) {
+  constructor(course: Course, start: PlayerStart) {
+    this.course = course;
     this.state = start.state;
     this.rng = start.rng;
     this.seq = start.seq;

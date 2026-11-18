@@ -1,21 +1,13 @@
 /**
  * The dev hostname adapter's one Function (#429), on every path (`[[path]]`
- * matches the root too). It forwards each request, unchanged, to the Worker
- * its host names in ../hosts.ts: the site Worker (`SITE`), whose gate, game
- * binding and pages stay as they are, or the sync Worker (`SYNC`).
- *
- * Any other host answers 404 and reaches neither Worker. That covers the
- * project's own pages.dev address and every preview deployment's, which are
- * public, so the Workers are reached only through the dev hostnames.
+ * matches the root too). Each dev hostname stands in for its front door
+ * (#784): the request goes on through the door's own code to its Worker's
+ * workers.dev address in the non-PROD account, with the dev door secret.
+ * Any other host answers 404. `handle` and `forward` (../hosts.ts) hold the logic,
+ * unit-tested in tests/unit/dev-hosts.test.ts; the deployed adapter in front
+ * of the real Workers is checked after every dev deploy by
+ * scripts/verify-dev-hosts.ts (#816).
  */
-import { DEV_HOSTS } from '../hosts';
+import { handle, type DevHostsEnv } from '../hosts.ts';
 
-export const onRequest: PagesFunction<Env> = ({ request, env }) => {
-  const binding = DEV_HOSTS.get(new URL(request.url).hostname);
-  if (binding === undefined)
-    return new Response('not found', {
-      status: 404,
-      headers: { 'cache-control': 'no-store' },
-    });
-  return env[binding].fetch(request);
-};
+export const onRequest: PagesFunction<DevHostsEnv> = handle;

@@ -1,8 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
-import { walkDisagreements } from '../unit/burn-down';
 import {
   ALLOWANCE_KEYS,
   grepCounts,
@@ -11,7 +8,7 @@ import {
   readText,
   walkTree,
 } from '../unit/old-name';
-import { committableFiles } from '../unit/tracked-files';
+import { committableFiles, walkDisagreements } from '../unit/tracked-files';
 
 /**
  * The old-name walk over every file git has (#356), and the allowances it proves still cover an occurrence.
@@ -63,19 +60,9 @@ describe('the repository names the game Yawelo Idle (#356)', () => {
     const { files, refused, findings } = repository();
     // Control c: the walk against git's own list of the same files.
     const walk = walkDisagreements(files, committableFiles());
-    expect(
-      searched(walk, { of: files, what: 'walked files' }),
-      walk.join('\n'),
-    ).toEqual([]);
-    expect(
-      searched(refused, { of: files, what: 'walked files' }),
-      refused.join('\n'),
-    ).toEqual([]);
-    expect(
-      searched(findings, { of: files, what: 'walked files' }),
-      findings.join('\n'),
-    ).toEqual([]);
-    expect(floorBreach('old-name/files', files.length)).toBeUndefined();
+    expect(walk, walk.join('\n')).toEqual([]);
+    expect(refused, refused.join('\n')).toEqual([]);
+    expect(findings, findings.join('\n')).toEqual([]);
   });
 
   it('reads as many lines naming it in each file as a fixed-string grep counts', () => {
@@ -91,13 +78,7 @@ describe('the repository names the game Yawelo Idle (#356)', () => {
         (path) =>
           `${path}: grep counts ${String(grep.get(path) ?? 0)}, the reader ${String(naming.get(path) ?? 0)}`,
       );
-    expect(
-      searched(misread, { of: named, what: 'files naming the old name' }),
-      misread.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('old-name/files-naming-it', named.length),
-    ).toBeUndefined();
+    expect(misread, misread.join('\n')).toEqual([]);
   });
 });
 

@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { committableFiles } from '../unit/tracked-files';
 import { DISSOLVED } from '../unit/dissolved-company';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 
 /**
  * The sweep of every committable text file for the dissolved company's name (#49).
@@ -39,7 +37,6 @@ describe('the rights holder is Shyden Labs (Refs #49)', () => {
     const naming = files
       .filter(({ text }) => DISSOLVED.test(text))
       .map(({ path }) => path);
-    expect(searched(naming, { of: files, what: 'text files' })).toEqual([]);
-    expect(floorBreach('licences/text-files', files.length)).toBeUndefined();
+    expect(naming).toEqual([]);
   });
 });

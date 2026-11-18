@@ -35,24 +35,31 @@ jobs:
     # A dispatch from any other branch stops here; the environment admits
     # main alone as well.
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment:
       name: production
-      url: https://yawelo-idle.shyden.co.uk
+      url: https://yaweloidle.com
     # The token is given only to the steps that call Cloudflare, so npm ci's
     # install scripts and the build never hold it.
     env:
       WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: '.nvmrc'
+          node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
       - run: npm ci
-      # The production token must reach the production account (the one that
-      # holds the shyden.co.uk zone) and nothing else.
+      # The production token must reach the production account (Yawelo's own,
+      # which holds the yaweloidle.com zone, #1013) and nothing else.
       - name: Prove the production token reaches the production account alone
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -69,19 +76,26 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"
+        run: npx --no wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"
 
   verify:
     needs: deploy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # verify-prod waits at most 60 looks, 10 s apart, for a new Custom
     # Domain's DNS and certificate, then judges every check once.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: '.nvmrc'
+          node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
       - run: npm ci
       # The verify compares production with what this commit builds.
@@ -91,6 +105,6 @@ jobs:
         run: npm run build:holding --workspace @yawelo-idle/site
       - name: Verify production serves this commit, its headers, 404 pages and the video
         env:
-          PROD_URL: https://yawelo-idle.shyden.co.uk
+          PROD_URL: https://yaweloidle.com
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/verify-prod.ts

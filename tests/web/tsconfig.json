@@ -4,6 +4,7 @@
   // or repo guard can typecheck against `document`.
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "lib": ["ES2023", "DOM"]
   },
   "include": ["*.ts", "../floors.ts", "../searched.ts"],

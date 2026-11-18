@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCKING_ROBOTS_TXT,
+  DEV_LOGIN_COOKIE,
   NO_INDEX,
   PROD_API_HOSTNAME,
   PROD_HOSTNAME,
   basicAuthOk,
+  challengeResponse,
   gateWebRequest,
   isProdHost,
   markApiRequest,
@@ -34,34 +36,40 @@ function recordingServe(): { serve: Serve; calls: string[] } {
   return { serve, calls };
 }
 
-function request(url: string, authorization?: string): Request {
-  return new Request(
-    url,
-    authorization === undefined ? {} : { headers: { authorization } },
-  );
+function request(
+  url: string,
+  authorization?: string,
+  cookie?: string,
+): Request {
+  const headers = new Headers();
+  if (authorization !== undefined) headers.set('authorization', authorization);
+  if (cookie !== undefined) headers.set('cookie', cookie);
+  return new Request(url, { headers });
 }
 
 describe('isProdHost', () => {
   it('matches the production hostnames exactly', () => {
-    expect(PROD_HOSTNAME).toBe('yawelo-idle.shyden.co.uk');
-    expect(PROD_API_HOSTNAME).toBe('api.yawelo-idle.shyden.co.uk');
-    expect(isProdHost('yawelo-idle.shyden.co.uk', PROD_HOSTNAME)).toBe(true);
-    expect(isProdHost('api.yawelo-idle.shyden.co.uk', PROD_API_HOSTNAME)).toBe(
-      true,
-    );
+    expect(PROD_HOSTNAME).toBe('yaweloidle.com');
+    expect(PROD_API_HOSTNAME).toBe('api.yaweloidle.com');
+    expect(isProdHost('yaweloidle.com', PROD_HOSTNAME)).toBe(true);
+    expect(isProdHost('api.yaweloidle.com', PROD_API_HOSTNAME)).toBe(true);
   });
 
   it('ignores case, as DNS does', () => {
-    expect(isProdHost('Yawelo-Idle.Shyden.CO.UK', PROD_HOSTNAME)).toBe(true);
+    expect(isProdHost('YaweloIdle.COM', PROD_HOSTNAME)).toBe(true);
   });
 
   it.each([
-    'dev.yawelo-idle.shyden.co.uk',
-    'yawelo-idle-web-dev.shyden-labs-dev.workers.dev',
-    'yawelo-idle.shyden.co.uk.evil.com',
-    'evilyawelo-idle.shyden.co.uk',
-    'yawelo-idle.shyden.co',
-    'api.yawelo-idle.shyden.co.uk',
+    'dev.yaweloidle.com',
+    'test.yaweloidle.com',
+    'www.yaweloidle.com',
+    'yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev',
+    'yaweloidle.com.evil.com',
+    'evilyaweloidle.com',
+    'yaweloidle.co',
+    'api.yaweloidle.com',
+    // The old production host (#1013): it only redirects now.
+    'yawelo-idle.shyden.co.uk',
     '',
   ])('refuses the near-miss %j', (hostname) => {
     expect(isProdHost(hostname, PROD_HOSTNAME)).toBe(false);
@@ -122,18 +130,33 @@ describe('basicAuthOk', () => {
 });
 
 describe('gateWebRequest', () => {
-  const dev = 'https://yawelo-idle-web-dev.shyden-labs-dev.workers.dev';
+  const dev = 'https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev';
+
+  /**
+   * What the gate hands on for `url` with the right password: the working
+   * run each "never serves" check is read against, so a recorder or a gate
+   * that hands nothing on cannot pass it (#375, Shyden 2026-10-21).
+   */
+  async function handedOn(url: string): Promise<readonly string[]> {
+    const working = recordingServe();
+    await gateWebRequest(
+      request(url, basic(`tester:${PASSWORD}`)),
+      PASSWORD,
+      working.serve,
+    );
+    return working.calls;
+  }
 
   it('serves the production host untouched, without asking for a password', async () => {
     const { serve, calls } = recordingServe();
     const response = await gateWebRequest(
-      request('https://YAWELO-IDLE.shyden.co.uk/index.html'),
+      request('https://YAWELOIDLE.com/index.html'),
       undefined,
       serve,
     );
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Robots-Tag')).toBeNull();
-    expect(calls).toEqual(['https://yawelo-idle.shyden.co.uk/index.html']);
+    expect(calls).toEqual(['https://yaweloidle.com/index.html']);
   });
 
   it.each([
@@ -141,10 +164,11 @@ describe('gateWebRequest', () => {
     ['a wrong password', basic('u:wrong')],
   ])(
     'challenges %s on a non-prod host and never serves',
-    async (_case, authorization) => {
+    async (_name, authorization) => {
       const { serve, calls } = recordingServe();
+      const url = `${dev}/`;
       const response = await gateWebRequest(
-        request(`${dev}/`, authorization),
+        request(url, authorization),
         PASSWORD,
         serve,
       );
@@ -153,19 +177,23 @@ describe('gateWebRequest', () => {
         'Basic realm="Yawelo Idle Non-Prod"',
       );
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-      expect(await response.text()).not.toContain('app bytes');
+      const sentences = (await response.text()).split('. ');
+      expect(sentences.filter((s) => s.includes('app bytes'))).toEqual([]);
+      await handedOn(url);
       expect(calls).toEqual([]);
     },
   );
 
   it('challenges every request when the password is not configured', async () => {
     const { serve, calls } = recordingServe();
+    const url = `${dev}/`;
     const response = await gateWebRequest(
-      request(`${dev}/`, basic('u:')),
+      request(url, basic('u:')),
       undefined,
       serve,
     );
     expect(response.status).toBe(401);
+    await handedOn(url);
     expect(calls).toEqual([]);
   });
 
@@ -180,6 +208,7 @@ describe('gateWebRequest', () => {
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
     expect(BLOCKING_ROBOTS_TXT).toContain('User-agent: *\nDisallow: /\n');
     expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
+    await handedOn(`${dev}/`);
     expect(calls).toEqual([]);
   });
 
@@ -203,7 +232,7 @@ describe('markApiRequest', () => {
     const { serve, calls } = recordingServe();
     const response = await markApiRequest(
       request(
-        'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev/health',
+        'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev/health',
       ),
       serve,
     );
@@ -214,13 +243,13 @@ describe('markApiRequest', () => {
 
   it('serves blocking robots.txt on a non-prod host', async () => {
     const { serve, calls } = recordingServe();
-    const response = await markApiRequest(
-      request(
-        'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev/robots.txt',
-      ),
-      serve,
-    );
+    const sync =
+      'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev';
+    const response = await markApiRequest(request(`${sync}/robots.txt`), serve);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
+    // The working run: off robots.txt the same host hands the request on.
+    const working = recordingServe();
+    await markApiRequest(request(`${sync}/health`), working.serve);
     expect(calls).toEqual([]);
   });
 
@@ -229,11 +258,110 @@ describe('markApiRequest', () => {
     async (path) => {
       const { serve, calls } = recordingServe();
       const response = await markApiRequest(
-        request(`https://api.yawelo-idle.shyden.co.uk${path}`),
+        request(`https://api.yaweloidle.com${path}`),
         serve,
       );
       expect(response.headers.get('X-Robots-Tag')).toBeNull();
       expect(calls).toHaveLength(1);
     },
   );
+});
+
+describe('the dev login cookie (#829)', () => {
+  const dev = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
+
+  /** The cookie the gate sets when `password` is given. */
+  async function loginCookie(password = PASSWORD): Promise<string> {
+    const { serve } = recordingServe();
+    const response = await gateWebRequest(
+      request(`${dev}/roadmap`, basic(`tester:${password}`)),
+      password,
+      serve,
+    );
+    return response.headers.get('Set-Cookie') ?? '';
+  }
+
+  /** The cookie's `name=value` pair, as a browser sends it back. */
+  const pair = (setCookie: string): string => setCookie.split(';')[0] ?? '';
+
+  it('is set host-only, secure, script-proof and same-site when the password is given', async () => {
+    const set = await loginCookie();
+    expect([pair(set).split('=')[0], set.split('; ').slice(1).sort()]).toEqual([
+      DEV_LOGIN_COOKIE,
+      ['HttpOnly', 'Max-Age=86400', 'Path=/', 'SameSite=Strict', 'Secure'],
+    ]);
+  });
+
+  it('never carries the password itself', async () => {
+    expect((await loginCookie()).includes(PASSWORD)).toBe(false);
+  });
+
+  it('lets a request carrying only the cookie through, without setting it again', async () => {
+    const { serve, calls } = recordingServe();
+    const url = `${dev}/api/roadmap/live`;
+    const response = await gateWebRequest(
+      request(url, undefined, `other=1; ${pair(await loginCookie())}`),
+      PASSWORD,
+      serve,
+    );
+    expect([
+      response.status,
+      calls,
+      response.headers.get('Set-Cookie'),
+    ]).toEqual([200, [url], null]);
+  });
+
+  it.each([
+    ['a wrong value', `${DEV_LOGIN_COOKIE}=0000`],
+    ['an empty value', `${DEV_LOGIN_COOKIE}=`],
+    ['a cookie whose name only ends the same', `x${DEV_LOGIN_COOKIE}=0000`],
+  ])('challenges %s and never serves', async (_name, cookie) => {
+    const { serve, calls } = recordingServe();
+    const response = await gateWebRequest(
+      request(`${dev}/`, undefined, cookie),
+      PASSWORD,
+      serve,
+    );
+    expect([response.status, calls]).toEqual([401, []]);
+  });
+
+  it('challenges a cookie set under an earlier password', async () => {
+    const { serve, calls } = recordingServe();
+    const old = pair(await loginCookie('an older password'));
+    const response = await gateWebRequest(
+      request(`${dev}/`, undefined, old),
+      PASSWORD,
+      serve,
+    );
+    expect([response.status, calls]).toEqual([401, []]);
+  });
+
+  it('challenges every cookie when the password is not configured', async () => {
+    const { serve, calls } = recordingServe();
+    const response = await gateWebRequest(
+      request(`${dev}/`, undefined, pair(await loginCookie())),
+      undefined,
+      serve,
+    );
+    expect([response.status, calls]).toEqual([401, []]);
+  });
+
+  it('sets no cookie on the production host', async () => {
+    const { serve } = recordingServe();
+    const response = await gateWebRequest(
+      request('https://yaweloidle.com/', basic(`u:${PASSWORD}`)),
+      PASSWORD,
+      serve,
+    );
+    expect(response.headers.get('Set-Cookie')).toBeNull();
+  });
+});
+
+describe('the password challenge (#1013)', () => {
+  it('points testers at the game on yaweloidle.com', async () => {
+    expect(await challengeResponse().text()).toBe(
+      'This is a non-prod Yawelo Idle environment for authorised testers. ' +
+        'The game is at https://yaweloidle.com.',
+    );
+  });
 });

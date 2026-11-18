@@ -126,18 +126,26 @@ export function offersDecision(v: View): boolean {
 export type QuickReturn = 'decision' | 'practice' | 'nothing';
 
 export class Player {
+  readonly persona: Persona;
+  private readonly course: Course;
+  private readonly streams: Streams;
+  private readonly watcher: Watcher;
   private current: GameState;
   private seq = 0;
   private t: number;
 
   /** Play `initial` from its own wall time onwards. */
   constructor(
-    private readonly course: Course,
-    readonly persona: Persona,
+    course: Course,
+    persona: Persona,
     initial: GameState,
-    private readonly streams: Streams,
-    private readonly watcher: Watcher = {},
+    streams: Streams,
+    watcher: Watcher = {},
   ) {
+    this.course = course;
+    this.persona = persona;
+    this.streams = streams;
+    this.watcher = watcher;
     this.current = initial;
     this.seq = initial.seq;
     this.t = initial.wall;

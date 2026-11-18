@@ -1,5 +1,9 @@
 import { builtinModules } from 'node:module';
 import type { Linter } from 'eslint';
+import {
+  PLATFORM_ONLY_GLOBALS,
+  PLATFORM_ONLY_SYNTAX,
+} from './eslint.platform-only.ts';
 
 /**
  * Determinism bans for packages/core/src (M1 design §2.1 and §3).
@@ -104,10 +108,14 @@ export const coreDeterminism: Linter.RulesRecord = {
       selector: `CallExpression[callee.computed=true][callee.property.value=${DECIMAL_MEMBER}]`,
       message: `a Decimal power or logarithm ${TRANSCENDENTAL}; use Num.pow or det-math`,
     },
+    ...PLATFORM_ONLY_SYNTAX,
   ],
   'no-restricted-globals': [
     'error',
     ...HOST_GLOBALS.map((name) => ({ name, message: `${name} ${IMPURE}` })),
+    // Core's block replaces the repo-wide one for these two rules, so it
+    // carries the platform-only bans too (#124 AC3).
+    ...PLATFORM_ONLY_GLOBALS,
   ],
   'no-restricted-imports': [
     'error',

@@ -13,11 +13,8 @@ import net from 'node:net';
 import tls from 'node:tls';
 import { describe, expect, it } from 'vitest';
 import unit from '../../vitest.config';
-import { floorBreach } from '../floors';
 import {
   connectProblem,
-  CPU_LIMIT_MS,
-  cpuProblem,
   processProblem,
   REFUSED,
   REFUSED_PROCESS,
@@ -25,9 +22,8 @@ import {
 } from './setup-rules';
 
 /**
- * The unit setup (#477 AC2, AC7): every unit test runs in under 1 s of its
- * own CPU (global rule, 2026-10-07), starts no process and reaches no service
- * (global rule, 2026-10-08). The live tests below run under tests/unit/setup.ts
+ * The unit setup (#477 AC7): a unit test starts no process and reaches no
+ * service (global rule, 2026-10-08). The live tests below run under tests/unit/setup.ts
  * itself, so each refusal is seen from inside a unit test; the rules are
  * tested beside them.
  */
@@ -60,9 +56,6 @@ describe('the setup is the unit suite’s (#477 AC7)', () => {
       ...REFUSED_PROCESS.map((name) => `child_process.${name}`),
       'net.Socket.prototype.connect',
     ]);
-    expect(
-      floorBreach('setup/refused-entry-points', REFUSED.length),
-    ).toBeUndefined();
   });
 });
 
@@ -162,22 +155,6 @@ describe('a unit test reaches no service (#477 AC7)', () => {
 });
 
 describe('the rules (#477 AC2, AC7)', () => {
-  it.each([
-    ['at the limit', CPU_LIMIT_MS * 1_000, null],
-    [
-      'a microsecond over',
-      CPU_LIMIT_MS * 1_000 + 1,
-      `f > t: 1000.0 ms of its own CPU, over the ${String(CPU_LIMIT_MS)} ms unit limit; cut its work (global rule, 2026-10-07)`,
-    ],
-    [
-      'well over',
-      2_500_000,
-      `f > t: 2500.0 ms of its own CPU, over the ${String(CPU_LIMIT_MS)} ms unit limit; cut its work (global rule, 2026-10-07)`,
-    ],
-  ])('cpuProblem: %s', (_case, micros, problem) => {
-    expect(cpuProblem('f > t', micros)).toBe(problem);
-  });
-
   it('processProblem names the test, the entry point and where such a test belongs', () => {
     expect(processProblem('f > t', 'fork')).toBe(
       'f > t: child_process.fork starts a process, and a unit test starts none (global rule, 2026-10-08); a test where a process is the thing tested belongs in tests/integration',

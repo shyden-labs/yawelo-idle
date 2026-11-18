@@ -6,6 +6,9 @@ import {
   closeOutLines,
   formatLines,
   inScope,
+  postLaunchEpics,
+  confidence,
+  etaDate,
   parseItems,
   progress,
   roadmapItems,
@@ -23,7 +26,7 @@ import { boardPages, FIXTURE_REPO, FIXTURE_TITLE } from './board-fixture';
  * and 5. The rest pin the defects #340 fixed in the port.
  */
 
-const TODAY = '2026-10-04';
+const TODAY = '2026-10-05';
 
 function item(over: Partial<BoardItem> & { number: number }): BoardItem {
   return {
@@ -34,6 +37,9 @@ function item(over: Partial<BoardItem> & { number: number }): BoardItem {
     closedAt: null,
     estimate: 3,
     labels: [],
+    parent: null,
+    publicTitle: null,
+    publicSummary: null,
     ...over,
   };
 }
@@ -75,6 +81,26 @@ describe('inScope', () => {
   it('keeps a story closed as completed', () => {
     expect(inScope(closedOn(6, '2026-10-03'))).toBe(true);
   });
+
+  it('leaves out a story under a post-launch epic, labelled or not (#838)', () => {
+    expect(inScope(item({ number: 7, parent: 9 }), new Set([9]))).toBe(false);
+  });
+
+  it('keeps a story under an epic before launch', () => {
+    expect(inScope(item({ number: 8, parent: 10 }), new Set([9]))).toBe(true);
+  });
+});
+
+describe('postLaunchEpics', () => {
+  it('names the epics labelled post-launch, and no story', () => {
+    expect([
+      ...postLaunchEpics([
+        item({ number: 1, title: 'Epic M1: Core' }),
+        item({ number: 2, title: 'Epic: Stores', labels: ['post-launch'] }),
+        item({ number: 3, labels: ['post-launch'] }),
+      ]),
+    ]).toEqual([2]);
+  });
 });
 
 describe('progress by tickets', () => {
@@ -91,7 +117,7 @@ describe('progress by tickets', () => {
     expect(p.tickets).toMatchObject({ closed: 1, total: 3 });
   });
 
-  it('counts closures per UTC day over the 7 days ending today, oldest first', () => {
+  it('counts closures per UTC day over the 7 finished days ending yesterday, oldest first', () => {
     const p = progress(
       [
         closedOn(1, '2026-09-28'),
@@ -116,7 +142,7 @@ describe('progress by tickets', () => {
     expect(p.tickets.pace).toEqual([0, 1, 0]);
   });
 
-  it('leaves a closure 7 days before today out of the window', () => {
+  it('leaves a closure 8 days before today, the day before the window, out of it', () => {
     const p = progress([closedOn(1, '2026-09-27')], TODAY);
     expect(p.tickets.pace).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
@@ -142,6 +168,67 @@ describe('progress by tickets', () => {
     expect(() =>
       progress([item({ number: 1, title: 'Epic M1: Core' })], TODAY),
     ).toThrow('the board has no in-scope stories: nothing to measure');
+  });
+});
+
+describe('the pace counts finished days only (#575)', () => {
+  const board = (): BoardItem[] => [
+    closedOn(1, '2026-09-28'),
+    closedOn(2, '2026-10-03'),
+    item({ number: 3 }),
+  ];
+
+  it('measures the 7 finished UTC days ending yesterday, oldest first', () => {
+    expect(progress(board(), TODAY).tickets.pace).toEqual([
+      1, 0, 0, 0, 0, 1, 0,
+    ]);
+  });
+
+  it('keeps the pace when a story closes today', () => {
+    const before = progress(board(), TODAY).tickets.pace;
+    const after = progress(
+      [...board(), closedOn(4, TODAY), closedOn(5, TODAY)],
+      TODAY,
+    ).tickets.pace;
+    expect(after).toEqual(before);
+  });
+
+  it('counts a story closed today in the closed total', () => {
+    const p = progress([...board(), closedOn(4, TODAY)], TODAY);
+    expect(p.tickets).toMatchObject({ closed: 3, total: 4 });
+  });
+
+  it('has no pace on a board less than one finished day old', () => {
+    const p = progress(
+      [item({ number: 1, createdAt: `${TODAY}T03:00:00Z` })],
+      TODAY,
+    );
+    expect(p.tickets.pace).toEqual([]);
+  });
+
+  it('says so in words on a board less than one finished day old, giving no ETA', () => {
+    const lines = formatLines(
+      progress(
+        [
+          { ...closedOn(1, TODAY), createdAt: `${TODAY}T01:00:00Z` },
+          item({ number: 2, createdAt: `${TODAY}T03:00:00Z` }),
+        ],
+        TODAY,
+      ),
+      TODAY,
+    );
+    expect(lines[0]).toContain(
+      'Measured pace: none yet, the board has no finished day. ETA at that pace: none yet.',
+    );
+    expect(lines[1]).toContain(
+      'Measured pace: none yet, the board has no finished day. ETA at that pace: none yet.',
+    );
+  });
+
+  it('names the window it measured', () => {
+    expect(formatLines(progress(board(), TODAY), TODAY)[0]).toContain(
+      'Measured pace 0.29 a day over the 7 finished days to 2026-10-04 (1, 0, 0, 0, 0, 1, 0).',
+    );
   });
 });
 
@@ -238,16 +325,16 @@ describe('formatLines', () => {
   it('states tickets complete, the measured pace and the ETA at that pace', () => {
     expect(formatLines(progress(sample(), TODAY), TODAY)[0]).toBe(
       'By tickets: 50% complete (2 of 4 in-scope stories closed; 1 epic and 1 post-launch left out). ' +
-        'Measured pace 0.29 a day over the last 7 days (0, 0, 0, 0, 0, 1, 1). ' +
-        'ETA at that pace: 2026-10-11, before outside waits.',
+        'Measured pace 0.29 a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 0, 1, 1). ' +
+        'ETA at that pace: 2026-10-12, before outside waits.',
     );
   });
 
   it('states the points remaining, the measured pace and the ETA at that pace, with no percentage (#567)', () => {
     expect(formatLines(progress(sample(), TODAY), TODAY)[1]).toBe(
       'By effort: 21 points remaining across 2 open stories (7 of 28 points closed). ' +
-        'Measured pace 1.00 points a day over the last 7 days (0, 0, 0, 0, 0, 5, 2). ' +
-        'ETA at that pace: 2026-10-25, before outside waits.',
+        'Measured pace 1.00 points a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 0, 5, 2). ' +
+        'ETA at that pace: 2026-10-26, before outside waits.',
     );
   });
 
@@ -314,7 +401,9 @@ describe('formatLines', () => {
   it('gives no date when nothing closed in the window', () => {
     expect(
       formatLines(progress([item({ number: 1 })], TODAY), TODAY)[0],
-    ).toContain('ETA at that pace: none, nothing closed in the last 7 days.');
+    ).toContain(
+      'ETA at that pace: none, nothing closed in the 7 finished days to 2026-10-04.',
+    );
   });
 
   it('names stories closed as not planned among those left out, when there are any', () => {
@@ -327,13 +416,13 @@ describe('formatLines', () => {
     );
   });
 
-  it('gives today as the ETA when nothing remains', () => {
+  it('gives today as the ETA when nothing remains, though the story closed today is not yet in the pace (#575)', () => {
     expect(
       formatLines(progress([closedOn(1, TODAY)], TODAY), TODAY)[0],
     ).toContain(
       '100% complete (1 of 1 in-scope stories closed; 0 epics and 0 post-launch left out). ' +
-        'Measured pace 0.14 a day over the last 7 days (0, 0, 0, 0, 0, 0, 1). ' +
-        'ETA at that pace: 2026-10-04, before outside waits.',
+        'Measured pace 0.00 a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 0, 0, 0). ' +
+        'ETA at that pace: 2026-10-05, before outside waits.',
     );
   });
 
@@ -347,7 +436,7 @@ describe('formatLines', () => {
     const open = Array.from({ length: 17 }, (_, i) => item({ number: i + 18 }));
     expect(
       formatLines(progress([...closed, ...open], TODAY), TODAY)[0],
-    ).toContain('ETA at that pace: 2026-10-11, before outside waits.');
+    ).toContain('ETA at that pace: 2026-10-12, before outside waits.');
   });
 });
 
@@ -397,8 +486,77 @@ describe('parseItems', () => {
         closedAt: '2026-10-03T01:02:03Z',
         estimate: 5,
         labels: ['post-launch'],
+        parent: null,
+        publicTitle: null,
+        publicSummary: null,
       },
     ]);
+  });
+
+  it('reads the issue’s parent, the epic it belongs to (#826, R4)', () => {
+    const [read] = parse([
+      page([{ estimate: null, content: issue({ parent: { number: 331 } }) }]),
+    ]);
+    expect(read?.parent).toBe(331);
+  });
+
+  it('reads an issue with no parent as null (#826)', () => {
+    const [read] = parse([page([{ estimate: null, content: issue() }])]);
+    expect(read?.parent).toBeNull();
+  });
+
+  it('reads the card’s Public title (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicTitle: { text: 'Save your game in the cloud' },
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect(read?.publicTitle).toBe('Save your game in the cloud');
+  });
+
+  it('reads the card’s Public summary (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicSummary: { text: 'The first playable voyage.' },
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect(read?.publicSummary).toBe('The first playable voyage.');
+  });
+
+  it('reads unset plain-words fields as null (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicTitle: null,
+          publicSummary: null,
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect([read?.publicTitle, read?.publicSummary]).toEqual([null, null]);
+  });
+
+  it('reads blank plain-words text as unset (#826)', () => {
+    const [read] = parse([
+      page([
+        {
+          estimate: null,
+          publicTitle: { text: '   ' },
+          publicSummary: { text: '' },
+          content: issue(),
+        },
+      ]),
+    ]);
+    expect([read?.publicTitle, read?.publicSummary]).toEqual([null, null]);
   });
 
   it('reads an unset Estimate as null', () => {
@@ -653,6 +811,42 @@ describe('BOARD_QUERY', () => {
       expect(BOARD_QUERY).toMatch(new RegExp(`\\b${field}\\b`));
     });
   }
+
+  // The roadmap's witnesses (#689) read each card's id and last change and
+  // each issue's last change. Pinned where they sit: `id` alone would match
+  // the query's own `$id`.
+  it('asks GitHub for each card’s id and last change', () => {
+    expect(BOARD_QUERY).toMatch(/\bnodes \{\s+id updatedAt\b/);
+  });
+
+  it('asks GitHub for each issue’s last change', () => {
+    expect(BOARD_QUERY).toMatch(/\.\.\. on Issue \{[^}]*\bupdatedAt\b/);
+  });
+
+  it('asks GitHub for each issue’s parent number (#826)', () => {
+    expect(BOARD_QUERY).toContain(
+      'repository { nameWithOwner } parent { number }',
+    );
+  });
+
+  it('asks GitHub for each card’s Public title as text (#826)', () => {
+    expect(BOARD_QUERY).toContain(
+      'publicTitle: fieldValueByName(name: "Public title") { ... on ProjectV2ItemFieldTextValue { text } }',
+    );
+  });
+
+  it('asks GitHub for each card’s Public summary as text (#826)', () => {
+    expect(BOARD_QUERY).toContain(
+      'publicSummary: fieldValueByName(name: "Public summary") { ... on ProjectV2ItemFieldTextValue { text } }',
+    );
+  });
+
+  // `totalCount` alone would match the labels' count (#703).
+  it('asks GitHub how many items the board holds', () => {
+    expect(BOARD_QUERY).toMatch(
+      /\bitems\(first: 100, after: \$endCursor\) \{ totalCount pageInfo\b/,
+    );
+  });
 });
 
 describe('assertTitle', () => {
@@ -701,17 +895,95 @@ describe('assertBoard (#341)', () => {
   });
 });
 
+describe('assertBoard refuses a read that is not the whole board (#703)', () => {
+  type CountedPages = {
+    data: { node: { items: { totalCount?: unknown; nodes: unknown[] } } };
+  }[];
+  const counted = (): CountedPages => boardPages(TODAY) as CountedPages;
+
+  it('passes a whole read: two pages holding the 9 items each page reports', () => {
+    const pages = counted();
+    expect(pages.map((page) => page.data.node.items.totalCount)).toEqual([
+      9, 9,
+    ]);
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).not.toThrow();
+  });
+
+  it('refuses a short page, giving both numbers', () => {
+    const pages = counted();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    second?.data.node.items.nodes.pop();
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow('the board has 9 items and 8 were read: nothing read');
+  });
+
+  it('refuses a read missing a page, giving both numbers', () => {
+    expect(() => {
+      assertBoard(counted().slice(0, 1), FIXTURE_TITLE);
+    }).toThrow('the board has 9 items and 5 were read: nothing read');
+  });
+
+  // Pages are read one after another, so a card added or removed between
+  // two of them shows here. It is named as a change, not a fault: nothing is
+  // wrong, and the next read (the next run or roadmap check) is whole.
+  it('names a board that changed while it was read, giving each count', () => {
+    const pages = counted();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) second.data.node.items.totalCount = 10;
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow(
+      'the board changed while it was read (its pages report 9, then 10 items): nothing read',
+    );
+  });
+
+  it('refuses a page that gives no count', () => {
+    const pages = counted();
+    const first = pages[0];
+    expect(first).toBeDefined();
+    if (first !== undefined) delete first.data.node.items.totalCount;
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow(
+      'a page came back without the board’s item count (items.totalCount): nothing read',
+    );
+  });
+
+  it('refuses a count that is not a whole number', () => {
+    const pages = counted();
+    const first = pages[0];
+    expect(first).toBeDefined();
+    if (first !== undefined) first.data.node.items.totalCount = '9';
+    expect(() => {
+      assertBoard(pages, FIXTURE_TITLE);
+    }).toThrow(
+      'a page came back without the board’s item count (items.totalCount): nothing read',
+    );
+  });
+
+  it('refuses a read of no pages', () => {
+    expect(() => {
+      assertBoard([], FIXTURE_TITLE);
+    }).toThrow('no page of the board came back: nothing read');
+  });
+});
+
 describe('closeOutLines', () => {
   it('gives both close-out lines for the shared fixture', () => {
     expect(
       closeOutLines(boardPages(TODAY), FIXTURE_TITLE, FIXTURE_REPO, TODAY),
     ).toEqual([
       'By tickets: 50% complete (3 of 6 in-scope stories closed; 1 epic, 1 post-launch and 1 closed as not planned left out). ' +
-        'Measured pace 0.29 a day over the last 7 days (0, 0, 0, 1, 0, 1, 0). ' +
-        'ETA at that pace: 2026-10-15, before outside waits.',
+        'Measured pace 0.29 a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 1, 0, 1). ' +
+        'ETA at that pace: 2026-10-16, before outside waits.',
       'By effort: 24 points remaining across 3 open stories (12 of 36 points closed; 1 closed story unscored, counted at the scored mean of 4.0 points (assumed)). ' +
-        'Measured pace 1.14 points a day over the last 7 days (0, 0, 0, 3, 0, 5, 0). ' +
-        'ETA at that pace: 2026-10-25, before outside waits.',
+        'Measured pace 1.14 points a day over the 7 finished days to 2026-10-04 (0, 0, 0, 0, 3, 0, 5). ' +
+        'ETA at that pace: 2026-10-26, before outside waits.',
     ]);
   });
 
@@ -727,5 +999,66 @@ describe('closeOutLines', () => {
     ).toThrow(
       'the board is "ShyTalk Stories", not "Fixture Stories": nothing read',
     );
+  });
+
+  it('refuses a read missing a page, giving no lines (#703)', () => {
+    expect(() =>
+      closeOutLines(
+        boardPages(TODAY).slice(0, 1),
+        FIXTURE_TITLE,
+        FIXTURE_REPO,
+        TODAY,
+      ),
+    ).toThrow('the board has 9 items and 5 were read: nothing read');
+  });
+});
+
+describe('etaDate (#828)', () => {
+  it('is the day the remaining work ends at the measured pace', () => {
+    // 10 left at 7 closed in 7 days: 10 days.
+    expect(etaDate(10, [1, 1, 1, 1, 1, 1, 1], '2026-11-01')).toBe('2026-11-11');
+  });
+
+  it('rounds a part day up', () => {
+    // 3 left at 2 a day: 1.5 days, so 2.
+    expect(etaDate(3, [2], '2026-11-01')).toBe('2026-11-03');
+  });
+
+  it('is null when nothing closed in the window', () => {
+    expect(etaDate(5, [0, 0, 0], '2026-11-01')).toBeNull();
+  });
+
+  it('is today when nothing is left', () => {
+    expect(etaDate(0, [1], '2026-11-01')).toBe('2026-11-01');
+  });
+});
+
+describe('confidence (#828): how many of the window’s days moved', () => {
+  it('is high when every day closed something', () => {
+    expect(confidence([1, 2, 1, 1, 3, 1, 1])).toBe('high');
+  });
+
+  it('is high when 6 of 7 days moved', () => {
+    expect(confidence([1, 0, 1, 1, 3, 1, 1])).toBe('high');
+  });
+
+  it('is medium when 5 of 7 days moved', () => {
+    expect(confidence([1, 0, 0, 1, 3, 1, 1])).toBe('medium');
+  });
+
+  it('is medium when 4 of 7 days moved', () => {
+    expect(confidence([0, 0, 0, 1, 3, 1, 1])).toBe('medium');
+  });
+
+  it('is low when 3 of 7 days moved', () => {
+    expect(confidence([0, 0, 0, 0, 3, 1, 1])).toBe('low');
+  });
+
+  it('is low over a window shorter than 7 days, however busy', () => {
+    expect(confidence([5, 5])).toBe('low');
+  });
+
+  it('is low when nothing moved', () => {
+    expect(confidence([0, 0, 0, 0, 0, 0, 0])).toBe('low');
   });
 });

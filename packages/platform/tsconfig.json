@@ -1,0 +1,22 @@
+{
+  // @yawelo-idle/platform is the one place the game reaches the host (spec
+  // §6.4, #124). The web implementation sees the DOM; `types: []` keeps the
+  // hoisted @types/node out, so a Node-only API cannot typecheck here. The
+  // contract and the tests run under Vitest in Node, against injected hosts.
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM"],
+    "types": [],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "contract/**/*.ts", "test/**/*.ts"]
+}

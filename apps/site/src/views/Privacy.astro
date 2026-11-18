@@ -1,16 +1,32 @@
 ---
+/**
+ * The privacy page, in English and Indonesian (Shyden, 2026-11-08, global
+ * rule; #928). Each copy says which text governs for whom. The English copy
+ * also carries the one translated note for readers of any language that has
+ * no legal text (none today).
+ */
 import Base from '../layouts/Base.astro';
-import { COPY } from '../copy';
-import type { Locale } from '../i18n';
+import { COPY, LEGAL } from '../copy';
+import { LOCALES, localesOf, type LegalLocale } from '../i18n';
 
 interface Props {
-  locale: Locale;
+  locale: LegalLocale;
 }
 const { locale } = Astro.props;
-const copy = COPY[locale];
+const legal = LEGAL[locale].privacy;
+const withoutLegalText =
+  locale === 'en'
+    ? LOCALES.filter((reader) => !localesOf('privacy').includes(reader))
+    : [];
 ---
 
-<Base locale={locale} page="privacy" title={copy.titles.privacy}>
-  <h1>{copy.titles.privacy}</h1>
-  <p>{copy.privacySoon}</p>
+<Base locale={locale} page="privacy" title={legal.title}>
+  {withoutLegalText.map((reader) => (
+    <p lang={reader} data-english-only-note>
+      {COPY[reader].englishOnlyNote}
+    </p>
+  ))}
+  <h1>{legal.title}</h1>
+  <p data-governing-language>{legal.governs}</p>
+  <p>{legal.soon}</p>
 </Base>

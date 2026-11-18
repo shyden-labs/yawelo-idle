@@ -1,0 +1,481 @@
+import { describe, expect, it } from 'vitest';
+import { assertNamedByRepo, REPO_ISSUES_QUERY } from '../src/index';
+import {
+  boardPages,
+  FIXTURE_BOARD_ID,
+  FIXTURE_REPO,
+  repoPages,
+} from './board-fixture';
+
+/**
+ * A partial board from GitHub must never pass as the whole board (#751).
+ * During GitHub's incident of 2026-10-22 the board's listing and its own
+ * items.totalCount shrank together (0 for 0, then 91 for 91), so #703's
+ * check agreed with the short read; on 2026-10-23 the listing still left
+ * out #752 (463 of 463) while the repository's issues named 464 on the
+ * board. The cross-check reads the repository's issues, a different GitHub
+ * surface, and compares the two as sets of issue numbers.
+ */
+
+const TODAY = '2026-10-23';
+/** When the board read began: every fixture issue is older (#877). */
+const READ_STARTED = new Date('2026-10-23T12:00:00Z');
+
+type Card = { content: Record<string, unknown> | null };
+type BoardPages = {
+  data: { node: { items: { totalCount: number; nodes: Card[] } } };
+}[];
+type Issue = {
+  number: number;
+  createdAt?: unknown;
+  projectItems: { totalCount: number; nodes: { project: { id: string } }[] };
+};
+type RepoPages = {
+  data: { repository: { issues: { totalCount?: unknown; nodes: Issue[] } } };
+}[];
+
+const board = (): BoardPages => boardPages(TODAY) as BoardPages;
+const repo = (): RepoPages => repoPages() as RepoPages;
+
+/** Cut the board's listing to the issues kept, its count shrinking with it, as GitHub's did. */
+function listingOf(keep: (number: number) => boolean): BoardPages {
+  const pages = board();
+  for (const page of pages)
+    page.data.node.items.nodes = page.data.node.items.nodes.filter((card) =>
+      keep(Number(card.content?.number)),
+    );
+  const total = pages.reduce(
+    (sum, page) => sum + page.data.node.items.nodes.length,
+    0,
+  );
+  for (const page of pages) page.data.node.items.totalCount = total;
+  return pages;
+}
+
+/** Add a card to the board's last page, its count growing with it. */
+function withCard(pages: BoardPages, content: Card['content']): BoardPages {
+  pages.at(-1)?.data.node.items.nodes.push({ content });
+  for (const page of pages) page.data.node.items.totalCount += 1;
+  return pages;
+}
+
+const issueCard = (
+  number: number,
+  nameWithOwner = FIXTURE_REPO,
+): Card['content'] => ({
+  __typename: 'Issue',
+  number,
+  repository: { nameWithOwner },
+});
+
+describe('assertNamedByRepo (#751)', () => {
+  it('passes a board listing exactly the issues the repository names on it', () => {
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  it('refuses a listing short of the repository, its own count agreeing with it, naming the missing issue', () => {
+    expect(() => {
+      assertNamedByRepo(
+        listingOf((number) => number !== 9),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'the board lists 8 of shyden-labs/fixture’s issues and the repository’s own issues (Repository.issues) name 9 on it; missing from the board’s listing: #9: nothing read',
+    );
+  });
+
+  it('refuses an empty listing, naming every missing issue', () => {
+    expect(() => {
+      assertNamedByRepo(
+        listingOf(() => false),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'the board lists 0 of shyden-labs/fixture’s issues and the repository’s own issues (Repository.issues) name 9 on it; missing from the board’s listing: #1, #2, #3, #4, #5, #6, #7, #8, #9: nothing read',
+    );
+  });
+
+  it('names the first ten missing issues and counts the rest', () => {
+    const pages = repo();
+    const extra = Array.from({ length: 3 }, (_, at) => ({
+      number: 20 + at,
+      createdAt: '2026-10-01T00:00:00Z',
+      projectItems: {
+        totalCount: 1,
+        nodes: [{ project: { id: FIXTURE_BOARD_ID } }],
+      },
+    }));
+    pages.at(-1)?.data.repository.issues.nodes.push(...extra);
+    for (const page of pages) page.data.repository.issues.totalCount = 14;
+    expect(() => {
+      assertNamedByRepo(
+        listingOf(() => false),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'missing from the board’s listing: #1, #2, #3, #4, #5, #6, #7, #8, #9, #20 and 2 more: nothing read',
+    );
+  });
+
+  // The two reads are not one snapshot: a card added between them shows as
+  // one side's extra. It is refused all the same, and the next read is whole.
+  it('refuses a card for an issue the repository does not name on the board', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(board(), issueCard(10)),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'the board lists 10 of shyden-labs/fixture’s issues and the repository’s own issues (Repository.issues) name 9 on it; on the board but named by no issue: #10 (a card added or removed between the two reads shows this way too): nothing read',
+    );
+  });
+
+  it('names both sides when the listing misses one issue and holds another', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(
+          listingOf((number) => number !== 4),
+          issueCard(11),
+        ),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'name 9 on it; missing from the board’s listing: #4; on the board but named by no issue: #11',
+    );
+  });
+
+  it('compares only this repository’s issues: a card from another repository passes', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(board(), issueCard(10, 'shyden-labs/elsewhere')),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  it('compares only issues: a draft card passes', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(board(), { __typename: 'DraftIssue', title: 'An idea' }),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  // A draft has no repository, so only a pull request of this repository
+  // shows that the comparison reads the card's type.
+  it('compares only issues: a pull request card from this repository passes', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(board(), {
+          __typename: 'PullRequest',
+          number: 30,
+          repository: { nameWithOwner: FIXTURE_REPO },
+        }),
+        repo(),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  it('refuses when the repository names no issue on the board at all', () => {
+    const pages = repo();
+    for (const page of pages)
+      for (const issue of page.data.repository.issues.nodes)
+        issue.projectItems = { totalCount: 0, nodes: [] };
+    expect(() => {
+      assertNamedByRepo(
+        listingOf(() => false),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'the repository’s own issues (Repository.issues) name no issue on board PVT_fixture: nothing read',
+    );
+  });
+
+  it('refuses a short read of the repository’s issues, giving both numbers', () => {
+    const pages = repo();
+    pages.at(-1)?.data.repository.issues.nodes.pop();
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow('the repository has 11 issues and 10 were read: nothing read');
+  });
+
+  it('refuses a read missing a page of the repository’s issues', () => {
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        repo().slice(0, 1),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow('the repository has 11 issues and 6 were read: nothing read');
+  });
+
+  it('refuses no page of the repository’s issues', () => {
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        [],
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow('no page of the repository’s issues came back: nothing read');
+  });
+
+  it('refuses a page of the repository’s issues that gives no count', () => {
+    const pages = repo();
+    const first = pages[0];
+    expect(first).toBeDefined();
+    if (first !== undefined) delete first.data.repository.issues.totalCount;
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'a page of the repository’s issues came back without their count (issues.totalCount): nothing read',
+    );
+  });
+
+  // #875: #873 and #874 were filed while PR #872's check read 530 issues.
+  // Read oldest first, a new issue lands on the last page, so the read is
+  // still whole when it holds the last page's count.
+  it('passes an issue filed while the issues were read, found on the last page', () => {
+    const pages = repo();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) {
+      second.data.repository.issues.totalCount = 12;
+      second.data.repository.issues.nodes.push({
+        createdAt: '2026-10-01T00:00:00Z',
+        number: 12,
+        projectItems: { totalCount: 0, nodes: [] },
+      });
+    }
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  it('refuses issues whose count fell while they were read', () => {
+    const pages = repo();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) {
+      second.data.repository.issues.totalCount = 10;
+      second.data.repository.issues.nodes.pop();
+    }
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      'the repository’s issues fell while they were read (its pages report 11, then 10): an issue was deleted or moved: nothing read',
+    );
+  });
+
+  it('refuses a risen count whose new issue was not read', () => {
+    const pages = repo();
+    const second = pages[1];
+    expect(second).toBeDefined();
+    if (second !== undefined) second.data.repository.issues.totalCount = 12;
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow('the repository has 12 issues and 11 were read: nothing read');
+  });
+
+  it('refuses an issue read twice, even when the count agrees', () => {
+    const pages = repo();
+    const second = pages[1];
+    const sixth = pages[0]?.data.repository.issues.nodes[5];
+    expect(sixth?.number).toBe(6);
+    if (second !== undefined && sixth !== undefined)
+      second.data.repository.issues.nodes[4] = sixth;
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow('#6 was read twice: nothing read');
+  });
+
+  it('refuses an issue on more boards than were read', () => {
+    const pages = repo();
+    const third = pages[0]?.data.repository.issues.nodes[2];
+    expect(third?.number).toBe(3);
+    if (third !== undefined) third.projectItems.totalCount = 11;
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        pages,
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      '#3 is on 11 boards and 2 were read: raise projectItems(first:) in REPO_ISSUES_QUERY: nothing read',
+    );
+  });
+});
+
+describe('REPO_ISSUES_QUERY (#751)', () => {
+  it('reads each issue’s boards by id, archived cards left out as the board’s listing leaves them', () => {
+    expect(REPO_ISSUES_QUERY).toMatch(
+      /projectItems\(first: \d+, includeArchived: false\) \{ totalCount nodes \{ project \{ id \} \} \}/,
+    );
+  });
+
+  it('pages the repository’s issues with their count, oldest first (#875)', () => {
+    expect(REPO_ISSUES_QUERY).toMatch(
+      /issues\(first: 100, after: \$endCursor, orderBy: \{ field: CREATED_AT, direction: ASC \}\) \{ totalCount pageInfo \{ hasNextPage endCursor \}/,
+    );
+  });
+});
+
+// A card added while the board is read (#877): the board's listing and the
+// repository's issues are read at once (#850), so an issue filed during the
+// read can show on one side only. Issues created after the read began are
+// left out on both sides; an older issue's missing card is still refused
+// (the #751 case above, unchanged).
+describe('assertNamedByRepo leaves out issues filed during the read (#877)', () => {
+  const AFTER = '2026-10-23T12:00:05Z';
+
+  /** The repository's last page gains #12, naming `boards`, created at `createdAt`. */
+  function withIssue(boards: string[], createdAt: unknown): RepoPages {
+    const pages = repo();
+    const last = pages.at(-1);
+    if (last === undefined) throw new Error('the fixture has no page');
+    last.data.repository.issues.nodes.push({
+      number: 12,
+      createdAt,
+      projectItems: {
+        totalCount: boards.length,
+        nodes: boards.map((id) => ({ project: { id } })),
+      },
+    });
+    for (const page of pages) {
+      const count = Number(page.data.repository.issues.totalCount);
+      page.data.repository.issues.totalCount = count + 1;
+    }
+    return pages;
+  }
+
+  it('passes an issue filed during the read that the repository names on the board and the listing lacks', () => {
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        withIssue([FIXTURE_BOARD_ID], AFTER),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  it('passes an issue filed during the read whose card the listing holds and the repository does not yet name', () => {
+    expect(() => {
+      assertNamedByRepo(
+        withCard(board(), issueCard(12)),
+        withIssue([], AFTER),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).not.toThrow();
+  });
+
+  it('still refuses that issue when it was filed before the read began', () => {
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        withIssue([FIXTURE_BOARD_ID], '2026-10-23T11:59:55Z'),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow('missing from the board’s listing: #12');
+  });
+
+  it('refuses an issue that comes back without its creation time, naming it', () => {
+    expect(() => {
+      assertNamedByRepo(
+        board(),
+        withIssue([FIXTURE_BOARD_ID], undefined),
+        FIXTURE_BOARD_ID,
+        FIXTURE_REPO,
+        READ_STARTED,
+      );
+    }).toThrow(
+      '#12 came back without a readable createdAt (undefined): nothing read',
+    );
+  });
+
+  it('asks GitHub for each issue’s creation time', () => {
+    expect(REPO_ISSUES_QUERY).toMatch(/nodes \{ number createdAt\b/);
+  });
+});

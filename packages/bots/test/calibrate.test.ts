@@ -44,13 +44,13 @@ const model: Measure = (goals, destination, untilDay) => {
 describe('calibrateGoals', () => {
   it('fits each goal so its sail lands by its target and within 0.01 days of it', () => {
     const fitted = calibrateGoals(model, options);
-    expect(fitted).toHaveLength(4);
     expect(
       fitted.filter(
         (g) =>
           g.day === undefined || g.day > g.target || g.day < g.target - 0.01,
       ),
     ).toEqual([]);
+    expect(fitted).toHaveLength(4);
   });
 
   it('fits each later goal about a gap of decades above the one before', () => {
@@ -81,9 +81,12 @@ describe('calibrateGoals', () => {
       },
       { ...options, destinations: 2 },
     );
-    expect(seen.every((g) => g.length === 2)).toBe(true);
-    expect(seen.slice(0, 31).every((g) => g[1] === UNREACHABLE)).toBe(true);
-    expect(seen.slice(31).every((g) => g[0] === 9.99)).toBe(true);
+    // 31 tables per goal: one per bisection step, then the fitted goal's own.
+    const fittingFirst = seen.slice(0, 31);
+    const fittingSecond = seen.slice(31);
+    expect(seen.filter((g) => g.length !== 2)).toEqual([]);
+    expect(fittingFirst.filter((g) => g[1] !== UNREACHABLE)).toEqual([]);
+    expect(fittingSecond.filter((g) => g[0] !== 9.99)).toEqual([]);
     expect(seen).toHaveLength(62);
   });
 

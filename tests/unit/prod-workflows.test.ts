@@ -12,6 +12,7 @@ import { parse } from 'yaml';
 const WORKFLOWS = new URL('../../.github/workflows/', import.meta.url).pathname;
 
 interface Step {
+  id?: string;
   name?: string;
   run?: string;
   'working-directory'?: string;
@@ -116,7 +117,7 @@ describe('the production release (#621 AC4)', () => {
     );
     expect(deploy['working-directory']).toBeUndefined();
     expect(deploy.run).toBe(
-      'npx wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
+      'npx --no wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
     );
   });
 
@@ -141,7 +142,7 @@ describe('the production release (#621 AC4)', () => {
     );
     expect(verify.run).toBe('node scripts/verify-prod.ts');
     expect(verify.env).toEqual({
-      PROD_URL: 'https://yawelo-idle.shyden.co.uk',
+      PROD_URL: 'https://yaweloidle.com',
       EXPECTED_SHA: '${{ github.sha }}',
     });
   });
@@ -169,7 +170,7 @@ describe('the production rollback (#621 AC6)', () => {
     expect(find['working-directory']).toBeUndefined();
     expect(find.env?.['COMMIT']).toBe('${{ inputs.commit }}');
     expect(find.run).toContain(
-      'npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
+      'npx --no wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
     );
     expect(find.run).toContain(
       'node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT"',
@@ -184,7 +185,7 @@ describe('the production rollback (#621 AC6)', () => {
     );
     expect(roll['working-directory']).toBeUndefined();
     expect(roll.run).toBe(
-      'npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
+      'npx --no wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
     );
   });
 
@@ -207,6 +208,80 @@ describe('the production rollback (#621 AC6)', () => {
   });
 });
 
+describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from main)', () => {
+  it('runs only by hand', () => {
+    expect(Object.keys(workflow('deploy-door.yml').on)).toEqual([
+      'workflow_dispatch',
+    ]);
+  });
+
+  it('deploys only from main, in the production environment Shyden approves', () => {
+    const deploy = job('deploy-door.yml', 'deploy');
+    expect(deploy.if).toBe("github.ref == 'refs/heads/main'");
+    expect(environmentOf(deploy)).toBe('production');
+  });
+
+  it('proves the token reaches the production account alone before anything else touches Cloudflare', () => {
+    const names = (job('deploy-door.yml', 'deploy').steps ?? []).map(
+      (each) => each.name,
+    );
+    const prove =
+      'Prove the production token reaches the production account alone';
+    expect(names.indexOf(prove)).toBeGreaterThan(-1);
+    expect(names.indexOf(prove)).toBeLessThan(
+      names.indexOf("Write the door's secrets file"),
+    );
+    expect(step('deploy-door.yml', 'deploy', prove).run).toBe(
+      'node scripts/token-reach.ts',
+    );
+  });
+
+  it('writes the secrets file from production environment secrets, holding no Cloudflare token', () => {
+    const write = step(
+      'deploy-door.yml',
+      'deploy',
+      "Write the door's secrets file",
+    );
+    expect(write.env).toEqual({
+      ORIGIN_DOMAIN: '${{ secrets.DOOR_ORIGIN_DOMAIN }}',
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
+      TEST_DOOR_SECRET: '${{ secrets.TEST_DOOR_SECRET }}',
+    });
+    // The script names the file's path itself (SonarCloud S8707 on #943):
+    // a failed write stops the step, and the path goes to the deploy.
+    expect(write.id).toBe('door-secrets');
+    expect(write.run).toBe(
+      'path="$(node scripts/door-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"\n',
+    );
+  });
+
+  it('deploys the door config, named from the repository root, with its secrets, tagged with the commit', () => {
+    const deploy = step('deploy-door.yml', 'deploy', 'Deploy the front door');
+    expect(deploy['working-directory']).toBeUndefined();
+    expect(deploy.env?.['SECRETS_FILE']).toBe(
+      '${{ steps.door-secrets.outputs.path }}',
+    );
+    expect(deploy.run).toBe(
+      'npx --no wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
+    );
+  });
+
+  it('installs without running any install script', () => {
+    const runs = (job('deploy-door.yml', 'deploy').steps ?? []).map(
+      (each) => each.run,
+    );
+    expect(runs).toContain('npm ci --ignore-scripts');
+    expect(runs).not.toContain('npm ci');
+  });
+
+  it('queues behind any production deploy or rollback', () => {
+    expect(workflow('deploy-door.yml').concurrency).toEqual({
+      group: 'deploy-prod',
+      'cancel-in-progress': false,
+    });
+  });
+});
+
 describe('deploys and rollbacks never overlap (#621)', () => {
   it.each(['deploy-prod.yml', 'rollback-prod.yml'])(
     '%s queues in the deploy-prod group',
@@ -220,7 +295,7 @@ describe('deploys and rollbacks never overlap (#621)', () => {
 });
 
 describe('dev can never deploy production (#621 AC7)', () => {
-  it('names the production environment only in the two production workflows', () => {
+  it('names the production environment only in the three production workflows', () => {
     // runtime population: the workflows on disk, so a new one is judged too.
     const files = readdirSync(WORKFLOWS)
       .filter((file) => /\.ya?ml$/.test(file))
@@ -231,6 +306,10 @@ describe('dev can never deploy production (#621 AC7)', () => {
       ),
     );
     expect(files).toContain('deploy-dev.yml');
-    expect(naming).toEqual(['deploy-prod.yml', 'rollback-prod.yml']);
+    expect(naming).toEqual([
+      'deploy-door.yml',
+      'deploy-prod.yml',
+      'rollback-prod.yml',
+    ]);
   });
 });

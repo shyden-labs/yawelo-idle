@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import {
   BOT_EPOCH_WALL_MS,
   syntheticCourse,
@@ -34,36 +32,12 @@ describe('the Capped buyer’s first day', () => {
     expect(run.openDays).toHaveLength(3);
     expect(run.openDays[0]).toBe(0);
     expect(run.openDays).toEqual([...run.openDays].sort((a, b) => a - b));
-    expect(
-      searched(
-        run.openDays.filter((d) => d < 0 || d >= 1),
-        { of: run.openDays, what: 'opens' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('persona-run/capped first day opens', run.openDays.length),
-    ).toBeUndefined();
-    expect(
-      floorBreach('persona-run/capped first day events', run.events),
-    ).toBeUndefined();
+    expect(run.openDays.filter((d) => d < 0 || d >= 1)).toEqual([]);
     expect(run.cpuMs).toBeGreaterThan(0);
-    expect(
-      searched(run.insane, { of: run.views, what: 'views judged' }),
-    ).toEqual([]);
-    expect(
-      floorBreach('persona-run/capped first day views', run.views),
-    ).toBeUndefined();
+    expect(run.insane).toEqual([]);
     expect(run.sails.length).toBeGreaterThan(0);
     const days = run.sails.map((s) => s.day);
-    expect(
-      searched(
-        days.filter((d) => d <= 0 || d >= 1),
-        { of: days, what: 'sail days' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('persona-run/capped first day sails', days.length),
-    ).toBeUndefined();
+    expect(days.filter((d) => d <= 0 || d >= 1)).toEqual([]);
     expect(days).toEqual([...days].sort((a, b) => a - b));
     expect(run.sails.map((s) => s.destination)).toEqual(
       run.sails.map((_, i) => i + 1),
@@ -95,50 +69,18 @@ describe('the Capped buyer’s first day', () => {
   it('judges a return 15 minutes after each of its 3 opens', () => {
     const run = cappedFirstDay();
     expect(run.returnsJudged).toBe(3);
-    expect(
-      searched(run.returnsUndecided, {
-        of: run.returnsJudged,
-        what: 'returns judged',
-      }),
-    ).toEqual([]);
-    expect(
-      searched(run.returnsPracticeOnly, {
-        of: run.returnsJudged,
-        what: 'returns judged',
-      }),
-    ).toEqual([]);
-    expect(
-      floorBreach('persona-run/capped first day returns', run.returnsJudged),
-    ).toBeUndefined();
+    expect(run.returnsUndecided).toEqual([]);
+    expect(run.returnsPracticeOnly).toEqual([]);
   });
 
   it('times a goal from when the Understanding earned that run reached it: no later than its sail, and hours before an open lets it sail', () => {
     // A second sail costs over 0.3 s of CPU in every persona (measured, #475),
     // so the clock's restart at each sail is SailLog's unit test.
     const { sails } = cappedFirstDay();
+    expect(sails.filter((s) => !Number.isFinite(s.reachedDay))).toEqual([]);
     expect(
-      searched(
-        sails.filter((s) => !Number.isFinite(s.reachedDay)),
-        { of: sails, what: 'sails' },
-      ),
+      sails.filter((s) => s.reachedDay > s.day || s.reachedDay <= 0),
     ).toEqual([]);
-    expect(
-      searched(
-        sails.filter((s) => s.reachedDay > s.day || s.reachedDay <= 0),
-        { of: sails, what: 'sails' },
-      ),
-    ).toEqual([]);
-    expect(
-      floorBreach('persona-run/capped first day timed sails', sails.length),
-    ).toBeUndefined();
-    const waitedHours = sails.map((s) => (s.day - s.reachedDay) * 24);
-    // The longest wait with the goal met, in whole hours.
-    expect(
-      floorBreach(
-        'persona-run/capped first day hours waited',
-        Math.floor(Math.max(...waitedHours)),
-      ),
-    ).toBeUndefined();
   });
 
   it('records no finale when the run ends first', () => {

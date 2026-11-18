@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../../../tests/floors';
 import {
   lateGameReturn,
   regionOneReturn,
@@ -56,10 +55,6 @@ describe('a 72 h return with Pemandu at 1 s (#33 AC5)', () => {
     );
     expect(summary.creditedMs).toBe(72 * HOUR_MS);
     expect(summary.clipped).toBe(false);
-    // The return really buys: the measured count is recorded (#378).
-    expect(
-      floorBreach('pemandu-perf/72 h return bought', bought),
-    ).toBeUndefined();
     expect(ms).toBeLessThan(1_000);
   });
 });
@@ -99,8 +94,9 @@ describe('a late-game catch-up with Pemandu at 1 s (#297 AC3)', () => {
       const { state } = advance(fresh, from, returnsAt(from, 1));
       const cpu = process.threadCpuUsage(cpuStart);
       const bought = units(state) - units(from);
-      // The catch-up the figures were measured on.
-      expect(bought).toBe(428);
+      // The catch-up the figures were measured on (428 purchases then).
+      // FSRS-7's schedule (#874) makes it 410, measured on 3cc252da.
+      expect(bought).toBe(410);
       costs.push((cpu.user + cpu.system) / bought);
     }
     const fastest = Math.min(...costs);

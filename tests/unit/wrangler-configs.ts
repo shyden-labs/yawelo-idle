@@ -18,12 +18,24 @@ export const WRANGLER_CONFIGS = [
 ] as const;
 
 /**
- * The production deploy configs: today the holding page alone (#621), an
- * assets-only Worker in the production account. prod-config.test.ts reads
- * these by name; the guards suite's walk counts them with the dev four.
+ * The production deploy configs: the front door (#784), a bindingless
+ * forwarding Worker that door-config.test.ts reads, and the holding page
+ * (#621), an assets-only Worker that prod-config.test.ts reads. Both are in
+ * the production account; the guards suite's walk counts them with the dev
+ * configs.
  */
 export const PROD_WRANGLER_CONFIGS = [
+  'apps/door/wrangler.jsonc',
   'apps/site/holding/wrangler.jsonc',
+] as const;
+
+/**
+ * The TEST deploy configs (#784 AC2): the holding page's locked-down copy in
+ * the non-PROD account, deployed from each release/* cut by deploy-test.yml
+ * and read by test-environment.test.ts.
+ */
+export const TEST_WRANGLER_CONFIGS = [
+  'apps/site/holding-test/wrangler.jsonc',
 ] as const;
 
 /** Every wrangler config under `dir`, found on disk rather than listed. */
@@ -50,6 +62,8 @@ export interface DeployConfig {
   assets: Record<string, unknown> | undefined;
   vars: Record<string, unknown>;
   d1_databases: unknown;
+  r2_buckets: unknown;
+  kv_namespaces: unknown;
   services: unknown;
   durable_objects: unknown;
   migrations: unknown;
@@ -73,6 +87,8 @@ export function readDeployConfig(path: string): DeployConfig {
     assets,
     vars,
     d1_databases,
+    r2_buckets,
+    kv_namespaces,
     services,
     durable_objects,
     migrations,
@@ -94,6 +110,8 @@ export function readDeployConfig(path: string): DeployConfig {
     assets,
     vars,
     d1_databases,
+    r2_buckets,
+    kv_namespaces,
     services,
     durable_objects,
     migrations,

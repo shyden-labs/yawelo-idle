@@ -1,9 +1,14 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { closeOutLines } from '../../../../packages/progress/src/index';
+import {
+  progress,
+  publicSnapshot,
+  roadmapItems,
+} from '../../../../packages/progress/src/index';
 import {
   boardPages,
   FIXTURE_REPO,
-  FIXTURE_TITLE,
+  fixtureCardId,
+  repoPages,
 } from '../../../../packages/progress/test/board-fixture';
 import { roadmapWorld, type RoadmapWorld } from './harness';
 
@@ -41,7 +46,7 @@ const GRACE_MS = 120_000;
 interface Snapshot {
   version: number;
   items: { number: number }[];
-  lines: [string, string];
+  progress: unknown;
 }
 interface Health {
   version: number;
@@ -51,9 +56,16 @@ interface Health {
   lastCheckAt: string | null;
   lastDriftAt: string | null;
   pendingDriftSince: string | null;
+  staleReads: number;
+  lastStaleReadAt: string | null;
+  unseenEvents: number;
   readFailingSince: string | null;
   readError: string | null;
 }
+/** worker/witness.ts's Witness: the card a webhook changed, and when (#689). */
+type Witness =
+  | { kind: 'issue'; number: number; updatedAt: string; gone: boolean }
+  | { kind: 'item'; id: string; updatedAt: string; gone: boolean };
 /** The socket a 101 carries: workerd's, which is accepted before use. */
 interface Socket {
   accept(): void;
@@ -66,7 +78,7 @@ interface Socket {
 interface RoadmapStub {
   setClock(at: number): Promise<void>;
   check(): Promise<void>;
-  changed(): Promise<void>;
+  changed(witness: Witness | null): Promise<void>;
   health(): Promise<Health>;
   snapshot(): Promise<Snapshot | null>;
   fetch(
@@ -102,9 +114,13 @@ async function inRoadmap<T>(
   const clock = { at: T0 };
   const at =
     <K extends keyof Calls>(method: K) =>
-    async (): Promise<Awaited<ReturnType<Calls[K]>>> => {
+    async (
+      ...args: Parameters<Calls[K]>
+    ): Promise<Awaited<ReturnType<Calls[K]>>> => {
       await target.setClock(clock.at);
-      return (await target[method]()) as Awaited<ReturnType<Calls[K]>>;
+      return (await Reflect.apply(target[method], target, args)) as Awaited<
+        ReturnType<Calls[K]>
+      >;
     };
   return body(
     {
@@ -117,15 +133,28 @@ async function inRoadmap<T>(
   );
 }
 
+/** When the changes these tests make happened, by GitHub's stamps (#689). */
+const CHANGED_AT = new Date(T0).toISOString();
+
+interface FixtureNode {
+  id: string;
+  updatedAt: string;
+  content: {
+    number: number;
+    title: string;
+    state: string;
+    stateReason: string | null;
+    closedAt: string | null;
+    updatedAt: string;
+    repository: { nameWithOwner: string };
+  };
+}
+type FixturePages = { data: { node: { items: { nodes: FixtureNode[] } } } }[];
+
+const fixturePages = () => boardPages(today()) as FixturePages;
+
 /** The fixture board with more stories, numbered from 99, so it hashes differently. */
-function boardWithExtraStory(extra = 1): unknown[] {
-  const pages = boardPages(today()) as {
-    data: {
-      node: {
-        items: { nodes: { content: { number: number; title: string } }[] };
-      };
-    };
-  }[];
+function boardWithExtraStory(extra = 1, pages = fixturePages()): unknown[] {
   const last = pages.at(-1)?.data.node.items.nodes;
   const template = last?.at(-1);
   if (last === undefined || template === undefined)
@@ -133,20 +162,99 @@ function boardWithExtraStory(extra = 1): unknown[] {
   for (let n = 0; n < extra; n += 1)
     last.push({
       ...structuredClone(template),
+      id: fixtureCardId(99 + n),
+      updatedAt: CHANGED_AT,
       content: {
         ...structuredClone(template.content),
         number: 99 + n,
         title: `Extra story ${String(99 + n)}`,
+        updatedAt: CHANGED_AT,
       },
     });
   return pages;
 }
 
+/** The fixture board with story #9 closed at CHANGED_AT, as #678 closed. */
+function boardWithStoryNineClosed(pages = fixturePages()): FixturePages {
+  const nine = pages
+    .flatMap((p) => p.data.node.items.nodes)
+    .find((n) => n.content.number === 9);
+  if (nine === undefined) throw new Error('the fixture has no story 9');
+  nine.updatedAt = CHANGED_AT;
+  Object.assign(nine.content, {
+    state: 'CLOSED',
+    stateReason: 'COMPLETED',
+    closedAt: CHANGED_AT,
+    updatedAt: CHANGED_AT,
+  });
+  return pages;
+}
+
+/**
+ * The refusal for a board listing without story #9 while the repository's
+ * issues still name it on the board (#751).
+ */
+const SHORT_OF_STORY_NINE =
+  'the board lists 8 of shyden-labs/fixture’s issues and the repository’s own issues (Repository.issues) name 9 on it; missing from the board’s listing: #9: nothing read';
+
+/** The fixture board without story #9's card, as an archived card leaves it. */
+function boardWithoutStoryNine(): unknown[] {
+  const pages = fixturePages();
+  for (const page of pages)
+    page.data.node.items.nodes = page.data.node.items.nodes.filter(
+      (n) => n.content.number !== 9,
+    );
+  return pages;
+}
+
+/**
+ * The fixture board with story #9 transferred to another repository: its
+ * card stays, holding the issue's new home (#689).
+ */
+function boardWithStoryNineTransferred(): unknown[] {
+  const pages = fixturePages();
+  const nine = pages
+    .flatMap((p) => p.data.node.items.nodes)
+    .find((n) => n.content.number === 9);
+  if (nine === undefined) throw new Error('the fixture has no story 9');
+  nine.content.repository = { nameWithOwner: 'shyden-labs/elsewhere' };
+  return pages;
+}
+
+/** The webhooks for those changes. */
+const extraStoryClosed: Witness = {
+  kind: 'issue',
+  number: 99,
+  updatedAt: CHANGED_AT,
+  gone: false,
+};
+const storyNineClosed: Witness = {
+  kind: 'issue',
+  number: 9,
+  updatedAt: CHANGED_AT,
+  gone: false,
+};
+/** #9 deleted, or transferred to another repository: gone from this one. */
+const storyNineGone: Witness = { ...storyNineClosed, gone: true };
+// Functions, so the fixture's card ids are made at test time, never at
+// collection (tests/guards/collection-calls.test.ts).
+const cardAdded = (number = 99): Witness => ({
+  kind: 'item',
+  id: fixtureCardId(number),
+  updatedAt: CHANGED_AT,
+  gone: false,
+});
+const storyNineArchived = (): Witness => ({
+  kind: 'item',
+  id: fixtureCardId(9),
+  updatedAt: CHANGED_AT,
+  gone: true,
+});
+
 /** GraphQL first-page reads the fake has served: one per board read. */
 const boardReads = async () =>
-  (await seenByFake()).filter(
-    (s) => s.url.endsWith('/graphql') && s.cursor === null,
-  ).length;
+  (await seenByFake()).filter((s) => s.query === 'board' && s.cursor === null)
+    .length;
 
 beforeEach(async () => {
   await resetFake();
@@ -160,10 +268,16 @@ describe('reading the board', () => {
     expect(health.readFailingSince).toBeNull();
   });
 
-  it('gives the same two lines as the close-out script, from one fixture', async () => {
+  it('gives the public part of the close-out’s figures, from one fixture (#840)', async () => {
     const snapshot = await inRoadmap((r) => r.snapshot());
-    expect(snapshot?.lines).toEqual(
-      closeOutLines(boardPages(today()), FIXTURE_TITLE, FIXTURE_REPO, today()),
+    const { items } = roadmapItems(boardPages(today()), FIXTURE_REPO);
+    expect(snapshot?.progress).toEqual(
+      publicSnapshot({
+        version: 1,
+        readAt: '',
+        items,
+        progress: progress(items, today()),
+      }).progress,
     );
   });
 
@@ -181,7 +295,7 @@ describe('reading the board', () => {
     const snapshot = await inRoadmap(async (r) => {
       await r.check();
       await configureFake({ pages: boardWithExtraStory() });
-      await r.changed();
+      await r.changed(cardAdded());
       return r.snapshot();
     });
     expect(snapshot?.version).toBe(2);
@@ -193,7 +307,9 @@ describe('reading the board', () => {
       await r.check();
       const before = await boardReads();
       await configureFake({ pages: boardWithExtraStory() });
-      await Promise.all(Array.from({ length: 10 }, () => r.changed()));
+      await Promise.all(
+        Array.from({ length: 10 }, () => r.changed(cardAdded())),
+      );
       return {
         reads: (await boardReads()) - before,
         snapshot: await r.snapshot(),
@@ -244,15 +360,15 @@ describe('reading the board', () => {
         snapshot: await r.snapshot(),
         health: await r.health(),
       }));
+      // The fixture's release items: 7 is post-launch and 8 closed as not
+      // planned, both left off what is public (#840).
       expect(snapshot?.items.map((i) => i.number)).toEqual([
-        1, 2, 3, 4, 5, 6, 7, 8, 9,
+        1, 2, 3, 4, 5, 6, 9,
       ]);
       // Exactly these fields are published: a list naming what was dropped,
       // or any other new field, fails here before it ships.
       expect(Object.keys(snapshot ?? {}).sort()).toEqual([
-        'hash',
         'items',
-        'lines',
         'progress',
         'readAt',
         'version',
@@ -264,9 +380,12 @@ describe('reading the board', () => {
         'lastCheckAt',
         'lastDriftAt',
         'lastEventAt',
+        'lastStaleReadAt',
         'pendingDriftSince',
         'readError',
         'readFailingSince',
+        'staleReads',
+        'unseenEvents',
         'version',
       ]);
       expect(health.readError).toBeNull();
@@ -291,6 +410,28 @@ describe('reading the board', () => {
       'the board is "ShyTalk Stories", not "Fixture Stories": nothing read',
     );
   });
+
+  // The fixture's 9 items, with GitHub counting 10 on the board (#703).
+  it('refuses a read short of the board, keeping nothing from it', async () => {
+    await configureFake({ totalCount: 10 });
+    const health = await inRoadmap((r) => r.health());
+    expect(health.version).toBe(0);
+    expect(health.readError).toBe(
+      'the board has 10 items and 9 were read: nothing read',
+    );
+  });
+
+  // GitHub's incident of 2026-10-22: the listing and its own count shrank
+  // together. The repository's issues still name story #9 on the board.
+  it('refuses a listing short of the repository’s issues, its own count agreeing, keeping nothing from it (#751)', async () => {
+    await configureFake({
+      pages: boardWithoutStoryNine(),
+      repoPages: repoPages(),
+    });
+    const health = await inRoadmap((r) => r.health());
+    expect(health.version).toBe(0);
+    expect(health.readError).toBe(SHORT_OF_STORY_NINE);
+  });
 });
 
 describe('a failed read', () => {
@@ -299,7 +440,7 @@ describe('a failed read', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502, pages: boardWithExtraStory() });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(cardAdded());
       return { health: await r.health(), snapshot: await r.snapshot() };
     });
     expect(snapshot?.version).toBe(1);
@@ -307,14 +448,31 @@ describe('a failed read', () => {
     expect(health.readError).toBe('GitHub refused POST /graphql: HTTP 502');
   });
 
+  it('keeps the last good snapshot and reports the short listing on health (#751)', async () => {
+    const { health, snapshot } = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({
+        pages: boardWithoutStoryNine(),
+        repoPages: repoPages(),
+      });
+      clock.at += 60_000;
+      await r.changed(null);
+      return { health: await r.health(), snapshot: await r.snapshot() };
+    });
+    expect(snapshot?.version).toBe(1);
+    expect(snapshot?.items.map((item) => item.number)).toContain(9);
+    expect(health.readFailingSince).toBe(new Date(T0 + 60_000).toISOString());
+    expect(health.readError).toBe(SHORT_OF_STORY_NINE);
+  });
+
   it('keeps the first failure’s time while reads go on failing', async () => {
     const health = await inRoadmap(async (r, clock) => {
       await r.check();
       await configureFake({ graphqlStatus: 502 });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(null);
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(null);
       return r.health();
     });
     expect(health.readFailingSince).toBe(new Date(T0 + 60_000).toISOString());
@@ -324,9 +482,9 @@ describe('a failed read', () => {
     const health = await inRoadmap(async (r) => {
       await r.check();
       await configureFake({ graphqlStatus: 502 });
-      await r.changed();
+      await r.changed(null);
       await configureFake({ graphqlStatus: 200 });
-      await r.changed();
+      await r.changed(null);
       return r.health();
     });
     expect(health.readFailingSince).toBeNull();
@@ -338,7 +496,7 @@ describe('a failed read', () => {
       await r.check();
       await configureFake({ graphqlStatus: 502 });
       const before = await boardReads();
-      await r.changed();
+      await r.changed(null);
       return (await boardReads()) - before;
     });
     expect(reads).toBe(1);
@@ -370,7 +528,7 @@ describe('drift', () => {
       clock.at += 600_000;
       await r.check();
       clock.at += GRACE_MS;
-      await r.changed();
+      await r.changed(cardAdded());
       clock.at += GRACE_MS + 1;
       return r.health();
     });
@@ -385,18 +543,18 @@ describe('drift', () => {
       clock.at += 600_000;
       await r.check();
       clock.at += GRACE_MS + 1;
-      await r.changed();
+      await r.changed(cardAdded());
       return r.health();
     });
     expect(health.drift).toBe(1);
   });
 
-  it('counts no drift when an event came after the last good read began, its own read having failed', async () => {
+  it('counts no drift when an event’s own read failed and the check finds its change', async () => {
     const health = await inRoadmap(async (r, clock) => {
       await r.check();
       await configureFake({ graphqlStatus: 502, pages: boardWithExtraStory() });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(cardAdded());
       await configureFake({ graphqlStatus: 200 });
       clock.at += 600_000;
       await r.check();
@@ -445,7 +603,7 @@ describe('drift', () => {
       expect((await r.health()).drift).toBe(1);
       await configureFake({ pages: boardWithExtraStory(2) });
       clock.at += 60_000;
-      await r.changed();
+      await r.changed(cardAdded(100));
       return r.health();
     });
     expect(health.drift).toBe(0);
@@ -470,6 +628,203 @@ describe('drift', () => {
     });
     expect(health.drift).toBe(1);
     expect(health.driftTotal).toBe(1);
+  });
+});
+
+/**
+ * #689: on 2026-10-19 every webhook was delivered and accepted, yet dev
+ * reported drift: the read #678's closure caused most likely got the board
+ * from before it. Each webhook now names its card and when it changed; a
+ * read is judged card by card against those witnesses.
+ */
+describe('a read behind its webhook (#689)', () => {
+  it('counts no drift when an event’s read is behind its webhook and the check then finds the change', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      // The fake still serves the board from before #9 closed.
+      await r.changed(storyNineClosed);
+      await configureFake({ pages: boardWithStoryNineClosed() });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.driftTotal).toBe(0);
+    expect(health.staleReads).toBe(1);
+    expect(health.lastStaleReadAt).toBe(new Date(T0 + 60_000).toISOString());
+    expect(health.unseenEvents).toBe(0);
+  });
+
+  // Blind spot 1: a late read used to excuse every change until the check.
+  it('counts drift for a change no webhook named, though another card’s webhook was owed', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      await configureFake({
+        pages: boardWithExtraStory(1, boardWithStoryNineClosed()),
+      });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(1);
+    expect(health.staleReads).toBe(1);
+  });
+
+  // Blind spot 2: a card added to the board but not yet in the read.
+  it('counts no drift when an event’s read is behind a card added to the board', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(cardAdded());
+      await configureFake({ pages: boardWithExtraStory() });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(1);
+  });
+
+  it('does not count a read late for an issue that is not on the board', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(extraStoryClosed);
+      return r.health();
+    });
+    expect(health.staleReads).toBe(0);
+    expect(health.lastStaleReadAt).toBeNull();
+  });
+
+  it('counts drift for a change an event’s read found that no webhook named', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({
+        pages: boardWithExtraStory(1, boardWithStoryNineClosed()),
+      });
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(1);
+    expect(health.lastDriftAt).toBe(new Date(T0 + 60_000).toISOString());
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('lets a late webhook within the grace explain its own card, not another', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({
+        pages: boardWithExtraStory(1, boardWithStoryNineClosed()),
+      });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.drift).toBe(1);
+    expect(health.driftTotal).toBe(1);
+  });
+
+  // A deleted or transferred issue never shows in this repository's read
+  // again, so its witness is seen by its absence (#689, found after #691).
+  it('counts no drift when a deleted issue’s card leaves the board by webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithoutStoryNine() });
+      clock.at += 60_000;
+      await r.changed(storyNineGone);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('counts no drift when a transferred issue leaves the roadmap by webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithStoryNineTransferred() });
+      clock.at += 60_000;
+      await r.changed(storyNineGone);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('counts no drift when an archived card leaves the board by webhook', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithoutStoryNine() });
+      clock.at += 60_000;
+      await r.changed(storyNineArchived());
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(0);
+    expect(health.staleReads).toBe(0);
+  });
+
+  it('drops a webhook no check shows within the grace, counting it unseen', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += 600_000;
+      await r.check();
+      return r.health();
+    });
+    expect(health.unseenEvents).toBe(1);
+    expect(health.staleReads).toBe(2);
+    expect(health.drift).toBe(0);
+  });
+
+  it('lets a dropped webhook explain no later change', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += 600_000;
+      await r.check();
+      await configureFake({ pages: boardWithStoryNineClosed() });
+      clock.at += 600_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.unseenEvents).toBe(1);
+    expect(health.drift).toBe(1);
+  });
+
+  it('explains nothing by a delivery that names no card', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithExtraStory() });
+      clock.at += 60_000;
+      await r.changed(null);
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.version).toBe(2);
+    expect(health.drift).toBe(1);
   });
 });
 
@@ -585,7 +940,7 @@ describe('the live socket', () => {
     const socket = await open(stub);
     expect((await socket.next()).version).toBe(1);
     await configureFake({ pages: boardWithExtraStory() });
-    await inRoadmap((r) => r.changed(), stub);
+    await inRoadmap((r) => r.changed(cardAdded()), stub);
     expect((await socket.next()).version).toBe(2);
   });
 

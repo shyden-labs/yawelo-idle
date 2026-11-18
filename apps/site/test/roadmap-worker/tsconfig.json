@@ -4,6 +4,7 @@
   // ../roadmap are typed by ../../tsconfig.json with the rest of the site.
   "extends": "../../worker/tsconfig.json",
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "types": ["../../worker/worker-configuration.d.ts"]
   },
   "include": ["*.ts", "../../worker/*.ts", "../github-fake/contract.ts"]

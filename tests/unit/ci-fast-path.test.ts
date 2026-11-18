@@ -24,6 +24,7 @@ interface Step {
   uses?: string;
   with?: Record<string, unknown>;
   env?: Record<string, unknown>;
+  'timeout-minutes'?: unknown;
 }
 
 interface Job {
@@ -49,9 +50,13 @@ const SKIP = "steps.classify.outputs.scope != 'docs-only'";
 const ORDER = [
   'The default branch is develop',
   'actions/checkout',
+  'Read the exact Node version (docker/node/Dockerfile)',
   'actions/setup-node',
+  "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
+  'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
+  'Audit (an advisory without a current exception fails it)',
   'Format',
   'Lint (zero warnings)',
   'Typecheck (tsc, svelte-check)',
@@ -63,17 +68,24 @@ const ORDER = [
   'Upload the pacing report',
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)',
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)',
-  'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)',
+  'Web smoke (the built game in a local Worker, on every supported target)',
   'Build (a warning fails it)',
+  'Build the holding page',
+  'Make its dev copy',
+  'No built page loads from a free shared domain',
 ];
 
 /** The steps a docs-only change runs (AC2). */
 const DOCS_ONLY = [
   'The default branch is develop',
   'actions/checkout',
+  'Read the exact Node version (docker/node/Dockerfile)',
   'actions/setup-node',
+  "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
+  'Develop merges by squash only (#679)',
   'Install (a warning fails it)',
+  'Audit (an advisory without a current exception fails it)',
   'Format',
   'Unit tests',
   'Guards (whole-repo checks)',
@@ -92,16 +104,29 @@ const SKIPPED: Record<string, string> = {
   'Upload the pacing report': `\${{ !cancelled() && ${SKIP} && (steps.pacing.outcome == 'success' || steps.pacing.outcome == 'failure') }}`,
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)': `\${{ ${SKIP} }}`,
   'Cross-engine determinism (Node, Chromium, Firefox, WebKit)': `\${{ ${SKIP} }}`,
-  'Web smoke (the built game in a local Worker, on Chromium, Firefox and WebKit)': `\${{ ${SKIP} }}`,
+  'Web smoke (the built game in a local Worker, on every supported target)': `\${{ ${SKIP} }}`,
   'Build (a warning fails it)': `\${{ ${SKIP} }}`,
+  'Build the holding page': `\${{ ${SKIP} }}`,
+  'Make its dev copy': `\${{ ${SKIP} }}`,
+  'No built page loads from a free shared domain': `\${{ ${SKIP} }}`,
 };
 
 describe('build-and-test’s steps (#360 AC2)', () => {
+  // A new advisory can land on any day, so the audit runs on docs-only too.
+  it('audits the install with the tested judge, straight after it (#720)', () => {
+    const audit = steps().find(
+      (s) =>
+        idOf(s) === 'Audit (an advisory without a current exception fails it)',
+    );
+    expect(audit?.run).toBe('node scripts/npm-audit.ts');
+    expect(audit?.if).toBeUndefined();
+  });
+
   it('run in today’s order, the default-branch check first, the classifier after Node and before install', () => {
     expect(steps().map(idOf)).toEqual(ORDER);
   });
 
-  it('on docs-only, run exactly the default-branch check, checkout, Node, the classifier, install, Format, the unit suite and the guards', () => {
+  it('on docs-only, run exactly the default-branch check, checkout, Node, the classifier, the squash-only check, install, the audit, Format, the unit suite and the guards', () => {
     expect(
       steps()
         .filter((s) => s.if === undefined)
@@ -128,6 +153,37 @@ describe('build-and-test’s steps (#360 AC2)', () => {
   });
 });
 
+describe('the ICU and CLDR print (#942 AC4)', () => {
+  it('prints the ICU and CLDR versions of the Node the job runs, with Node alone', () => {
+    const print = steps().find(
+      (s) => idOf(s) === "Print Node's ICU and CLDR versions (#942)",
+    );
+    expect(print?.run).toBe(
+      "node -p '`icu ${process.versions.icu} cldr ${process.versions.cldr}`'",
+    );
+  });
+});
+
+describe('the squash-only step (#679 AC3)', () => {
+  const step = () =>
+    steps().find((s) => idOf(s) === 'Develop merges by squash only (#679)') ??
+    {};
+
+  it('runs the check with Node alone, on this repository', () => {
+    expect(step().run).toBe(
+      'node scripts/develop-squash-only.ts "$GITHUB_REPOSITORY"',
+    );
+  });
+
+  it('reads the rules with the run’s own token, and nothing else', () => {
+    expect(step().env).toEqual({ GH_TOKEN: '${{ github.token }}' });
+  });
+
+  it('has a one-minute limit', () => {
+    expect(step()['timeout-minutes']).toBe(1);
+  });
+});
+
 describe('the classifier step (#360 AC1)', () => {
   const classifier = () =>
     steps().find(
@@ -148,16 +204,23 @@ describe('the classifier step (#360 AC1)', () => {
 
   it('has the commit’s first parent to diff against: checkout fetches two levels', () => {
     const checkout = steps().find((s) => idOf(s) === 'actions/checkout');
-    expect(checkout?.with).toEqual({
-      ref: '${{ inputs.ref }}',
-      'fetch-depth': 2,
+    expect(checkout?.with).toEqual({ 'fetch-depth': 2 });
+  });
+
+  it('takes no input, so every caller tests its event’s own commit (#679)', () => {
+    expect(read('ci.yml').on).toEqual({
+      pull_request: null,
+      workflow_call: null,
     });
   });
 });
 
 describe('deploy-dev always tests in full (#360 AC3)', () => {
-  it('runs only on a push, an event the classifier never makes docs-only', () => {
-    expect(Object.keys(read('deploy-dev.yml').on)).toEqual(['push']);
+  it('runs only on a push or a dispatch, events the classifier never makes docs-only', () => {
+    expect(Object.keys(read('deploy-dev.yml').on)).toEqual([
+      'push',
+      'workflow_dispatch',
+    ]);
   });
 
   it('calls build-and-test with no input', () => {

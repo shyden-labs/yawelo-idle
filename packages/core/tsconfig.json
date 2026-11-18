@@ -4,6 +4,7 @@
   // `types: []` matters: without it, the hoisted @types/node would be
   // included automatically and `process` or `Buffer` would typecheck.
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -15,7 +16,8 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   // The tests run in Node and have their own project (test/tsconfig.json);
   // the golden vectors are also bundled into every browser engine

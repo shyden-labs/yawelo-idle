@@ -1,7 +1,12 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parse } from 'yaml';
-import { SKIPPED_AUTHOR } from '../../scripts/board-orphans';
+import {
+  onlyJob,
+  stepNamed,
+  workflow as readWorkflow,
+  type Workflow,
+  type WorkflowJob,
+  type WorkflowStep,
+} from './workflow-file';
 import { runOf } from './workflow-steps';
 
 /**
@@ -9,56 +14,17 @@ import { runOf } from './workflow-steps';
  * scripts/board-orphans.ts in a job of its own, which branch protection
  * requires by its name. The board is read with the read-only roadmap App's
  * token, minted from the `board-read` environment's key; the branches and
- * pull requests with the run's own token (operator 2026-10-15). Dependabot's
- * runs get no environment secrets, so the key check and the mint skip there
- * and the script says it skipped (operator 2026-10-15).
+ * pull requests with the run's own token (operator 2026-10-15). Every step
+ * runs for every author (#661: a check is green only when it ran); a
+ * Dependabot run reads the key from the repository's Dependabot secret.
  */
 
-const FILE = '.github/workflows/board-orphans.yml';
+const FILE = 'board-orphans.yml';
+const ID = 'board-orphans';
 
-interface Step {
-  readonly name?: string;
-  readonly id?: string;
-  readonly if?: string;
-  readonly uses?: string;
-  readonly run?: unknown;
-  readonly env?: Readonly<Record<string, unknown>>;
-  readonly with?: Readonly<Record<string, unknown>>;
-}
-interface Job {
-  readonly 'runs-on'?: string;
-  readonly 'timeout-minutes'?: number;
-  readonly environment?: unknown;
-  readonly container?: unknown;
-  readonly steps?: readonly Step[];
-}
-interface Workflow {
-  readonly on?: unknown;
-  readonly permissions?: unknown;
-  readonly jobs?: Readonly<Record<string, Job>>;
-}
-
-const workflow = (): Workflow => parse(readFileSync(FILE, 'utf8')) as Workflow;
-
-/** The workflow's one job, refusing any other shape. */
-function job(): Job {
-  const jobs = workflow().jobs ?? {};
-  if (Object.keys(jobs).join() !== 'board-orphans')
-    throw new Error(`${FILE} holds jobs ${Object.keys(jobs).join(', ')}`);
-  return jobs['board-orphans'] as Job;
-}
-
-/** The step called `name`, refusing a missing or doubled one. */
-function step(name: string): Step {
-  const found = (job().steps ?? []).filter((s) => s.name === name);
-  if (found.length !== 1)
-    throw new Error(
-      `${FILE} holds ${String(found.length)} steps named "${name}"`,
-    );
-  return found[0] as Step;
-}
-
-const NOT_DEPENDABOT = `\${{ github.event.pull_request.user.login != '${SKIPPED_AUTHOR}' }}`;
+const workflow = (): Workflow => readWorkflow(FILE);
+const job = (): WorkflowJob => onlyJob(FILE, ID);
+const step = (name: string): WorkflowStep => stepNamed(FILE, ID, name);
 
 describe('board-orphans.yml (#580)', () => {
   it('runs on every pull request, and again when its title or body is edited', () => {
@@ -85,7 +51,7 @@ describe('board-orphans.yml (#580)', () => {
       j['runs-on'],
       j.container,
       j['timeout-minutes'],
-    ]).toEqual(['board-read', 'ubuntu-24.04', undefined, 5]);
+    ]).toEqual(['board-read', 'ubuntu-26.04', undefined, 5]);
   });
 
   it('runs its steps in order: key check, mint, checkout, node, the check', () => {
@@ -95,17 +61,18 @@ describe('board-orphans.yml (#580)', () => {
       'The board key is set',
       'Mint the board token (read-only roadmap App)',
       'actions/checkout',
+      'Read the exact Node version (docker/node/Dockerfile)',
       'actions/setup-node',
       'No ticket is In Progress without a branch or open pull request',
     ]);
   });
 
-  it("fails by name when the key is missing, except on Dependabot's pull requests", () => {
+  it('fails by name when the key is missing, for every author, naming both places it is set', () => {
     const s = step('The board key is set');
-    expect(s.if).toBe(NOT_DEPENDABOT);
+    expect(s.if).toBeUndefined();
     expect(s.env).toEqual({ KEY: '${{ secrets.ROADMAP_APP_KEY }}' });
     expect(runOf(s)).toContain(
-      '::error::ROADMAP_APP_KEY is not set in the board-read environment, so the board cannot be read (#580).',
+      "::error::ROADMAP_APP_KEY is not set, so the board cannot be read: it is the board-read environment's secret, and the repository's Dependabot secret for Dependabot's pull requests (#580, #661).",
     );
     expect(runOf(s)).toContain('exit 1');
   });
@@ -113,9 +80,11 @@ describe('board-orphans.yml (#580)', () => {
   it("mints a token for the roadmap App's org installation, reading issues and projects only", () => {
     const s = step('Mint the board token (read-only roadmap App)');
     expect([s.if, s.id, s.uses]).toEqual([
-      NOT_DEPENDABOT,
+      undefined,
       'board-token',
-      'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1',
+      // Any full SHA: supply-chain.test.ts checks the pin and its version
+      // comment, and an exact SHA here turned every Dependabot bump red (#919).
+      expect.stringMatching(/^actions\/create-github-app-token@[0-9a-f]{40}$/),
     ]);
     expect(s.with).toEqual({
       'client-id': 'Iv23liVLjRN8twjcTmN0',

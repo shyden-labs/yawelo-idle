@@ -23,18 +23,25 @@ concurrency:
 jobs:
   rollback:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment:
       name: production
-      url: https://yawelo-idle.shyden.co.uk
+      url: https://yaweloidle.com
     env:
       WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: '.nvmrc'
+          node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
       - run: npm ci
       - name: Prove the production token reaches the production account alone
@@ -53,7 +60,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           COMMIT: ${{ inputs.commit }}
         run: |
-          npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"
+          npx --no wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"
           echo "id=$(node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT")" >> "$GITHUB_OUTPUT"
       - name: Roll production back to it
         env:
@@ -61,11 +68,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           VERSION: ${{ steps.version.outputs.id }}
           COMMIT: ${{ inputs.commit }}
-        run: npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes
+        run: npx --no wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes
 
   verify:
     needs: rollback
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       # The commit production returned to, so the verify compares with what
@@ -74,9 +81,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.commit }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: '.nvmrc'
+          node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
       - run: npm ci
       - name: Build the holding page that commit released
@@ -85,6 +99,6 @@ jobs:
         run: npm run build:holding --workspace @yawelo-idle/site
       - name: Verify production serves the commit it was rolled back to
         env:
-          PROD_URL: https://yawelo-idle.shyden.co.uk
+          PROD_URL: https://yaweloidle.com
           EXPECTED_SHA: ${{ inputs.commit }}
         run: node scripts/verify-prod.ts

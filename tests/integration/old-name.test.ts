@@ -12,8 +12,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { grepCounts, OLD, walkTree } from '../unit/old-name';
 import { committableFiles } from '../unit/tracked-files';
 
@@ -140,12 +138,6 @@ describe('grepCounts against git grep (#491)', () => {
         (path) =>
           `${path}: git grep counts ${String(grep.get(path) ?? 0)}, grepCounts ${String(counted.get(path) ?? 0)}`,
       );
-    expect(
-      searched(misread, { of: named, what: 'files naming the old name' }),
-      misread.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('old-name/git-grep-files', named.length),
-    ).toBeUndefined();
+    expect(misread, misread.join('\n')).toEqual([]);
   });
 });

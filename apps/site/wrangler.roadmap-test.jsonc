@@ -5,7 +5,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-site-roadmap-test",
   "main": "test/roadmap-worker/test-worker.ts",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
@@ -14,12 +14,16 @@
     "run_worker_first": true,
     "not_found_handling": "404-page",
   },
-  "services": [{ "binding": "GAME", "service": "yawelo-idle-web-dev" }],
+  "services": [
+    { "binding": "GAME", "service": "yawelo-idle-web-dev" },
+    { "binding": "HOLDING", "service": "yawelo-idle-holding-dev" },
+  ],
   "vars": {
     "ROADMAP_APP_ID": "5294556",
     "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
     "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
     "ROADMAP_REPO": "shyden-labs/yawelo-idle",
+    "DOOR_REQUIRED": "false",
   },
   "durable_objects": {
     "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],

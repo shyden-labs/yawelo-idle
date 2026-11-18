@@ -22,12 +22,27 @@ export const READ_ONLY: Permissions = {
   metadata: 'read',
   organization_projects: 'read',
 };
+/**
+ * The installation as it stands since 2026-11-02: the three reads, with
+ * Administration: read removed (#797). Written out, not spread from
+ * READ_ONLY, so the token's rights and the installation's are each stated
+ * once.
+ */
+export const INSTALLED: Permissions = {
+  issues: 'read',
+  metadata: 'read',
+  organization_projects: 'read',
+};
 
 /** What a test can change; `reset` puts every field back. */
 export interface FakeConfig {
   repositorySelection: 'selected' | 'all';
   installationPermissions: Permissions;
-  tokenPermissions: Permissions;
+  /**
+   * The issued token's rights, or `null` for what GitHub does: the request's
+   * `permissions` when it names them, else every right of the installation.
+   */
+  tokenPermissions: Permissions | null;
   tokenRepositories: string[];
   /** Raw pages served in order; `null` serves the shared fixture for today. */
   pages: unknown[] | null;
@@ -37,6 +52,17 @@ export interface FakeConfig {
   graphqlErrors: { message: string }[] | null;
   /** Say every page has a next one, as a broken paginator would. */
   endlessPages: boolean;
+  /**
+   * The board's item count each page reports (#703); `null` reports what
+   * GitHub would: every item on every page served.
+   */
+  totalCount: number | null;
+  /**
+   * Raw pages of the repository's issues served in order for
+   * REPO_ISSUES_QUERY (#751); `null` serves what GitHub would: one page
+   * naming every issue of the repository the board's pages hold.
+   */
+  repoPages: unknown[] | null;
 }
 
 /** One request as the fake received it. */
@@ -44,6 +70,8 @@ export interface Seen {
   method: string;
   url: string;
   userAgent: string | null;
+  /** For GraphQL: which query it asked, the board's or the repository's issues' (#751). */
+  query?: 'board' | 'issues';
   /** For GraphQL: the cursor asked for (`null` for the first page). */
   cursor?: string | null;
   /** For an App call: the JWT's claims once verified. */

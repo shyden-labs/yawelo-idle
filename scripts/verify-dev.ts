@@ -9,19 +9,24 @@
  *    both without credentials and with a wrong password.
  * 2. Its robots.txt blocks every crawler, without credentials.
  * 3. With the password, the page carries `yawelo-idle-commit` = the expected SHA
- *    and the noindex header.
+ *    and the noindex header, and is the holding page production shows
+ *    (#673): its mark, and the stylesheet it links served as CSS.
  * 4. The sync API's /health reports ok, that SHA and db "ok", with the
  *    noindex header (the API is not password-gated, by operator decision).
- * 5. The site's other pages (`SITE_PAGES`: Indonesian, the roadmap and the
- *    game at /play/, forwarded by service binding) each carry that SHA and
- *    noindex with the password, the game refuses a caller without it, and
- *    the script the game shell loads is served as JavaScript (#332).
+ * 5. The front door's other pages (`SITE_PAGES`: the Indonesian holding page
+ *    and the game at /play/, forwarded by service binding) each carry that
+ *    SHA and noindex with the password, the game refuses a caller without
+ *    it, and the script the game shell loads is served as JavaScript (#332).
  * 6. The game Worker's own workers.dev address serves nothing: the site
  *    Worker's binding is its only way in, so nothing reaches the game
  *    around the gate (#332).
+ * 7. The site being built, at the site Worker's own address
+ *    (`PREVIEW_PAGES`: home, Indonesian and the roadmap), carries that SHA,
+ *    noindex and its own mark with the password, and refuses a caller
+ *    without it (#673).
  *
  * Nothing is retried (Refs #83). The one wait is for a named condition: both
- * hosts, and then each of `SITE_PAGES`, serving the expected commit, since
+ * hosts, and then each page judged, serving the expected commit, since
  * the previous deploy can be served for a few seconds after an upload, and
  * on one path after another has moved on (#581). Each look waits on only two answers: an
  * older commit, and no answer from a host that has not yet answered in this
@@ -44,7 +49,10 @@ export interface Probe {
 }
 
 export interface Target {
+  /** The dev front door, which shows the holding page (#673). */
   webUrl: string;
+  /** The site Worker's own address, which shows the site being built (#673). */
+  siteUrl: string;
   syncUrl: string;
   /** The game Worker's own workers.dev address, retired by #332. */
   gameUrl: string;
@@ -59,11 +67,30 @@ const COMMIT_STAMP = /<meta name="yawelo-idle-commit" content="([^"]*)"/;
 /** The script a game shell loads, under /play/assets/. */
 const GAME_SCRIPT = /<script[^>]+src="(\/play\/assets\/[^"]+\.js)"/;
 
-/** The pages checked once the home page serves the expected commit (#332). */
 /** The game's shell, the one page served by the game Worker (#332). */
 const GAME_SHELL = '/play/';
 
-export const SITE_PAGES: readonly string[] = ['/id/', '/roadmap', GAME_SHELL];
+/** The front door's pages checked once its home page serves the expected commit (#332, #673). */
+export const SITE_PAGES: readonly string[] = ['/id/', GAME_SHELL];
+
+/** The site being built's pages, at the site Worker's own address (#673). */
+export const PREVIEW_PAGES: readonly string[] = ['/', '/id/', '/roadmap'];
+
+/** The holding page's mark, an attribute Holding.astro writes (#673). */
+const HOLDING_MARK = /<[a-z][^>]*\sdata-coming-soon[\s>=]/;
+
+/** The site being built's mark, an attribute Base.astro writes (#673). */
+const SITE_MARK = /<[a-z][^>]*\sdata-dev-strip[\s>=]/;
+
+/** The stylesheet a page links, whatever the order of the tag's attributes (#673). */
+export function stylesheetOf(body: string): string | undefined {
+  for (const [tag] of body.matchAll(/<link\b[^>]*>/gi)) {
+    if (!/\srel="stylesheet"/i.test(tag)) continue;
+    const href = /\shref="([^"]+)"/i.exec(tag)?.[1];
+    if (href !== undefined) return href;
+  }
+  return undefined;
+}
 
 /** Any sign that a response carries the app rather than a challenge. */
 const APP_MARKUP = /<(?:!doctype|html|meta|script)\b/i;
@@ -215,6 +242,101 @@ export function webProblems(
   return [...webJudgement(probe, sha, label).problems];
 }
 
+/** A check that the page carries the mark of the build that should serve it (#673). */
+const markCheck = (
+  label: string,
+  probe: Probe,
+  mark: RegExp,
+  what: string,
+  attribute: string,
+): Check => ({
+  name: 'mark',
+  problem: () =>
+    mark.test(probe.body)
+      ? undefined
+      : `${label}: not ${what}: no ${attribute} mark`,
+});
+
+/** A front door page: the holding page production shows (#673). */
+export function holdingJudgement(
+  probe: Probe,
+  sha: string,
+  label = 'web',
+): Judgement {
+  return judge([
+    ...webChecks(probe, sha, label),
+    markCheck(
+      label,
+      probe,
+      HOLDING_MARK,
+      'the holding page',
+      'data-coming-soon',
+    ),
+  ]);
+}
+
+export function holdingProblems(
+  probe: Probe,
+  sha: string,
+  label = 'web',
+): string[] {
+  return [...holdingJudgement(probe, sha, label).problems];
+}
+
+/** A page at the site Worker's own address: the site being built (#673). */
+export function siteJudgement(
+  probe: Probe,
+  sha: string,
+  label: string,
+): Judgement {
+  return judge([
+    ...webChecks(probe, sha, label),
+    markCheck(
+      label,
+      probe,
+      SITE_MARK,
+      'the site being built',
+      'data-dev-strip',
+    ),
+  ]);
+}
+
+export function siteProblems(
+  probe: Probe,
+  sha: string,
+  label: string,
+): string[] {
+  return [...siteJudgement(probe, sha, label).problems];
+}
+
+/** The holding page's stylesheet, read with the password (#673). */
+export function stylesheetJudgement(label: string, probe: Probe): Judgement {
+  return judge([
+    {
+      name: 'status',
+      gate: true,
+      problem: () =>
+        probe.status === 200
+          ? undefined
+          : `${label}: status ${String(probe.status)} with the password, expected 200`,
+    },
+    {
+      name: 'content type',
+      problem: () => {
+        const type = probe.headers.get('content-type');
+        return /^text\/css\b/.test(type ?? '')
+          ? undefined
+          : `${label}: Content-Type is ${JSON.stringify(type)}, expected text/css`;
+      },
+    },
+    noIndexCheck(label, probe),
+  ]);
+}
+
+export function stylesheetProblems(label: string, probe: Probe): string[] {
+  return [...stylesheetJudgement(label, probe).problems];
+}
+
 /** The game Worker's policy on a response it served (#123). */
 const policyCheck = (label: string, probe: Probe): Check => ({
   name: 'content security policy',
@@ -338,26 +460,45 @@ export function healthJudgement(probe: Probe, sha: string): Judgement {
 /** Two of the roadmap's 10-minute checks (website spec §5.2 item 6). */
 const ROADMAP_CHECK_MAX_AGE_MS = 20 * 60_000;
 
+/** The roadmap check that the record was made after the deploy (#708). */
+const AFTER_DEPLOY = 'after deploy';
+
 /** A health field in a message: a string as it is, anything else as JSON. */
 const shown = (value: unknown): string =>
   typeof value === 'string' ? value : JSON.stringify(value);
 
-/** The fields of `/api/roadmap/health` this judges (#341). */
+/** A health time in milliseconds, or NaN for anything but a parseable string. */
+const timeOf = (value: unknown): number =>
+  typeof value === 'string' ? Date.parse(value) : Number.NaN;
+
+/** A health time in a message: a field the health left out says so. */
+const stamped = (value: unknown): string =>
+  value === undefined ? 'missing' : shown(value);
+
+/** The fields of `/api/roadmap/health` this judges or names (#341, #689). */
 interface RoadmapHealth {
   version?: unknown;
   drift?: unknown;
   readFailingSince?: unknown;
   readError?: unknown;
   lastCheckAt?: unknown;
+  lastEventAt?: unknown;
+  lastDriftAt?: unknown;
 }
 
 /**
  * The live roadmap's health (#341): the board has been read, no missed webhook
  * is outstanding (drift stays until a webhook is seen delivering a change
- * again, operator decision 2026-10-06), reads are not failing, and the
- * 10-minute check ran within two intervals.
+ * again, operator decision 2026-10-06), reads are not still failing at a
+ * check after the one that failed (#693), and the 10-minute check ran within
+ * two intervals. Only a record whose last check came at or after
+ * `deployedAtMs` is judged: an earlier one is the previous code's (#708).
  */
-export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
+export function roadmapJudgement(
+  probe: Probe,
+  nowMs: number,
+  deployedAtMs: number,
+): Judgement {
   let body: RoadmapHealth = {};
   return judge([
     {
@@ -381,6 +522,20 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
       },
     },
     {
+      // A record the previous code made says nothing about this deploy's
+      // code, so none of it is judged (#708: deploy-dev run 39353024750
+      // judged the old Worker's check). A last check that is not a time is
+      // left to the check-age check, which names it.
+      name: AFTER_DEPLOY,
+      gate: true,
+      problem: () => {
+        const check = timeOf(body.lastCheckAt);
+        return Number.isFinite(check) && check < deployedAtMs
+          ? `roadmap: last check ${shown(body.lastCheckAt)} was made before the deploy at ${new Date(deployedAtMs).toISOString()}, by the code that deploy replaced`
+          : undefined;
+      },
+    },
+    {
       name: 'version',
       problem: () =>
         typeof body.version === 'number' && body.version >= 1
@@ -392,14 +547,21 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
       problem: () =>
         body.drift === 0
           ? undefined
-          : `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed`,
+          : // The times the judgement rests on, so the next drift is measured
+            // from verify's own output, not inferred (#689).
+            `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift ${stamped(body.lastDriftAt)}, last event ${stamped(body.lastEventAt)}, last check ${stamped(body.lastCheckAt)})`,
     },
     {
       name: 'reads',
+      // Any failed read is red (Shyden, 2026-10-20, on #708: "treat any
+      // failure as red"). The record's last check came after the deploy, so
+      // the failure is the deployed code's, or the old code's with the new
+      // code's check failing too. #693's wait for a second failed check
+      // would let a deploy that breaks reads pass on its first.
       problem: () =>
         body.readFailingSince === null
           ? undefined
-          : `roadmap: reads failing since ${shown(body.readFailingSince)}: ${shown(body.readError)}`,
+          : `roadmap: reads failing since ${stamped(body.readFailingSince)} (last check ${stamped(body.lastCheckAt)}): ${shown(body.readError)}`,
     },
     {
       name: 'check age',
@@ -413,8 +575,59 @@ export function roadmapJudgement(probe: Probe, nowMs: number): Judgement {
     noIndexCheck('roadmap', probe),
   ]);
 }
-export function roadmapProblems(probe: Probe, nowMs: number): string[] {
-  return [...roadmapJudgement(probe, nowMs).problems];
+export function roadmapProblems(
+  probe: Probe,
+  nowMs: number,
+  deployedAtMs: number,
+): string[] {
+  return [...roadmapJudgement(probe, nowMs, deployedAtMs).problems];
+}
+
+/**
+ * The live roadmap's health as the deployed code reports it (#708): waits
+ * for the site's first 10-minute check at or after `deployedAtMs`, looking
+ * `polls` times `pollMs` apart, then judges that record once. A record the
+ * previous code made is waited past, never judged; anything else (a failed
+ * request, a wrong status, a record from after the deploy with a problem)
+ * fails at once. At the last look it fails naming the last check it saw.
+ */
+export async function verifyRoadmap(
+  target: Pick<Target, 'webUrl' | 'password'>,
+  deployedAtMs: number,
+  { polls, pollMs }: Wait,
+): Promise<string[]> {
+  if (!Number.isFinite(deployedAtMs))
+    throw new RangeError(
+      `the deploy time must be a time, got ${String(deployedAtMs)}`,
+    );
+  if (!Number.isInteger(polls) || polls < 1)
+    throw new RangeError(
+      `polls must be a whole number of at least 1, got ${String(polls)}`,
+    );
+  const url = new URL('/api/roadmap/health', target.webUrl).href;
+  const headers = { Authorization: basicAuthorization(target.password) };
+  let previous: readonly string[] = [];
+  for (let poll = 1; poll <= polls; poll += 1) {
+    // The judgement the probe got, or none when the request failed outright.
+    const seen: { judged?: Judgement } = {};
+    const outcome = await check('roadmap', url, headers, (p) => {
+      seen.judged = roadmapJudgement(p, Date.now(), deployedAtMs);
+      return [...seen.judged.problems];
+    });
+    const { judged } = seen;
+    const madeBefore =
+      judged !== undefined &&
+      judged.problems.length > 0 &&
+      judged.checked.at(-1) === AFTER_DEPLOY;
+    if (!madeBefore) return outcome.problems;
+    previous = judged.problems;
+    if (poll < polls)
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  return [
+    `roadmap: no check after the deploy at ${new Date(deployedAtMs).toISOString()} in ${String(polls)} looks ${String(pollMs)} ms apart`,
+    ...previous,
+  ];
 }
 
 export function healthProblems(probe: Probe, sha: string): string[] {
@@ -525,9 +738,9 @@ export async function verifyDev(
   const wrong = { Authorization: basicAuthorization(`${target.password}x`) };
 
   /** Hosts that have answered in this run: a later failed request from one is a failure, not a wait. */
-  const answered = new Set<'web' | 'sync'>();
+  const answered = new Set<Host>();
   const look = async (
-    host: 'web' | 'sync',
+    host: Host,
     label: string,
     url: string,
     headers: Record<string, string>,
@@ -572,7 +785,7 @@ export async function verifyDev(
     if (gate.some(({ answer }) => answer !== null && leaked(answer)))
       return gate.flatMap((outcome) => outcome.problems);
     const web = await look('web', 'web', target.webUrl, right, (p) =>
-      webProblems(p, target.sha),
+      holdingProblems(p, target.sha),
     );
     const sync = await look('sync', 'sync', healthUrl, {}, (p) =>
       healthProblems(p, target.sha),
@@ -599,12 +812,11 @@ export async function verifyDev(
       // version rolls out per request, so /roadmap served the previous commit
       // 2 s after the home page served this one (deploy-dev run 38333791614).
       const pages = await lookAtPages(look, target, right);
-      const standings = pages.map((page, i) =>
+      const standings = pages.map((page) =>
         standing(
           page,
-          (p) => webCommit(p, `web ${String(SITE_PAGES[i])}`),
-          (c) =>
-            `web ${String(SITE_PAGES[i])}: serves commit ${c}, expected ${target.sha}`,
+          (p) => webCommit(p, page.label),
+          (c) => `${page.label}: serves commit ${c}, expected ${target.sha}`,
         ),
       );
       const pageFailed = standings.flatMap((h) =>
@@ -628,7 +840,7 @@ export async function verifyDev(
           web,
           sync,
           ...pages,
-          ...(await lookAtTheRest(look, target, right, pages)),
+          ...(await lookAtTheRest(look, target, right, web, pages)),
         ].flatMap((outcome) => outcome.problems);
       }
     }
@@ -641,8 +853,14 @@ export async function verifyDev(
   ];
 }
 
+/** The hosts a run looks at: the front door, the site Worker's own address (#673), the sync API. */
+type Host = 'web' | 'site' | 'sync';
+
+/** One page's look, under the label its problems carry. */
+type PageLook = Outcome & { unanswered: boolean; label: string };
+
 type Look = (
-  host: 'web' | 'sync',
+  host: Host,
   label: string,
   url: string,
   headers: Record<string, string>,
@@ -650,44 +868,74 @@ type Look = (
 ) => Promise<Outcome & { unanswered: boolean }>;
 
 /**
- * Check 5's pages, at each look once both hosts serve the expected commit:
- * each of `SITE_PAGES` with the password, in order.
+ * Check 5's and 7's pages, at each look once both hosts serve the expected
+ * commit: each of `SITE_PAGES` on the front door, then each of
+ * `PREVIEW_PAGES` at the site Worker's own address, with the password, in
+ * order.
  */
 async function lookAtPages(
   look: Look,
   target: Target,
   right: Record<string, string>,
-): Promise<Array<Outcome & { unanswered: boolean }>> {
-  const outcomes: Array<Outcome & { unanswered: boolean }> = [];
+): Promise<PageLook[]> {
+  const outcomes: PageLook[] = [];
   for (const path of SITE_PAGES) {
     const label = `web ${path}`;
-    outcomes.push(
-      await look('web', label, new URL(path, target.webUrl).href, right, (p) =>
+    const outcome = await look(
+      'web',
+      label,
+      new URL(path, target.webUrl).href,
+      right,
+      (p) =>
         path === GAME_SHELL
           ? gameShellProblems(p, target.sha, label)
-          : webProblems(p, target.sha, label),
-      ),
+          : holdingProblems(p, target.sha, label),
     );
+    outcomes.push({ ...outcome, label });
+  }
+  for (const path of PREVIEW_PAGES) {
+    const label = `site ${path}`;
+    const outcome = await look(
+      'site',
+      label,
+      new URL(path, target.siteUrl).href,
+      right,
+      (p) => siteProblems(p, target.sha, label),
+    );
+    outcomes.push({ ...outcome, label });
   }
   return outcomes;
 }
 
 /**
- * The rest of checks 5 and 6, once every page serves the expected commit:
- * the game's script (named by the shell among `pages`), the gate in front of
- * the game, the game's retired address, and the live roadmap's health (#341).
+ * The rest of checks 3, 5, 6 and 7, once every page serves the expected
+ * commit: the holding page's stylesheet (named by the front door's home page,
+ * `home`, #673), the game's script (named by the shell among `pages`), the
+ * gate in front of the game and of the site Worker's own address, and the
+ * game's retired address. The live roadmap's health (#341) is judged by
+ * `verifyRoadmap`, in its own job, once the deployed code has checked the
+ * board (#708).
  */
 async function lookAtTheRest(
   look: Look,
   target: Target,
   right: Record<string, string>,
-  pages: readonly Outcome[],
+  home: Outcome,
+  pages: readonly PageLook[],
 ): Promise<Outcome[]> {
   const at = (path: string) => new URL(path, target.webUrl).href;
   const outcomes: Outcome[] = [];
-  const shell = pages.at(SITE_PAGES.indexOf(GAME_SHELL))?.answer?.body ?? '';
+  const stylesheet = stylesheetOf(home.answer?.body ?? '');
+  const shell =
+    pages.find(({ label }) => label === `web ${GAME_SHELL}`)?.answer?.body ??
+    '';
   const script = GAME_SCRIPT.exec(shell)?.[1];
   outcomes.push(
+    stylesheet === undefined
+      ? { problems: ['web: no stylesheet in the page'], answer: null }
+      : await look('web', `web ${stylesheet}`, at(stylesheet), right, (p) =>
+          stylesheetProblems(`web ${stylesheet}`, p),
+        ),
     script === undefined
       ? { problems: ['web /play/: no game script in the page'], answer: null }
       : await look('web', `web ${script}`, at(script), right, (p) =>
@@ -696,15 +944,16 @@ async function lookAtTheRest(
     await look('web', 'game without credentials', at('/play/'), {}, (p) =>
       gateProblems('game without credentials', p),
     ),
-    await check('game address', target.gameUrl, {}, retiredProblems),
-    await look('web', 'roadmap health', at('/api/roadmap/health'), right, (p) =>
-      roadmapProblems(p, Date.now()),
+    await look('site', 'site without credentials', target.siteUrl, {}, (p) =>
+      gateProblems('site without credentials', p),
     ),
+    await check('game address', target.gameUrl, {}, retiredProblems),
   );
   return outcomes;
 }
 
-function required(name: string): string {
+/** An environment variable the run needs, refused when unset or empty. */
+export function required(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === '')
     throw new Error(`${name} is not set`);
@@ -715,6 +964,7 @@ if (import.meta.main) {
   const problems = await verifyDev(
     {
       webUrl: required('DEV_WEB_URL'),
+      siteUrl: required('DEV_SITE_URL'),
       syncUrl: required('DEV_SYNC_URL'),
       gameUrl: required('DEV_GAME_URL'),
       sha: required('EXPECTED_SHA'),
@@ -727,6 +977,6 @@ if (import.meta.main) {
     process.exit(1);
   }
   console.log(
-    '✓ dev is password-gated, blocks crawlers, serves the expected commit on every page and the game, keeps the game behind the site, and D1 answers',
+    '✓ dev is password-gated, blocks crawlers, serves the expected commit on every page and the game, shows the holding page on the front door and the site being built at its own address, keeps the game behind the site, and D1 answers',
   );
 }

@@ -1,8 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import { withoutYamlComments } from './source-text';
 import { scanRunners } from './workflow-runners';
 
@@ -28,7 +26,7 @@ describe('scanRunners', () => {
     expect(
       scanRunners('w.yml', workflow(job('a', 'ubuntu-latest'))).findings,
     ).toEqual([
-      'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-24.04',
+      'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-26.04',
     ]);
   });
 
@@ -36,7 +34,7 @@ describe('scanRunners', () => {
     expect(
       scanRunners('w.yml', workflow(job('a', 'windows-latest'))).findings,
     ).toEqual([
-      'w.yml: jobs.a: runs-on windows-latest moves with GitHub; name a fixed image such as ubuntu-24.04',
+      'w.yml: jobs.a: runs-on windows-latest moves with GitHub; name a fixed image such as ubuntu-26.04',
     ]);
   });
 
@@ -46,7 +44,7 @@ describe('scanRunners', () => {
     ).toEqual({
       labels: ['w.yml: jobs.a: self-hosted', 'w.yml: jobs.a: ubuntu-latest'],
       findings: [
-        'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-24.04',
+        'w.yml: jobs.a: runs-on ubuntu-latest moves with GitHub; name a fixed image such as ubuntu-26.04',
       ],
     });
   });
@@ -103,15 +101,15 @@ describe('this repo’s workflows name a fixed runner image (#400)', () => {
 
   it('every job runs on a fixed image', () => {
     const scans = scanAll();
-    const labels = scans.flatMap(({ scan }) => scan.labels);
     const findings = scans.flatMap(({ scan }) => scan.findings);
-    expect(
-      searched(findings, { of: labels, what: 'runner labels' }),
-      findings.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('workflow-runners/labels', labels.length),
-    ).toBeUndefined();
+    expect(findings, findings.join('\n')).toEqual([]);
+  });
+
+  it('every job runs on ubuntu-26.04, moved there deliberately (#402)', () => {
+    const others = scanAll()
+      .flatMap(({ scan }) => scan.labels)
+      .filter((label) => !label.endsWith(': ubuntu-26.04'));
+    expect(others, others.join('\n')).toEqual([]);
   });
 
   it('reads as many runs-on lines in each workflow as its text holds', () => {
@@ -129,12 +127,6 @@ describe('this repo’s workflows name a fixed runner image (#400)', () => {
         ? []
         : [`${file}: ${String(written)} runs-on written, ${String(jobs)} read`];
     });
-    expect(
-      searched(misread, { of: scans, what: 'workflows' }),
-      misread.join('\n'),
-    ).toEqual([]);
-    expect(
-      floorBreach('workflow-runners/workflows', scans.length),
-    ).toBeUndefined();
+    expect(misread, misread.join('\n')).toEqual([]);
   });
 });

@@ -1,0 +1,11 @@
+{
+  // The unit tests run in Node under vitest, so they see
+  // Node's types (they read the golden fixtures from disk), while the
+  // package's own tsconfig.json keeps `src/` to ECMAScript alone.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../src/**/*.ts"]
+}

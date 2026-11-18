@@ -379,7 +379,7 @@ describe('rootFactors (#32 AC2)', () => {
   });
 
   it('is empty with no node owned', () => {
-    expect(rootFactors(course, holding([])).size).toBe(0);
+    expect([...rootFactors(course, holding([])).keys()]).toEqual([]);
   });
 
   it('refuses an owned node the course does not have', () => {

@@ -11,12 +11,12 @@
  * Upgrades tab only with the first stamp (D1), and sees Journeys, Culture
  * and the goal before it.
  */
-import { BALANCE } from './balance';
-import type { Course } from './course';
-import { isDue } from './memory';
-import { Num } from './num';
-import { goalMet, runUnderstanding } from './sail';
-import type { GameState } from './state';
+import { BALANCE } from './balance.ts';
+import type { Course } from './course.ts';
+import { isDue } from './memory.ts';
+import { Num } from './num.ts';
+import { goalMet, runUnderstanding } from './sail.ts';
+import type { GameState } from './state.ts';
 
 /** The reveal flags, in parent §4.1's order. */
 export const UNFOLD_FLAGS = [

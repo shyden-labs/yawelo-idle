@@ -1,0 +1,27 @@
+Stage  Job ID           Job name         Workflow name    Workflow file        Events                         
+0      board-orphans    board-orphans    board-orphans    board-orphans.yml    pull_request                   
+0      build-and-test   build-and-test   build-and-test   ci.yml               pull_request,workflow_call     
+0      coverage         coverage         build-and-test   ci.yml               pull_request,workflow_call     
+0      test             test             deploy-dev       deploy-dev.yml       push                           
+0      test             test             deploy-prod      deploy-prod.yml      push,workflow_dispatch         
+0      logs             logs             logs             logs.yml             workflow_dispatch,workflow_call
+0      changed          changed          mutations        mutations.yml        pull_request                   
+0      owner-review     owner-review     owner-review     owner-review.yml     workflow_dispatch,schedule     
+0      record-floors    record-floors    record-floors    record-floors.yml    workflow_dispatch              
+0      record-minimums  record-minimums  record-minimums  record-minimums.yml  workflow_dispatch              
+0      rollback         rollback         rollback-prod    rollback-prod.yml    workflow_dispatch              
+0      schedule-watch   schedule-watch   schedule-watch   schedule-watch.yml   push,schedule,workflow_dispatch
+1      deploy           deploy           deploy-dev       deploy-dev.yml       push                           
+1      deploy           deploy           deploy-prod      deploy-prod.yml      push,workflow_dispatch         
+1      run              run              mutations        mutations.yml        pull_request                   
+1      record-coverage  record-coverage  record-floors    record-floors.yml    workflow_dispatch              
+1      verify           verify           rollback-prod    rollback-prod.yml    workflow_dispatch              
+2      verify-holding   verify-holding   deploy-dev       deploy-dev.yml       push                           
+2      verify           verify           deploy-dev       deploy-dev.yml       push                           
+2      verify-roadmap   verify-roadmap   deploy-dev       deploy-dev.yml       push                           
+2      verify           verify           deploy-prod      deploy-prod.yml      push,workflow_dispatch         
+2      mutations        mutations        mutations        mutations.yml        pull_request                   
+3      smoke            smoke            deploy-dev       deploy-dev.yml       push                           
+4      dev-verified     dev-verified     deploy-dev       deploy-dev.yml       push                           
+
+Detected multiple jobs with the same job name, use `-W` to specify the path to the specific workflow.

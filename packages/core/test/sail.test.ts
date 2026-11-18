@@ -104,8 +104,8 @@ const LAST = 11;
  * the table is a deliberate edit here too.
  */
 const GOAL_U = [
-  2.12e9, 2.07e13, 1.42e14, 4.73e14, 4.81e17, 1.13e18, 2.49e18, 2.98e18,
-  3.18e21, 5.65e21, 8.02e21, 1.35e22,
+  2.12e9, 2.07e13, 1.42e14, 4.73e14, 4.329e17, 1.017e18, 2.241e18, 2.682e18,
+  2.75e21, 5.08e21, 8.8e21, 1.2e22,
 ] as const;
 const goalU = (i: number): number => {
   const goal = GOAL_U[i];
@@ -244,7 +244,8 @@ describe('the goal (AC1)', () => {
 
   it('never needs a review: unreviewed words and no Insight still sail (D1)', () => {
     const s = at(0);
-    expect(Object.values(s.words).every((w) => w.card.reps === 0)).toBe(true);
+    const words = Object.values(s.words);
+    expect(words.filter((w) => w.card.reps !== 0)).toEqual([]);
     expect(s.insight).toEqual([0, 0]);
     expect(ok(setSail(course, s)).destination).toBe(1);
   });
@@ -338,7 +339,7 @@ describe('the preview (AC2, DN3)', () => {
     expect(n(preview().resets.understanding)).toBe(
       n(understandingNow(course, before())),
     );
-    expect(after().owned).toEqual({});
+    expect(Object.keys(after().owned)).toEqual([]);
   });
 
   it('says what Understanding the next run starts with', () => {
@@ -457,7 +458,7 @@ describe('a sail resets only Encounters and Understanding (AC3, DN3)', () => {
   });
 
   it('owns no Encounters and holds only the starting grant, with nothing spent', () => {
-    expect(after().owned).toEqual({});
+    expect(Object.keys(after().owned)).toEqual([]);
     expect(after().anchor).toEqual({
       sim: out().sim,
       understanding: tuple(200),
@@ -490,7 +491,7 @@ describe('destinations unlock in order (AC4)', () => {
         expect(after.destination).toBe(i + 1);
         expect(after.reached).toBe(i + 1);
         expect(after.finale).toBe(false);
-        expect(after.replays).toEqual({});
+        expect(Object.keys(after.replays)).toEqual([]);
       });
 
   it('accepts the next destination named', () => {

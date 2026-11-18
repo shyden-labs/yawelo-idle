@@ -1,7 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
-import { floorBreach } from '../../../tests/floors';
-import { searched } from '../../../tests/searched';
 import { inlineTags, startTags } from '../../../tests/inline-tags';
 
 /**
@@ -16,7 +14,7 @@ import { inlineTags, startTags } from '../../../tests/inline-tags';
  * it runs alone, because local workerd serves static assets for the harness's
  * primary Worker only (measured with wrangler 4.145.0, #332).
  */
-const HOST = 'https://yawelo-idle-site-dev.shyden-labs-dev.workers.dev';
+const HOST = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 
 const server = createTestHarness({
   root: new URL('..', import.meta.url).pathname,
@@ -95,16 +93,36 @@ describe('the game Worker, under /play/ (#332 AC4)', () => {
     expect(await response.text()).toBe('Not found');
   });
 
+  // The shell builds its links from the UI catalogue (#104), so the bundle
+  // holds each string and path, not finished `href` markup; the rendered
+  // links are checked in packages/ui/test/Shell.test.ts.
   it.each([
-    ['the roadmap', 'href="/roadmap"'],
-    ['the launch list', 'href="/#launch-list"'],
-    ['the Indonesian roadmap', 'href="/id/roadmap"'],
-    ['the Indonesian launch list', 'href="/id/#launch-list"'],
-  ])('says coming soon and links to %s (#332 AC6)', async (_name, href) => {
-    const body = await (await get(await builtScript())).text();
-    expect(body).toContain('Coming soon.');
-    expect(body).toContain(href);
-  });
+    ['English', 'Coming soon.', 'Follow the roadmap', 'join the launch list'],
+    [
+      'Indonesian',
+      'Segera hadir.',
+      'Ikuti peta jalan',
+      'bergabung dengan daftar peluncuran',
+    ],
+  ])(
+    'carries the %s shell copy (#332 AC6)',
+    async (_name, comingSoon, roadmap, launchList) => {
+      const body = await (await get(await builtScript())).text();
+      expect([
+        body.includes(comingSoon),
+        body.includes(roadmap),
+        body.includes(launchList),
+      ]).toEqual([true, true, true]);
+    },
+  );
+
+  it.each(['/roadmap', '/#launch-list', '/id'])(
+    'carries the link path %s as a string (#332 AC6)',
+    async (path) => {
+      const body = await (await get(await builtScript())).text();
+      expect(body).toMatch(new RegExp(`["'\`]${path}["'\`]`));
+    },
+  );
 });
 
 /**
@@ -136,9 +154,6 @@ describe('the game Worker sets a Content Security Policy (#123 AC5)', () => {
     const html = await (await get('/play/')).text();
     const tags = startTags(html);
     const inline = inlineTags(tags);
-    expect(
-      searched(inline, { of: tags, what: 'tags in the served shell' }),
-    ).toEqual([]);
-    expect(floorBreach('game-html/tags', tags.length)).toBeUndefined();
+    expect(inline).toEqual([]);
   });
 });

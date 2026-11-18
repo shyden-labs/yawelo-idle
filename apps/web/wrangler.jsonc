@@ -9,7 +9,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yawelo-idle-web-dev",
   "main": "worker/index.ts",
-  "compatibility_date": "2026-09-30",
+  "compatibility_date": "2026-10-20",
   "workers_dev": false,
   "preview_urls": false,
   "assets": {

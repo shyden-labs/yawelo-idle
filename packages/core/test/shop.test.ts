@@ -374,7 +374,8 @@ describe('the grammar offers match buying a node', () => {
 
   it('is not affordable before grammar opens, however much Insight is held', () => {
     const rich = { ...fresh(), insight: Num.toTuple(Num.from(1e30)) };
-    expect(shopOf(rich).grammar.filter((o) => o.affordable)).toEqual([]);
+    const offers = shopOf(rich).grammar;
+    expect(offers.filter((o) => o.affordable)).toEqual([]);
     expect(shopOf(rich).grammar).toHaveLength(12);
     expect(buyGrammarNode(course(), rich, 'r0-gram-0').ok).toBe(false);
   });
@@ -414,8 +415,9 @@ describe('the Journey offers match starting a Journey', () => {
 
   it('offers nothing while every open slot is busy', () => {
     const away = accepted(startJourney(course(), fresh(), 0, '8h'));
+    const { startable } = shopOf(away).journeys;
+    expect(startable).toEqual([]);
     expect(shopOf(away).journeys.slots).toEqual(['away', 'locked', 'locked']);
-    expect(shopOf(away).journeys.startable).toEqual([]);
   });
 
   it('states how long each Journey takes, as starting one schedules it', () => {
@@ -484,7 +486,8 @@ describe('the Practice offer matches practising a word', () => {
       Num.from(0),
     );
     const shop = shopOf(state);
-    expect(shop.encounters.some((o) => o.affordable)).toBe(false);
+    const offers = shop.encounters;
+    expect(offers.filter((o) => o.affordable)).toEqual([]);
     expect(shop.pickUp?.affordable).toBe(false);
     expect(shop.practice).toEqual({ available: true });
   });

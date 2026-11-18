@@ -44,7 +44,11 @@ export interface Figure {
 
 /** A line's words with the figures in it, made by the `t` template. */
 export class Template {
-  constructor(readonly parts: readonly (string | Figure)[]) {}
+  readonly parts: readonly (string | Figure)[];
+
+  constructor(parts: readonly (string | Figure)[]) {
+    this.parts = parts;
+  }
 }
 
 /** `t\`never more than ${digits('BALANCE.memory.queueSize')} reviews\`` */
@@ -73,11 +77,10 @@ export class CopyLine {
   readonly figures: readonly Figure[];
   /** The text with every figure taken out: what the source checks read. */
   readonly unbound: string;
+  readonly sources: readonly Source[];
 
-  constructor(
-    content: string | Template,
-    readonly sources: readonly Source[],
-  ) {
+  constructor(content: string | Template, sources: readonly Source[]) {
+    this.sources = sources;
     if (typeof content === 'string') {
       this.text = content;
       this.figures = [];

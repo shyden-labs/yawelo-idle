@@ -1,0 +1,21 @@
+{
+  "name": "@yawelo-idle/save",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test && tsc --noEmit -p properties"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "@yawelo-idle/core": "*",
+    "fflate": "^0.8.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2"
+  }
+}

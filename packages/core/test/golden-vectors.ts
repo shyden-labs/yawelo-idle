@@ -13,8 +13,8 @@ import { nextU32, seedRng, type RngState } from '../src/rng';
  * Golden vectors (#26 AC10, #28): 100,000 per function, generated from a
  * fixed seed, hashed over the exact bits of every result. The six det-math
  * functions, the mean retrievability over a window, and core's FSRS review
- * with the parameters it ships (ts-fsrs defaults, short-term steps on, fuzz
- * off), whose cross-engine bits M1 design §2.1 measured only with short-term
+ * with the parameters it ships (ts-fsrs 6's FSRS-7 defaults, short-term
+ * steps on, fuzz and model override off, #874), whose cross-engine bits M1 design §2.1 measured only with short-term
  * steps off.
  *
  * The same module runs under Node (a unit test pins its digests) and, bundled,
@@ -129,15 +129,22 @@ function vector(
     case 'log1p':
       return log1p(k % 2 === 0 ? i.unit() * 2 - 1 : i.anyPositive());
     case 'meanR': {
-      // S from 0.01 d to 100 y, a window starting up to 100 y after the
-      // review, and a span of up to one bucket or up to 100 y, in turn.
-      const s = ((i.u32() % 3_652_500) + 1) / 100;
+      // S and the fast stability each from 0.01 d to 100 y, D from 1 to
+      // 10 (FSRS-7, #874), a window starting up to 100 y after the review,
+      // and a span of up to one bucket or up to 100 y, in turn.
+      const stability = ((i.u32() % 3_652_500) + 1) / 100;
+      const stabilityFast = ((i.u32() % 3_652_500) + 1) / 100;
+      const difficulty = 1 + (i.u32() % 900_001) / 100_000;
       const from = (i.u32() % 3_652_500) / 100;
       const span =
         k % 2 === 0
           ? ((i.u32() % HOUR_MS) + 1) / DAY_MS
           : ((i.u32() % 3_652_500) + 1) / 100;
-      return meanRetrievability(s, from, span);
+      return meanRetrievability(
+        { stability, stabilityFast, difficulty },
+        from,
+        span,
+      );
     }
   }
 }
@@ -156,9 +163,10 @@ function reviewVectors(i: Inputs, hash: BitHash, vectors: number): void {
     const c = word.card;
     hash.add(c.due);
     hash.add(c.stability);
+    hash.add(c.stabilityFast);
     hash.add(c.difficulty);
     hash.add(c.scheduledDays);
-    hash.add(c.learningSteps);
+    hash.add(c.learningStep);
     hash.add(c.reps);
     hash.add(c.lapses);
     hash.add(c.state);

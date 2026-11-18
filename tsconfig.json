@@ -3,6 +3,7 @@
   // workspace under apps/ and packages/ has its own tsconfig.json and is
   // checked by its own `typecheck` script.
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -22,11 +23,13 @@
     "tests/**/*.ts",
     "scripts/**/*.ts",
     "eslint.core-determinism.ts",
+    "eslint.platform-only.ts",
     "vitest.config.ts",
     "vitest.pacing.config.ts",
     "playwright.engines.config.ts",
-    "playwright.web.config.ts"
+    "playwright.web.config.ts",
+    "playwright.site.config.ts"
   ],
   // The browser specs see the DOM, so they have their own project.
-  "exclude": ["tests/web/**"]
+  "exclude": ["tests/web/**", "tests/site/**"]
 }

@@ -7,7 +7,8 @@
  * body field by field and returns the first defect as a typed `EventError`,
  * never a throw, so M5 can report exactly what a client sent.
  */
-import type { WallMs } from './clock';
+import type { WallMs } from './clock.ts';
+import { byCodeUnit } from './order.ts';
 
 /** Parent §3.4's prompt types: multiple choice, typed answer, sentence tiles. */
 export const PROMPT_TYPES = ['choice', 'typed', 'tiles'] as const;
@@ -217,7 +218,7 @@ export function parseEvent(input: unknown): ParsedEvent {
   const known = new Set(['type', ...fields.map((f) => f.name)]);
   const unexpected = Object.keys(input)
     .filter((key) => !known.has(key))
-    .sort();
+    .sort(byCodeUnit);
   const first = unexpected[0];
   if (first !== undefined) {
     return { ok: false, error: { kind: 'unexpectedField', field: first } };

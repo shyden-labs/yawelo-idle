@@ -1,7 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { floorBreach } from '../floors';
-import { searched } from '../searched';
 import {
   applyVariant,
   LEVERS,
@@ -83,12 +81,7 @@ describe('the sweep variants', () => {
     const allowed = matchedLines(source, lever.pattern);
     expect(changed.length).toBeGreaterThan(0);
     const strays = changed.filter((line) => !allowed.has(line));
-    expect(searched(strays, { of: changed, what: 'changed lines' })).toEqual(
-      [],
-    );
-    expect(
-      floorBreach(`balance-variants/changed-lines/${name}`, changed.length),
-    ).toBeUndefined();
+    expect(strays).toEqual([]);
   });
 
   it('scales a value by its factor', () => {

@@ -15,23 +15,33 @@
  * until the ticket closes: merged work waits for its dev deploy to be checked
  * before the ticket is closed by hand, and is not abandoned (operator
  * 2026-10-16). A branch whose pull requests all closed without merging
- * names nothing.
+ * names nothing. Merged branches are deleted at merge (#701), so a merged
+ * pull request whose branch, in this repository, has `/N-` names N the same
+ * way until the ticket closes (#702). Its title and body do not: merged
+ * history keeps every mention, and 77 of 302 open tickets had one (measured
+ * 2026-10-20), so a ticket left In Progress would never be flagged.
  *
  * The board is read with the read-only roadmap App's token (BOARD_TOKEN), and
  * the branches and pull requests, which are public, with the run's own token
  * (operator 2026-10-15). Anything it cannot read fails it by name, and each
  * read carries a known positive: the board holds items, the branches hold
- * `develop`, the open pull requests hold this one. Dependabot's runs get no
- * environment secrets, so on its pull requests the check passes and says it
- * skipped; the next pull request anyone else opens checks the same board
- * (operator 2026-10-15).
+ * `develop`, the open pull requests hold this one, the closed pull requests
+ * hold the merged one develop's head came from. The board's listing is also
+ * checked against the issues the repository names on it, read from a second
+ * surface with the board's token, since the listing's own count shrinks with
+ * it (#751). It reads the board for
+ * every author, Dependabot included (#661: a check is green only when it
+ * ran); Dependabot's runs get no environment secrets, so theirs read the key
+ * from the repository's Dependabot secret.
  */
 import { execFileSync } from 'node:child_process';
+import { assertNamedByRepo } from '../packages/progress/src/index.ts';
 import { NEXT_QUERY, type NextItem, parseNextItems } from './board-next.ts';
-import type { Gh } from './board-progress.ts';
+import { type Gh, repoIssuePages } from './board-progress.ts';
+import { entries, isRecord, read } from './gh-reads.ts';
 
-/** The pull-request author whose runs get no environment secrets. */
-export const SKIPPED_AUTHOR = 'dependabot[bot]';
+/** The pull-request author whose runs read Dependabot secrets, not environment ones. */
+const DEPENDABOT = 'dependabot[bot]';
 
 /** `gh` with the board's token, and `gh` with the run's own token. */
 export interface OrphanReads {
@@ -51,34 +61,66 @@ const USAGE =
 
 const IN_PROGRESS = 'In Progress';
 
-/** `what`'s value from `call`, or an error naming what could not be read. */
-function read<T>(what: string, call: () => T): T {
-  try {
-    return call();
-  } catch (error) {
-    throw new Error(
-      `could not read ${what}: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
-  }
+/** A closed pull request: merged or not, and the branch it came from. */
+interface ClosedPull {
+  number: number;
+  merged: boolean;
+  mergeCommit: string | null;
+  branch: string;
+  /** The head branch's repository, `null` when it was deleted. */
+  headRepo: string | null;
 }
 
-/** The entries of every page `gh api --paginate --slurp` printed. */
-function entries(out: string): unknown[] {
-  const pages = JSON.parse(out) as unknown;
-  if (!Array.isArray(pages) || !pages.every(Array.isArray))
-    throw new Error('the reply is not a list of pages');
-  return (pages as unknown[][]).flat();
-}
-
-const isRecord = (x: unknown): x is Record<string, unknown> =>
-  typeof x === 'object' && x !== null;
-
-function parseBranches(out: string): string[] {
-  return entries(out).map((e) => {
+/**
+ * The branch names, and develop's head commit (`null` with no develop, which
+ * the caller refuses), the closed pull requests' known positive.
+ */
+function parseBranches(out: string): {
+  names: string[];
+  developSha: string | null;
+} {
+  const list = entries(out);
+  const names = list.map((e) => {
     if (!isRecord(e) || typeof e.name !== 'string')
       throw new Error('an entry has no name');
     return e.name;
+  });
+  const develop = list.find((e) => isRecord(e) && e.name === 'develop');
+  if (!isRecord(develop)) return { names, developSha: null };
+  const commit = develop.commit;
+  if (!isRecord(commit) || typeof commit.sha !== 'string')
+    throw new Error('develop has no commit SHA');
+  return { names, developSha: commit.sha };
+}
+
+function parseClosedPulls(out: string): ClosedPull[] {
+  return entries(out).map((e) => {
+    const head = isRecord(e) ? e.head : undefined;
+    const headRepo = isRecord(head) ? head.repo : undefined;
+    if (
+      !isRecord(e) ||
+      !Number.isInteger(e.number) ||
+      !(typeof e.merged_at === 'string' || e.merged_at === null) ||
+      !(
+        typeof e.merge_commit_sha === 'string' || e.merge_commit_sha === null
+      ) ||
+      !isRecord(head) ||
+      typeof head.ref !== 'string' ||
+      !(
+        headRepo === null ||
+        (isRecord(headRepo) && typeof headRepo.full_name === 'string')
+      )
+    )
+      throw new Error(
+        'an entry has no number, merged_at, merge_commit_sha, head branch and head repository',
+      );
+    return {
+      number: e.number as number,
+      merged: e.merged_at !== null,
+      mergeCommit: e.merge_commit_sha,
+      branch: head.ref,
+      headRepo: isRecord(headRepo) ? (headRepo.full_name as string) : null,
+    };
   });
 }
 
@@ -127,42 +169,45 @@ export function boardOrphans(
   const [id, title, repo] = args;
   if (id === undefined || title === undefined || repo === undefined)
     throw new Error(USAGE);
-  if (env.PR_AUTHOR === SKIPPED_AUTHOR) {
-    return {
-      ok: true,
-      lines: [
-        'Skipped: Dependabot opened this pull request, and its runs get no environment secrets, so the board cannot be read. The next pull request anyone else opens checks it (#580).',
-      ],
-    };
-  }
   const prNumber = Number(env.PR_NUMBER);
   if (!Number.isInteger(prNumber) || prNumber <= 0)
     throw new Error('PR_NUMBER is not a pull request number');
   if (!env.BOARD_TOKEN)
     throw new Error(
-      "no board token: BOARD_TOKEN is empty, so the board cannot be read (the board-read environment's ROADMAP_APP_KEY, #580)",
+      env.PR_AUTHOR === DEPENDABOT
+        ? "no board token: BOARD_TOKEN is empty, so the board cannot be read (Dependabot's runs read the repository's Dependabot secret ROADMAP_APP_KEY, #661)"
+        : "no board token: BOARD_TOKEN is empty, so the board cannot be read (the board-read environment's ROADMAP_APP_KEY, #580)",
     );
 
-  const items = read('the board', () =>
-    parseNextItems(
-      JSON.parse(
-        gh.board([
-          'api',
-          'graphql',
-          '--paginate',
-          '--slurp',
-          '-f',
-          `query=${NEXT_QUERY}`,
-          '-f',
-          `id=${id}`,
-        ]),
-      ) as unknown[],
-      title,
-    ),
-  );
+  // Before the board is read: an issue filed after it is left out of the
+  // cross-check (#877).
+  const readStartedAt = new Date();
+  const board = read('the board', () => {
+    const pages = JSON.parse(
+      gh.board([
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        `query=${NEXT_QUERY}`,
+        '-f',
+        `id=${id}`,
+      ]),
+    ) as unknown[];
+    return { pages, items: parseNextItems(pages, title) };
+  });
+  const { items } = board;
   if (items.length === 0)
     throw new Error('the board read holds no items, so nothing was judged');
-  const branches = read('the branches', () =>
+  // The issues' boards need the board's token; the run's own cannot read them.
+  const issuePages = read('the repository’s issues', () =>
+    repoIssuePages(gh.board, repo),
+  );
+  read('the board', () => {
+    assertNamedByRepo(board.pages, issuePages, id, repo, readStartedAt);
+  });
+  const { names: branches, developSha } = read('the branches', () =>
     parseBranches(
       gh.repo([
         'api',
@@ -189,6 +234,20 @@ export function boardOrphans(
   if (!pulls.some((p) => p.number === prNumber))
     throw new Error(
       `the open pull requests read does not hold this one, #${String(prNumber)}, so it is not the whole list`,
+    );
+  const merged = read('the closed pull requests', () =>
+    parseClosedPulls(
+      gh.repo([
+        'api',
+        '--paginate',
+        '--slurp',
+        `repos/${repo}/pulls?state=closed&per_page=100`,
+      ]),
+    ),
+  ).filter((p) => p.merged);
+  if (!merged.some((p) => p.mergeCommit === developSha))
+    throw new Error(
+      `the closed pull requests read holds no merged pull request for develop's head ${String(developSha)}, so it is not the whole list`,
     );
 
   const owner = repo.split('/')[0] as string;
@@ -230,6 +289,11 @@ export function boardOrphans(
       if (state === 'merged')
         return `branch ${branch} (merged, awaiting close)`;
     }
+    const landed = merged.find(
+      (p) => p.headRepo === repo && branchNames(p.branch, n),
+    );
+    if (landed !== undefined)
+      return `pull request #${String(landed.number)} (merged, awaiting close)`;
     return null;
   };
 
@@ -244,7 +308,7 @@ export function boardOrphans(
   }
   const named = inProgress.map((i) => ({ ticket: i, by: namer(i) }));
   const orphans = named.filter((x) => x.by === null).map((x) => x.ticket);
-  const sizes = `Read ${plural(items.length, 'board item', 'board items')}, ${plural(branches.length, 'branch', 'branches')}, ${plural(pulls.length, 'open pull request', 'open pull requests')}.`;
+  const sizes = `Read ${plural(items.length, 'board item', 'board items')}, ${plural(branches.length, 'branch', 'branches')}, ${plural(pulls.length, 'open pull request', 'open pull requests')}, ${plural(merged.length, 'merged pull request', 'merged pull requests')}.`;
   if (orphans.length > 0) {
     return {
       ok: false,

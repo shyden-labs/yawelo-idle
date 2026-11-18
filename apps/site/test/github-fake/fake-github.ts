@@ -1,5 +1,8 @@
 import { createVerify } from 'node:crypto';
-import { BOARD_QUERY } from '../../../../packages/progress/src/index';
+import {
+  BOARD_QUERY,
+  REPO_ISSUES_QUERY,
+} from '../../../../packages/progress/src/index';
 import { boardPages } from '../../../../packages/progress/test/board-fixture';
 import {
   FAKE_APP_ID,
@@ -8,8 +11,9 @@ import {
   FAKE_ORG,
   FAKE_REPO_NAME,
   FAKE_TOKEN,
-  READ_ONLY,
+  INSTALLED,
   type FakeConfig,
+  type Permissions,
   type Seen,
 } from './contract';
 
@@ -22,8 +26,9 @@ import {
  * GitHub itself checks: an RS256 JWT verified with the App's public key
  * (`iat`, `exp` within ten minutes, `iss` the App id), a User-Agent on every
  * request, the token request naming the repository, and the GraphQL query
- * being packages/progress's BOARD_QUERY. It serves the shared board fixture
- * with real `pageInfo`, one page per request.
+ * being packages/progress's BOARD_QUERY or REPO_ISSUES_QUERY (#751). It
+ * serves the shared board fixture with real `pageInfo`, one page per
+ * request, and beside it the repository's issues that name the board.
  *
  * Tests steer it and read what it saw through `https://fake-github.test/…`
  * (`POST /reset`, `POST /configure`, `GET /seen`), called in the test's own
@@ -33,17 +38,43 @@ import {
 
 const defaults = (): FakeConfig => ({
   repositorySelection: 'selected',
-  installationPermissions: { ...READ_ONLY },
-  tokenPermissions: { ...READ_ONLY },
+  installationPermissions: { ...INSTALLED },
+  tokenPermissions: null,
   tokenRepositories: [FAKE_REPO_NAME],
   pages: null,
   graphqlStatus: 200,
   graphqlErrors: null,
   endlessPages: false,
+  totalCount: null,
+  repoPages: null,
 });
 
 const json = (body: unknown, status = 200): Response =>
   Response.json(body, { status });
+
+const LEVELS = ['read', 'write'];
+
+/**
+ * The rights GitHub issues for a token request (REST "Create an installation
+ * access token for an app"): the request's `permissions` when given, each no
+ * higher than the installation's, else every right the installation holds.
+ * `null` when the request asks beyond the installation; the docs name no
+ * status for that, so the fake's 422 is assumed.
+ */
+function issuedRights(
+  requested: unknown,
+  installation: Permissions,
+): Permissions | null {
+  if (requested === undefined) return { ...installation };
+  const asked = requested as Permissions;
+  const within = Object.entries(asked).every(
+    ([right, level]) =>
+      installation[right] !== undefined &&
+      LEVELS.indexOf(level) >= 0 &&
+      LEVELS.indexOf(level) <= LEVELS.indexOf(installation[right]),
+  );
+  return within ? { ...asked } : null;
+}
 
 function decode(part: string): unknown {
   return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
@@ -73,15 +104,105 @@ function verifyJwt(
   return { claims };
 }
 
-/** The fixture page at `index`, with the `pageInfo` GitHub adds. */
-function pageAt(pages: unknown[], index: number, endless: boolean): unknown {
+/** Every item on the pages served, as GitHub counts the board (#703). */
+function itemCount(pages: unknown[]): number {
+  return pages.reduce<number>((sum, page) => {
+    const nodes = (
+      page as { data?: { node?: { items?: { nodes?: unknown } } } }
+    ).data?.node?.items?.nodes;
+    return sum + (Array.isArray(nodes) ? nodes.length : 0);
+  }, 0);
+}
+
+/** The fixture page at `index`, with the `totalCount` and `pageInfo` GitHub adds. */
+function pageAt(
+  pages: unknown[],
+  index: number,
+  endless: boolean,
+  totalCount: number,
+): unknown {
   const page = structuredClone(pages[index]) as {
     data: { node: { items: Record<string, unknown> } };
   };
+  page.data.node.items['totalCount'] = totalCount;
   page.data.node.items['pageInfo'] = {
     hasNextPage: endless || index < pages.length - 1,
     endCursor: String(index + 1),
   };
+  return page;
+}
+
+/**
+ * One page of the repository's issues as REPO_ISSUES_QUERY returns it, as
+ * GitHub would serve it beside these board pages (#751): every issue of the
+ * repository the board holds, each naming the board.
+ */
+function issuesOnBoard(pages: unknown[]): unknown {
+  const repo = `${FAKE_ORG}/${FAKE_REPO_NAME}`;
+  const numbers = pages.flatMap((page) => {
+    const nodes = (
+      page as {
+        data?: {
+          node?: {
+            items?: {
+              nodes?: {
+                content?: {
+                  __typename?: string;
+                  number?: number;
+                  repository?: { nameWithOwner?: string };
+                } | null;
+              }[];
+            };
+          };
+        };
+      }
+    ).data?.node?.items?.nodes;
+    return (nodes ?? []).flatMap(({ content }) =>
+      content?.__typename === 'Issue' &&
+      content.repository?.nameWithOwner === repo &&
+      content.number !== undefined
+        ? [content.number]
+        : [],
+    );
+  });
+  return {
+    data: {
+      repository: {
+        issues: {
+          totalCount: numbers.length,
+          nodes: numbers.map((number) => ({
+            number,
+            // Older than any read (#877).
+            createdAt: '2026-01-01T00:00:00Z',
+            projectItems: {
+              totalCount: 1,
+              nodes: [{ project: { id: FAKE_BOARD_ID } }],
+            },
+          })),
+        },
+      },
+    },
+  };
+}
+
+/**
+ * The issues page at `index`, with the `pageInfo` GitHub adds; a page a test
+ * served without issues stays as it was.
+ */
+function issuePageAt(
+  pages: unknown[],
+  index: number,
+  endless: boolean,
+): unknown {
+  const page = structuredClone(pages[index]) as {
+    data?: { repository?: { issues?: Record<string, unknown> } | null };
+  };
+  const issues = page.data?.repository?.issues;
+  if (issues !== undefined)
+    issues['pageInfo'] = {
+      hasNextPage: endless || index < pages.length - 1,
+      endCursor: String(index + 1),
+    };
   return page;
 }
 
@@ -151,7 +272,10 @@ export function fakeGitHub(
           permissions: config.installationPermissions,
         });
       if (url.pathname === tokens && request.method === 'POST') {
-        const body = (await request.json()) as { repositories?: unknown };
+        const body = (await request.json()) as {
+          repositories?: unknown;
+          permissions?: unknown;
+        };
         if (
           JSON.stringify(body.repositories) !== JSON.stringify([FAKE_REPO_NAME])
         )
@@ -159,11 +283,23 @@ export function fakeGitHub(
             { message: 'the token request must name the one repository' },
             422,
           );
+        const rights = issuedRights(
+          body.permissions,
+          config.installationPermissions,
+        );
+        if (rights === null)
+          return json(
+            {
+              message:
+                'The permissions requested are not granted to this installation.',
+            },
+            422,
+          );
         return json(
           {
             token: FAKE_TOKEN,
             expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-            permissions: config.tokenPermissions,
+            permissions: config.tokenPermissions ?? rights,
             repositories: config.tokenRepositories.map((name) => ({ name })),
           },
           201,
@@ -176,14 +312,38 @@ export function fakeGitHub(
         return json({ message: 'Bad credentials' }, 401);
       const body = (await request.json()) as {
         query?: string;
-        variables?: { id?: string; endCursor?: string | null };
+        variables?: {
+          id?: string;
+          owner?: string;
+          name?: string;
+          endCursor?: string | null;
+        };
       };
       record.cursor = body.variables?.endCursor ?? null;
-      if (body.query !== BOARD_QUERY)
+      if (body.query !== BOARD_QUERY && body.query !== REPO_ISSUES_QUERY)
         return json({
-          errors: [{ message: 'the fake answers BOARD_QUERY only' }],
+          errors: [
+            {
+              message:
+                'the fake answers BOARD_QUERY and REPO_ISSUES_QUERY only',
+            },
+          ],
         });
-      if (body.variables?.id !== FAKE_BOARD_ID)
+      record.query = body.query === BOARD_QUERY ? 'board' : 'issues';
+      if (
+        record.query === 'issues' &&
+        (body.variables?.owner !== FAKE_ORG ||
+          body.variables.name !== FAKE_REPO_NAME)
+      )
+        return json({
+          data: { repository: null },
+          errors: [
+            {
+              message: `Could not resolve to a Repository with the name '${String(body.variables?.owner)}/${String(body.variables?.name)}'.`,
+            },
+          ],
+        });
+      if (record.query === 'board' && body.variables?.id !== FAKE_BOARD_ID)
         return json({ data: { node: null } });
       if (config.graphqlStatus !== 200)
         return json({ message: 'Server Error' }, config.graphqlStatus);
@@ -192,8 +352,23 @@ export function fakeGitHub(
       const pages =
         config.pages ?? boardPages(new Date().toISOString().slice(0, 10));
       const index = record.cursor === null ? 0 : Number(record.cursor);
+      if (record.query === 'issues') {
+        const issues = config.repoPages ?? [issuesOnBoard(pages)];
+        return json(
+          issuePageAt(
+            issues,
+            config.endlessPages ? 0 : index,
+            config.endlessPages,
+          ),
+        );
+      }
       return json(
-        pageAt(pages, config.endlessPages ? 0 : index, config.endlessPages),
+        pageAt(
+          pages,
+          config.endlessPages ? 0 : index,
+          config.endlessPages,
+          config.totalCount ?? itemCount(pages),
+        ),
       );
     }
 

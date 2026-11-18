@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { includeIgnoreFile } from '@eslint/compat';
+import { defineConfig, includeIgnoreFile } from 'eslint/config';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
@@ -7,6 +7,8 @@ import astro from 'eslint-plugin-astro';
 import globals from 'globals';
 import svelteConfig from './apps/web/svelte.config.js';
 import { coreDeterminismBlock } from './eslint.core-determinism.ts';
+import { platformOnlyBlock } from './eslint.platform-only.ts';
+import { noWakeLockBlock } from './eslint.no-wake-lock.ts';
 
 /**
  * One flat config for the whole monorepo. `--max-warnings 0` in the lint
@@ -19,8 +21,12 @@ import { coreDeterminismBlock } from './eslint.core-determinism.ts';
  * Ignores come from `.gitignore` rather than a list kept here, so anything git
  * does not track (build output, wrangler state, local agent scratch) is never
  * linted.
+ *
+ * `defineConfig` and `includeIgnoreFile` are ESLint core's own (#624): the
+ * `typescript-eslint` and `@eslint/compat` versions are deprecated in favour
+ * of them.
  */
-export default tseslint.config(
+export default defineConfig(
   includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -36,6 +42,14 @@ export default tseslint.config(
       },
     },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
+    rules: {
+      // Every unused parameter, not only those after the last used one: the
+      // default let core's contextAt carry a dead `state` (#833).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { args: 'all', argsIgnorePattern: '^_' },
+      ],
+    },
   },
   {
     files: ['**/*.svelte', '**/*.svelte.ts'],
@@ -72,7 +86,11 @@ export default tseslint.config(
     files: ['apps/site/holding/public/**/*.js'],
     languageOptions: { globals: { ...globals.browser } },
   },
+  // Before core's block, which carries the same bans for core's source.
+  platformOnlyBlock,
   coreDeterminismBlock,
+  // packages/platform, which platform-only skips, is refused wakeLock too (#128).
+  noWakeLockBlock,
   {
     files: ['**/*.js'],
     ...tseslint.configs.disableTypeChecked,

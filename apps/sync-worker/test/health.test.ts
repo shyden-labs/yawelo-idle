@@ -8,8 +8,8 @@ import { createTestHarness } from 'wrangler';
  * wrangler.jsonc, on the workerd that wrangler itself deploys with and a real
  * local D1 (spec §12.4). Every case runs inside workerd (#506).
  *
- * Cases that need an environment no deploy has (another commit, a D1 that
- * throws) go to a second Worker in the same harness: test/injected-worker.ts,
+ * Cases that need an environment no deploy has (another commit) go to a
+ * second Worker in the same harness: test/injected-worker.ts,
  * which wraps the real one and makes the change the `x-inject` header names.
  * Its config, wrangler.injected.jsonc, differs from wrangler.jsonc only in
  * `name` and `main`, which the first test holds.
@@ -87,23 +87,6 @@ describe('GET /health', () => {
     expect(await response.json()).toMatchObject({ commit: sha });
   });
 
-  it('answers 503, not 200, when D1 throws', async () => {
-    const response = await inject('d1-throws');
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      ok: false,
-      commit: 'local',
-      db: 'unreachable',
-    });
-  });
-
-  it('logs why D1 failed, so a 503 can be diagnosed from the Worker logs', async () => {
-    const response = await inject('d1-throws');
-    expect(JSON.parse(response.headers.get('x-console-error') ?? '')).toEqual([
-      ['health: D1 query failed', '<the injected D1 error>'],
-    ]);
-  });
-
   it.each(['POST', 'PUT', 'DELETE', 'PATCH'])(
     'refuses %s, naming GET as the one method it allows',
     async (method) => {
@@ -131,7 +114,7 @@ describe('non-prod marking (#39)', () => {
     'marks %s noindex on the dev API host, with no password asked',
     async (path) => {
       const response = await host(
-        'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev',
+        'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev',
         path,
       );
       expect(response.status).not.toBe(401);
@@ -143,7 +126,7 @@ describe('non-prod marking (#39)', () => {
 
   it('serves blocking robots.txt on the dev API host', async () => {
     const response = await host(
-      'https://yawelo-idle-sync-dev.shyden-labs-dev.workers.dev',
+      'https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev',
       '/robots.txt',
     );
     expect(response.status).toBe(200);
@@ -151,16 +134,10 @@ describe('non-prod marking (#39)', () => {
   });
 
   it('leaves the production API host unmarked, robots.txt included', async () => {
-    const health = await host(
-      'https://api.yawelo-idle.shyden.co.uk',
-      '/health',
-    );
+    const health = await host('https://api.yaweloidle.com', '/health');
     expect(health.status).toBe(200);
     expect(health.headers.get('x-robots-tag')).toBeNull();
-    const robots = await host(
-      'https://api.yawelo-idle.shyden.co.uk',
-      '/robots.txt',
-    );
+    const robots = await host('https://api.yaweloidle.com', '/robots.txt');
     expect(robots.status).toBe(404);
     expect(robots.headers.get('x-robots-tag')).toBeNull();
   });

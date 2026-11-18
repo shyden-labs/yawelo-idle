@@ -130,9 +130,11 @@ describe('the cards line (AC4)', () => {
   });
 
   it('is not shown while no card is held', () => {
-    expect(linesOf(holding([]), 'tea').map((l) => l.name)).not.toContain(
-      'cards',
-    );
+    expect(
+      linesOf(holding([]), 'tea')
+        .map((l) => l.name)
+        .filter((name) => name === 'cards'),
+    ).toEqual([]);
   });
 
   it('refuses a held card the course does not have', () => {

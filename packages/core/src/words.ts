@@ -10,7 +10,7 @@
  * b_w = rankBonus[rank] x (floorShare + (1 - floorShare) x R), so it never
  * falls below floorShare x rankBonus however long it goes unreviewed (DN16).
  */
-import { BALANCE, type Rank } from './balance';
+import { BALANCE, type Rank } from './balance.ts';
 import type {
   Cefr,
   Course,
@@ -18,8 +18,8 @@ import type {
   Destination,
   GrammarNode,
   LexiconItem,
-} from './course';
-import { Num } from './num';
+} from './course.ts';
+import { Num } from './num.ts';
 
 const CEFR_ORDER: Readonly<Record<Cefr, number>> = { A1: 0, A2: 1, B1: 2 };
 const PICK_UP_C0 = Num.from(BALANCE.words.pickUpC0);

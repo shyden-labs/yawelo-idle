@@ -5,8 +5,7 @@ import pacing from '../../vitest.pacing.config';
 import { runOf } from './workflow-steps';
 
 /**
- * The pacing suite stays wired (#35 AC4, AC6; its time limit, AC7, is held in
- * suite-limits.test.ts, #476). A CI step removed or its report no longer
+ * The pacing suite stays wired (#35 AC4, AC6). A CI step removed or its report no longer
  * uploaded would let the pacing
  * checks pass by not running; this suite fails instead. The workflow is read
  * as parsed YAML, so a comment naming a command cannot stand in for a step.
@@ -54,10 +53,8 @@ describe('the pacing suite in CI (#35)', () => {
     // #360's docs-only skip, in ci-fast-path.test.ts; the pacing step's own
     // outcome in the test below (#353).
     expect(step?.if).toMatch(/^\$\{\{ !cancelled\(\) && /);
-    // Called once per commit inside one every-commit run (#348), where an
-    // artifact name may appear once, so a called run names its commit.
     expect(step?.with).toEqual({
-      name: "${{ inputs.ref && format('pacing-report-{0}', inputs.ref) || 'pacing-report' }}",
+      name: 'pacing-report',
       path: 'pacing-report.json',
       'if-no-files-found': 'error',
     });

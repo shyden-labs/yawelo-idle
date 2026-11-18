@@ -3,8 +3,9 @@
  * refuses a malformed pack here, so the engine never meets bad data.
  *
  * The pack is the spec's flat shape. Lexicon items carry exactly #101 AC2's
- * fields; every other kind is a strict `{ id }` until the story that reads
- * more adds it (#102, #110, #462). Every object is strict (AC4), so a typo
+ * fields; grammar nodes, culture cards, motifs and story lines carry their
+ * id, source and licence (#102), and the rest a strict `{ id }`, until the
+ * story that reads more adds it (#110, #462). Every object is strict (AC4), so a typo
  * such as `translation` is refused rather than ignored.
  */
 import { z } from 'zod';
@@ -21,17 +22,77 @@ const REVIEW_STATUSES = [
 /** Holds at least one character that is not whitespace. */
 const VISIBLE = /\S/;
 
+/** A string holding at least one character that is not whitespace. */
+const visible = z.string().regex(VISIBLE, { message: 'is empty' });
+
+/**
+ * Who changed an item (#51 AC3): Claude, the operator, or the player report
+ * a correction came from, by that report's id.
+ */
+const historyBy = z.union(
+  [z.enum(['claude', 'operator']), z.string().regex(/^player-report:\S+$/)],
+  { error: 'must be claude, operator or player-report:<id>' },
+);
+
+/** One change to an item: when (UTC), by whom, and what changed. */
+const historyEntry = z.strictObject({
+  at: z.iso.datetime(),
+  by: historyBy,
+  change: visible,
+});
+
 /**
  * Spec §5.2's review block. Every key is required, so a draft writes `null`
- * rather than leaving a key out, and an omission or a typo is an error.
- * Evidence and history are #51's.
+ * or `[]` rather than leaving a key out, and an omission or a typo is an
+ * error. A `claude-checked` block's evidence (#51 AC2) is checked on the
+ * item, which knows the text a label audit depends on.
  */
 const review = z.strictObject({
   status: z.enum(REVIEW_STATUSES),
   reviewer: z.string().min(1).nullable(),
   reviewedAt: z.iso.datetime({ offset: true }).nullable(),
-  notes: z.string(),
+  notes: z.string().nullable(),
+  sources: z.array(visible),
+  backTranslation: z.string().nullable(),
+  labelAudit: z.string().nullable(),
+  history: z.array(historyEntry),
 });
+
+/** The review block, shared with the UI catalogue (#104 AC6). */
+export const reviewSchema = review;
+export type Review = z.output<typeof review>;
+
+/** Text this short needs a label audit: a bare label gives no context. */
+const LABEL_AUDIT_MAX_WORDS = 3;
+
+const wordCount = (text: string): number =>
+  text.split(/\s+/).filter((word) => word !== '').length;
+
+const isVisible = (text: string | null): boolean =>
+  text !== null && VISIBLE.test(text);
+
+/**
+ * The evidence a `claude-checked` block is missing (#51 AC2, spec D18): two
+ * distinct sources, a back-translation, and a label audit when the text is
+ * three words or fewer. Each entry is the field and why.
+ */
+export function missingEvidence(
+  block: Review,
+  text: string,
+): readonly (readonly [field: string, message: string])[] {
+  if (block.status !== 'claude-checked') return [];
+  const missing: (readonly [string, string])[] = [];
+  if (new Set(block.sources).size < 2)
+    missing.push(['sources', 'needs at least two distinct source ids']);
+  if (!isVisible(block.backTranslation))
+    missing.push(['backTranslation', 'is required on a claude-checked item']);
+  if (wordCount(text) <= LABEL_AUDIT_MAX_WORDS && !isVisible(block.labelAudit))
+    missing.push([
+      'labelAudit',
+      `is required on a claude-checked item of ${String(LABEL_AUDIT_MAX_WORDS)} words or fewer`,
+    ]);
+  return missing;
+}
 
 const lexiconItem = z.strictObject({
   id: z.string(),
@@ -61,6 +122,16 @@ const lexiconItem = z.strictObject({
 /** A kind no story reads yet: an id and nothing else. */
 const idOnly = z.strictObject({ id: z.string() });
 
+/**
+ * A content kind whose fields later stories add (#110, #462): its id, and
+ * the source and licence every content item records (#102 AC3).
+ */
+const licensedItem = z.strictObject({
+  id: z.string(),
+  source: z.string(),
+  licence: z.string(),
+});
+
 export const courseSchema = z
   .strictObject({
     id: z.string(),
@@ -70,10 +141,10 @@ export const courseSchema = z
     destinations: z.array(idOnly),
     encounters: z.array(idOnly),
     lexicon: z.array(lexiconItem),
-    grammarNodes: z.array(idOnly),
-    cultureCards: z.array(idOnly),
-    motifs: z.array(idOnly),
-    story: z.array(idOnly),
+    grammarNodes: z.array(licensedItem),
+    cultureCards: z.array(licensedItem),
+    motifs: z.array(licensedItem),
+    story: z.array(licensedItem),
   })
   .superRefine((course, context) => {
     if (course.sourceLang === course.targetLang)
@@ -82,6 +153,14 @@ export const courseSchema = z
         path: ['targetLang'],
         message: `is the same as sourceLang (${course.sourceLang})`,
       });
+    course.lexicon.forEach((item, index) => {
+      for (const [field, message] of missingEvidence(item.review, item.target))
+        context.addIssue({
+          code: 'custom',
+          path: ['lexicon', index, 'review', field],
+          message,
+        });
+    });
     if (course.targetLang !== 'en') return;
     course.lexicon.forEach((item, index) => {
       if (item.pronunciation === undefined)
@@ -95,6 +174,45 @@ export const courseSchema = z
 
 export type CoursePack = z.output<typeof courseSchema>;
 export type LexiconEntry = CoursePack['lexicon'][number];
+
+/** The statuses every build ships (spec D18, §5.5); the rest are refused. */
+const SHIPPED: ReadonlySet<Review['status']> = new Set([
+  'claude-checked',
+  'native-reviewed',
+]);
+
+/**
+ * Why a loaded course may not ship (#51 AC4): every `draft` or `rejected`
+ * item, named. Empty means every item ships. The review tool loads drafts,
+ * so this is a separate gate from `loadCourse`.
+ */
+export function shipErrors(course: CoursePack): readonly LoadError[] {
+  return course.lexicon.flatMap((item) =>
+    SHIPPED.has(item.review.status)
+      ? []
+      : [
+          {
+            kind: 'lexicon',
+            item: item.id,
+            field: 'review.status',
+            message: `lexicon ${item.id}: review.status is ${item.review.status}, which never ships`,
+          },
+        ],
+  );
+}
+
+/**
+ * Whether the course must carry the disclosure line (#51 AC5): true while
+ * any item that ships is below `native-reviewed`. Derived from the content
+ * and never stored, so the line goes by itself once a course is reviewed.
+ */
+export function needsDisclosure(course: CoursePack): boolean {
+  return course.lexicon.some(
+    (item) =>
+      SHIPPED.has(item.review.status) &&
+      item.review.status !== 'native-reviewed',
+  );
+}
 
 /** One reason a pack was refused, naming the item and the field. */
 export interface LoadError {
@@ -124,17 +242,25 @@ export function loadCourse(json: unknown): LoadResult {
 function itemName(json: unknown, kind: string, index: number): string {
   const items = isRecord(json) ? json[kind] : undefined;
   const item: unknown = Array.isArray(items) ? items[index] : undefined;
-  return isRecord(item) && typeof item.id === 'string'
+  return isRecord(item) && typeof item.id === 'string' && VISIBLE.test(item.id)
     ? item.id
     : `#${String(index)}`;
 }
 
+/** Which item of the pack a path sits in, and the path inside that item. */
+function located(
+  json: unknown,
+  path: readonly PropertyKey[],
+): { kind: string; item: string; within: readonly PropertyKey[] } {
+  const [head, index, ...rest] = path;
+  if (typeof head === 'string' && typeof index === 'number')
+    return { kind: head, item: itemName(json, head, index), within: rest };
+  return { kind: 'course', item: 'course', within: path };
+}
+
 function errorsOf(json: unknown, issue: z.core.$ZodIssue): LoadError[] {
-  const [head, index, ...rest] = issue.path;
-  const inItem = typeof head === 'string' && typeof index === 'number';
-  const kind = inItem ? head : 'course';
-  const item = inItem ? itemName(json, head, index) : 'course';
-  const within = (inItem ? rest : issue.path).map(String);
+  const { kind, item, within: path } = located(json, issue.path);
+  const within = path.map(String);
   // An unknown key is reported at the object holding it, naming the keys.
   const fields =
     issue.code === 'unrecognized_keys'
@@ -151,3 +277,197 @@ function errorsOf(json: unknown, issue: z.core.$ZodIssue): LoadError[] {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/** One structural check's verdict: what it judged, and what it refused. */
+export interface StructureCheck {
+  readonly name: string;
+  readonly judged: number;
+  readonly errors: readonly LoadError[];
+  readonly message: string;
+}
+
+const verdict = (
+  name: string,
+  judged: number,
+  errors: readonly LoadError[],
+): StructureCheck => ({
+  name,
+  judged,
+  errors,
+  message: `${name}: ${String(judged)} judged, ${String(errors.length)} refused`,
+});
+
+/** Every lexicon `id` is unique within a course (#103 AC1). */
+function uniqueIds(course: CoursePack): StructureCheck {
+  const byId = new Map<string, string[]>();
+  course.lexicon.forEach((item, index) => {
+    const named = `#${String(index)} (${item.target})`;
+    byId.set(item.id, [...(byId.get(item.id) ?? []), named]);
+  });
+  const errors = [...byId]
+    .filter(([, items]) => items.length > 1)
+    .map(([id, items]) => ({
+      kind: 'lexicon',
+      item: id,
+      field: 'id',
+      message: `lexicon ${id}: id is shared by ${items.join(' and ')}`,
+    }));
+  return verdict('unique lexicon ids', course.lexicon.length, errors);
+}
+
+/** Every string leaf under `value`, with the path that reaches it. */
+function stringLeaves(
+  value: unknown,
+  path: readonly (string | number)[] = [],
+): readonly (readonly [readonly (string | number)[], string])[] {
+  if (typeof value === 'string') return [[path, value]];
+  if (Array.isArray(value))
+    return value.flatMap((each, index) => stringLeaves(each, [...path, index]));
+  if (isRecord(value))
+    return Object.entries(value).flatMap(([key, each]) =>
+      stringLeaves(each, [...path, key]),
+    );
+  return [];
+}
+
+/** No empty or whitespace-only string anywhere in a pack (#103 AC2). */
+function noEmptyStrings(course: CoursePack): StructureCheck {
+  const leaves = stringLeaves(course);
+  const errors = leaves
+    .filter(([, text]) => !VISIBLE.test(text))
+    .map(([path]) => {
+      const { kind, item, within } = located(course, path);
+      const field = within.map(String).join('.');
+      return {
+        kind,
+        item,
+        field,
+        message: `${kind} ${item}: ${field} is empty or whitespace only`,
+      };
+    });
+  return verdict('no empty strings', leaves.length, errors);
+}
+
+/**
+ * The structural mistakes that must never ship (#103; spec §5.5). Each check
+ * says how many units it judged, so one that read nothing cannot pass for a
+ * clean result. Separate from `loadCourse`, which the review tool uses on
+ * drafts, and for the build to run alongside `shipErrors` (#106).
+ */
+export function structureChecks(course: CoursePack): readonly StructureCheck[] {
+  return [uniqueIds(course), noEmptyStrings(course)];
+}
+
+/**
+ * The content licence allow-list (#102 AC1; spec §5.3, D17): adapted CC BY-SA
+ * material stays CC BY-SA, and original work is CC BY-NC-SA. Nothing else
+ * ships, however close its spelling.
+ */
+export const LICENCES = ['CC-BY-SA-4.0', 'CC-BY-NC-SA-4.0'] as const;
+export type Licence = (typeof LICENCES)[number];
+
+/** The ShareAlike licence an item from a BY-SA source must keep. */
+const SHARE_ALIKE: Licence = 'CC-BY-SA-4.0';
+
+/**
+ * Every source an item may cite (#102 AC4), by the id before the first
+ * colon of its `source` (`wiktionary:rumah` cites `wiktionary`).
+ */
+export const SOURCES: Readonly<
+  Record<string, { readonly licence: Licence; readonly url: string }>
+> = {
+  // Wiktionary's text is CC BY-SA 4.0 (Wikimedia Terms of Use from 2023-06-07).
+  wiktionary: { licence: 'CC-BY-SA-4.0', url: 'https://en.wiktionary.org/' },
+  // Written by Shyden Labs for the game (LICENSE-CONTENT.md).
+  original: {
+    licence: 'CC-BY-NC-SA-4.0',
+    url: 'https://github.com/shyden-labs/yawelo-idle',
+  },
+};
+
+/** An item the licence guard judges: its id, its source and its licence. */
+export interface Licensed {
+  readonly id: string;
+  readonly source: string;
+  readonly licence: string;
+}
+
+const isLicence = (licence: string): licence is Licence =>
+  (LICENCES as readonly string[]).includes(licence);
+
+/** Why one item's licence may not ship, if it may not. */
+function licenceErrors(kind: string, item: Licensed): LoadError[] {
+  const error = (field: string, why: string): LoadError => ({
+    kind,
+    item: item.id,
+    field,
+    message: `${kind} ${item.id}: ${why}`,
+  });
+  const errors: LoadError[] = [];
+  if (!isLicence(item.licence))
+    errors.push(
+      error(
+        'licence',
+        `licence "${item.licence}" is not ${LICENCES.join(' or ')}`,
+      ),
+    );
+  const [sourceId = ''] = item.source.split(':');
+  const source = Object.hasOwn(SOURCES, sourceId)
+    ? SOURCES[sourceId]
+    : undefined;
+  if (source === undefined)
+    errors.push(
+      error(
+        'source',
+        `source "${item.source}" names no registered source (${sourceId})`,
+      ),
+    );
+  else if (
+    source.licence === SHARE_ALIKE &&
+    isLicence(item.licence) &&
+    item.licence !== SHARE_ALIKE
+  )
+    errors.push(
+      error(
+        'licence',
+        `licence is ${item.licence}, but source ${sourceId} is ${SHARE_ALIKE}, so ShareAlike keeps it ${SHARE_ALIKE}`,
+      ),
+    );
+  return errors;
+}
+
+/**
+ * The licence guard over one kind's items (#102): each refusal names the
+ * item, and the verdict says how many it judged, so an empty kind cannot
+ * pass for a clean one. The UI catalogue runs it too (AC3).
+ */
+export function licenceCheck(
+  kind: string,
+  items: readonly Licensed[],
+): StructureCheck {
+  return verdict(
+    `licences: ${kind}`,
+    items.length,
+    items.flatMap((item) => licenceErrors(kind, item)),
+  );
+}
+
+/** The content kinds that carry a licence, in the order they are judged. */
+const LICENSED_KINDS = [
+  'lexicon',
+  'grammarNodes',
+  'cultureCards',
+  'motifs',
+  'story',
+] as const;
+
+/**
+ * The licence guard over every content kind of a course (#102 AC1 to AC3),
+ * one verdict per kind. Separate from `loadCourse`, like `structureChecks`,
+ * for the content build to run beside them (#106).
+ */
+export function licenceChecks(course: CoursePack): readonly StructureCheck[] {
+  return LICENSED_KINDS.map((kind) => licenceCheck(kind, course[kind]));
+}
+
+export * from './evidence.ts';

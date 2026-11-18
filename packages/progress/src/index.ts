@@ -1,7 +1,7 @@
 /**
  * Progress from the project board, twice: by tickets and by effort (story
  * points in the board's `Estimate` field), each with its measured pace over
- * the last 7 days and the ETA that pace gives. Every session close-out
+ * the last 7 finished days and the ETA that pace gives. Every session close-out
  * quotes these two lines, then adds what the pace cannot know: outside waits
  * (operator sign-offs, store review, devices) and any assumed change of pace.
  *
@@ -31,6 +31,11 @@ export interface BoardItem {
   closedAt: string | null;
   estimate: number | null;
   labels: string[];
+  /** The issue's parent, the epic it belongs to (R4, #826): null when none. */
+  parent: number | null;
+  /** The card's plain-words fields for the public roadmap (#826): null when unset or blank. */
+  publicTitle: string | null;
+  publicSummary: string | null;
 }
 
 export interface TicketProgress {
@@ -79,14 +84,36 @@ const isNotPlanned = (item: BoardItem): boolean =>
   item.state === 'CLOSED' &&
   (item.stateReason === 'NOT_PLANNED' || item.stateReason === 'DUPLICATE');
 
-/** Whether a board item counts towards release-ready. */
-export function inScope(item: BoardItem): boolean {
-  return !isEpic(item) && !isPostLaunch(item) && !isNotPlanned(item);
+/** The epics labelled post-launch: their stories are after launch too (#838). */
+export function postLaunchEpics(items: BoardItem[]): Set<number> {
+  return new Set(
+    items.filter((i) => isEpic(i) && isPostLaunch(i)).map((i) => i.number),
+  );
 }
 
-/** The UTC days of the window ending `today`, oldest first, none before `since`. */
+/** After launch: labelled so, or under an epic labelled so (#838). */
+function afterLaunch(item: BoardItem, epics: ReadonlySet<number>): boolean {
+  return isPostLaunch(item) || (item.parent !== null && epics.has(item.parent));
+}
+
+/**
+ * Whether a board item counts towards release-ready. `epics` are the
+ * post-launch epics (`postLaunchEpics`), whose stories are left out too.
+ */
+export function inScope(
+  item: BoardItem,
+  epics: ReadonlySet<number> = new Set(),
+): boolean {
+  return !isEpic(item) && !afterLaunch(item, epics) && !isNotPlanned(item);
+}
+
+/**
+ * The finished UTC days of the window, ending the day before `today`, oldest
+ * first, none before `since` (#575): today is never a day of the pace, so the
+ * ETA does not jump when a new UTC day begins.
+ */
 function windowDays(today: string, since: string): string[] {
-  const end = Date.parse(`${today}T00:00:00Z`);
+  const end = Date.parse(`${today}T00:00:00Z`) - DAY_MS;
   return Array.from({ length: WINDOW_DAYS }, (_, i) =>
     new Date(end - (WINDOW_DAYS - 1 - i) * DAY_MS).toISOString().slice(0, 10),
   ).filter((day) => day >= since);
@@ -105,7 +132,8 @@ function perDay(
 }
 
 export function progress(items: BoardItem[], today: string): Progress {
-  const scope = items.filter(inScope);
+  const after = postLaunchEpics(items);
+  const scope = items.filter((item) => inScope(item, after));
   if (scope.length === 0) {
     throw new Error('the board has no in-scope stories: nothing to measure');
   }
@@ -118,7 +146,8 @@ export function progress(items: BoardItem[], today: string): Progress {
   }
   const closed = scope.filter((item) => item.state === 'CLOSED');
   const open = scope.filter((item) => item.state === 'OPEN');
-  // `since` is never after `today`, so the window always holds today.
+  // `since` is never after `today`; a board created today has no finished
+  // day, so its window is empty and it has no pace yet (#575).
   const since = items
     .map((item) => item.createdAt.slice(0, 10))
     .reduce((a, b) => (b < a ? b : a), today);
@@ -127,10 +156,12 @@ export function progress(items: BoardItem[], today: string): Progress {
     closed: closed.length,
     total: scope.length,
     epics: items.filter(isEpic).length,
-    postLaunch: items.filter((item) => !isEpic(item) && isPostLaunch(item))
-      .length,
+    postLaunch: items.filter(
+      (item) => !isEpic(item) && afterLaunch(item, after),
+    ).length,
     notPlanned: items.filter(
-      (item) => !isEpic(item) && !isPostLaunch(item) && isNotPlanned(item),
+      (item) =>
+        !isEpic(item) && !afterLaunch(item, after) && isNotPlanned(item),
     ).length,
     pace: perDay(closed, days, () => 1),
   };
@@ -175,17 +206,59 @@ const stories = (n: number, kind: string): string =>
 
 const sumOf = (pace: number[]): number => pace.reduce((a, b) => a + b, 0);
 
-/** The ETA at the window's mean daily pace, or why there is none. */
-function eta(remaining: number, pace: number[], today: string): string {
+/**
+ * The day `remaining` work ends at the pace measured over `pace` (#828):
+ * today when nothing remains, else null when nothing closed in the window.
+ */
+export function etaDate(
+  remaining: number,
+  pace: number[],
+  today: string,
+): string | null {
+  // Nothing left ends today, whatever the pace (#575: a board finished
+  // today has nothing in its window yet).
+  if (remaining <= 0) return today;
   const closed = sumOf(pace);
-  if (closed === 0) {
-    return `ETA at that pace: none, nothing closed in the last ${plural(pace.length, 'day')}.`;
-  }
+  if (closed === 0) return null;
   // remaining ÷ (closed ÷ days) as one division: dividing by the rounded mean
   // put a whole number of days a hair above itself, and its ceiling a day late.
   const days = Math.ceil((remaining * pace.length) / closed);
   const date = new Date(Date.parse(`${today}T00:00:00Z`) + days * DAY_MS);
-  return `ETA at that pace: ${date.toISOString().slice(0, 10)}, before outside waits.`;
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * How sure an ETA is, from how many of the window's days moved (#828): high at
+ * 6 or more of 7, medium at 4 or 5, low otherwise or over a shorter window.
+ */
+export function confidence(pace: number[]): 'high' | 'medium' | 'low' {
+  if (pace.length < WINDOW_DAYS) return 'low';
+  const moved = pace.filter((n) => n > 0).length;
+  if (moved >= 6) return 'high';
+  if (moved >= 4) return 'medium';
+  return 'low';
+}
+
+/** The last finished day of the window: the day before `today`. */
+const yesterday = (today: string): string =>
+  new Date(Date.parse(`${today}T00:00:00Z`) - DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+
+const NO_PACE =
+  'Measured pace: none yet, the board has no finished day. ETA at that pace: none yet.';
+
+/** The finished days a pace was measured over, by name (#575). */
+const over = (pace: number[], today: string): string =>
+  `the ${plural(pace.length, 'finished day')} to ${yesterday(today)}`;
+
+/** The ETA at the window's mean daily pace, or why there is none. */
+function eta(remaining: number, pace: number[], today: string): string {
+  const date = etaDate(remaining, pace, today);
+  if (date === null) {
+    return `ETA at that pace: none, nothing closed in ${over(pace, today)}.`;
+  }
+  return `ETA at that pace: ${date}, before outside waits.`;
 }
 
 /** The two close-out lines: by tickets, then by effort. */
@@ -198,8 +271,10 @@ export function formatLines(p: Progress, today: string): [string, string] {
   const tickets =
     `By tickets: ${String(Math.round((100 * t.closed) / t.total))}% complete ` +
     `(${String(t.closed)} of ${String(t.total)} in-scope stories closed; ${leftOut} left out). ` +
-    `Measured pace ${(sumOf(t.pace) / t.pace.length).toFixed(2)} a day over the last ${plural(t.pace.length, 'day')} (${t.pace.join(', ')}). ` +
-    eta(t.total - t.closed, t.pace, today);
+    (t.pace.length === 0
+      ? NO_PACE
+      : `Measured pace ${(sumOf(t.pace) / t.pace.length).toFixed(2)} a day over ${over(t.pace, today)} (${t.pace.join(', ')}). ` +
+        eta(t.total - t.closed, t.pace, today));
   const e = p.effort;
   if (!e.available) {
     return [
@@ -216,29 +291,39 @@ export function formatLines(p: Progress, today: string): [string, string] {
   const effort =
     `By effort: ${plural(Math.round(e.openPoints), 'point')} remaining across ${stories(e.openStories, 'open')} ` +
     `(${String(Math.round(e.closedPoints))} of ${String(Math.round(total))} points closed${assumed}). ` +
-    `Measured pace ${(sumOf(e.pace) / e.pace.length).toFixed(2)} points a day over the last ${plural(e.pace.length, 'day')} ` +
-    `(${e.pace.map((n) => String(Math.round(n))).join(', ')}). ` +
-    eta(e.openPoints, e.pace, today);
+    (e.pace.length === 0
+      ? NO_PACE
+      : `Measured pace ${(sumOf(e.pace) / e.pace.length).toFixed(2)} points a day over ${over(e.pace, today)} ` +
+        `(${e.pace.map((n) => String(Math.round(n))).join(', ')}). ` +
+        eta(e.openPoints, e.pace, today));
   return [tickets, effort];
 }
 
 const LABELS_PER_ISSUE = 20;
-/** Every item of a board with what the maths reads, 100 to a page. */
+/**
+ * Every item of a board with what the maths reads, 100 to a page, and each
+ * card's id and last change and each issue's last change, which the live
+ * roadmap checks a read against the webhook that caused it (#689).
+ */
 export const BOARD_QUERY = `query($id: ID!, $endCursor: String) {
   node(id: $id) { ... on ProjectV2 { title
-    items(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor }
-      nodes {
+    items(first: 100, after: $endCursor) { totalCount pageInfo { hasNextPage endCursor }
+      nodes { id updatedAt
         estimate: fieldValueByName(name: "Estimate") { ... on ProjectV2ItemFieldNumberValue { number } }
+        publicTitle: fieldValueByName(name: "Public title") { ... on ProjectV2ItemFieldTextValue { text } }
+        publicSummary: fieldValueByName(name: "Public summary") { ... on ProjectV2ItemFieldTextValue { text } }
         content { __typename
           ... on DraftIssue { title }
           ... on PullRequest { title }
-          ... on Issue { number title state stateReason createdAt closedAt
-            repository { nameWithOwner }
+          ... on Issue { number title state stateReason createdAt closedAt updatedAt
+            repository { nameWithOwner } parent { number }
             labels(first: ${String(LABELS_PER_ISSUE)}) { totalCount nodes { name } } }
         } } } } } }`;
 
 interface RawNode {
   estimate: { number: number } | null;
+  publicTitle?: { text?: string } | null;
+  publicSummary?: { text?: string } | null;
   content: {
     __typename: string;
     title?: string;
@@ -249,10 +334,13 @@ interface RawNode {
     closedAt?: string | null;
     labels?: { totalCount: number; nodes: { name: string }[] };
     repository?: { nameWithOwner: string };
+    parent?: { number: number } | null;
   } | null;
 }
 interface RawPage {
-  data: { node: { title: string; items: { nodes: RawNode[] } } };
+  data: {
+    node: { title: string; items: { totalCount?: unknown; nodes: RawNode[] } };
+  };
 }
 
 /** A page as it may come back: a wrong node id gives `node: null` or `{}`. */
@@ -365,7 +453,18 @@ function classify(node: RawNode, repo: string): BoardItem | NotAnIssue {
     closedAt: c.closedAt ?? null,
     estimate: node.estimate?.number ?? null,
     labels: labels.nodes.map((l) => l.name),
+    parent: c.parent?.number ?? null,
+    publicTitle: plainWords(node.publicTitle),
+    publicSummary: plainWords(node.publicSummary),
   };
+}
+
+/** A text field's value, or null when it is unset or only spaces (#826). */
+function plainWords(
+  field: { text?: string } | null | undefined,
+): string | null {
+  const text = field?.text?.trim() ?? '';
+  return text === '' ? null : text;
 }
 
 const isIssue = (read: BoardItem | NotAnIssue): read is BoardItem =>
@@ -431,10 +530,218 @@ export function roadmapItems(
 /**
  * Refuse pages that are not all of the board asked for (#341): each page's
  * title is checked, the second and later included, before anything is read
- * from them. The close-out script and the roadmap Worker both call it.
+ * from them, and then that the pages hold every item the board has (#703).
+ * The close-out script, the roadmap Worker, board-next and board-orphans all
+ * call it.
  */
 export function assertBoard(pages: unknown[], title: string): void {
-  for (const page of pages) assertTitle(boardOf(page).title, title);
+  const boards = pages.map(boardOf);
+  for (const board of boards) assertTitle(board.title, title);
+  assertWhole(boards);
+}
+
+/**
+ * Refuse a read short of the board (#703): every page carries GitHub's count
+ * of the board's items, and the pages together must hold exactly that many.
+ * Pages are read one after another, so a card added or removed between two
+ * of them makes their counts differ: that is named as a change, since
+ * nothing is wrong and the next read is whole.
+ */
+function assertWhole(boards: RawPage['data']['node'][]): void {
+  if (boards.length === 0)
+    throw new Error('no page of the board came back: nothing read');
+  const counts = boards.map((board) => board.items.totalCount);
+  if (!counts.every((count) => Number.isInteger(count)))
+    throw new Error(
+      'a page came back without the board’s item count (items.totalCount): nothing read',
+    );
+  const seen = [...new Set(counts)];
+  if (seen.length > 1)
+    throw new Error(
+      `the board changed while it was read (its pages report ${seen.join(', then ')} items): nothing read`,
+    );
+  const total = Number(counts[0]);
+  const read = boards.reduce((sum, board) => sum + board.items.nodes.length, 0);
+  if (read !== total)
+    throw new Error(
+      `the board has ${String(total)} items and ${String(read)} were read: nothing read`,
+    );
+}
+
+const BOARDS_PER_ISSUE = 10;
+/**
+ * The repository's issues, 100 to a page, each with the boards it is on
+ * (#751): the surface a board's listing is checked against, since the
+ * listing's own count shrinks with it. Archived cards are left out, as the
+ * board's listing leaves them out. Oldest first, so an issue filed during
+ * the read lands on the last page (#875).
+ */
+export const REPO_ISSUES_QUERY = `query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 100, after: $endCursor, orderBy: { field: CREATED_AT, direction: ASC }) { totalCount pageInfo { hasNextPage endCursor }
+      nodes { number createdAt
+        projectItems(first: ${String(BOARDS_PER_ISSUE)}, includeArchived: false) { totalCount nodes { project { id } } } } } } }`;
+
+interface RepoIssue {
+  number: number;
+  createdAt?: unknown;
+  projectItems: {
+    totalCount: number;
+    nodes: { project: { id: string } | null }[];
+  };
+}
+interface RepoIssues {
+  totalCount?: unknown;
+  nodes: RepoIssue[];
+}
+
+/** A page's issues, refused by name when the page holds none. */
+function issuesOf(page: unknown): RepoIssues {
+  const issues = (
+    page as {
+      data?: { repository?: { issues?: { nodes?: unknown } } | null };
+    } | null
+  )?.data?.repository?.issues;
+  if (issues === undefined || !Array.isArray(issues.nodes)) {
+    throw new Error(
+      'a page came back without the repository’s issues: is the repository right?',
+    );
+  }
+  return issues as RepoIssues;
+}
+
+/**
+ * The issues the repository names on the board, from pages proved to hold
+ * every issue, as assertWhole proves a board's pages (#703), and the issues
+ * created after `readStartedAt`, whose card can show on one side only
+ * (#877).
+ */
+function namedOnBoard(
+  repoPages: unknown[],
+  boardId: string,
+  readStartedAt: Date,
+): { named: Set<number>; filedDuringRead: Set<number> } {
+  if (repoPages.length === 0)
+    throw new Error(
+      'no page of the repository’s issues came back: nothing read',
+    );
+  const pages = repoPages.map(issuesOf);
+  const counts = pages.map((page) => page.totalCount);
+  if (!counts.every((count) => Number.isInteger(count)))
+    throw new Error(
+      'a page of the repository’s issues came back without their count (issues.totalCount): nothing read',
+    );
+  // Read oldest first, an issue filed during the read lands on a later page
+  // and the count rises (#875). A fall means an issue already read was
+  // deleted or moved, which shifts the pages, so it is refused.
+  const totals = counts.map(Number);
+  if (totals.some((count, i) => i > 0 && count < Number(totals[i - 1])))
+    throw new Error(
+      `the repository’s issues fell while they were read (its pages report ${[...new Set(totals)].join(', then ')}): an issue was deleted or moved: nothing read`,
+    );
+  const total = Number(totals.at(-1));
+  const issues = pages.flatMap((page) => page.nodes);
+  if (issues.length !== total)
+    throw new Error(
+      `the repository has ${String(total)} issues and ${String(issues.length)} were read: nothing read`,
+    );
+  const read = new Set<number>();
+  for (const { number } of issues) {
+    if (read.has(number))
+      throw new Error(`#${String(number)} was read twice: nothing read`);
+    read.add(number);
+  }
+  const named = new Set<number>();
+  const filedDuringRead = new Set<number>();
+  for (const issue of issues) {
+    const created =
+      typeof issue.createdAt === 'string' ? Date.parse(issue.createdAt) : NaN;
+    if (Number.isNaN(created))
+      throw new Error(
+        `#${String(issue.number)} came back without a readable createdAt (${String(issue.createdAt)}): nothing read`,
+      );
+    if (created > readStartedAt.getTime()) filedDuringRead.add(issue.number);
+    const items = issue.projectItems;
+    if (items.totalCount > items.nodes.length)
+      throw new Error(
+        `#${String(issue.number)} is on ${String(items.totalCount)} boards and ${String(items.nodes.length)} were read: raise projectItems(first:) in REPO_ISSUES_QUERY: nothing read`,
+      );
+    if (items.nodes.some((item) => item.project?.id === boardId))
+      named.add(issue.number);
+  }
+  return { named, filedDuringRead };
+}
+
+const NAMED_IN_A_REFUSAL = 10;
+
+/** Issue numbers for a refusal: the first ten, and how many more. */
+function listed(numbers: number[]): string {
+  const shown = numbers
+    .slice(0, NAMED_IN_A_REFUSAL)
+    .map((number) => `#${String(number)}`)
+    .join(', ');
+  const more = numbers.length - NAMED_IN_A_REFUSAL;
+  return more > 0 ? `${shown} and ${String(more)} more` : shown;
+}
+
+/**
+ * Refuse a board whose listing is not every issue the repository names on
+ * it (#751). The board's pages and the repository's are read from two
+ * GitHub surfaces (ProjectV2.items and Repository.issues), and compared as
+ * sets of issue numbers, so a listing short of the board is refused even
+ * when its own count agrees with it. Only `repo`'s issues are compared:
+ * drafts, pull requests and other repositories' issues are parseItems'.
+ * An issue created after `readStartedAt` (taken before the board is read)
+ * is left out on both sides: its card can be added between the two reads
+ * (#877). Every older issue is still compared.
+ */
+export function assertNamedByRepo(
+  boardPages: unknown[],
+  repoPages: unknown[],
+  boardId: string,
+  repo: string,
+  readStartedAt: Date,
+): void {
+  const { named, filedDuringRead } = namedOnBoard(
+    repoPages,
+    boardId,
+    readStartedAt,
+  );
+  if (named.size === 0)
+    throw new Error(
+      `the repository’s own issues (Repository.issues) name no issue on board ${boardId}: nothing read`,
+    );
+  const carded = new Set(
+    boardPages
+      .map(boardOf)
+      .flatMap((board) => board.items.nodes)
+      .flatMap(({ content }) =>
+        content?.__typename === 'Issue' &&
+        content.repository?.nameWithOwner === repo &&
+        content.number !== undefined
+          ? [content.number]
+          : [],
+      ),
+  );
+  const byNumber = (a: number, b: number): number => a - b;
+  const compared = (n: number): boolean => !filedDuringRead.has(n);
+  const missing = [...named]
+    .filter((n) => compared(n) && !carded.has(n))
+    .sort(byNumber);
+  const extra = [...carded]
+    .filter((n) => compared(n) && !named.has(n))
+    .sort(byNumber);
+  if (missing.length === 0 && extra.length === 0) return;
+  const parts = [
+    `the board lists ${String(carded.size)} of ${repo}’s issues and the repository’s own issues (Repository.issues) name ${String(named.size)} on it`,
+  ];
+  if (missing.length > 0)
+    parts.push(`missing from the board’s listing: ${listed(missing)}`);
+  if (extra.length > 0)
+    parts.push(
+      `on the board but named by no issue: ${listed(extra)} (a card added or removed between the two reads shows this way too)`,
+    );
+  throw new Error(`${parts.join('; ')}: nothing read`);
 }
 
 /** Refuse to read a board other than the one asked for. */
@@ -458,4 +765,116 @@ export function closeOutLines(
 ): [string, string] {
   assertBoard(pages, title);
   return formatLines(progress(parseItems(pages, repo), today), today);
+}
+
+/** The label an issue waiting on Shyden's decision carries (#826). */
+export const WAITING_LABEL = 'waiting-on-shyden';
+
+/**
+ * A board item as the public roadmap may show it (#840): the fields the page
+ * reads and nothing else. A story's own title stays private; its Public
+ * title is the only name it is shown by.
+ */
+export interface PublicItem {
+  number: number;
+  /** Whether it is an epic, which the page draws as an island. */
+  epic: boolean;
+  /**
+   * An epic's milestone ("Epic M3: …" is 3), for the islands' order; null for
+   * a story or an epic with none. Its ticket title is never served (#844).
+   */
+  milestone: number | null;
+  state: 'OPEN' | 'CLOSED';
+  closedAt: string | null;
+  estimate: number | null;
+  parent: number | null;
+  publicTitle: string | null;
+  publicSummary: string | null;
+  /** Whether it waits on a decision (`waiting-on-shyden`). */
+  waiting: boolean;
+}
+
+/** The progress figures the public roadmap shows (#840). */
+export interface PublicProgress {
+  tickets: { closed: number; total: number; pace: number[] };
+  effort:
+    | { available: false; scored: number; open: number }
+    | {
+        available: true;
+        openPoints: number;
+        assumedClosed: number;
+        scoredMean: number;
+        pace: number[];
+      };
+}
+
+/** What `/api/roadmap.json` serves and each live socket receives (#840). */
+export interface PublicSnapshot {
+  version: number;
+  readAt: string;
+  items: PublicItem[];
+  progress: PublicProgress;
+}
+
+/** An epic's milestone number ("Epic M3: …" is 3), or null when it has none. */
+function milestoneOf(title: string): number | null {
+  const match = /^Epic M(\d+)\b/.exec(title);
+  return match === null ? null : Number(match[1]);
+}
+
+/** The board's items the public roadmap may carry, as it may carry them (#840). */
+export function publicItems(items: BoardItem[]): PublicItem[] {
+  const after = postLaunchEpics(items);
+  return items
+    .filter((i) => (isEpic(i) ? !after.has(i.number) : inScope(i, after)))
+    .map((i) => ({
+      number: i.number,
+      epic: isEpic(i),
+      milestone: isEpic(i) ? milestoneOf(i.title) : null,
+      state: i.state,
+      closedAt: i.closedAt,
+      estimate: i.estimate,
+      parent: i.parent,
+      publicTitle: i.publicTitle,
+      publicSummary: i.publicSummary,
+      waiting: i.labels.includes(WAITING_LABEL),
+    }));
+}
+
+/**
+ * The public part of a read (#840; Shyden, 2026-11-02: "i don't want any
+ * leaks in the public"): only the work up to the first public release, its
+ * epics and its in-scope stories, each with only the fields the page reads,
+ * and only the figures the page shows. Progress is still measured from the
+ * whole board on the Worker; nothing else of it leaves.
+ */
+export function publicSnapshot(read: {
+  version: number;
+  readAt: string;
+  items: BoardItem[];
+  progress: Progress;
+}): PublicSnapshot {
+  const items = publicItems(read.items);
+  const { tickets, effort } = read.progress;
+  return {
+    version: read.version,
+    readAt: read.readAt,
+    items,
+    progress: {
+      tickets: {
+        closed: tickets.closed,
+        total: tickets.total,
+        pace: tickets.pace,
+      },
+      effort: effort.available
+        ? {
+            available: true,
+            openPoints: effort.openPoints,
+            assumedClosed: effort.assumedClosed,
+            scoredMean: effort.scoredMean,
+            pace: effort.pace,
+          }
+        : { available: false, scored: effort.scored, open: effort.open },
+    },
+  };
 }

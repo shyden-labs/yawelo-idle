@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  bundledPackages,
   pickFile,
-  SHIPPED_WORKSPACES,
+  shippedPackages,
   type Lockfile,
 } from '../../scripts/third-party-notices';
 
@@ -20,16 +19,6 @@ import {
 const lock = JSON.parse(readFileSync('package-lock.json', 'utf8')) as Lockfile;
 const listing = readFileSync('THIRD-PARTY-NOTICES.md', 'utf8');
 
-/**
- * Direct dependencies per shipped workspace, measured at b2a6f3f (#82) and
- * raised to 9 when #34 added `@noble/hashes`. Each floor sits at measured -
- * 1; lower one only in the commit that removes a dependency. A workspace
- * with no entry fails, so a new one is measured.
- */
-const MEASURED_DIRECT: Readonly<Record<string, number>> = {
-  'packages/core': 9,
-};
-
 function directDependencies(workspace: string): string[] {
   const pkg = JSON.parse(readFileSync(`${workspace}/package.json`, 'utf8')) as {
     dependencies?: Record<string, string>;
@@ -41,34 +30,23 @@ describe('THIRD-PARTY-NOTICES.md', () => {
   // That the file is exactly what the generator renders reads every bundled
   // package's folder: a guard (#530, tests/guards/third-party-notices.test.ts).
 
-  for (const workspace of SHIPPED_WORKSPACES) {
-    // package.json is fixture data, read here so each dependency is its own test.
-    const direct = directDependencies(workspace);
+  // The lockfile is fixture data, read here so each dependency is its own test.
+  const workspaces = Object.keys(lock.packages).filter(
+    (path) => path !== '' && !path.includes('node_modules/'),
+  );
 
-    it(`${workspace} has direct dependencies to check`, () => {
-      expect(
-        direct.length,
-        `measure ${workspace} and add it to MEASURED_DIRECT`,
-      ).toBeGreaterThan((MEASURED_DIRECT[workspace] ?? Infinity) - 1);
-    });
-
-    for (const name of direct)
-      it(`the closure of ${workspace} holds its dependency ${name}`, () => {
-        expect(bundledPackages(lock).map((p) => p.name)).toContain(name);
+  for (const workspace of workspaces)
+    for (const name of directDependencies(workspace).filter(
+      (dependency) => !dependency.startsWith('@yawelo-idle/'),
+    ))
+      it(`lists ${workspace}'s dependency ${name}`, () => {
+        expect(listing).toContain(`\`${name}\``);
       });
-  }
 
-  it('names every package of the closure, which is larger than the direct list', () => {
-    const names = bundledPackages(lock).map((p) => p.name);
-    // The closure is larger than the direct list: @stdlib's six pull in 152.
-    // Measured 152 @stdlib and 164 in all at b2a6f3f (#82); floors at measured - 1.
-    expect(
-      names.filter((n) => n.startsWith('@stdlib/')).length,
-    ).toBeGreaterThan(151);
-    expect(names.length).toBeGreaterThan(163);
-    // runtime population: the closure bundledPackages computes from the lockfile.
+  it('lists every shipped package', () => {
+    // runtime population: the set shippedPackages derives from the lockfile.
     // Listing it at collection would run the code under test there.
-    for (const name of names) {
+    for (const { name } of shippedPackages(lock)) {
       expect(listing, name).toContain(`\`${name}\``);
     }
   });
@@ -131,5 +109,47 @@ describe('NOTICE', () => {
 
   it('points to the full licence texts', () => {
     expect(notice).toContain('THIRD-PARTY-NOTICES.md');
+  });
+});
+
+describe('shippedPackages', () => {
+  it('holds every package npm does not mark build-only, and no workspace', () => {
+    const fixture: Lockfile = {
+      packages: {
+        '': {},
+        'packages/core': { version: '0.0.0' },
+        'node_modules/@yawelo-idle/core': { link: true },
+        'node_modules/shipped': { version: '1.0.0', license: 'MIT' },
+        'node_modules/tool': { version: '2.0.0', license: 'MIT', dev: true },
+        'node_modules/a/node_modules/nested': {
+          version: '3.0.0',
+          license: 'ISC',
+        },
+      },
+    };
+    expect(shippedPackages(fixture)).toEqual([
+      {
+        name: 'nested',
+        version: '3.0.0',
+        license: 'ISC',
+        path: 'node_modules/a/node_modules/nested',
+      },
+      {
+        name: 'shipped',
+        version: '1.0.0',
+        license: 'MIT',
+        path: 'node_modules/shipped',
+      },
+    ]);
+  });
+
+  it('refuses a shipped package with no licence in the lockfile', () => {
+    expect(() =>
+      shippedPackages({
+        packages: { 'node_modules/bare': { version: '1.0.0' } },
+      }),
+    ).toThrow(
+      'node_modules/bare has no version or licence in package-lock.json',
+    );
   });
 });

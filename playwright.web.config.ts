@@ -1,8 +1,9 @@
+import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
 import {
-  defineConfig,
-  devices,
-  type PlaywrightTestConfig,
-} from '@playwright/test';
+  BROWSER_TARGETS,
+  TARGET_TOTALS_REPORTER,
+  ASSERTION_COUNTS_REPORTER,
+} from './tests/browser-targets';
 
 /**
  * The web app's smoke suite (#123 AC3): the BUILT game, loaded in each
@@ -42,12 +43,8 @@ export function webSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: 'list',
-    projects: [
-      { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-      { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-      { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    ],
+    reporter: [['list'], [TARGET_TOTALS_REPORTER], [ASSERTION_COUNTS_REPORTER]],
+    projects: BROWSER_TARGETS,
   };
   const target = env['WEB_SMOKE_URL'];
   if (target === undefined) {
@@ -75,6 +72,13 @@ export function webSmokeConfig(
         username: USERNAME,
         password,
       },
+      // A failing test leaves a screenshot beside Playwright's page snapshot
+      // in test-results, which deploy-dev uploads (#888). Never a trace or a
+      // video: a trace records each request's headers, the dev password's
+      // Authorization among them, and the upload is public.
+      screenshot: 'only-on-failure',
+      trace: 'off',
+      video: 'off',
     },
   });
 }

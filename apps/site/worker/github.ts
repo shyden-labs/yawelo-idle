@@ -1,25 +1,34 @@
 /**
  * The roadmap's read-only GitHub App, `yawelo-idle-roadmap` (#341, website
  * spec §5.2 item 3): a JWT signed with the App's key, an installation token
- * for the one repository, and every page of the board. The installation and
- * the issued token must each hold exactly the three reads, or nothing is read:
- * a public-facing Worker never holds a key that can write, and a write right
- * added to the App later turns dev verify red rather than going unnoticed.
+ * for the one repository, every page of the board, and every page of the
+ * repository's issues it is checked against (#751). The installation must
+ * hold exactly the three reads: Administration: read, granted 2026-10-20 for
+ * the owner-review check (#687), was removed with it (#797, Shyden,
+ * 2026-11-02). The token asks for the three reads by name and must hold
+ * exactly those (#704).
+ * Otherwise nothing is read: a public-facing Worker never holds a key that
+ * can write, and a right added to the App later turns dev verify red rather
+ * than going unnoticed.
  *
  * The same checks as `~/.claude/scripts/github-app/app_token.py`, which mints
  * the agent's tokens: an installation on selected repositories only, and the
  * issued rights compared with a pinned set.
  */
-import { BOARD_QUERY } from '@yawelo-idle/progress';
+import { BOARD_QUERY, REPO_ISSUES_QUERY } from '@yawelo-idle/progress';
 
 const API = 'https://api.github.com';
 /** GitHub refuses any request without a User-Agent. */
 export const USER_AGENT = 'yawelo-idle-roadmap';
-/** The App's rights: Issues, Metadata and the org's Projects, read only. */
+/** The token's rights: Issues, Metadata and the org's Projects, read only. */
 export const PERMISSIONS: Readonly<Record<string, string>> = {
   issues: 'read',
   metadata: 'read',
   organization_projects: 'read',
+};
+/** The installation's rights: the token's three reads, nothing more (#797). */
+export const INSTALLATION_PERMISSIONS: Readonly<Record<string, string>> = {
+  ...PERMISSIONS,
 };
 /** 2,000 items at 100 a page: a board that claims more is broken, not big. */
 const MAX_PAGES = 20;
@@ -158,16 +167,17 @@ export async function installationToken(
     throw new Error(
       `the roadmap App is installed on every ${app.org} repository; install it on ${app.repoName} only`,
     );
-  const pinned = canonical(PERMISSIONS);
-  if (canonical(installation.permissions) !== pinned)
+  const installed = canonical(INSTALLATION_PERMISSIONS);
+  if (canonical(installation.permissions) !== installed)
     throw new Error(
-      `the roadmap App’s installation has ${canonical(installation.permissions)}, not exactly ${pinned}`,
+      `the roadmap App’s installation has ${canonical(installation.permissions)}, not exactly ${installed}`,
     );
+  const pinned = canonical(PERMISSIONS);
   const issued = (await call(
     'POST',
     `/app/installations/${String(installation.id)}/access_tokens`,
     jwt,
-    { repositories: [app.repoName] },
+    { repositories: [app.repoName], permissions: PERMISSIONS },
   )) as {
     token: string;
     permissions: unknown;
@@ -227,4 +237,70 @@ export async function readBoardPages(
   throw new Error(
     `the board ${boardId} has more than ${String(MAX_PAGES)} pages`,
   );
+}
+
+interface IssuesPage {
+  data?: {
+    repository?: {
+      issues?: {
+        pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+      };
+    } | null;
+  };
+  errors?: { message: string }[];
+}
+
+/**
+ * Every page of `owner/name`'s issues as GitHub returns it for
+ * REPO_ISSUES_QUERY, each with the boards it is on (#751): the second
+ * surface packages/progress checks the board's listing against. Refused by
+ * name as the board's pages are, and past MAX_PAGES.
+ */
+export async function readRepoIssuePages(
+  token: string,
+  owner: string,
+  name: string,
+): Promise<unknown[]> {
+  const pages: unknown[] = [];
+  let endCursor: string | null = null;
+  for (let read = 0; read < MAX_PAGES; read += 1) {
+    const page = (await call('POST', '/graphql', token, {
+      query: REPO_ISSUES_QUERY,
+      variables: { owner, name, endCursor },
+    })) as IssuesPage;
+    const first = page.errors?.[0];
+    if (first !== undefined)
+      throw new Error(
+        `GitHub’s GraphQL answered with errors: ${first.message}`,
+      );
+    const pageInfo = page.data?.repository?.issues?.pageInfo;
+    if (pageInfo === undefined)
+      throw new Error(`GitHub found no issues for ${owner}/${name}`);
+    pages.push(page);
+    if (!pageInfo.hasNextPage) return pages;
+    endCursor = pageInfo.endCursor;
+  }
+  throw new Error(
+    `the repository ${owner}/${name} has more than ${String(MAX_PAGES)} pages of issues`,
+  );
+}
+
+/**
+ * The board's pages and the repository's issue pages, read at the same time
+ * (#850): each list pages by its own cursor, so neither waits on the other.
+ * Read one after the other they took about 11 s of the 13-15 s from an edit
+ * to the open roadmap (measured on dev, 2026-11-05). Either failing fails
+ * the read, naming why, as each does alone.
+ */
+export async function readBoardAndIssues(
+  token: string,
+  boardId: string,
+  owner: string,
+  name: string,
+): Promise<{ board: unknown[]; issues: unknown[] }> {
+  const [board, issues] = await Promise.all([
+    readBoardPages(token, boardId),
+    readRepoIssuePages(token, owner, name),
+  ]);
+  return { board, issues };
 }

@@ -24,18 +24,18 @@ describe('scanTimeouts', () => {
       'w.yml',
       workflow(job('build', '    timeout-minutes: 15\n')),
     );
-    expect(scan.checked).toBe(1);
     expect(scan.findings).toEqual([]);
+    expect(scan.checked).toBe(1);
   });
 
   it(`accepts the bound itself, ${String(MAX_TIMEOUT_MINUTES)} minutes`, () => {
-    expect(
-      problems(
-        workflow(
-          job('build', `    timeout-minutes: ${String(MAX_TIMEOUT_MINUTES)}\n`),
-        ),
+    const scan = scanTimeouts(
+      'w.yml',
+      workflow(
+        job('build', `    timeout-minutes: ${String(MAX_TIMEOUT_MINUTES)}\n`),
       ),
-    ).toEqual([]);
+    );
+    expect(scan.findings).toEqual([]);
   });
 
   it('pins the bound at 30 minutes', () => {
@@ -89,8 +89,8 @@ describe('scanTimeouts', () => {
       'w.yml',
       workflow('  test:\n    uses: ./.github/workflows/ci.yml\n'),
     );
-    expect(scan.calls).toEqual(['./.github/workflows/ci.yml']);
     expect(scan.findings).toEqual([]);
+    expect(scan.calls).toEqual(['./.github/workflows/ci.yml']);
   });
 
   it('flags a call to a remote reusable workflow, whose timeouts this repo cannot see', () => {
@@ -139,6 +139,7 @@ describe('this repo’s workflows stop every job within minutes', () => {
   });
 
   it('every job has a timeout of at most 30 minutes', () => {
-    expect(scanAll().flatMap(({ scan }) => scan.findings)).toEqual([]);
+    const scans = scanAll();
+    expect(scans.flatMap(({ scan }) => scan.findings)).toEqual([]);
   });
 });

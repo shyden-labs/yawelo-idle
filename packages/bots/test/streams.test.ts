@@ -70,12 +70,14 @@ describe('recall', () => {
 
   it('is never correct at R = 0', () => {
     const s = new Streams(35);
-    expect(draws(1_000, () => s.recalls(0)).filter(Boolean)).toEqual([]);
+    const recalls = draws(1_000, () => s.recalls(0));
+    expect(recalls.filter(Boolean)).toEqual([]);
   });
 
   it('is always correct at R = 1', () => {
     const s = new Streams(35);
-    expect(draws(1_000, () => s.recalls(1)).filter((x) => !x)).toEqual([]);
+    const recalls = draws(1_000, () => s.recalls(1));
+    expect(recalls.filter((x) => !x)).toEqual([]);
   });
 });
 
@@ -137,7 +139,6 @@ describe('the open schedule', () => {
         offset: o.startMs - EPOCH - day * DAY_MS,
       })),
     );
-    expect(starts).toHaveLength(90);
     expect(
       starts.filter(
         ({ offset }) =>
@@ -146,6 +147,7 @@ describe('the open schedule', () => {
           offset % 1_000 !== 0,
       ),
     ).toEqual([]);
+    expect(starts).toHaveLength(90);
     expect(Math.min(...starts.map((s) => s.offset))).toBeLessThan(
       WAKE_MS + 3_600_000,
     );
@@ -160,8 +162,8 @@ describe('the open schedule', () => {
       dayOpens(persona('diligent'), EPOCH, day, s).map((o) => o.startMs),
     );
     const gaps = starts.slice(1).map((t, i) => t - (starts[i] ?? 0));
-    expect(gaps).toHaveLength(149);
     expect(gaps.filter((g) => g < MIN_OPEN_GAP_MS)).toEqual([]);
+    expect(gaps).toHaveLength(149);
     expect(Math.min(...gaps)).toBeLessThan(MIN_OPEN_GAP_MS + 15 * 60_000);
   });
 
@@ -173,10 +175,10 @@ describe('the open schedule', () => {
         (o, i) => o.startMs - EPOCH - day * DAY_MS - WAKE_MS - i * slotMs,
       ),
     );
-    expect(offsets).toHaveLength(90);
     expect(
       offsets.filter((x) => x < 0 || x > slotMs - MIN_OPEN_GAP_MS),
     ).toEqual([]);
+    expect(offsets).toHaveLength(90);
   });
 
   it('orders a day’s opens by time', () => {

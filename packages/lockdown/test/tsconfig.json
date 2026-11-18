@@ -1,0 +1,11 @@
+{
+  // The lockdown tests run in Node under vitest, so they see Node's types, while the package's own
+  // tsconfig.json keeps `src/` to the web platform APIs workerd and Node
+  // share.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../src/**/*.ts"]
+}

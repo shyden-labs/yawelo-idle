@@ -68,15 +68,13 @@ export function roadmapWorld({ appKey = true }: { appKey?: boolean } = {}) {
               ROADMAP_WEBHOOK_SECRET: WEBHOOK_SECRET,
               ...(appKey ? { ROADMAP_APP_KEY: keys.privateKey } : {}),
             },
-            bindingOverrides: { GAME: 'game-echo' },
+            // The roadmap's tests ask the front door for no page (#673), so
+            // the holding binding takes the real game too, the one other
+            // Worker this harness runs (#815).
+            bindingOverrides: { HOLDING: 'yawelo-idle-web-dev' },
           },
-          {
-            config: {
-              name: 'game-echo',
-              main: './test/game-echo.ts',
-              compatibility_date: '2026-09-30',
-            },
-          },
+          // The real game Worker, the service the GAME binding names (#815).
+          { configPath: '../web/wrangler.jsonc' },
         ],
       });
       await server.listen();
@@ -96,6 +94,23 @@ export function roadmapWorld({ appKey = true }: { appKey?: boolean } = {}) {
       });
     },
     seenByFake: async (): Promise<Seen[]> =>
-      (await (await control('/seen')).json()) as Seen[],
+      (await control('/seen')).json<Seen[]>(),
   };
+}
+
+/** GitHub's `X-Hub-Signature-256` for `body`, made with the test secret. */
+export async function sign(body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(WEBHOOK_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const mac = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(body),
+  );
+  return `sha256=${[...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 }

@@ -1,0 +1,11 @@
+// A dev Worker bound to another environment's resources, read through wrangler
+// by environment-bindings.test.ts so the real reader's output is what is judged.
+{
+  "name": "yawelo-idle-fixture-dev",
+  "compatibility_date": "2026-01-01",
+  "d1_databases": [{ "binding": "DB", "database_name": "yawelo-idle-test" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "yawelo-idle-media" }],
+  "kv_namespaces": [{ "binding": "CACHE", "id": "0123456789abcdef" }],
+  "hyperdrive": [{ "binding": "HD", "id": "0123456789abcdef" }],
+  "env": { "production": { "name": "yawelo-idle-fixture" } },
+}
