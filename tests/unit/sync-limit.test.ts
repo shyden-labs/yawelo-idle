@@ -60,8 +60,18 @@ describe('the keyed one-way hash of a network (#164 AC2)', () => {
 describe('the window a request falls in (#164 AC2)', () => {
   it.each([
     ['inside an hour', 18_001_234, 3600, { end: 21_600, retryAfter: 3599 }],
-    ['at its first moment', 18_000_000, 3600, { end: 21_600, retryAfter: 3600 }],
-    ['at its last millisecond', 21_599_999, 3600, { end: 21_600, retryAfter: 1 }],
+    [
+      'at its first moment',
+      18_000_000,
+      3600,
+      { end: 21_600, retryAfter: 3600 },
+    ],
+    [
+      'at its last millisecond',
+      21_599_999,
+      3600,
+      { end: 21_600, retryAfter: 1 },
+    ],
     ['in a minute window', 61_500, 60, { end: 120, retryAfter: 59 }],
   ])('%s', (_case, nowMs, perSeconds, window) => {
     expect(windowOf(nowMs, perSeconds)).toEqual(window);
@@ -102,6 +112,8 @@ describe('a limit at its exact boundary (#164 AC2)', () => {
     // one scenario: a key reaches its limit, then asks a window later
     for (let request = 0; request < 3; request += 1)
       await checkLimit(counts, '/r', 'k', limit, NOW);
-    expect(await checkLimit(counts, '/r', 'k', limit, NOW + 60_000)).toBeUndefined();
+    expect(
+      await checkLimit(counts, '/r', 'k', limit, NOW + 60_000),
+    ).toBeUndefined();
   });
 });

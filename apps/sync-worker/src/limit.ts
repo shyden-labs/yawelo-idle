@@ -18,7 +18,8 @@ function ipv4Parts(address: string): number[] | undefined {
   return numbers.every((part) => part <= 255) ? numbers : undefined;
 }
 
-const v4Network = ([a, b, c]: number[]) => `${a}.${b}.${c}.0/24`;
+const v4Network = (parts: readonly number[]) =>
+  `${parts.slice(0, 3).join('.')}.0/24`;
 
 /** An IPv6 address's eight groups, with `::` expanded, or undefined. */
 function ipv6Groups(address: string): string[] | undefined {

@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { DOOR_CLIENT_HEADER, DOOR_SECRET_HEADER } from '../../apps/door/worker/door';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  DOOR_CLIENT_HEADER,
+  DOOR_SECRET_HEADER,
+} from '../../apps/door/worker/door';
 import type { Equal } from '../../apps/door/worker/origin';
 import type { Counts } from '../../apps/sync-worker/src/limit';
 import { ROUTES, route, type SyncEnv } from '../../apps/sync-worker/src/routes';
@@ -165,7 +168,7 @@ describe('the request limits (#164 AC2)', () => {
     for (let sent = 0; sent < 60; sent += 1)
       await send('/health', {
         counts,
-        headers: { 'cf-connecting-ip': `203.0.113.${sent % 2}` },
+        headers: { 'cf-connecting-ip': `203.0.113.${String(sent % 2)}` },
       });
     expect((await send('/health', { counts })).status).toBe(429);
   });
@@ -208,7 +211,10 @@ describe('the request limits (#164 AC2)', () => {
     });
     // one scenario: one caller names a new address on each request
     for (let sent = 0; sent < 60; sent += 1)
-      await send('/health', { counts, headers: forged(`198.51.100.${sent}`) });
+      await send('/health', {
+        counts,
+        headers: forged(`198.51.100.${String(sent)}`),
+      });
     expect(
       (await send('/health', { counts, headers: forged('192.0.2.1') })).status,
     ).toBe(429);
@@ -217,16 +223,23 @@ describe('the request limits (#164 AC2)', () => {
   it('keeps a keyed hash, never the address or its network', async () => {
     const counts = memoryCounts();
     await send('/health', { counts });
-    expect(counts.keys).toEqual([
-      expect.stringMatching(/^[\da-f]{64}$/),
-    ]);
+    expect(counts.keys).toEqual([expect.stringMatching(/^[\da-f]{64}$/)]);
   });
 
   it('gives one network the same key each time and another a different one', async () => {
     const counts = memoryCounts();
-    await send('/health', { counts, headers: { 'cf-connecting-ip': '203.0.113.7' } });
-    await send('/health', { counts, headers: { 'cf-connecting-ip': '203.0.113.9' } });
-    await send('/health', { counts, headers: { 'cf-connecting-ip': '198.51.100.7' } });
+    await send('/health', {
+      counts,
+      headers: { 'cf-connecting-ip': '203.0.113.7' },
+    });
+    await send('/health', {
+      counts,
+      headers: { 'cf-connecting-ip': '203.0.113.9' },
+    });
+    await send('/health', {
+      counts,
+      headers: { 'cf-connecting-ip': '198.51.100.7' },
+    });
     const [first, second, third] = counts.keys;
     expect([first === second, first === third]).toEqual([true, false]);
   });
@@ -245,12 +258,25 @@ describe('the request limits (#164 AC2)', () => {
 
   it('answers 500 naming RATE_KEY when the deploy left it unset, counting nothing', async () => {
     const counts = memoryCounts();
-    const { RATE_KEY: _unset, ...withoutKey } = env;
+    const withoutKey: SyncEnv = { ...env, RATE_KEY: undefined };
     const response = await send('/health', { counts, withEnv: withoutKey });
     expect([response.status, await response.json(), counts.keys]).toEqual([
       500,
       { error: 'not_configured', missing: 'RATE_KEY' },
       [],
     ]);
+  });
+
+  it('serves the request and logs when the counts cannot be read', async () => {
+    const error = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const broken: Counts = { add: () => Promise.reject(new Error('D1 down')) };
+    const response = await send('/health', { counts: broken });
+    expect([response.status, error.mock.calls[0]?.[0]]).toEqual([
+      200,
+      'limit: the request count failed',
+    ]);
+    error.mockRestore();
   });
 });

@@ -42,6 +42,8 @@ const logs: Log[] = [];
 const start = () =>
   unstable_startWorker({
     config: CONFIG,
+    // The key request counts are hashed under (#164 AC2), as the deploy sets it.
+    bindings: { RATE_KEY: { type: 'secret_text', value: 'harness-rate-key' } },
     dev: {
       persist,
       server: { port: 0 },

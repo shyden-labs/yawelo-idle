@@ -25,7 +25,6 @@ import {
 } from './limit';
 import { readQuery } from './validate';
 
-
 /** A prepared D1 statement, as far as the routes use one. */
 interface Statement {
   bind(...values: unknown[]): Statement;
@@ -175,7 +174,14 @@ export async function route(
     equal = workerEqual,
   } = options;
   const key = await requestKey(request, env.RATE_KEY, env.DOOR_SECRET, equal);
-  const wait = await checkLimit(counts, url.pathname, key, listed.limit, now());
+  let wait: number | undefined;
+  try {
+    wait = await checkLimit(counts, url.pathname, key, listed.limit, now());
+  } catch (error) {
+    // Served uncounted: a route that needs D1 reports the failure itself
+    // (/health answers 503), and the cause goes to the Worker logs.
+    console.error('limit: the request count failed', error);
+  }
   if (wait !== undefined)
     return json({ error: 'too_many_requests' }, 429, {
       'retry-after': String(wait),

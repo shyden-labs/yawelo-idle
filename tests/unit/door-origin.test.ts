@@ -108,7 +108,10 @@ describe('a request not believed (#784 AC4)', () => {
  * requires the door, so a forgotten setting fails closed.
  */
 describe('the caller’s address (#164 AC2)', () => {
-  const withAddresses = (secret: string | undefined, sent: string | undefined) =>
+  const withAddresses = (
+    secret: string | undefined,
+    sent: string | undefined,
+  ) =>
     request({
       'cf-connecting-ip': '2a06:98c0:3600::103',
       ...(secret === undefined ? {} : { [DOOR_SECRET_HEADER]: secret }),
@@ -117,30 +120,48 @@ describe('the caller’s address (#164 AC2)', () => {
 
   it('is the one the door names, when the secret matches', async () => {
     expect(
-      await clientAddressOf(withAddresses(SECRET, '203.0.113.7'), SECRET, sameBytes),
+      await clientAddressOf(
+        withAddresses(SECRET, '203.0.113.7'),
+        SECRET,
+        sameBytes,
+      ),
     ).toBe('203.0.113.7');
   });
 
   it('is Cloudflare’s when the secret matches but the door names none', async () => {
     expect(
-      await clientAddressOf(withAddresses(SECRET, undefined), SECRET, sameBytes),
+      await clientAddressOf(
+        withAddresses(SECRET, undefined),
+        SECRET,
+        sameBytes,
+      ),
     ).toBe('2a06:98c0:3600::103');
   });
 
   it('is Cloudflare’s, never the one named, when the secret is wrong', async () => {
     expect(
-      await clientAddressOf(withAddresses('forged', '203.0.113.7'), SECRET, sameBytes),
+      await clientAddressOf(
+        withAddresses('forged', '203.0.113.7'),
+        SECRET,
+        sameBytes,
+      ),
     ).toBe('2a06:98c0:3600::103');
   });
 
   it('is Cloudflare’s, never the one named, when the origin has no secret', async () => {
     expect(
-      await clientAddressOf(withAddresses('', '203.0.113.7'), undefined, sameBytes),
+      await clientAddressOf(
+        withAddresses('', '203.0.113.7'),
+        undefined,
+        sameBytes,
+      ),
     ).toBe('2a06:98c0:3600::103');
   });
 
   it('is unknown when nothing names one', async () => {
-    expect(await clientAddressOf(request({}), SECRET, sameBytes)).toBeUndefined();
+    expect(
+      await clientAddressOf(request({}), SECRET, sameBytes),
+    ).toBeUndefined();
   });
 });
 

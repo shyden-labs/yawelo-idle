@@ -11,7 +11,7 @@ export function memoryCounts(): Counts & { readonly keys: string[] } {
     keys,
     add: (routePath, key, windowEnd) => {
       keys.push(key);
-      const id = `${routePath} ${key} ${windowEnd}`;
+      const id = `${routePath} ${key} ${String(windowEnd)}`;
       const count = (counts.get(id) ?? 0) + 1;
       counts.set(id, count);
       return Promise.resolve(count);
