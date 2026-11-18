@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-18 10:25 WIB, session `yawelo-idle-de`. Shyden AFK again from ~10:20 WIB (park what needs him, carry on by Priority). Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-165` (pushed, PR #1037), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim.
+**Written:** 2026-11-18 10:50 WIB, session `yawelo-idle-de`. Shyden AFK again from ~10:20 WIB (park what needs him, carry on by Priority). Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-165` (pushed, PR #1037), `yawelo-idle-52` (pushed a9500f9, no PR yet), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim.
 
 ## Shyden (when back)
 
@@ -20,7 +20,8 @@
 2. Merge only through the scratchpad helper `merge.sh <pr> <issue>` (merge + Todo in one command); rewrite it from memory `feedback-in-progress-after-the-branch-exists` if the scratchpad is gone.
 3. **PR #1037** (#165): green on 14336d3, held for question 4. After his answer: merge (or prove red / restart); #165 stays open for AC4's flow log and AC5 (#166), so Todo at merge.
 4. #164 is Todo, open for AC2/AC5 after question 2.
-5. Next by Priority once those land: everything P0–P2 open is waiting on Shyden or the release (#757, #783, #1013, #784, #1021, #830, #713), on upstream (#1018), or on a time window (#864 closes after 2026-11-18 21:00 UTC, #888 after 2026-11-20 13:00 UTC). P3 candidates: #166 (save push and pull; uses #165 and #164), #127, #52.
+5. **#52 (content reports, P3, In Progress)**, branch `52-content-reports` at a9500f9: slice 1 done (strict body schema, code-point limits, 28 unit tests, mutation-checked). Next slices: (a) migration `0002_content_reports.sql` (design §B.3 tables) with its harness schema test (CI-only suite: push the red test commit first, then the migration); (b) the POST route in `routes.ts` (order: shape 422, honeypot 201 writes nothing, item 422, quota 429, duplicate 409, insert 201) with the quota upsert + insert in one D1 batch; (c) health route. Parked: AC2's item-exists check has no content ids yet (no course content until M2); AC5 and AC9 need Shyden to create the Cloudflare Access application, service token and rate-limit rule. #757 is done (AC6 met by release #1030, shut by hand); #783 still wants a refused non-release PR seen.
+6. Next by Priority once those land: everything P0–P2 open is waiting on Shyden or the release (#757, #783, #1013, #784, #1021, #830, #713), on upstream (#1018), or on a time window (#864 closes after 2026-11-18 21:00 UTC, #888 after 2026-11-20 13:00 UTC). P3 candidates: #166 (save push and pull; uses #165 and #164), #127, #52.
 
 ## Done this session (2026-11-18)
 
