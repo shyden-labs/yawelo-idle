@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestHarness } from 'wrangler';
 
 /**
@@ -12,7 +12,13 @@ const ROOT = new URL('..', import.meta.url).pathname;
 
 const server = createTestHarness({
   root: ROOT,
-  workers: [{ configPath: './wrangler.jsonc' }],
+  // The key request counts are hashed under (#164 AC2), as the deploy sets it.
+  workers: [
+    {
+      configPath: './wrangler.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
+  ],
 });
 
 let db: D1Database;
@@ -22,6 +28,12 @@ beforeAll(async () => {
   const worker = server.getWorker<Env>();
   await worker.applyD1Migrations('DB');
   db = (await worker.getEnv()).DB;
+});
+
+// Registration is limited to 10 an hour per network (#164 AC2); every test
+// here starts from no counts, so the limit never decides a registration test.
+beforeEach(async () => {
+  await db.prepare('DELETE FROM rate_counts').run();
 });
 
 afterAll(async () => {

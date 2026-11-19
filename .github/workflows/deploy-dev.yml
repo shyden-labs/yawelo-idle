@@ -103,12 +103,25 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: npx --no wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc
+      # The sync Worker's secrets reach it from the dev environment's secrets,
+      # uploaded with the version itself (#164 AC2): the door secret, so it
+      # believes the caller's address the door names, and the key request
+      # counts are hashed under.
+      - name: Write the sync Worker's secrets file (the dev door secret, the request-count key)
+        id: sync-secrets
+        env:
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          DEV_RATE_KEY: ${{ secrets.DEV_RATE_KEY }}
+        run: |
+          path="$(node scripts/sync-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
       - name: Deploy the sync Worker, stamped with this commit
         working-directory: apps/sync-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"
+          SECRETS_FILE: ${{ steps.sync-secrets.outputs.path }}
+        run: npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}" --secrets-file "$SECRETS_FILE"
       - name: Build the game, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
