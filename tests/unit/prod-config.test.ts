@@ -11,7 +11,7 @@ import { headerRules, type HeaderRules } from '../../scripts/headers-file';
 
 /**
  * The production holding page (#621): an assets-only Worker in the
- * production account, served at yawelo-idle.shyden.co.uk, with its security
+ * production account, served at yaweloidle.com (#1013), with its security
  * headers, its robots file, its approved words and its video's terms.
  * Configs are read the way wrangler reads them (comments stripped), so no
  * comment can satisfy or trip a pin.

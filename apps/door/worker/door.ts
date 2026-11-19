@@ -21,6 +21,14 @@ export const DOOR_SECRET_HEADER = 'x-yawelo-door-secret';
  */
 export const DOOR_HOST_HEADER = 'x-yawelo-door';
 
+/**
+ * The header carrying the caller's address as Cloudflare gave it to the door
+ * (#164 AC2): past the door, an origin's own `CF-Connecting-IP` is
+ * Cloudflare's Worker address, the same for everyone. Trusted by an origin
+ * only alongside a valid secret; any value a caller sent is replaced.
+ */
+export const DOOR_CLIENT_HEADER = 'x-yawelo-client';
+
 export type Environment = 'dev' | 'test';
 
 export interface Door {
@@ -50,7 +58,7 @@ export const DOORS: ReadonlyMap<string, Door> = new Map([
   ],
   [
     'test.yaweloidle.com',
-    { worker: 'yawelo-idle-site-test', environment: 'test' },
+    { worker: 'yawelo-idle-holding-test', environment: 'test' },
   ],
 ]);
 
@@ -100,5 +108,8 @@ export async function pass(
   const headers = new Headers(forwarded.headers);
   headers.set(DOOR_SECRET_HEADER, env[secretName]);
   headers.set(DOOR_HOST_HEADER, host);
+  const client = request.headers.get('cf-connecting-ip');
+  if (client === null) headers.delete(DOOR_CLIENT_HEADER);
+  else headers.set(DOOR_CLIENT_HEADER, client);
   return fetch(new Request(forwarded, { headers, redirect: 'manual' }));
 }

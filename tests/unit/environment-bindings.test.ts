@@ -63,11 +63,6 @@ describe('a Worker bound to its own environment (#784 AC1a)', () => {
       [],
     );
   });
-  it('reads the dev hostname adapter as dev', () => {
-    expect(
-      crossEnvironmentBindings(worker('a-dev-hosts', service('b-dev'))),
-    ).toEqual([]);
-  });
 });
 
 describe('a Worker bound to another environment (#784 AC1a)', () => {
@@ -131,10 +126,10 @@ describe('a Worker bound to another environment (#784 AC1a)', () => {
       'a-dev (dev): Worker b belongs to production',
     ]);
   });
-  it('refuses the dev hostname adapter calling a test Worker', () => {
+  it('reads a name ending -dev-hosts as production, the adapter retired (#1013)', () => {
     expect(
-      crossEnvironmentBindings(worker('a-dev-hosts', service('b-test'))),
-    ).toEqual(['a-dev-hosts (dev): Worker b-test belongs to test']);
+      crossEnvironmentBindings(worker('a-dev-hosts', service('b-dev'))),
+    ).toEqual(['a-dev-hosts (production): Worker b-dev belongs to dev']);
   });
   it('reports every crossed binding, not only the first', () => {
     expect(

@@ -48,7 +48,7 @@ export function onAllowlist(path: string): boolean {
 /** The change kinds judged path by path: added, modified, deleted. */
 const JUDGED_KINDS = new Set(['A', 'M', 'D']);
 
-const STATUS = /^[A-Z][0-9]*$/;
+const STATUS = /^[A-Z]\d*$/;
 
 /** Reads `git diff --name-status -z`; anything malformed throws by name. */
 export function parseNameStatus(text: string): Change[] {

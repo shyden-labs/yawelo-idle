@@ -62,20 +62,6 @@ const CALLS = [
     start: 'the package root apps/site',
   },
   {
-    step: `${DEV}Upload the hostname adapter's secret to its Pages project`,
-    command: 'pages secret bulk',
-    from: 'apps/dev-hosts',
-    configArgs: [],
-    start: 'the package root apps/dev-hosts',
-  },
-  {
-    step: `${DEV}Deploy the dev hostname adapter to its Pages main branch (dev account)`,
-    command: 'pages deploy',
-    from: 'apps/dev-hosts',
-    configArgs: [],
-    start: 'the package root apps/dev-hosts',
-  },
-  {
     step: 'deploy-door.yml / deploy / Deploy the front door',
     command: 'deploy',
     from: '.',
@@ -113,7 +99,6 @@ const CALLS = [
 ];
 
 const ROOTS = [
-  'apps/dev-hosts',
   'apps/door',
   'apps/site',
   'apps/sync-worker',
@@ -415,14 +400,6 @@ describe('describing what a call reads (#627)', () => {
   it("describes the game Worker's config as wrangler reads it", () => {
     expect(describeMeant('.', { config: 'apps/web/wrangler.jsonc' })).toBe(
       'apps/web/wrangler.jsonc: yawelo-idle-web-dev, assets apps/web/dist',
-    );
-  });
-
-  it('describes the Pages config with its output directory', () => {
-    expect(
-      describeMeant('.', { config: 'apps/dev-hosts/wrangler.jsonc' }),
-    ).toBe(
-      'apps/dev-hosts/wrangler.jsonc: yawelo-idle-dev-hosts, assets apps/dev-hosts/public',
     );
   });
 

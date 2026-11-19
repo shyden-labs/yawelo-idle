@@ -14,8 +14,7 @@
  * #341); a missing password locks the gate and a missing webhook secret
  * refuses every delivery. `DOOR_SECRET` (#784) is uploaded with them: while
  * DOOR_REQUIRED is "false" it only lets the site believe the door a request
- * names, which the dev hostname adapter sends while it stands in for the
- * doors (apps/dev-hosts/hosts.ts).
+ * names, which the door sends (apps/door, #1013).
  *
  * Behind its door (#784 AC4), a request without this environment's door
  * secret is refused before anything else, the webhook path included
@@ -23,7 +22,7 @@
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
 import { refusal, workerEqual } from '../../door/worker/origin';
-import { Roadmap, type RoadmapEnv } from './roadmap';
+import type { RoadmapEnv } from './roadmap';
 import {
   HOOK_PATH,
   isGamePath,
@@ -39,7 +38,7 @@ import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
 import privateSpec from '../api/private.openapi.json';
 
-export { Roadmap };
+export { Roadmap } from './roadmap';
 
 interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */

@@ -75,7 +75,7 @@ export interface Progress {
 const WINDOW_DAYS = 7;
 const DAY_MS = 86_400_000;
 /** Story points (global rule, 2026-10-04): anything larger is an epic to split. */
-const POINTS = [1, 2, 3, 5, 8, 13];
+const POINTS = new Set([1, 2, 3, 5, 8, 13]);
 
 const isEpic = (item: BoardItem): boolean => /^Epic\b/.test(item.title);
 const isPostLaunch = (item: BoardItem): boolean =>
@@ -138,7 +138,7 @@ export function progress(items: BoardItem[], today: string): Progress {
     throw new Error('the board has no in-scope stories: nothing to measure');
   }
   for (const item of scope) {
-    if (item.estimate !== null && !POINTS.includes(item.estimate)) {
+    if (item.estimate !== null && !POINTS.has(item.estimate)) {
       throw new Error(
         `#${String(item.number)} has Estimate ${String(item.estimate)}: a story is 1, 2, 3, 5, 8 or 13 points, and anything larger is an epic to split`,
       );

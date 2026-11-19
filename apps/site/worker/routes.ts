@@ -35,18 +35,11 @@ export function isRoadmapPath(pathname: string): boolean {
 }
 
 /**
- * The dev front door (apps/dev-hosts/hosts.ts maps it to this Worker), whose
- * pages are the holding page production shows (#673; Shyden, 2026-10-18:
- * "Dev shows holding"). The site being built stays at this Worker's own
- * workers.dev address, behind the same gate. Retired with apps/dev-hosts
- * when the doors go live (#784, 2026-11-15).
- */
-export const HOLDING_HOST = 'dev.yawelo-idle.shyden.co.uk';
-
-/**
- * The dev site Worker's door (#784): behind it, this Worker is reached at its
- * workers.dev address, so the holding page follows the door a request came
- * through instead of its host.
+ * The dev site Worker's door, dev.yaweloidle.com (#784, #1013), whose pages
+ * are the holding page production shows (#673; Shyden, 2026-10-18: "Dev
+ * shows holding"). Behind it, this Worker is reached at its workers.dev
+ * address, so the holding page follows the door a request came through; the
+ * site being built stays at that address, behind the same gate.
  */
 export const HOLDING_DOOR = doorTo('yawelo-idle-site-dev');
 
@@ -57,22 +50,17 @@ export function doorTo(worker: string): string {
 }
 
 /**
- * Whether a page request is the holding page's to answer: on the dev front
- * door's host, or through the dev site's door. `door` is the door a request
- * came through, named only once its secret is believed
- * (apps/door/worker/origin.ts), else undefined.
+ * Whether a page request is the holding page's to answer: through the dev
+ * site's door. `door` is the door a request came through, named only once
+ * its secret is believed (apps/door/worker/origin.ts), else undefined.
  */
-export function showsHolding(
-  hostname: string,
-  door: string | undefined,
-): boolean {
-  return hostname === HOLDING_HOST || door === HOLDING_DOOR;
+export function showsHolding(door: string | undefined): boolean {
+  return door === HOLDING_DOOR;
 }
 
 /**
- * Which pages `request` gets (#673, #784): the holding page's dev copy on the
- * dev front door's host or through the dev site's door, else the site being
- * built. The door is believed only with `secret`, compared by `equal` (the
+ * Which pages `request` gets (#673, #784, #1013): the holding page's dev copy
+ * through the dev site's door, else the site being built. The door is believed only with `secret`, compared by `equal` (the
  * runtime's constant-time comparison in the Worker).
  */
 export async function pagesFor(
@@ -81,7 +69,7 @@ export async function pagesFor(
   equal: Equal,
 ): Promise<'holding' | 'site'> {
   const door = await doorOf(request, secret, equal);
-  return showsHolding(new URL(request.url).hostname, door) ? 'holding' : 'site';
+  return showsHolding(door) ? 'holding' : 'site';
 }
 
 /** A binding that answers a request: a service binding or the static assets. */

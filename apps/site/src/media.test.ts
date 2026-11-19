@@ -62,7 +62,37 @@ describe('the promo media', () => {
       'yawelo-idle-promo.webm',
     ]);
   });
+
+  // #622: every browser takes the MP4 first (#621), so its size is what a
+  // phone on slow data waits for, and a player can start before the whole
+  // file arrives only when the index (moov) comes before the media (mdat).
+  it('hold an MP4 under 2 MB', () => {
+    const bytes = readFileSync(new URL('yawelo-idle-promo.mp4', FOLDER)).length;
+    expect(bytes).toBeLessThan(2_000_000);
+  });
+
+  it('hold an MP4 whose index (moov) comes before its media (mdat)', () => {
+    const order = topLevelBoxes(
+      readFileSync(new URL('yawelo-idle-promo.mp4', FOLDER)),
+    );
+    expect(order).toContain('moov');
+    expect(order).toContain('mdat');
+    expect(order.indexOf('moov')).toBeLessThan(order.indexOf('mdat'));
+  });
 });
+
+/** The four-letter types of an MP4's top-level boxes, in file order. */
+const topLevelBoxes = (file: Buffer): string[] => {
+  const types: string[] = [];
+  let at = 0;
+  while (at + 8 <= file.length) {
+    const size = file.readUInt32BE(at);
+    types.push(file.toString('latin1', at + 4, at + 8));
+    if (size === 0) break; // the box runs to the end of the file
+    at += size === 1 ? Number(file.readBigUInt64BE(at + 8)) : size;
+  }
+  return types;
+};
 
 /**
  * The entries of the holding page's public folder that could put a promo

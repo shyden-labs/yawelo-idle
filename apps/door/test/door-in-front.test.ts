@@ -47,7 +47,12 @@ const behindItsDoor = {
 const origins = createTestHarness({
   root: new URL('../..', import.meta.url).pathname,
   workers: [
-    { configPath: './sync-worker/wrangler.jsonc', ...behindItsDoor },
+    {
+      configPath: './sync-worker/wrangler.jsonc',
+      vars: behindItsDoor.vars,
+      // The key request counts are hashed under (#164 AC2).
+      secrets: { ...behindItsDoor.secrets, RATE_KEY: 'harness-rate-key' },
+    },
     {
       configPath: './site/wrangler.jsonc',
       vars: behindItsDoor.vars,

@@ -47,6 +47,9 @@ describe('the privacy page’s text (#928)', () => {
       soon: 'The privacy notice will be published here before the launch list opens.',
       governs:
         'For residents of Indonesia, the Indonesian text of this page governs. For everyone else, the English text governs.',
+      // Shyden approved the line 2026-11-19 (#164 AC2).
+      requestCounts:
+        "To stop abuse, the game's server counts requests. Requests made without a device code are counted under a scrambled code made from the network part of the internet address, never the address itself, and each count is deleted the next time the server is used after its time window ends.",
     });
   });
 
@@ -56,6 +59,8 @@ describe('the privacy page’s text (#928)', () => {
       soon: 'Pemberitahuan privasi akan diterbitkan di sini sebelum daftar peluncuran dibuka.',
       governs:
         'Bagi penduduk Indonesia, yang berlaku adalah teks halaman ini dalam bahasa Indonesia. Bagi semua orang lainnya, yang berlaku adalah teks dalam bahasa Inggris.',
+      requestCounts:
+        'Untuk mencegah penyalahgunaan, server permainan ini menghitung permintaan. Permintaan tanpa kode perangkat dihitung dengan kode samaran yang dibuat dari bagian jaringan alamat internet, tidak pernah dari alamat itu sendiri, dan setiap hitungan dihapus saat server digunakan lagi setelah periode hitungannya berakhir.',
     });
   });
 

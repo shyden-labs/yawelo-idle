@@ -20,7 +20,6 @@ import { DOOR_HOST_HEADER, DOOR_SECRET_HEADER } from '../../door/worker/door';
 import {
   EXEMPT_PATHS,
   HOLDING_DOOR,
-  HOLDING_HOST,
   PRIVATE_PATHS,
   ROADMAP_PATHS,
 } from '../worker/routes';
@@ -353,19 +352,32 @@ describe('legal pages are English and Indonesian (#928)', () => {
       expect(html).toContain(
         `<p data-governing-language>${LEGAL[locale][page].governs}</p>`,
       );
+      // The request counts line (#164 AC2), as the page escapes it.
+      expect(html).toContain(
+        `<p data-request-counts>${LEGAL[locale][page].requestCounts.replaceAll("'", '&#39;')}</p>`,
+      );
       expect(html).not.toContain('data-english-only-note');
     },
   );
 });
 
-/** The dev front door: the holding page, with the game and the roadmap kept (#673). */
-const FRONT = `https://${HOLDING_HOST}`;
+/**
+ * The dev front door, dev.yaweloidle.com (#673, #1013): the holding page,
+ * with the game and the roadmap kept. The door reaches this Worker at its
+ * workers.dev address with the door secret and its own name (#784).
+ */
+const front = (path: string, headers: Record<string, string> = {}) =>
+  get(`${DEV}${path}`, {
+    [DOOR_SECRET_HEADER]: DOOR_SECRET,
+    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+    ...headers,
+  });
 
 describe('the dev front door shows the holding page production shows (#673)', () => {
   it.each(['/', '/id/'])(
     'shows the holding page at %s with the password, noindex added',
     async (path) => {
-      const response = await get(`${FRONT}${path}`, authorised);
+      const response = await front(path, authorised);
       expect(response.status).toBe(200);
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
       const html = await response.text();
@@ -374,14 +386,14 @@ describe('the dev front door shows the holding page production shows (#673)', ()
   );
 
   it('serves the stylesheet the holding page links, as CSS', async () => {
-    const html = await (await get(`${FRONT}/`, authorised)).text();
+    const html = await (await front('/', authorised)).text();
     // Matched on the page, never on the href: toMatch throws on a missing
     // href before it adds this message, so the failure would not say why.
     const link =
       /<link rel="stylesheet" href="(\/_astro\/Holding\.[^"]+\.css)">/;
     expect(html, 'the Holding stylesheet').toMatch(link);
     const href = link.exec(html)?.[1];
-    const response = await get(`${FRONT}${String(href)}`, authorised);
+    const response = await front(String(href), authorised);
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
   });
@@ -389,27 +401,27 @@ describe('the dev front door shows the holding page production shows (#673)', ()
   it.each(['/', '/id/', '/no/such/page'])(
     'refuses %s on the front door without credentials',
     async (path) => {
-      const response = await get(`${FRONT}${path}`);
+      const response = await front(path);
       expect(response.status).toBe(401);
       expect(await response.text()).toBe(await challengeResponse().text());
     },
   );
 
   it('serves blocking robots.txt on the front door without credentials', async () => {
-    const response = await get(`${FRONT}/robots.txt`);
+    const response = await front('/robots.txt');
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
   });
 
   it('forwards the game on the front door', async () => {
-    const response = await get(`${FRONT}/play/`, authorised);
+    const response = await front('/play/', authorised);
     expect(response.status).toBe(200);
     expect(fromGame(response)).toBe(true);
     expect(await response.text()).toBe(GAME_SHELL);
   });
 
   it('answers the roadmap’s health on the front door, not the holding page', async () => {
-    const response = await get(`${FRONT}${ROADMAP_PATHS.health}`, authorised);
+    const response = await front(ROADMAP_PATHS.health, authorised);
     expect(response.headers.get('Content-Type')).toMatch(
       /^application\/json\b/,
     );
@@ -418,7 +430,7 @@ describe('the dev front door shows the holding page production shows (#673)', ()
   it.each(EXEMPT_PATHS)(
     'takes %s on the front door without credentials, POST only',
     async (path) => {
-      const response = await get(`${FRONT}${path}`);
+      const response = await front(path);
       expect(response.status).toBe(405);
       expect(response.headers.get('Allow')).toBe('POST');
     },
@@ -580,7 +592,7 @@ describe('the private API docs, dev only (#589)', () => {
   });
 
   it('keeps the page behind the password on the dev front door', async () => {
-    expect((await get(`https://${HOLDING_HOST}${DOCS}`)).status).toBe(401);
+    expect((await front(DOCS)).status).toBe(401);
   });
 
   it('refuses a wrong password on dev', async () => {

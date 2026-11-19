@@ -11,7 +11,13 @@ const ROOT = new URL('..', import.meta.url).pathname;
 
 const server = createTestHarness({
   root: ROOT,
-  workers: [{ configPath: './wrangler.jsonc' }],
+  // The key request counts are hashed under (#164 AC2), as the deploy sets it.
+  workers: [
+    {
+      configPath: './wrangler.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
+  ],
 });
 
 let db: D1Database;
@@ -100,7 +106,7 @@ const addPlayer = (id: string) =>
     .bind(id)
     .run();
 
-describe('the migrations create exactly the first tables (#162 AC1, AC2)', () => {
+describe('the migrations create exactly the first tables (#162 AC1, AC2) and the request counts (#164 AC5)', () => {
   it('and no others', async () => {
     const tables = await rows<{ name: string }>(
       `SELECT name FROM sqlite_schema WHERE type = 'table'
@@ -112,6 +118,7 @@ describe('the migrations create exactly the first tables (#162 AC1, AC2)', () =>
       'devices',
       'pairings',
       'players',
+      'rate_counts',
       'save_versions',
       'saves',
     ]);

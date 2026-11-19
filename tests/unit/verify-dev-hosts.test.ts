@@ -1,7 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
-  ADAPTER_OWN,
   API_HOST,
   SITE_HOST,
   verifyDevHosts,
@@ -9,8 +8,8 @@ import {
 } from '../../scripts/verify-dev-hosts';
 
 /**
- * scripts/verify-dev-hosts.ts (#816) judged against a stand-in of the dev
- * hosts, so each way the real ones could go wrong is seen to be named. The
+ * scripts/verify-dev-hosts.ts (#816, #1013) judged against a stand-in of the
+ * dev doors, so each way the real ones could go wrong is seen to be named. The
  * stand-in checks the webhook signature over the body it receives, as the
  * site Worker does, so a script that signed wrongly would fail too.
  */
@@ -23,7 +22,7 @@ interface Answer {
   readonly body?: string;
 }
 
-type Override = Partial<Record<'play' | 'post' | 'hook' | 'own', Answer>>;
+type Override = Partial<Record<'play' | 'post' | 'hook', Answer>>;
 
 function hosts(override: Override = {}): Fetch {
   return (url, init) => {
@@ -58,13 +57,18 @@ function hosts(override: Override = {}): Fetch {
         new Headers(init.headers).get('X-Hub-Signature-256') === expected;
       return Promise.resolve(answer({ status: signed ? 204 : 401 }, 'hook'));
     }
-    if (url === `${ADAPTER_OWN}/`)
-      return Promise.resolve(answer({ status: 404, body: 'not found' }, 'own'));
     return Promise.reject(new Error(`unexpected request: ${url}`));
   };
 }
 
 describe('verifyDevHosts (#816)', () => {
+  it('reads the dev doors on yaweloidle.com, never an old host (#1013)', () => {
+    expect([SITE_HOST, API_HOST]).toEqual([
+      'https://dev.yaweloidle.com',
+      'https://dev-api.yaweloidle.com',
+    ]);
+  });
+
   it('finds nothing when every host answers as the real Workers do', async () => {
     expect(await verifyDevHosts(hosts(), INPUTS)).toEqual([]);
   });
@@ -116,26 +120,6 @@ describe('verifyDevHosts (#816)', () => {
     );
     expect(problems).toEqual([
       `${SITE_HOST}/hooks/github: a ping one byte longer than its signature should be refused 401, got 204`,
-    ]);
-  });
-
-  it('names the adapter’s own address reaching a Worker', async () => {
-    const problems = await verifyDevHosts(
-      hosts({ own: { status: 200, body: 'a page' } }),
-      INPUTS,
-    );
-    expect(problems).toEqual([
-      `${ADAPTER_OWN}/: expected the adapter's 404 "not found", got 200`,
-    ]);
-  });
-
-  it('names a 404 that is not the adapter’s own', async () => {
-    const problems = await verifyDevHosts(
-      hosts({ own: { status: 404, body: 'Cloudflare: no such project' } }),
-      INPUTS,
-    );
-    expect(problems).toEqual([
-      `${ADAPTER_OWN}/: expected the adapter's 404 "not found", got 404`,
     ]);
   });
 });

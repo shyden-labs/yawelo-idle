@@ -2,12 +2,12 @@
 # database (created on the first deploy, #357, bound by id, #391) and its
 # migrations, then the sync Worker, then the game, the holding page's dev copy
 # and the site Worker (the password gate in front, spec D9, #39, #332; its
-# front door shows the holding page, #673), then the Pages hostname adapter
-# that serves them at dev.yawelo-idle.shyden.co.uk,
-# dev-api.yawelo-idle.shyden.co.uk (#429) and
-# dev-holding.yawelo-idle.shyden.co.uk (#768), all in the dev-only "Shyden Labs
-# Dev" account (#395), then a verify that reads them back at those names and
-# reads the site being built at the site Worker's workers.dev address.
+# front door shows the holding page, #673), all in the non-PROD account
+# (#784). The front door Worker (apps/door, deployed by deploy-door.yml)
+# serves them at dev.yaweloidle.com, dev-api.yaweloidle.com and
+# dev-holding.yaweloidle.com (#1013); a verify then reads them back at those
+# names and reads the site being built at the site Worker's workers.dev
+# address.
 #
 # Every Cloudflare secret is a `dev` ENVIRONMENT secret, and `dev` admits only
 # the develop branch, so a fork PR or any other branch cannot reach them
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     # When the deploy finished, for verify-roadmap (#708).
     outputs:
       deployed-at: ${{ steps.deployed.outputs.at }}
@@ -103,12 +103,25 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
         run: npx --no wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc
+      # The sync Worker's secrets reach it from the dev environment's secrets,
+      # uploaded with the version itself (#164 AC2): the door secret, so it
+      # believes the caller's address the door names, and the key request
+      # counts are hashed under.
+      - name: Write the sync Worker's secrets file (the dev door secret, the request-count key)
+        id: sync-secrets
+        env:
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          DEV_RATE_KEY: ${{ secrets.DEV_RATE_KEY }}
+        run: |
+          path="$(node scripts/sync-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
       - name: Deploy the sync Worker, stamped with this commit
         working-directory: apps/sync-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"
+          SECRETS_FILE: ${{ steps.sync-secrets.outputs.path }}
+        run: npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}" --secrets-file "$SECRETS_FILE"
       - name: Build the game, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
@@ -124,8 +137,8 @@ jobs:
         run: npx --no wrangler deploy
       # The holding page's dev copy (#621 AC8): the production holding build,
       # crawlers blocked and every response noindex, at
-      # dev-holding.yawelo-idle.shyden.co.uk through the dev hostname adapter
-      # (#768), so Shyden checks it on his phones before a release. Before
+      # dev-holding.yaweloidle.com through the front door
+      # (#768, #1013), so Shyden checks it on his phones before a release. Before
       # the site Worker, whose HOLDING binding names it: the dev front door
       # shows it (#673).
       - name: Build the holding page, stamped with this commit
@@ -169,52 +182,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
           SECRETS_FILE: ${{ steps.site-secrets.outputs.path }}
         run: npx --no wrangler deploy --secrets-file "$SECRETS_FILE"
-      # The dev hostnames (#429): a Pages project whose one Function forwards
-      # each request to the site, the sync Worker or the holding page's dev
-      # copy by host, so it goes after all three. Its custom domains were attached once and are read back by the
-      # verify below. Git keeps no empty directory, so the empty static one
-      # Pages uploads is made here.
-      # The hostname adapter's Pages project stays in Shyden Labs Dev beside
-      # its custom domains (#784, Shyden 2026-11-16), so its steps alone hold
-      # that account's token. It reaches the Workers over HTTPS, as their
-      # door, with the dev door secret.
-      - name: Prove the Shyden Labs Dev token reaches its account alone
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/token-reach.ts
-      - name: Write the hostname adapter's secrets file (the dev door secret)
-        id: dev-hosts-secrets
-        env:
-          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
-        run: |
-          path="$(node scripts/dev-hosts-secrets.ts)"
-          echo "path=$path" >> "$GITHUB_OUTPUT"
-      - name: Upload the hostname adapter's secret to its Pages project
-        working-directory: apps/dev-hosts
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SECRETS_FILE: ${{ steps.dev-hosts-secrets.outputs.path }}
-        # `--no`: only the wrangler installed from the lockfile, never a
-        # download (SonarCloud githubactions:S8543).
-        run: npx --no wrangler pages secret bulk "$SECRETS_FILE"
-      - name: Make the hostname adapter's empty static directory
-        working-directory: apps/dev-hosts
-        run: mkdir -p public
-      # The dev hostname adapter (apps/dev-hosts: dev.yawelo-idle and
-      # dev-api.yawelo-idle only), deployed with the dev token to the dev
-      # account (#395). `--branch main` because main is the Pages project's
-      # production branch (read 2026-10-06, #429), Pages' word for the slot
-      # its custom domains serve, not the game's production (#672). Wrangler
-      # otherwise takes the branch from git, `develop` here, and makes a
-      # preview deployment, which the custom domains do not serve.
-      - name: Deploy the dev hostname adapter to its Pages main branch (dev account)
-        working-directory: apps/dev-hosts
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --no wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"
       # Last, so every deploy above has returned: a roadmap check that began
       # before this time may be the previous site Worker's, and verify-roadmap
       # waits past it (#708).
@@ -230,7 +197,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -247,9 +214,9 @@ jobs:
           node-version: ${{ steps.node.outputs.version }}
       - name: Verify dev is password-gated, serves this commit, shows the holding page, and D1 answers
         env:
-          # The dev hostnames, through the Pages adapter (#429).
-          DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
-          DEV_SYNC_URL: https://dev-api.yawelo-idle.shyden.co.uk
+          # The dev hostnames, through the front door (#784, #1013).
+          DEV_WEB_URL: https://dev.yaweloidle.com/
+          DEV_SYNC_URL: https://dev-api.yaweloidle.com
           # The site Worker's own address, where the site being built stays
           # while the front door shows the holding page (#673).
           DEV_SITE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
@@ -258,9 +225,9 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
-      # The hostname adapter in front of the real Workers, once verify-dev
+      # The front door in front of the real Workers, once verify-dev
       # has seen this commit served (#816): path, query, method and body
-      # reach them unchanged, and its own pages.dev address reaches none.
+      # reach them unchanged (#1013).
       - name: Verify the dev hostnames reach the real Workers unchanged
         env:
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
@@ -277,7 +244,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -295,7 +262,7 @@ jobs:
       - name: Verify the roadmap as the deployed code checked it (waits up to 12 minutes for its first check)
         timeout-minutes: 13
         env:
-          DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
+          DEV_WEB_URL: https://dev.yaweloidle.com/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
           DEPLOYED_AT: ${{ needs.deploy.outputs.deployed-at }}
         run: node scripts/verify-roadmap.ts
@@ -308,11 +275,11 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
       options: --user 1001
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -334,7 +301,7 @@ jobs:
         # One measured limit, at least 3 times its slowest run (#476).
         timeout-minutes: 1
         env:
-          WEB_SMOKE_URL: https://dev.yawelo-idle.shyden.co.uk/
+          WEB_SMOKE_URL: https://dev.yaweloidle.com/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
       # Each failing test's screenshot and page snapshot (#888), only when
@@ -359,7 +326,7 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
       options: --user 1001
     environment:
       name: dev
@@ -434,7 +401,7 @@ jobs:
         run: node scripts/holding-dev.ts
       - name: Verify the holding page's dev copy serves this commit, noindex, crawlers blocked
         env:
-          DEV_HOLDING_URL: https://dev-holding.yawelo-idle.shyden.co.uk
+          DEV_HOLDING_URL: https://dev-holding.yaweloidle.com
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/verify-prod.ts --dev-copy
 

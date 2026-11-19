@@ -24,8 +24,6 @@ import { committableFiles } from '../unit/tracked-files';
  * and fails on any difference.
  */
 const TSCONFIGS = [
-  'apps/dev-hosts/functions/tsconfig.json',
-  'apps/dev-hosts/tsconfig.json',
   'apps/door/tsconfig.json',
   'apps/door/worker/tsconfig.json',
   'apps/site/test/roadmap-worker/tsconfig.json',

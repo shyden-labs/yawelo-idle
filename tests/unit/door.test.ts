@@ -1,5 +1,10 @@
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { readDeployConfig } from './wrangler-configs';
+
+const ROOT = new URL('../../', import.meta.url).pathname;
 import {
+  DOOR_CLIENT_HEADER,
   DOOR_HOST_HEADER,
   DOOR_SECRET_HEADER,
   DOORS,
@@ -30,7 +35,7 @@ const doorHost = (worker: string): string => {
 };
 
 const SITE_DEV = doorHost('yawelo-idle-site-dev');
-const SITE_TEST = doorHost('yawelo-idle-site-test');
+const HOLDING_TEST = doorHost('yawelo-idle-holding-test');
 
 /** A mocked outbound fetch answering 200, and the request it was handed. */
 function origin(response: Response = new Response('origin')) {
@@ -44,7 +49,7 @@ function origin(response: Response = new Response('origin')) {
 }
 
 describe('the doors (#784)', () => {
-  it('are exactly the dev site, dev API, dev holding page and test site, each on yaweloidle.com with its Worker and environment', () => {
+  it('are exactly the dev site, dev API, dev holding page and the TEST holding page, each on yaweloidle.com with its Worker and environment', () => {
     expect(
       [...DOORS].map(([host, door]) => [
         host.split('.')[0],
@@ -56,8 +61,18 @@ describe('the doors (#784)', () => {
       ['dev', 'yaweloidle.com', 'yawelo-idle-site-dev', 'dev'],
       ['dev-api', 'yaweloidle.com', 'yawelo-idle-sync-dev', 'dev'],
       ['dev-holding', 'yaweloidle.com', 'yawelo-idle-holding-dev', 'dev'],
-      ['test', 'yaweloidle.com', 'yawelo-idle-site-test', 'test'],
+      ['test', 'yaweloidle.com', 'yawelo-idle-holding-test', 'test'],
     ]);
+  });
+
+  // TEST holds what production deploys (#784, #1021): the test door reaches
+  // the Worker deploy-test.yml deploys, and moves with it.
+  it('send test.yaweloidle.com to the Worker TEST deploys (#1021)', () => {
+    const test = [...DOORS].find(([host]) => host === 'test.yaweloidle.com');
+    expect(test?.[1].worker).toBe(
+      readDeployConfig(join(ROOT, 'apps/site/holding-test/wrangler.jsonc'))
+        .name,
+    );
   });
 });
 
@@ -103,7 +118,7 @@ describe('a request to a door (#784 AC4)', () => {
 
   it('carries the test door secret from the test door', async () => {
     const { fetch, sent } = origin();
-    await pass(new Request(`https://${SITE_TEST}/`), ENV, fetch);
+    await pass(new Request(`https://${HOLDING_TEST}/`), ENV, fetch);
     expect(sent().headers.get(DOOR_SECRET_HEADER)).toBe('test-secret');
   });
 
@@ -113,10 +128,49 @@ describe('a request to a door (#784 AC4)', () => {
     expect(sent().headers.get(DOOR_HOST_HEADER)).toBe(SITE_DEV);
   });
 
+  it('names the caller’s address, as Cloudflare gave it to the door (#164 AC2)', async () => {
+    const { fetch, sent } = origin();
+    await pass(
+      new Request(`https://${SITE_DEV}/`, {
+        headers: { 'cf-connecting-ip': '203.0.113.7' },
+      }),
+      ENV,
+      fetch,
+    );
+    expect(sent().headers.get(DOOR_CLIENT_HEADER)).toBe('203.0.113.7');
+  });
+
+  it('replaces an address the caller sent with Cloudflare’s (#164 AC2)', async () => {
+    const { fetch, sent } = origin();
+    await pass(
+      new Request(`https://${SITE_DEV}/`, {
+        headers: {
+          'cf-connecting-ip': '203.0.113.7',
+          [DOOR_CLIENT_HEADER]: '198.51.100.1',
+        },
+      }),
+      ENV,
+      fetch,
+    );
+    expect(sent().headers.get(DOOR_CLIENT_HEADER)).toBe('203.0.113.7');
+  });
+
+  it('drops an address the caller sent when Cloudflare gave none (#164 AC2)', async () => {
+    const { fetch, sent } = origin();
+    await pass(
+      new Request(`https://${SITE_DEV}/`, {
+        headers: { [DOOR_CLIENT_HEADER]: '198.51.100.1' },
+      }),
+      ENV,
+      fetch,
+    );
+    expect(sent().headers.has(DOOR_CLIENT_HEADER)).toBe(false);
+  });
+
   it('replaces a secret and a door name the caller sent', async () => {
     const { fetch, sent } = origin();
     await pass(
-      new Request(`https://${SITE_TEST}/`, {
+      new Request(`https://${HOLDING_TEST}/`, {
         headers: {
           [DOOR_SECRET_HEADER]: 'forged',
           [DOOR_HOST_HEADER]: 'forged.example',
@@ -126,7 +180,7 @@ describe('a request to a door (#784 AC4)', () => {
       fetch,
     );
     expect(sent().headers.get(DOOR_SECRET_HEADER)).toBe('test-secret');
-    expect(sent().headers.get(DOOR_HOST_HEADER)).toBe(SITE_TEST);
+    expect(sent().headers.get(DOOR_HOST_HEADER)).toBe(HOLDING_TEST);
   });
 
   it('leaves a redirect for the caller to follow', async () => {
@@ -190,7 +244,7 @@ describe('a request the door will not pass (#784 AC4)', () => {
   it('answers 500 naming a missing test secret, reaching no origin', async () => {
     const { fetch } = origin();
     const response = await pass(
-      new Request(`https://${SITE_TEST}/`),
+      new Request(`https://${HOLDING_TEST}/`),
       { ...ENV, TEST_DOOR_SECRET: '' },
       fetch,
     );

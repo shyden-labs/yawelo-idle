@@ -45,7 +45,7 @@ const deployDev = parse(
 /** The suite as `npm run test:web` runs it: no dev URL in the environment. */
 const local = () => webSmokeConfig({});
 /** The suite as deploy-dev runs it against dev. */
-const DEV_URL = 'https://dev.yawelo-idle.shyden.co.uk/';
+const DEV_URL = 'https://dev.yaweloidle.com/';
 const dev = () =>
   webSmokeConfig({
     WEB_SMOKE_URL: DEV_URL,

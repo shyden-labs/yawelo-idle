@@ -75,7 +75,7 @@ function padded(
   return [
     ...goals,
     next,
-    ...Array<number>(length - goals.length - 1).fill(UNREACHABLE),
+    ...new Array<number>(length - goals.length - 1).fill(UNREACHABLE),
   ];
 }
 

@@ -102,11 +102,9 @@ describe('the audit judge', () => {
 });
 
 describe('the recorded exceptions', () => {
-  // picomatch has no fixed release (#1018; Shyden, 2026-11-18: until
-  // 2026-12-01, checked at every session start and dropped the day a fix ships).
-  it('hold only the picomatch advisory, until 2026-12-01 (#1018)', () => {
-    expect(EXCEPTIONS.map(({ id, expires }) => ({ id, expires }))).toEqual([
-      { id: 'GHSA-fc5q-39xc-vjpf', expires: '2026-12-01' },
-    ]);
+  // GitHub withdrew the picomatch advisory GHSA-fc5q-39xc-vjpf on
+  // 2026-11-18 (#1018), so its exception matched no finding and was dropped.
+  it('are none (#1018)', () => {
+    expect(EXCEPTIONS).toEqual([]);
   });
 });
