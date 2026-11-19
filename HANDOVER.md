@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-19 06:55 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-164` (branch `164-rate-limits`, d5d11d4, 3 commits not yet pushed; draft PR #1046), `yawelo-idle-52` (99b2aa7 pushed, draft PR #1042, clean), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at 88eca73). No Colima, simulator or USB claim. Shyden says the real phones are unavailable for now.
+**Written:** 2026-11-19 06:55 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-164` (branch `164-rate-limits`, 1eb09d5 pushed; draft PR #1046), `yawelo-idle-52` (99b2aa7 pushed, draft PR #1042, clean), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at 88eca73). No Colima, simulator or USB claim. Shyden says the real phones are unavailable for now.
 
 ## Waiting on Shyden
 
@@ -11,7 +11,7 @@
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (Node: `~/.local/share/node/current/bin`).
-2. **#164 AC2 (In Progress, PR #1046):** CI run 44424102026 on 3f05c2a must show `apps/sync-worker/test/limits.test.ts` red (D1 store is a stub in `apps/sync-worker/src/d1-counts.ts`). Read that red first, then write `d1Counts` (batch: `DELETE FROM rate_counts WHERE window_end <= ?`, then `INSERT ... ON CONFLICT (route, key, window_end) DO UPDATE SET count = count + 1 RETURNING count`), push, read CI green by job name.
+2. **#164 AC2 (In Progress, PR #1046):** D1 tests seen red on the stub (run 44424102026: the 4 `limits.test.ts` tests only). Store written and pushed at 1eb09d5; read its CI by job name (`~/.claude/scripts/pr-verdict.sh 1046`), then mark the PR ready.
 3. Then: merge once green and `DEV_RATE_KEY` exists, check deploy-dev, prove on dev (11th registration from one network → 429 with Retry-After at dev-api.yaweloidle.com; workers.dev directly, since the door passes addresses only after the next release). #164 stays open for the device-token half (no route takes a token yet).
 4. **#52** (P3, draft PR #1042): renumber its migration to 0003 if #1046 merges first (comment on #1042).
 
