@@ -5,8 +5,7 @@
 ## Waiting on Shyden
 
 1. **Release cut:** approved, but the permission check refused `git push origin <develop sha>:refs/heads/release/2026-11-19-yaweloidle-doors` (2026-11-19 06:05 WIB). It needs a permission rule from him, or he pushes it. Develop was still 88eca73. After the cut: PR into main, read `release-cut`, promo media to `yawelo-idle-media`, purge `media.yaweloidle.com`, he approves deploy-prod, re-run deploy-door from main. Then shut #1021, #1015, #622, #1038, #783 with evidence; #1013 AC1/AC2/AC4/AC5 read after. The door change in #1046 also reaches the live door only with a release.
-2. **`DEV_RATE_KEY`** (dev environment secret, 32 random bytes as hex) for #1046: `gh secret set` was refused by the permission check. He sets it (`openssl rand -hex 32 | gh secret set DEV_RATE_KEY --env dev --repo shyden-labs/yawelo-idle`) or allows it. Without it the dev deploy stops at "Write the sync Worker's secrets file", naming DEV_RATE_KEY.
-3. **Privacy line, final English** (to show him with the read-back): "...and each count is deleted the next time the server is used after its time window ends" (the ending changed after his "only when traffic arrives" answer; he approved the draft with that change promised).
+2. **Privacy line, final English** (to show him with the read-back): "...and each count is deleted the next time the server is used after its time window ends" (the ending changed after his "only when traffic arrives" answer; he approved the draft with that change promised).
 
 ## Resume steps
 
