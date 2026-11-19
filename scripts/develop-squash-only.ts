@@ -139,20 +139,6 @@ export async function developSquashOnly(
       ],
     };
   }
-  // For once (#1048, Shyden 2026-11-19): develop takes main's history by one
-  // merge commit; then the ruleset goes back to squash alone, and so does this.
-  if (
-    allowed.length === 2 &&
-    allowed[0] === 'merge' &&
-    allowed[1] === 'squash'
-  ) {
-    return {
-      ok: true,
-      lines: [
-        `${BRANCH} merges by squash, and by merge commit while #1048 takes main’s history: ${rules} ${pulls.length === 1 ? 'allows' : 'allow'} merge, squash. ${sizes}`,
-      ],
-    };
-  }
   const what = allowed.length === 0 ? 'no merge method' : allowed.join(', ');
   return {
     ok: false,
