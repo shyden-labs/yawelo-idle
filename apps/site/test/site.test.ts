@@ -352,6 +352,10 @@ describe('legal pages are English and Indonesian (#928)', () => {
       expect(html).toContain(
         `<p data-governing-language>${LEGAL[locale][page].governs}</p>`,
       );
+      // The request counts line (#164 AC2), as the page escapes it.
+      expect(html).toContain(
+        `<p data-request-counts>${LEGAL[locale][page].requestCounts.replaceAll("'", '&#39;')}</p>`,
+      );
       expect(html).not.toContain('data-english-only-note');
     },
   );

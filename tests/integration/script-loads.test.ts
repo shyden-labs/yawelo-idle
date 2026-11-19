@@ -50,6 +50,7 @@ const SCRIPTS = [
   'scripts/prod-version.ts',
   'scripts/release-cut.ts',
   'scripts/sonar-verdict.ts',
+  'scripts/sync-secrets.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
   'scripts/verify-dev-hosts.ts',

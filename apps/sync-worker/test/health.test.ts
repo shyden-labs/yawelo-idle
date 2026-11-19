@@ -20,8 +20,15 @@ const INJECTED = 'yawelo-idle-sync-injected';
 const server = createTestHarness({
   root: ROOT,
   workers: [
-    { configPath: './wrangler.jsonc' },
-    { configPath: './wrangler.injected.jsonc' },
+    // The key request counts are hashed under (#164 AC2), as the deploy sets it.
+    {
+      configPath: './wrangler.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
+    {
+      configPath: './wrangler.injected.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
   ],
 });
 

@@ -295,7 +295,7 @@ describe('the dev D1 database, created by the pipeline (#357 AC1)', () => {
     const deploy = runs.findIndex(
       ({ run }) =>
         run ===
-        `npx --no wrangler deploy --config ${DEPLOY_CONFIG} --var "COMMIT:\${GITHUB_SHA}"`,
+        `npx --no wrangler deploy --config ${DEPLOY_CONFIG} --var "COMMIT:\${GITHUB_SHA}" --secrets-file "$SECRETS_FILE"`,
     );
     expect(create).toBeGreaterThanOrEqual(0);
     expect(bind).toBeGreaterThan(create);
@@ -356,7 +356,7 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
         'npx --no wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc',
       ),
       holds(
-        'npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"',
+        'npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}" --secrets-file "$SECRETS_FILE"',
       ),
       holds('npx --no wrangler deploy'),
       // The holding page's dev copy (#621 AC8), named from the repository
@@ -378,6 +378,38 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
     expect(first === undefined ? undefined : runOf(first)).toBe(
       'node scripts/token-reach.ts',
     );
+  });
+});
+
+describe('the sync Worker’s secrets, uploaded by the deploy (#164 AC2)', () => {
+  it('are written from the dev environment secrets, then deployed with the sync Worker', () => {
+    const steps = deploySteps();
+    const write = steps.findIndex(
+      (step) =>
+        runOf(step) ===
+        'path="$(node scripts/sync-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"',
+    );
+    const deploy = steps.findIndex((step) =>
+      runOf(step).startsWith(
+        'npx --no wrangler deploy --config wrangler.deploy.jsonc ',
+      ),
+    );
+    expect({
+      written: write >= 0,
+      id: steps[write]?.id,
+      env: steps[write]?.env,
+      deployedAfter: deploy > write,
+      file: steps[deploy]?.env?.['SECRETS_FILE'],
+    }).toEqual({
+      written: true,
+      id: 'sync-secrets',
+      env: {
+        DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
+        DEV_RATE_KEY: '${{ secrets.DEV_RATE_KEY }}',
+      },
+      deployedAfter: true,
+      file: '${{ steps.sync-secrets.outputs.path }}',
+    });
   });
 });
 
