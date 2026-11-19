@@ -77,10 +77,35 @@ const fetchRoute = (path: string, method = 'GET', body?: string) =>
   send(path, { method, ...(body === undefined ? {} : { body }) });
 
 /** A request `path` accepts: its own method, and `{}` for a body it reads. */
-const accepted = (path: (typeof PATHS)[number]) =>
-  ROUTES[path].method === 'POST'
-    ? { method: 'POST', body: '{}' }
-    : { method: 'GET' };
+/** A content report the route accepts (#52). */
+const REPORT = JSON.stringify({
+  course: 'en-id',
+  kind: 'lexicon',
+  itemId: 'lex.a',
+  problem: 'other',
+  appVersion: '0.1.0',
+  contentVersion: 'c1',
+  installId: 'install-a',
+  website: '',
+});
+
+/** A request each route accepts, and the status it answers it with. */
+const ACCEPTED: Readonly<
+  Record<
+    (typeof PATHS)[number],
+    { request: { method: string; body?: string }; status: number }
+  >
+> = {
+  '/health': { request: { method: 'GET' }, status: 200 },
+  '/v1/content-reports': {
+    request: { method: 'POST', body: REPORT },
+    status: 201,
+  },
+  '/v1/content-reports/health': { request: { method: 'GET' }, status: 200 },
+  '/v1/devices': { request: { method: 'POST', body: '{}' }, status: 201 },
+};
+
+const accepted = (path: (typeof PATHS)[number]) => ACCEPTED[path].request;
 
 describe('the sync route table (#164 AC3)', () => {
   it('lists exactly the routes the Worker serves', () => {
@@ -149,19 +174,9 @@ describe('the sync route table (#164 AC3)', () => {
   });
 
   it('serves /v1/content-reports through the table', async () => {
-    const body = JSON.stringify({
-      course: 'en-id',
-      kind: 'lexicon',
-      itemId: 'lex.a',
-      problem: 'other',
-      appVersion: '0.1.0',
-      contentVersion: 'c1',
-      installId: 'install-a',
-      website: '',
-    });
-    expect((await fetchRoute('/v1/content-reports', 'POST', body)).status).toBe(
-      201,
-    );
+    expect(
+      (await fetchRoute('/v1/content-reports', 'POST', REPORT)).status,
+    ).toBe(201);
   });
 
   it('serves /v1/content-reports/health through the table', async () => {
@@ -195,7 +210,7 @@ describe('the request limits (#164 AC2)', () => {
         refused.headers.get('cache-control'),
         await refused.json(),
       ]).toEqual([
-        path === '/v1/devices' ? 201 : 200,
+        ACCEPTED[path].status,
         429,
         String(ROUTES[path].limit.perSeconds - 30),
         'no-store',

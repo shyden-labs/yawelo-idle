@@ -207,12 +207,14 @@ export const ROUTES: Readonly<
     method: 'POST',
     query: NO_QUERY,
     limit: { requests: 10, perSeconds: 60 },
+    whenUncounted: 'refuse',
     handle: contentReports,
   },
   '/v1/content-reports/health': {
     method: 'GET',
     query: NO_QUERY,
     limit: { requests: 60, perSeconds: 60 },
+    whenUncounted: 'refuse',
     handle: contentReportsHealth,
   },
   '/v1/devices': {
