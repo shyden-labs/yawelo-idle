@@ -118,12 +118,24 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
-  it('fails, naming the extra method, when the rule also allows merge commits', async () => {
+  // For once (#1048, Shyden 2026-11-19): develop takes main's history by one
+  // merge commit, then the ruleset and this case go back to squash alone.
+  it('passes, saying merge commits are open for #1048, when the rule allows merge and squash', async () => {
     const result = await check(develop([pullRule(7, ['merge', 'squash'])]));
+    expect(result).toEqual({
+      ok: true,
+      lines: [
+        'develop merges by squash, and by merge commit while #1048 takes main’s history: 1 pull-request rule (ruleset 7) allows merge, squash. Read 1 rule on develop.',
+      ],
+    });
+  });
+
+  it('fails, naming the method, when the rule allows merge commits alone', async () => {
+    const result = await check(develop([pullRule(7, ['merge'])]));
     expect(result).toEqual({
       ok: false,
       lines: [
-        'develop allows merge, squash: 1 pull-request rule (ruleset 7) must allow squash alone (#679). Read 1 rule on develop.',
+        'develop allows merge: 1 pull-request rule (ruleset 7) must allow squash alone (#679). Read 1 rule on develop.',
       ],
     });
   });
