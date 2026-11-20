@@ -3,7 +3,14 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { headerRules } from '../../scripts/headers-file';
 import { readDeployConfig } from './wrangler-configs';
-import { apiProblems, API_PATHS, type ApiPath } from '../../scripts/verify-api';
+import {
+  apiProblems,
+  apiVerdict,
+  runApiVerify,
+  API_PATHS,
+  verifyApi,
+  type ApiPath,
+} from '../../scripts/verify-api';
 import type { Probe } from '../../scripts/verify-dev';
 
 /**
@@ -131,4 +138,172 @@ describe('the API reserve verify (#1013 AC1)', () => {
       '/robots.txt: does not disallow every path',
     ]);
   });
+});
+
+/** A stand-in for the network: each URL answers from `byPath`, counting looks. */
+function stubLook(byPath: (path: string, look: number) => Probe | Error) {
+  const looks: string[] = [];
+  const look = (url: string): Promise<Probe> => {
+    const path = new URL(url).pathname;
+    looks.push(path);
+    const answer = byPath(path, looks.filter((each) => each === path).length);
+    return answer instanceof Error
+      ? Promise.reject(answer)
+      : Promise.resolve(answer);
+  };
+  return { look, looks };
+}
+
+const ORIGIN = 'https://api.example.test';
+const NO_WAIT = { polls: 3, pollMs: 0 };
+
+describe('the API reserve verify run (#1013 AC1)', () => {
+  it('waits for the commit, then judges every path once', async () => {
+    const answers = good();
+    const { look, looks } = stubLook((path, n) =>
+      path === '/commit.txt' && n === 1
+        ? { status: 404, headers: headers(NOINDEX), body: 'old' }
+        : answers[path as ApiPath],
+    );
+    expect(
+      await verifyApi(ORIGIN, SHA, NO_WAIT, look, read('public/404.html')),
+    ).toEqual([]);
+    expect(looks).toEqual(['/commit.txt', '/commit.txt', ...API_PATHS]);
+  });
+
+  it('names the last answer when the commit never arrives, and judges nothing', async () => {
+    const { look, looks } = stubLook(() => ({
+      status: 200,
+      headers: headers(NOINDEX),
+      body: 'b'.repeat(40),
+    }));
+    expect(
+      await verifyApi(ORIGIN, SHA, NO_WAIT, look, read('public/404.html')),
+    ).toEqual([
+      `/commit.txt: never served commit ${SHA} in 3 looks 0 ms apart; last: status 200, body ${'b'.repeat(40)}`,
+    ]);
+    expect(looks).toEqual(['/commit.txt', '/commit.txt', '/commit.txt']);
+  });
+
+  it('names a request that fails while waiting', async () => {
+    const { look } = stubLook(() => new Error('getaddrinfo ENOTFOUND'));
+    expect(
+      await verifyApi(ORIGIN, SHA, NO_WAIT, look, read('public/404.html')),
+    ).toEqual([
+      `/commit.txt: never served commit ${SHA} in 3 looks 0 ms apart; last: getaddrinfo ENOTFOUND`,
+    ]);
+  });
+
+  it('names a path whose request fails after the commit arrived', async () => {
+    const answers = good();
+    const { look } = stubLook((path) =>
+      path === '/robots.txt'
+        ? new Error('socket hang up')
+        : answers[path as ApiPath],
+    );
+    expect(
+      await verifyApi(ORIGIN, SHA, NO_WAIT, look, read('public/404.html')),
+    ).toEqual(['/robots.txt: request failed: socket hang up']);
+  });
+});
+
+describe('the API reserve verdict (#1013 AC1)', () => {
+  it('prints one success line naming the host and commit', () => {
+    expect(apiVerdict(ORIGIN, SHA, [])).toEqual({
+      code: 0,
+      lines: [
+        `✓ API reserve: ${ORIGIN} serves commit ${SHA}, the 404 page on every other path, a robots file keeping crawlers out, and noindex on every answer`,
+      ],
+    });
+  });
+
+  it('prints one failure line per problem', () => {
+    expect(apiVerdict(ORIGIN, SHA, ['one', 'two'])).toEqual({
+      code: 1,
+      lines: ['✗ API reserve: one', '✗ API reserve: two'],
+    });
+  });
+});
+
+describe('the API reserve run from the environment (#1013 AC1)', () => {
+  const env = { API_URL: ORIGIN, EXPECTED_SHA: SHA };
+  const answers = good();
+  const fine = stubLook((path) => answers[path as ApiPath]).look;
+
+  it('refuses to start without API_URL', async () => {
+    await expect(
+      runApiVerify({ EXPECTED_SHA: SHA }, fine, {
+        log: () => {},
+        error: () => {},
+      }),
+    ).rejects.toThrow('API_URL is not set');
+  });
+
+  it('refuses to start with an empty EXPECTED_SHA', async () => {
+    await expect(
+      runApiVerify({ API_URL: ORIGIN, EXPECTED_SHA: '' }, fine, {
+        log: () => {},
+        error: () => {},
+      }),
+    ).rejects.toThrow('EXPECTED_SHA is not set');
+  });
+
+  it('logs the success line and exits 0', async () => {
+    const logged: string[] = [];
+    const errors: string[] = [];
+    expect(
+      await runApiVerify(env, fine, {
+        log: (line) => logged.push(line),
+        error: (line) => errors.push(line),
+      }),
+    ).toBe(0);
+    expect(logged).toEqual(apiVerdict(ORIGIN, SHA, []).lines);
+    expect(errors).toEqual([]);
+  });
+
+  it('sends each problem to the error stream and exits 1', async () => {
+    const broken = stubLook((path) =>
+      path === '/robots.txt'
+        ? new Error('socket hang up')
+        : answers[path as ApiPath],
+    ).look;
+    const logged: string[] = [];
+    const errors: string[] = [];
+    expect(
+      await runApiVerify(env, broken, {
+        log: (line) => logged.push(line),
+        error: (line) => errors.push(line),
+      }),
+    ).toBe(1);
+    expect(logged).toEqual([]);
+    expect(errors).toEqual([
+      '✗ API reserve: /robots.txt: request failed: socket hang up',
+    ]);
+  });
+});
+
+it('names a commit file that does not answer 200 (#1013 AC1)', () => {
+  const answers = good();
+  answers['/commit.txt'] = {
+    status: 404,
+    headers: headers(NOINDEX),
+    body: 'gone',
+  };
+  expect(apiProblems(answers, SHA, read('public/404.html'))).toEqual([
+    '/commit.txt: status 404, expected 200',
+  ]);
+});
+
+it('pauses between looks while waiting for the commit (#1013 AC1)', async () => {
+  const { look } = stubLook(() => new Error('not yet'));
+  const started = performance.now();
+  await verifyApi(
+    ORIGIN,
+    SHA,
+    { polls: 3, pollMs: 40 },
+    look,
+    read('public/404.html'),
+  );
+  // Two pauses of 40 ms between three looks; timers never fire much early.
+  expect(performance.now() - started).toBeGreaterThanOrEqual(75);
 });

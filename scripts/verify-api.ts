@@ -58,58 +58,118 @@ export function apiProblems(
   return problems;
 }
 
+/** Fetches one URL; the network in a run, a stand-in in the tests. */
+export type Look = (url: string) => Promise<Probe>;
+
+const message = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 /** Waits for `commit.txt` to name `sha`; the last answer (or failure) when it never does. */
 async function waitForCommit(
   origin: string,
   sha: string,
   wait: Wait,
+  look: Look,
 ): Promise<string | undefined> {
   let last = 'no answer yet';
-  for (let look = 1; look <= wait.polls; look += 1) {
+  for (let attempt = 1; attempt <= wait.polls; attempt += 1) {
     try {
-      const answer = await probe(`${origin}/commit.txt`);
+      const answer = await look(`${origin}/commit.txt`);
       if (answer.status === 200 && served(answer.body) === sha)
         return undefined;
       last = `status ${String(answer.status)}, body ${served(answer.body).slice(0, 80)}`;
     } catch (error) {
-      last = error instanceof Error ? error.message : String(error);
+      last = message(error);
     }
-    if (look < wait.polls)
+    if (attempt < wait.polls)
       await new Promise((done) => setTimeout(done, wait.pollMs));
   }
   return `/commit.txt: never served commit ${sha} in ${String(wait.polls)} looks ${String(wait.pollMs)} ms apart; last: ${last}`;
 }
 
-function required(name: string): string {
-  const value = process.env[name];
+/** Every problem the reserve at `origin` shows, after waiting for `sha`. */
+export async function verifyApi(
+  origin: string,
+  sha: string,
+  wait: Wait,
+  look: Look,
+  notFoundPage: string,
+): Promise<string[]> {
+  const waited = await waitForCommit(origin, sha, wait, look);
+  if (waited !== undefined) return [waited];
+  const answers: Partial<Record<ApiPath, Probe>> = {};
+  const failures: string[] = [];
+  for (const path of API_PATHS) {
+    try {
+      answers[path] = await look(`${origin}${path}`);
+    } catch (error) {
+      failures.push(`${path}: request failed: ${message(error)}`);
+    }
+  }
+  if (failures.length > 0) return failures;
+  return apiProblems(answers as Record<ApiPath, Probe>, sha, notFoundPage);
+}
+
+/** What a run prints, and its exit code. */
+export function apiVerdict(
+  origin: string,
+  sha: string,
+  problems: readonly string[],
+): { code: number; lines: string[] } {
+  if (problems.length > 0)
+    return {
+      code: 1,
+      lines: problems.map((problem) => `✗ API reserve: ${problem}`),
+    };
+  return {
+    code: 0,
+    lines: [
+      `✓ API reserve: ${origin} serves commit ${sha}, the 404 page on every other path, a robots file keeping crawlers out, and noindex on every answer`,
+    ],
+  };
+}
+
+function required(
+  env: Readonly<Record<string, string | undefined>>,
+  name: string,
+): string {
+  const value = env[name];
   if (value === undefined || value === '')
     throw new Error(`${name} is not set`);
   return value;
 }
 
-if (import.meta.main) {
-  const origin = required('API_URL');
-  const sha = required('EXPECTED_SHA');
+/** Where a run's lines go. */
+export interface Output {
+  log: (line: string) => void;
+  error: (line: string) => void;
+}
+
+/** One verify run, from API_URL and EXPECTED_SHA; returns the exit code. */
+export async function runApiVerify(
+  env: Readonly<Record<string, string | undefined>>,
+  look: Look,
+  out: Output,
+): Promise<number> {
+  const origin = required(env, 'API_URL');
+  const sha = required(env, 'EXPECTED_SHA');
   // A new Custom Domain's DNS and certificate: up to 10 minutes (60 looks, 10 s apart).
-  const waited = await waitForCommit(origin, sha, {
-    polls: 60,
-    pollMs: 10_000,
-  });
-  const problems: string[] = [];
-  if (waited === undefined) {
-    const answers = {} as Record<ApiPath, Probe>;
-    for (const path of API_PATHS)
-      answers[path] = await probe(`${origin}${path}`);
-    const page = readFileSync(
+  const problems = await verifyApi(
+    origin,
+    sha,
+    { polls: 60, pollMs: 10_000 },
+    look,
+    readFileSync(
       new URL('../apps/sync-worker/reserve/public/404.html', import.meta.url),
       'utf8',
-    );
-    problems.push(...apiProblems(answers, sha, page));
-  } else problems.push(waited);
-  for (const problem of problems) console.error(`✗ API reserve: ${problem}`);
-  if (problems.length === 0)
-    console.log(
-      `✓ API reserve: ${origin} serves commit ${sha}, the 404 page on every other path, a robots file keeping crawlers out, and noindex on every answer`,
-    );
-  process.exitCode = problems.length > 0 ? 1 : 0;
+    ),
+  );
+  const { code, lines } = apiVerdict(origin, sha, problems);
+  for (const line of lines)
+    if (code === 0) out.log(line);
+    else out.error(line);
+  return code;
 }
+
+if (import.meta.main)
+  process.exitCode = await runApiVerify(process.env, probe, console);
