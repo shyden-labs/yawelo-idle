@@ -453,7 +453,7 @@ export function licenceCheck(
 }
 
 /** The content kinds that carry a licence, in the order they are judged. */
-const LICENSED_KINDS = [
+export const LICENSED_KINDS = [
   'lexicon',
   'grammarNodes',
   'cultureCards',
@@ -472,3 +472,4 @@ export function licenceChecks(course: CoursePack): readonly StructureCheck[] {
 
 export * from './evidence.ts';
 export * from './build.ts';
+export * from './attribution.ts';
