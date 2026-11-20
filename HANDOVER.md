@@ -1,20 +1,22 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-20 15:40 WIB, session `yawelo-idle-03`, before Shyden's laptop shutdown. Branch `handover/2026-10-17-d`. Main is at c634281 (release #1050 merged 2026-11-19 23:49 UTC). Worktrees: `yawelo-idle-52` (927edb1, draft PR #1042), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 70bc717). No Colima, simulator or USB claim. Nothing running; no local job to re-run.
+**Written:** 2026-11-20 20:20 WIB, session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Main is at c634281 (release #1050). Worktrees: `yawelo-idle-52` (927edb1, draft PR #1042), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 70bc717). No Colima, simulator or USB claim. Nothing running; no local job to re-run.
 
 ## State
 
-- **Release #1050 is merged and deployed to production** (deploy-prod run 44640895992: build-and-test, coverage, deploy all success). Its **verify failed only on the 3 promo media files**: `media.yaweloidle.com` still serves the old poster (43,632 B), MP4 (4,360,966 B) and WebM (1,715,107 B); main expects 54,602 / 1,921,671 / 1,814,372. The dev bucket already matches main byte for byte (measured 2026-11-20).
-- The upload is blocked on Shyden: the only connected Chrome is signed in to Cloudflare as the Shyden Labs login, which cannot see Yawelo's account. He chose "Sign in Yawelo here" (he signs that Chrome in to yaweloidle@gmail.com himself; never type a password).
-- **Open question to Shyden:** he pasted a panel message saying to change "your domain(s)" nameservers to ns1/ns2.athenapanel.com. I advised NOT to do this for yaweloidle.com (all hosts, R2 domains and redirects live on Cloudflare DNS); mail needs only MX/SPF/DKIM records in Cloudflare. Ask which domain and what it was for.
-- **Shyden ruled 2026-11-20:** delete the old Worker `yawelo-idle-site` (prod account) and Pages project `yawelo-idle-dev-hosts` (Shyden Labs Dev) after the release is live and checked; recorded on #1013. Before and after each delete, `curl -sI` both old hosts. Old hosts currently answer **308** (not 301) to the new hosts: compare with #1013's wording.
+- **Release #1050 is finished.** The 3 promo files were uploaded to R2 `yawelo-idle-media`, purged, and are byte-identical live. deploy-prod 44640895992 verify was re-run: all green. deploy-door 44729311334 from main: success. `test.yaweloidle.com` answers 200 with commit 254318f, the cut's head.
+- **Closed with live evidence:** #1015, #622, #1038, #783 (planted PR #1053 refused by `release-cut` by name, then closed; branch and worktree deleted), and #1021.
+- **#1013:** the old Worker `yawelo-idle-site` (shyden.co.uk account) and the Pages project `yawelo-idle-dev-hosts` (Shyden Labs Dev; 300 deployments and 3 domains removed with a temporary Pages-only token, which was then deleted) are both gone. The 4 old hosts still answer 308 with path and query kept. Evidence is on #1013.
+- **Phones:** Shyden freed them (relayed by repo-template). Yawelo has no run to do: #992/#993 are blocked by playwright-devices#7 (open), and #997–#1000 wait on those.
+- Chrome's Cloudflare login is now Shyden Labs again (not Yawelo).
+- `@shyden-labs/playwright-devices` `>=` rule: the package isn't in this repo yet. #1003 adds it and must declare a `>=` range.
+
+## Open question to Shyden
+
+- He pasted a panel message saying to change "your domain(s)" nameservers to ns1/ns2.athenapanel.com. My advice was NOT to do this for yaweloidle.com (everything runs on Cloudflare DNS). Ask which domain it was for.
 
 ## Resume steps
 
-1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (`git fetch && git checkout --detach origin/develop`; Node: `~/.local/share/node/current/bin`).
-2. Once Chrome is on Yawelo's Cloudflare: upload the 3 files from `apps/site/media` (main) to R2 `yawelo-idle-media`, check content types, purge the 3 `https://media.yaweloidle.com/<file>` URLs (README step 4), `curl -sI` each (not HIT, new size), then re-run deploy-prod's verify (`gh run rerun 44640895992 --failed`) and re-run deploy-door from main.
-3. Then close #1021, #1015, #622, #1038, #783 with live evidence; read #1013 AC1/AC2/AC4/AC5.
-4. Delete the two old Cloudflare resources per the ruling above, with the before/after redirect measurement.
-5. yawelo.com: no DNS records yet; its 301 to yaweloidle.com is #1013 AC1 (proxied record + redirect, measure `curl -I`).
-6. #52 (draft PR #1042) and #164 as in the previous handover: #52 open items itemId check, AC5/AC9 (Shyden), AC11; #164 two networks through `dev-api.` get separate counts.
-7. New global rule (2026-11-20): `@shyden-labs/playwright-devices` declared as `>=` range, never pinned; check this repo's package.json.
+1. `ListAgents`; then from `../yawelo-idle-dev-scripts` (`git fetch && git checkout --detach origin/develop`; Node: `~/.local/share/node/current/bin`) run `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`.
+2. #1013: read the ACs left open (AC1 yawelo.com → yaweloidle.com 301: no DNS records yet, needs Yawelo's Cloudflare login; AC4 promo media in a real browser on the new hosts; AC5). Close it only on measurements.
+3. #52 (draft PR #1042) and #164 as in the earlier handover: #52 open items itemId check, AC5/AC9 (Shyden), AC11; #164 two networks through `dev-api.` get separate counts.
