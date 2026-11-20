@@ -1,15 +1,13 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-20 20:20 WIB, session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Main is at c634281 (release #1050). Worktrees: `yawelo-idle-52` (927edb1, draft PR #1042), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 70bc717). No Colima, simulator or USB claim. Nothing running; no local job to re-run.
+**Written:** 2026-11-21 01:00 WIB (progress page republished 00:58 WIB), session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Main is at c634281 (release #1050). Worktrees: `yawelo-idle-1055` (branch `1055-tab-icon`, 7235be5, draft PR #1056), `yawelo-idle-1003` (branch `1003-shared-playwright-devices`, cd7f4f2, draft PR #1054), `yawelo-idle-52` (927edb1, draft PR #1042), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 70bc717). No Colima, simulator or USB claim. A background wait on PR #1054's CI dies with this session; re-read it with `~/.claude/scripts/pr-verdict.sh 1054`.
 
 ## State
 
-- **Release #1050 is finished.** The 3 promo files were uploaded to R2 `yawelo-idle-media`, purged, and are byte-identical live. deploy-prod 44640895992 verify was re-run: all green. deploy-door 44729311334 from main: success. `test.yaweloidle.com` answers 200 with commit 254318f, the cut's head.
-- **Closed with live evidence:** #1015, #622, #1038, #783 (planted PR #1053 refused by `release-cut` by name, then closed; branch and worktree deleted), and #1021.
-- **#1013:** the old Worker `yawelo-idle-site` (shyden.co.uk account) and the Pages project `yawelo-idle-dev-hosts` (Shyden Labs Dev; 300 deployments and 3 domains removed with a temporary Pages-only token, which was then deleted) are both gone. The 4 old hosts still answer 308 with path and query kept. Evidence is on #1013.
-- **Phones:** Shyden freed them (relayed by repo-template). Yawelo has no run to do: #992/#993 are blocked by playwright-devices#7 (open), and #997–#1000 wait on those.
-- Chrome's Cloudflare login is now Shyden Labs again (not Yawelo).
-- `@shyden-labs/playwright-devices` `>=` rule: the package isn't in this repo yet. #1003 adds it and must declare a `>=` range.
+- **#1003 (P0, In Progress), draft PR #1054, head cd7f4f2:** shared setup, Edge, the shared check, measured limits (Install Edge 3 min) all in. Engines pass on all four browsers; Sonar green. **Blocked by** #1055 (Edge asks for `/favicon.ico`, measured 404; the game and site have no icon; the design is Shyden's call) and playwright-devices#39 (Playwright's JSON strips `@` from tags, so the shared group-tag check never fires; that session is fixing it). AC5(a) proven refused (run 44785092678); AC5(b) waits on #39's release; evidence comment on #1003.
+- **#1055 (P0, In Progress), draft PR #1056 (7235be5):** game and site declare a shared SVG tab icon; unit tests green. Three candidates in `docs/design/tab-icon/`; the question is on #1055 for Shyden. After his pick: swap both `favicon.svg`, deploy dev, curl `/favicon.svg` and `/play/favicon.svg` on both hosts (200), screenshot real tabs, merge, then merge develop into #1003's branch so Edge's shell journey passes.
+- **Morning questions posted (answer, then act):** #1055 icon (3 candidates); #830 AC2 epic Public titles/summaries (13-row table); #1013: prod API host scope, yawelo.com needs his Cloudflare sign-in, accept 308 vs 301, use his Chrome's Yawelo profile for AC4. Nothing running in the background.
+- Release #1050 finished; #1015, #622, #1038, #783, #1021 closed with evidence. #1013's old Worker and Pages project deleted.
 
 ## Open question to Shyden
 
@@ -17,6 +15,8 @@
 
 ## Resume steps
 
-1. `ListAgents`; then from `../yawelo-idle-dev-scripts` (`git fetch && git checkout --detach origin/develop`; Node: `~/.local/share/node/current/bin`) run `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"`.
-2. #1013: read the ACs left open (AC1 yawelo.com → yaweloidle.com 301: no DNS records yet, needs Yawelo's Cloudflare login; AC4 promo media in a real browser on the new hosts; AC5). Close it only on measurements.
-3. #52 (draft PR #1042) and #164 as in the earlier handover: #52 open items itemId check, AC5/AC9 (Shyden), AC11; #164 two networks through `dev-api.` get separate counts.
+1. `ListAgents`; check for playwright-devices' message with #39's fixed version. Then `npm install` in `../yawelo-idle-1003` (the range takes it), re-plant AC5(b) (a test with `{ tag: '@desktop' }` and no reason) in ONE commit, see it refused in CI, revert.
+2. Ask Shyden which #1055 candidate (AskUserQuestion, plain words, links from the #1055 comment). Then do the post-pick steps in State.
+3. #1003 then goes ready: CI green on head, squash-merge, read the develop deploy's `one-suite:` totals (AC4) and the deploy-dev smoke step times for their limits, quote both on #1003, close.
+4. #1013 ACs left open; #52 (PR #1042), #164 as before.
+5. Next ticket: `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
