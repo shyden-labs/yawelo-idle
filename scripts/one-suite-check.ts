@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { JSONReport } from '@playwright/test/reporter';
 import { checkOneSuite, testsByTarget } from '@shyden-labs/playwright-devices';
 import { desktopGroup } from '@shyden-labs/playwright-devices/desktop';
-import { DESKTOP_BROWSERS } from '../tests/desktop-targets.ts';
+import { DESKTOP_BROWSERS, type Suite } from '../tests/desktop-targets.ts';
 
 /**
  * The shared one-suite check on one suite's run (#1003): every desktop
@@ -37,16 +37,47 @@ export function checkSuite(
   });
 }
 
-if (import.meta.main) {
-  const dir = process.argv[2];
-  if (dir === undefined) {
-    console.error('usage: node scripts/one-suite-check.ts <dir>');
-    process.exit(2);
+const SUITES: readonly Suite[] = ['engines', 'web', 'site'];
+
+const isSuite = (name: string | undefined): name is Suite =>
+  SUITES.some((suite) => suite === name);
+
+/** Where main reads, and where it prints. */
+export interface Io {
+  read: (file: string) => string;
+  log: (line: string) => void;
+  error: (line: string) => void;
+}
+
+/**
+ * Checks one suite by its name alone, never a path: the folder is built here,
+ * so no argument can point the reads elsewhere (SonarCloud tssecurity:S8707,
+ * PR #1054). 0 passes, 1 is a problem found, 2 a wrong argument.
+ */
+export function main(argv: readonly string[], io: Io): number {
+  const [suite] = argv;
+  if (argv.length !== 1 || !isSuite(suite)) {
+    io.error(
+      'usage: node scripts/one-suite-check.ts <suite>, the suite being engines, web or site',
+    );
+    return 2;
   }
-  const { totals, problems } = checkSuite(dir, (file) =>
-    readFileSync(file, 'utf8'),
+  const { totals, problems } = checkSuite(`one-suite/${suite}`, io.read);
+  for (const line of totals) io.log(`one-suite: ${line}`);
+  for (const line of problems) io.error(`one-suite: ${line}`);
+  return problems.length === 0 ? 0 : 1;
+}
+
+if (import.meta.main) {
+  process.exit(
+    main(process.argv.slice(2), {
+      read: (file) => readFileSync(file, 'utf8'),
+      log: (line) => {
+        console.log(line);
+      },
+      error: (line) => {
+        console.error(line);
+      },
+    }),
   );
-  for (const line of totals) console.log(`one-suite: ${line}`);
-  for (const line of problems) console.error(`one-suite: ${line}`);
-  process.exit(problems.length === 0 ? 0 : 1);
 }

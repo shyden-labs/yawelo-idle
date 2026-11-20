@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkSuite } from '../../scripts/one-suite-check';
+import { checkSuite, main } from '../../scripts/one-suite-check';
 
 /**
  * The shared one-suite check on one suite's run (#1003 AC2, AC4): what
@@ -108,4 +108,58 @@ describe('checkSuite (#1003)', () => {
       /one-suite\/web\/list\.json/,
     );
   });
+});
+
+describe('main (#1003)', () => {
+  function io(read: (file: string) => string) {
+    const out: string[] = [];
+    const err: string[] = [];
+    const reads: string[] = [];
+    return {
+      out,
+      err,
+      reads,
+      io: {
+        read: (file: string) => {
+          reads.push(file);
+          return read(file);
+        },
+        log: (line: string) => out.push(line),
+        error: (line: string) => err.push(line),
+      },
+    };
+  }
+
+  it('checks a named suite’s folder, prints each total and passes', () => {
+    const run = io(files([LOADS], [LOADS]));
+    expect(main(['web'], run.io)).toBe(0);
+    expect(run.reads).toEqual([
+      'one-suite/web/list.json',
+      'one-suite/web/report.json',
+      'one-suite/web/assertions.json',
+    ]);
+    expect(run.out).toHaveLength(4);
+    expect(run.out.every((line) => line.startsWith('one-suite: '))).toBe(true);
+    expect(run.err).toEqual([]);
+  });
+
+  it('fails a run with a problem, printing each one', () => {
+    const ran = {
+      title: 'loads',
+      statuses: { ...everywhere('expected'), firefox: 'unexpected' as const },
+    };
+    const run = io(files([LOADS], [ran]));
+    expect(main(['web'], run.io)).toBe(1);
+    expect(run.err.join('\n')).toMatch(/^one-suite: firefox failed/m);
+  });
+
+  it.each([[[]], [['../../etc']], [['web', 'site']], [['one-suite/web']]])(
+    'refuses %j: only a suite name, never a path, and reads nothing',
+    (argv) => {
+      const run = io(files([LOADS], [LOADS]));
+      expect(main(argv, run.io)).toBe(2);
+      expect(run.err.join('\n')).toMatch(/engines, web or site/);
+      expect(run.reads).toEqual([]);
+    },
+  );
 });

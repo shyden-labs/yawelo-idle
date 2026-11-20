@@ -158,8 +158,8 @@ describe('the browsers job’s steps (#1003)', () => {
       'actions/checkout',
       'Read the exact Node version (docker/node/Dockerfile)',
       'actions/setup-node',
-      'Classify the change as docs-only or full (#360)',
       "Mark the workspace safe for root's git",
+      'Classify the change as docs-only or full (#360)',
       'Install (a warning fails it)',
     ]);
     expect(browsers()[0]?.with?.['fetch-depth']).toBe(2);

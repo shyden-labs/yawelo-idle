@@ -183,6 +183,10 @@ jobs:
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -198,16 +202,15 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Classify the change as docs-only or full (#360)
         id: classify
         env:
           EVENT: ${{ github.event_name }}
         run: node scripts/ci-scope.ts
-      # Root's git refuses a workspace the runner's user checked out ("not in
-      # a git directory"), and npm ci's prepare runs git (PR #1054).
-      - name: Mark the workspace safe for root's git
-        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm ci

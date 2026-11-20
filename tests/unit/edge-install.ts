@@ -18,6 +18,7 @@ interface Step {
 
 interface Job {
   container?: { image?: string; options?: string };
+  env?: Record<string, unknown>;
   steps?: Step[];
 }
 
@@ -32,6 +33,9 @@ export function expectEdgeInstalledBefore(
   suite: string,
 ): void {
   expect(job?.container?.options, 'the job runs as root').toBeUndefined();
+  // Firefox refuses to start as root in a home another user owns (PR #1054's
+  // second run): Playwright's own advice is HOME=/root.
+  expect(job?.env?.['HOME'], 'root runs with its own home').toBe('/root');
   const steps = job?.steps ?? [];
   const runs = steps.map((s) => runOf(s));
   expect(runs.filter((run) => /playwright install/.test(run))).toEqual([

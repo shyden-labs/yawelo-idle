@@ -17,7 +17,7 @@ mkdir -p "$dir"
 PLAYWRIGHT_JSON_OUTPUT_FILE="$dir/list.json" npx --no playwright test -c "$config" --list --reporter=json || exit 1
 npx --no playwright test -c "$config"
 run=$?
-node scripts/one-suite-check.ts "$dir"
+node scripts/one-suite-check.ts "$suite"
 check=$?
 if [[ "$run" -ne 0 || "$check" -ne 0 ]]; then
   exit 1

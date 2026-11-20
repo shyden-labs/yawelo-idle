@@ -277,6 +277,10 @@ jobs:
     timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     environment:
       name: dev
       url: https://dev.yaweloidle.com
@@ -338,6 +342,10 @@ jobs:
     timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     environment:
       name: dev
       url: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/roadmap
