@@ -146,6 +146,45 @@ describe('the production release (#621 AC4)', () => {
       EXPECTED_SHA: '${{ github.sha }}',
     });
   });
+
+  // The API address, reserved until the production sync Worker exists
+  // (#1013 AC1, #252): its files are static, so the commit stamp is written
+  // into them at deploy time and never committed.
+  it('stamps the API reserve with the released commit', () => {
+    const stamp = step(
+      'deploy-prod.yml',
+      'deploy',
+      'Stamp the API reserve with this commit',
+    );
+    expect(stamp.run).toBe(
+      'printf \'%s\\n\' "$GITHUB_SHA" > apps/sync-worker/reserve/public/commit.txt',
+    );
+  });
+
+  it('deploys the API reserve config, named from the repository root, tagged with the commit', () => {
+    const deploy = step(
+      'deploy-prod.yml',
+      'deploy',
+      'Deploy the API reserve, tagged with this commit',
+    );
+    expect(deploy['working-directory']).toBeUndefined();
+    expect(deploy.run).toBe(
+      'npx --no wrangler deploy --config apps/sync-worker/reserve/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
+    );
+  });
+
+  it('verifies the reserved API address from outside after the deploy', () => {
+    const verify = step(
+      'deploy-prod.yml',
+      'verify',
+      'Verify the API address is reserved, serving this commit',
+    );
+    expect(verify.run).toBe('node scripts/verify-api.ts');
+    expect(verify.env).toEqual({
+      API_URL: 'https://api.yaweloidle.com',
+      EXPECTED_SHA: '${{ github.sha }}',
+    });
+  });
 });
 
 describe('the production rollback (#621 AC6)', () => {
