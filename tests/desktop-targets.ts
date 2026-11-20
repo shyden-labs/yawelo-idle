@@ -9,7 +9,12 @@ import { desktopProjects } from '@shyden-labs/playwright-devices/desktop';
  * run, since Playwright's image lacks it (Shyden, 2026-11-20). Phones and
  * tablets are their own group, run on the real devices and their simulators.
  */
-export const DESKTOP_BROWSERS = ['chromium', 'firefox', 'webkit', 'msedge'] as const;
+export const DESKTOP_BROWSERS = [
+  'chromium',
+  'firefox',
+  'webkit',
+  'msedge',
+] as const;
 
 /** Where each suite's run leaves what the shared check reads. */
 export type Suite = 'engines' | 'web' | 'site';
@@ -29,7 +34,10 @@ export function desktopSuite(
       ['json', { outputFile: `one-suite/${suite}/report.json` }],
       [
         '@shyden-labs/playwright-devices/assertion-counter',
-        { outputFile: `one-suite/${suite}/assertions.json`, unnamedTarget: 'desktop' },
+        {
+          outputFile: `one-suite/${suite}/assertions.json`,
+          unnamedTarget: 'desktop',
+        },
       ],
     ],
   };

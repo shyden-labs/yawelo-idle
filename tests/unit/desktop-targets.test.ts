@@ -24,7 +24,12 @@ const SPEC = 'docs/superpowers/specs/2026-10-01-yawelo-idle-design.md';
 
 describe('the desktop browsers (#1003)', () => {
   it('are Chromium, Firefox, WebKit and Edge (#1003 AC3)', () => {
-    expect(DESKTOP_BROWSERS).toEqual(['chromium', 'firefox', 'webkit', 'msedge']);
+    expect(DESKTOP_BROWSERS).toEqual([
+      'chromium',
+      'firefox',
+      'webkit',
+      'msedge',
+    ]);
   });
 
   it('come from shyden-labs/playwright-devices, taking every newer release (#1003 AC1)', () => {
@@ -54,7 +59,9 @@ describe('the desktop browsers (#1003)', () => {
       spec.indexOf('**Supported browser targets'),
       spec.indexOf('## 13. Delivery'),
     );
-    const listed = [...block.matchAll(/^\s+- `([a-z-]+)`: /gm)].map((m) => m[1]);
+    const listed = [...block.matchAll(/^\s+- `([a-z-]+)`: /gm)].map(
+      (m) => m[1],
+    );
     expect(listed).toEqual([...DESKTOP_BROWSERS]);
   });
 });
@@ -66,7 +73,10 @@ function reporters(suite: string): PlaywrightTestConfig['reporter'] {
     ['json', { outputFile: `one-suite/${suite}/report.json` }],
     [
       '@shyden-labs/playwright-devices/assertion-counter',
-      { outputFile: `one-suite/${suite}/assertions.json`, unnamedTarget: 'desktop' },
+      {
+        outputFile: `one-suite/${suite}/assertions.json`,
+        unnamedTarget: 'desktop',
+      },
     ],
   ];
 }

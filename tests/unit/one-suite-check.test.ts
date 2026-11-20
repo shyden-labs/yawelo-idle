@@ -48,7 +48,9 @@ function everywhere(
 }
 
 function counts(n: number): string {
-  return JSON.stringify(Object.fromEntries(ALL.map((b) => [b, { 'a.spec.ts › loads': n }])));
+  return JSON.stringify(
+    Object.fromEntries(ALL.map((b) => [b, { 'a.spec.ts › loads': n }])),
+  );
 }
 
 function files(list: Spec[], ran: Spec[], assertions = counts(2)) {
@@ -75,7 +77,10 @@ describe('checkSuite (#1003)', () => {
   });
 
   it('refuses a test one browser skipped (#1003 AC4)', () => {
-    const ran = { title: 'loads', statuses: { ...everywhere('expected'), msedge: 'skipped' as const } };
+    const ran = {
+      title: 'loads',
+      statuses: { ...everywhere('expected'), msedge: 'skipped' as const },
+    };
     const out = checkSuite('one-suite/web', files([LOADS], [ran]));
     expect(out.problems.join('\n')).toMatch(/msedge skipped/);
   });

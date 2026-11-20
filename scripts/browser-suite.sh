@@ -14,8 +14,8 @@ dir="one-suite/$suite"
 
 rm -rf "$dir"
 mkdir -p "$dir"
-PLAYWRIGHT_JSON_OUTPUT_FILE="$dir/list.json" npx playwright test -c "$config" --list --reporter=json || exit 1
-npx playwright test -c "$config"
+PLAYWRIGHT_JSON_OUTPUT_FILE="$dir/list.json" npx --no playwright test -c "$config" --list --reporter=json || exit 1
+npx --no playwright test -c "$config"
 run=$?
 node scripts/one-suite-check.ts "$dir"
 check=$?

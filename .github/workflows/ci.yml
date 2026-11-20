@@ -211,7 +211,7 @@ jobs:
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 5
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npx playwright install --with-deps msedge
+        run: npx --no playwright install --with-deps msedge
       # Each suite: first limits since Edge joined (#1003), until measured
       # (#476), and none inside it.
       - name: Cross-engine determinism (Node, Chromium, Firefox, WebKit, Edge)

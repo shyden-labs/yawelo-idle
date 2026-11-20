@@ -21,14 +21,19 @@ export function checkSuite(
     try {
       return JSON.parse(read(file));
     } catch (error) {
-      throw new Error(`cannot read ${file}: ${String(error)}`, { cause: error });
+      throw new Error(`cannot read ${file}: ${String(error)}`, {
+        cause: error,
+      });
     }
   };
   return checkOneSuite({
     listed: testsByTarget(json('list.json') as JSONReport, 'desktop'),
     ran: testsByTarget(json('report.json') as JSONReport, 'desktop'),
     groups: desktopGroup(DESKTOP_BROWSERS),
-    assertions: json('assertions.json') as Record<string, Record<string, number>>,
+    assertions: json('assertions.json') as Record<
+      string,
+      Record<string, number>
+    >,
   });
 }
 
@@ -38,7 +43,9 @@ if (import.meta.main) {
     console.error('usage: node scripts/one-suite-check.ts <dir>');
     process.exit(2);
   }
-  const { totals, problems } = checkSuite(dir, (file) => readFileSync(file, 'utf8'));
+  const { totals, problems } = checkSuite(dir, (file) =>
+    readFileSync(file, 'utf8'),
+  );
   for (const line of totals) console.log(`one-suite: ${line}`);
   for (const line of problems) console.error(`one-suite: ${line}`);
   process.exit(problems.length === 0 ? 0 : 1);

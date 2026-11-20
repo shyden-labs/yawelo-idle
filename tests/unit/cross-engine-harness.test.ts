@@ -37,7 +37,9 @@ describe('the cross-engine harness', () => {
     expect(job?.container?.image ?? '', 'the job’s image').toBe(
       ci.jobs['build-and-test']?.container?.image,
     );
-    expect(job?.container?.image ?? '').toMatch(/^mcr\.microsoft\.com\/playwright:v/);
+    expect(job?.container?.image ?? '').toMatch(
+      /^mcr\.microsoft\.com\/playwright:v/,
+    );
     const steps = job?.steps ?? [];
     expect(
       steps.filter((s) => runOf(s) === 'npm run test:engines'),
@@ -49,7 +51,9 @@ describe('the cross-engine harness', () => {
   it('leaves build-and-test, which runs as the runner’s user and installs nothing', () => {
     const steps = ci.jobs['build-and-test']?.steps ?? [];
     const runs = steps.map((s) => runOf(s));
-    expect(runs.filter((r) => /test:engines|test:web|playwright install/.test(r))).toEqual([]);
+    expect(
+      runs.filter((r) => /test:engines|test:web|playwright install/.test(r)),
+    ).toEqual([]);
     expect(ci.jobs['build-and-test']?.container?.options).toBe('--user 1001');
   });
 
