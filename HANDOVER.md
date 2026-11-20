@@ -1,23 +1,24 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-21 01:46 WIB (progress page v73 republished 01:45 WIB), session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Main is at c634281 (release #1050). Worktrees: `yawelo-idle-1055` (branch `1055-tab-icon`, 7235be5, draft PR #1056), `yawelo-idle-1003` (branch `1003-shared-playwright-devices`, cd7f4f2, draft PR #1054), `yawelo-idle-52` (927edb1, draft PR #1042), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 70bc717). No Colima, simulator or USB claim. A background wait on PR #1054's CI dies with this session; re-read it with `~/.claude/scripts/pr-verdict.sh 1054`.
+**Written:** 2026-11-21, session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-1055` (`1055-tab-icon`, local 5a91762a; remote has a later update-branch merge, `git pull` first, PR #1056), `yawelo-idle-1013` (`1013-api-host`, 361123fa, PR #1058), `yawelo-idle-1003` (cd7f4f2, draft PR #1054), `yawelo-idle-52` (927edb1, draft PR #1042), `yawelo-idle-160` (35dd400, draft PR 986), `yawelo-idle-dev-scripts` (detached). No Colima, simulator or USB claim. A background CI waiter on #1056 and #1058 dies with this session: re-read with `gh pr checks 1056` / `gh pr checks 1058`.
 
-## State
+## Shyden's answers today (2026-11-21)
 
-- **#1003 (P0, In Progress), draft PR #1054, head cd7f4f2:** shared setup, Edge, the shared check, measured limits (Install Edge 3 min) all in. Engines pass on all four browsers; Sonar green. **Blocked by** #1055 (Edge asks for `/favicon.ico`, measured 404; the game and site have no icon; the design is Shyden's call) and playwright-devices#39 (Playwright's JSON strips `@` from tags, so the shared group-tag check never fires; that session is fixing it). AC5(a) proven refused (run 44785092678); AC5(b) waits on #39's release; evidence comment on #1003.
-- **#1055 (P0, In Progress), draft PR #1056 (7235be5):** game and site declare a shared SVG tab icon; unit tests green. Three candidates in `docs/design/tab-icon/`; the question is on #1055 for Shyden. After his pick: swap both `favicon.svg`, deploy dev, curl `/favicon.svg` and `/play/favicon.svg` on both hosts (200), screenshot real tabs, merge, then merge develop into #1003's branch so Edge's shell journey passes.
-- **Morning questions posted (answer, then act):** #1055 icon (3 candidates); #830 AC2 epic Public titles/summaries (13-row table); #1013: prod API host scope, yawelo.com needs his Cloudflare sign-in, accept 308 vs 301, use his Chrome's Yawelo profile for AC4. Nothing running in the background.
-- **Closed tonight:** #122 (attribution manifest, PR #1057 → develop `ef5cffaf`, dev deploy 44791693863 all 9 jobs green), #888 and #864 (14-day watches: 101 and 111 deploy runs read, 0 smoke / site-smoke failures). #1025 got its 12 blockers linked (#111–#120, #127, #462). #343 has a morning question (AC2 is UK ICO, likely stale). #110 is large and its AC4 needs destination records that don't exist yet: ask or split before starting.
-- Release #1050 finished; #1015, #622, #1038, #783, #1021 closed with evidence. #1013's old Worker and Pages project deleted.
-
-## Open question to Shyden
-
-- He pasted a panel message saying to change "your domain(s)" nameservers to ns1/ns2.athenapanel.com. My advice was NOT to do this for yaweloidle.com (everything runs on Cloudflare DNS). Ask which domain it was for.
+- **Tab icon: #10, twin sparkles on the night square** (from the 56-icon gallery, https://claude.ai/artifact/Cn5v3fC2xDvQJC2GX2szK5). In PR #1056: both `favicon.svg` swapped, pin test seen red first, unit 14,651 green; all CI green on 5a91762a, then branch updated with develop (CI re-running).
+- **Nameserver panel message:** ignore it. Nothing to do.
+- **api.yaweloidle.com:** "Reserve the address now". PR #1058: assets-only Worker `yawelo-idle-sync` (apps/sync-worker/reserve), 404 "not open yet" en+id (Google read-back matched), noindex, robots disallow; deploy-prod stamps `commit.txt`, `scripts/verify-api.ts` checks it. First push failed two integration lists (script-loads, wrangler-steps dry-runs); fixed in 361123fa, CI re-running.
+- **308 vs 301:** keep 308. #1013 AC2 rewritten and met.
+- **#1013 AC4** measured in his Chrome: video plays on yaweloidle.com, test., dev-holding. (comment on #1013).
+- **yawelo.com:** he signs in, I click. The connected Chrome is NOT the Yawelo login (shows ShyDesk / Shyden Labs Dev accounts). Asked him to open the Yawelo profile, connect Claude there, sign in to Yawelo's Cloudflare.
+- **#343 AC2:** follows #635's answer; #343 now blocked by #635 (both P3).
+- #1013 set In Progress (branch 1013-api-host).
 
 ## Resume steps
 
-1. `ListAgents`; check for playwright-devices' message with #39's fixed version. Then `npm install` in `../yawelo-idle-1003` (the range takes it), re-plant AC5(b) (a test with `{ tag: '@desktop' }` and no reason) in ONE commit, see it refused in CI, revert.
-2. Ask Shyden which #1055 candidate (AskUserQuestion, plain words, links from the #1055 comment). Then do the post-pick steps in State.
-3. #1003 then goes ready: CI green on head, squash-merge, read the develop deploy's `one-suite:` totals (AC4) and the deploy-dev smoke step times for their limits, quote both on #1003, close.
-4. #1013 ACs left open; #52 (PR #1042), #164 as before.
-5. Next ticket: `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
+1. `ListAgents`; `gh pr checks 1056` and `gh pr checks 1058`. If red, read `gh run view <id> --log-failed`.
+2. #1056 green on head: squash-merge into develop, wait for the dev deploy, curl `/favicon.svg` and `/play/favicon.svg` on dev hosts (200, body = twin-sparkles.svg), screenshot a real tab (AC4), close #1055 with evidence. Then merge develop into `1003-shared-playwright-devices` so Edge's shell journey passes.
+3. #1058 green: squash-merge. It goes live with the next production release (Shyden approves); then `verify-api.ts` in deploy-prod proves AC1's API host.
+4. When Shyden says the Yawelo profile is connected and signed in: in Yawelo's Cloudflare, yawelo.com zone: add proxied records and a redirect rule to https://yaweloidle.com (path and query kept, 308), then curl it. Then #1013 can close (AC1 api host after the release).
+5. playwright-devices#39 still open (no release past 0.1.3): when released, `npm install` in `../yawelo-idle-1003`, re-plant AC5(b) in one commit, see it refused in CI, revert.
+6. #830 AC2 epic titles table still waits for Shyden (comment on #830).
+7. Next ticket: `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts`.
