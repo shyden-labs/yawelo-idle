@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { JSONReport } from '@playwright/test/reporter';
 import { checkOneSuite, testsByTarget } from '@shyden-labs/playwright-devices';
 import { desktopGroup } from '@shyden-labs/playwright-devices/desktop';
-import { DESKTOP_BROWSERS } from '../tests/desktop-targets';
+import { DESKTOP_BROWSERS } from '../tests/desktop-targets.ts';
 
 /**
  * The shared one-suite check on one suite's run (#1003): every desktop
