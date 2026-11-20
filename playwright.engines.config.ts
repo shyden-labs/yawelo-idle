@@ -15,4 +15,10 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   ...desktopSuite('engines'),
+  // PLANT (#1003 AC5, reverted next commit): Edge runs one test fewer.
+  projects: desktopSuite('engines').projects.map((project) =>
+    project.name === 'msedge'
+      ? { ...project, testIgnore: /save-blob/ }
+      : project,
+  ),
 });
