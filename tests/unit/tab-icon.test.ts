@@ -32,6 +32,12 @@ describe('the icon file (#1055)', () => {
     expect(svg).toMatch(/viewBox="0 0 (\d+) \1"/);
   });
 
+  it('is the design Shyden chose: twin sparkles on the night square (2026-11-21)', () => {
+    expect(readFileSync(GAME_ICON, 'utf8')).toBe(
+      readFileSync('docs/design/tab-icon/twin-sparkles.svg', 'utf8'),
+    );
+  });
+
   it('is the same file for the game and the site', () => {
     expect(readFileSync(SITE_ICON, 'utf8')).toBe(
       readFileSync(GAME_ICON, 'utf8'),
