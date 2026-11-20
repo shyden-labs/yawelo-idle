@@ -154,11 +154,12 @@ describe('the browsers job’s steps (#1003)', () => {
 
   it('classifies after Node and before install, and the checkout fetches two levels', () => {
     const ids = browsers().map(idOf);
-    expect(ids.slice(0, 5)).toEqual([
+    expect(ids.slice(0, 6)).toEqual([
       'actions/checkout',
       'Read the exact Node version (docker/node/Dockerfile)',
       'actions/setup-node',
       'Classify the change as docs-only or full (#360)',
+      "Mark the workspace safe for root's git",
       'Install (a warning fails it)',
     ]);
     expect(browsers()[0]?.with?.['fetch-depth']).toBe(2);

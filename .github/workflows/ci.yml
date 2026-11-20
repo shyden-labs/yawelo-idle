@@ -203,6 +203,11 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
         run: node scripts/ci-scope.ts
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm ci

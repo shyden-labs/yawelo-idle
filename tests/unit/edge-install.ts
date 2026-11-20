@@ -1,6 +1,13 @@
 import { expect } from 'vitest';
 import { runOf } from './workflow-steps';
 
+/**
+ * As root, git refuses a workspace the runner's own user checked out ("not in
+ * a git directory", PR #1054's first run), and npm ci's `prepare` runs git.
+ */
+export const SAFE_WORKSPACE =
+  'git config --global --add safe.directory "$GITHUB_WORKSPACE"';
+
 /** The one command that installs Edge, the browser Playwright's image lacks. */
 export const EDGE_INSTALL = 'npx --no playwright install --with-deps msedge';
 
@@ -31,6 +38,11 @@ export function expectEdgeInstalledBefore(
     EDGE_INSTALL,
   ]);
   const install = runs.indexOf(EDGE_INSTALL);
+  const safe = runs.indexOf(SAFE_WORKSPACE);
+  expect(safe, 'the workspace is marked safe for root').toBeGreaterThan(-1);
+  expect(safe, 'before the install runs git').toBeLessThan(
+    runs.findIndex((run) => /npm ci$/.test(run)),
+  );
   expect(install, 'Edge is installed before the suite').toBeLessThan(
     runs.indexOf(suite),
   );

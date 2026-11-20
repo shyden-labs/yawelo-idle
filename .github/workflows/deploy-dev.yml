@@ -295,6 +295,10 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       # Playwright's image lacks Edge, so each run downloads it (Shyden,
       # 2026-11-20, #1003). A first limit, until its first runs are measured
@@ -352,6 +356,10 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       # Playwright's image lacks Edge, so each run downloads it (Shyden,
       # 2026-11-20, #1003). A first limit, until its first runs are measured
