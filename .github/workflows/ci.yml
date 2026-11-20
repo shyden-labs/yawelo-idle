@@ -153,14 +153,6 @@ jobs:
         timeout-minutes: 3
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:worker
-      - name: Cross-engine determinism (Node, Chromium, Firefox, WebKit)
-        timeout-minutes: 1
-        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npm run test:engines
-      - name: Web smoke (the built game in a local Worker, on every supported target)
-        timeout-minutes: 1
-        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npm run test:web
       - name: Build (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm run build
@@ -177,6 +169,59 @@ jobs:
       - name: No built page loads from a free shared domain
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: node scripts/free-hosts.ts apps/site/dist apps/site/dist-holding apps/site/dist-holding-dev
+
+  # The browser suites, on every desktop browser (#1003): Playwright's image
+  # carries Chromium, Firefox and WebKit, and Edge is downloaded first (Shyden,
+  # 2026-11-20). Its installer needs root, so this job runs as root, apart
+  # from build-and-test, whose integration suite needs the runner's own user
+  # (tests/integration/old-name.test.ts). Each suite ends with the shared
+  # one-suite check (scripts/browser-suite.sh), which prints every browser's
+  # total. Like build-and-test, it reports on a docs-only change without
+  # running a suite.
+  browsers:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
+      - name: Read the exact Node version (docker/node/Dockerfile)
+        id: node
+        run: |
+          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: 'npm'
+      - name: Classify the change as docs-only or full (#360)
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: node scripts/ci-scope.ts
+      - name: Install (a warning fails it)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: scripts/fail-on-warnings.sh npm ci
+      # A first limit, until its first runs are measured (#476): then at
+      # least 3 times the slowest.
+      - name: Install Edge (Playwright's image lacks it)
+        timeout-minutes: 5
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npx playwright install --with-deps msedge
+      # Each suite: first limits since Edge joined (#1003), until measured
+      # (#476), and none inside it.
+      - name: Cross-engine determinism (Node, Chromium, Firefox, WebKit, Edge)
+        timeout-minutes: 2
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:engines
+      - name: Web smoke (the built game in a local Worker, on every desktop browser)
+        timeout-minutes: 2
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: npm run test:web
 
   # Every suite pull-request CI runs, under coverage, one after another, in a
   # job of its own so the unit step above keeps coverage off (#728). It fails

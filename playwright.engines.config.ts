@@ -1,9 +1,5 @@
 import { defineConfig } from '@playwright/test';
-import {
-  BROWSER_TARGETS,
-  TARGET_TOTALS_REPORTER,
-  ASSERTION_COUNTS_REPORTER,
-} from './tests/browser-targets';
+import { desktopSuite } from './tests/desktop-targets';
 
 /**
  * The cross-engine determinism check (M1 design §7): the same golden vectors
@@ -18,6 +14,5 @@ export default defineConfig({
   timeout: 0,
   forbidOnly: true,
   retries: 0,
-  reporter: [['list'], [TARGET_TOTALS_REPORTER], [ASSERTION_COUNTS_REPORTER]],
-  projects: BROWSER_TARGETS,
+  ...desktopSuite('engines'),
 });
