@@ -55,6 +55,14 @@ export function main(argv: readonly string[], io: BuildIo): number {
   const { id } = loaded.course;
   io.write(join(outDir, `${id}.json`), built.bundle);
   io.write(join(outDir, `${id}.version`), `${built.contentVersion}\n`);
+  io.write(
+    join(outDir, `${id}.attribution.json`),
+    `${JSON.stringify(built.attribution, null, 2)}\n`,
+  );
+  for (const source of built.attribution.unused)
+    io.out(
+      `${id} attribution: source ${source} is registered but cited by no item`,
+    );
   io.out(`${id} ${built.contentVersion}`);
   return 0;
 }

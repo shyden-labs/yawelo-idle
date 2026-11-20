@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { canonicalHash } from '@yawelo-idle/core';
-import { loadCourse } from '@yawelo-idle/content';
+import { attributionOf, loadCourse } from '@yawelo-idle/content';
 import { main, type BuildIo } from '../../scripts/build-content.ts';
 
 /**
@@ -50,10 +50,38 @@ describe('build:content on a course that may ship', () => {
     const { code, written, out } = run(['en-id.json', 'dist'], text);
     expect({ code, files: [...written.keys()], out }).toEqual({
       code: 0,
-      files: ['dist/en-id.json', 'dist/en-id.version'],
+      files: [
+        'dist/en-id.json',
+        'dist/en-id.version',
+        'dist/en-id.attribution.json',
+      ],
       out: [`en-id ${versionOf(text)}`],
     });
     expect(written.get('dist/en-id.version')).toBe(`${versionOf(text)}\n`);
+  });
+
+  it('writes the attribution manifest beside the bundle (#122 AC1)', () => {
+    const { written } = run(['en-id.json', 'dist'], text);
+    const loaded = loadCourse(JSON.parse(text));
+    if (!loaded.ok) throw new Error('the course does not load');
+    expect(
+      JSON.parse(written.get('dist/en-id.attribution.json') ?? 'null'),
+    ).toEqual(attributionOf(loaded.course));
+  });
+
+  it('reports a registered source no item cites (#122 AC3)', () => {
+    const json = JSON.parse(text) as {
+      lexicon: { source: string; licence: string }[];
+    };
+    for (const item of json.lexicon) {
+      item.source = 'original:rumah';
+      item.licence = 'CC-BY-NC-SA-4.0';
+    }
+    const { code, out } = run(['en-id.json', 'dist'], JSON.stringify(json));
+    expect(code).toBe(0);
+    expect(out).toContain(
+      'en-id attribution: source wiktionary is registered but cited by no item',
+    );
   });
 });
 

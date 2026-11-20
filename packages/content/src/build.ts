@@ -3,6 +3,7 @@
  * game loads and its `contentVersion`.
  */
 import { canonicalHash } from '@yawelo-idle/core';
+import { attributionOf, type Attribution } from './attribution.ts';
 import {
   licenceChecks,
   shipErrors,
@@ -27,6 +28,8 @@ export type BuildResult =
       readonly bundle: string;
       /** SHA-256 of the course's canonical form, 64 lowercase hex digits. */
       readonly contentVersion: string;
+      /** Its sources and licences, for the attribution screen (#122). */
+      readonly attribution: Attribution;
     }
   | { readonly ok: false; readonly refusals: readonly BuildRefusal[] };
 
@@ -58,5 +61,6 @@ export function buildCourse(course: CoursePack): BuildResult {
     ok: true,
     bundle: JSON.stringify(course),
     contentVersion: canonicalHash(course),
+    attribution: attributionOf(course),
   };
 }
