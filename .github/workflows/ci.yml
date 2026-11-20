@@ -214,20 +214,21 @@ jobs:
       - name: Install (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm ci
-      # A first limit, until its first runs are measured (#476): then at
-      # least 3 times the slowest.
+      # Measured on PR #1054: 25, 26 and 56 s, so 3 times the slowest is
+      # 168 s (#476).
       - name: Install Edge (Playwright's image lacks it)
-        timeout-minutes: 5
+        timeout-minutes: 3
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npx --no playwright install --with-deps msedge
-      # Each suite: first limits since Edge joined (#1003), until measured
-      # (#476), and none inside it.
+      # Each suite: one measured limit, at least 3 times its slowest run
+      # (#476), and none inside it. On PR #1054 with Edge: engines 27 and 32 s
+      # (96 s), web smoke 9 and 11 s (33 s).
       - name: Cross-engine determinism (Node, Chromium, Firefox, WebKit, Edge)
         timeout-minutes: 2
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:engines
       - name: Web smoke (the built game in a local Worker, on every desktop browser)
-        timeout-minutes: 2
+        timeout-minutes: 1
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: npm run test:web
 

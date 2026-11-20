@@ -305,10 +305,10 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       # Playwright's image lacks Edge, so each run downloads it (Shyden,
-      # 2026-11-20, #1003). A first limit, until its first runs are measured
-      # (#476): then at least 3 times the slowest.
+      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
+      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
       - name: Install Edge (Playwright's image lacks it)
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: npx --no playwright install --with-deps msedge
       - name: Smoke the game on dev (every supported target, behind the dev password)
         id: suite
@@ -370,10 +370,10 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       # Playwright's image lacks Edge, so each run downloads it (Shyden,
-      # 2026-11-20, #1003). A first limit, until its first runs are measured
-      # (#476): then at least 3 times the slowest.
+      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
+      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
       - name: Install Edge (Playwright's image lacks it)
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: npx --no playwright install --with-deps msedge
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
