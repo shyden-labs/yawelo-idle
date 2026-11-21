@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-21 ~08:30 WIB, session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-1055` (`1055-favicon-ico`, 70edd1a9, PR #1060), `yawelo-idle-1003` (869c6656, draft PR #1054), `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. A background CI waiter on #1060 dies with this session: re-read with `gh pr checks 1060`.
+**Written:** 2026-11-21 08:40 WIB (progress page v75 at 08:39), session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-1003` (draft PR #1054, updated with develop on GitHub: `git pull` first), `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -15,18 +15,15 @@
 
 ## Since then
 
-- **Merged:** #1056 (1fa928b6), #1058 API reserve (afbd9fb8), #1059 holding icon + CSP `img-src 'self'` (dc78cf9c). Their worktrees and branches removed. #1013 back to Todo (no branch; waits on the prod release and yawelo.com).
-- **#1055 evidence posted** (comment on #1055): AC1 picked; AC2 SVG measured on dev (dev-holding, dev site Worker `/favicon.svg` and `/play/favicon.svg` 200, bytes = design; Chrome fetched it, no `/favicon.ico`, no console error); AC3 shell journey passed on chromium/firefox/webkit/msedge in #1003's run 44840564327.
-- **AC2's `.ico` was missing**: PR #1060 adds `docs/design/tab-icon/twin-sparkles.ico` (16/32/48 PNG-in-ICO, made with sharp from a scratch script) and copies in `apps/site/public` and `apps/site/holding/public`; the old-name guard now reads `.ico` as media. CI re-running on 70edd1a9.
-- **AC4** (real tab screenshot in Shyden's Chrome and on a phone) needs Shyden: my screen captures showed his personal tabs, so I deleted them and stopped.
-- #1054's board-orphans red was #1055 briefly without a branch; refresh with `gh pr update-branch 1054`.
+- **#1055 closed** with all four ACs evidenced (comments on #1055): PRs #1056, #1059 (holding page's own icon + CSP `img-src 'self'`), #1060 (`/favicon.ico`, 16/32/48 px; old-name guard reads `.ico` as media). Dev: `/favicon.svg`, `/play/favicon.svg`, `/favicon.ico` all 200, byte-checked. AC3 shell journey on all four browsers (run 44840564327). AC4: Shyden's own Chrome screenshot, plus an iPhone Air Safari tab-overview capture; both in `.superpowers/sdd/1055/` (ignored). Production gets the icon at the next release.
+- **#1058 merged**: api.yaweloidle.com reserve, live at the next production release. #1013 is Todo (waits on that release and yawelo.com).
+- #1054's board-orphans red is stale (ran while #1055 had no branch and was still open); it clears on that PR's next push.
+- My slip: told Shyden the iPhone was "probably locked" when iphone-capture lost it; he said it never locked. Cause unknown; memory updated.
 
 ## Resume steps
 
-1. `ListAgents`; `gh pr checks 1060`.
-2. #1060 green: squash-merge (SHA from a file), wait for the dev deploy (loop on `gh run view <id> --json status` until completed; `gh run watch` returned early once), curl `/favicon.ico` on dev-holding and on `https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev` (dev password in `~/.config/shyden/yawelo-dev.env`): 200, bytes = twin-sparkles.ico. Remove worktree and branch.
-3. Ask Shyden (AskUserQuestion, plain words) for AC4: screenshots of the Yawelo Idle tab at dev-holding.yaweloidle.com in his Chrome and on his phone (prod gets the icon at the next release). Then shut #1055 by hand with all evidence.
-4. #1003: still blocked by playwright-devices#39 (no release past 0.1.3); `gh pr update-branch 1054`.
-5. yawelo.com: wait for Shyden to connect the Yawelo Chrome profile and sign in to Yawelo's Cloudflare, then add records + redirect (308, path kept) and curl it.
-6. #830 AC2 epic titles table waits for Shyden.
-7. Next ticket: `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts`.
+1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
+2. #1003: still blocked by playwright-devices#39 (no release past 0.1.3). When released: `npm install` in `../yawelo-idle-1003`, re-plant AC5(b) in one commit, see it refused in CI, revert; then ready, merge, read the develop deploy's `one-suite:` totals.
+3. yawelo.com: when Shyden says the Yawelo Chrome profile is connected and signed in to Yawelo's Cloudflare, add records + redirect (308, path kept) and curl it.
+4. Next production release (Shyden approves): carries the tab icon and the API reserve; deploy-prod's verify-api proves #1013 AC1's API host.
+5. #830 AC2 epic titles table waits for Shyden.
