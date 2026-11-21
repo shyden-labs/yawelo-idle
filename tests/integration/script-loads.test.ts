@@ -53,6 +53,7 @@ const SCRIPTS = [
   'scripts/sync-secrets.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
+  'scripts/verify-api.ts',
   'scripts/verify-dev-hosts.ts',
   'scripts/verify-dev.ts',
   'scripts/verify-prod.ts',
