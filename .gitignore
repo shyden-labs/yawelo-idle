@@ -38,3 +38,6 @@ apps/door/worker/worker-configuration.d.ts
 
 # OS
 .DS_Store
+
+# The API reserve's commit stamp, written by deploy-prod.yml (#1013).
+apps/sync-worker/reserve/public/commit.txt

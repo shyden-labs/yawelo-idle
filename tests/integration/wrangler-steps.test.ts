@@ -83,6 +83,7 @@ const DRY_RUNS = [
   'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
   'deploy-door.yml / deploy / Deploy the front door',
   'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
+  'deploy-prod.yml / deploy / Deploy the API reserve, tagged with this commit',
   "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
 ];
 

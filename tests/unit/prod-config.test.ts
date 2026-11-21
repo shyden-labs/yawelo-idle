@@ -44,6 +44,7 @@ describe('the production holding page Worker (#621 AC2)', () => {
     expect([...PROD_WRANGLER_CONFIGS]).toEqual([
       'apps/door/wrangler.jsonc',
       'apps/site/holding/wrangler.jsonc',
+      'apps/sync-worker/reserve/wrangler.jsonc',
     ]);
   });
 
