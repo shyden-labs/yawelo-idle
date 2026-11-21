@@ -38,6 +38,16 @@ describe('the icon file (#1055)', () => {
     );
   });
 
+  // The holding page (production's yaweloidle.com, and its test and dev
+  // copies) builds from apps/site/holding/public, not apps/site/public:
+  // without its own copy, /favicon.svg answered 404 on dev-holding
+  // (measured 2026-11-21 after PR #1056 deployed).
+  it('is served by the holding page too, from its own public folder', () => {
+    expect(readFileSync('apps/site/holding/public/favicon.svg', 'utf8')).toBe(
+      readFileSync(GAME_ICON, 'utf8'),
+    );
+  });
+
   it('is the same file for the game and the site', () => {
     expect(readFileSync(SITE_ICON, 'utf8')).toBe(
       readFileSync(GAME_ICON, 'utf8'),
