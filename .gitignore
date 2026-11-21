@@ -16,6 +16,8 @@ reports/mutation/
 # Test output
 playwright-report/
 test-results/
+# What each browser suite listed, ran and counted, for the one-suite check (#1003).
+one-suite/
 # Written by `npm run test:pacing`; CI uploads it as an artifact (#35)
 pacing-report.json
 

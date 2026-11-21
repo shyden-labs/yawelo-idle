@@ -47,6 +47,7 @@ const SCRIPTS = [
   'scripts/holding-dev.ts',
   'scripts/licence-check.ts',
   'scripts/npm-audit.ts',
+  'scripts/one-suite-check.ts',
   'scripts/prod-version.ts',
   'scripts/release-cut.ts',
   'scripts/sonar-verdict.ts',

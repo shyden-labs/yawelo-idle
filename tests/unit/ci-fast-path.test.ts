@@ -67,8 +67,6 @@ const ORDER = [
   'Pacing bots (under 2 minutes)',
   'Upload the pacing report',
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)',
-  'Cross-engine determinism (Node, Chromium, Firefox, WebKit)',
-  'Web smoke (the built game in a local Worker, on every supported target)',
   'Build (a warning fails it)',
   'Build the holding page',
   'Make its dev copy',
@@ -103,8 +101,6 @@ const SKIPPED: Record<string, string> = {
   // (#353).
   'Upload the pacing report': `\${{ !cancelled() && ${SKIP} && (steps.pacing.outcome == 'success' || steps.pacing.outcome == 'failure') }}`,
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)': `\${{ ${SKIP} }}`,
-  'Cross-engine determinism (Node, Chromium, Firefox, WebKit)': `\${{ ${SKIP} }}`,
-  'Web smoke (the built game in a local Worker, on every supported target)': `\${{ ${SKIP} }}`,
   'Build (a warning fails it)': `\${{ ${SKIP} }}`,
   'Build the holding page': `\${{ ${SKIP} }}`,
   'Make its dev copy': `\${{ ${SKIP} }}`,
@@ -150,6 +146,31 @@ describe('build-and-test’s steps (#360 AC2)', () => {
     );
     expect(readers.map(idOf)).toEqual(Object.keys(SKIPPED));
     expect(all.map(idOf)).toEqual(ORDER);
+  });
+});
+
+describe('the browsers job’s steps (#1003)', () => {
+  const browsers = (): Step[] => read('ci.yml').jobs['browsers']?.steps ?? [];
+
+  it('classifies after Node and before install, and the checkout fetches two levels', () => {
+    const ids = browsers().map(idOf);
+    expect(ids.slice(0, 6)).toEqual([
+      'actions/checkout',
+      'Read the exact Node version (docker/node/Dockerfile)',
+      'actions/setup-node',
+      "Mark the workspace safe for root's git",
+      'Classify the change as docs-only or full (#360)',
+      'Install (a warning fails it)',
+    ]);
+    expect(browsers()[0]?.with?.['fetch-depth']).toBe(2);
+  });
+
+  it('on docs-only, runs no suite: every step after the classifier carries the skip, whole', () => {
+    const after = browsers().slice(
+      browsers().findIndex((s) => s.id === 'classify') + 1,
+    );
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.map((s) => s.if)).toEqual(after.map(() => `\${{ ${SKIP} }}`));
   });
 });
 
