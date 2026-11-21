@@ -19,13 +19,15 @@ export const WRANGLER_CONFIGS = [
 /**
  * The production deploy configs: the front door (#784), a bindingless
  * forwarding Worker that door-config.test.ts reads, and the holding page
- * (#621), an assets-only Worker that prod-config.test.ts reads. Both are in
+ * (#621), an assets-only Worker that prod-config.test.ts reads, and the API
+ * reserve (#1013), another that api-reserve.test.ts reads. All are in
  * the production account; the guards suite's walk counts them with the dev
  * configs.
  */
 export const PROD_WRANGLER_CONFIGS = [
   'apps/door/wrangler.jsonc',
   'apps/site/holding/wrangler.jsonc',
+  'apps/sync-worker/reserve/wrangler.jsonc',
 ] as const;
 
 /**

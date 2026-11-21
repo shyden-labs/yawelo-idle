@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  // The production API address, reserved (#1013 AC1; Shyden, 2026-11-21:
+  // "Reserve the address now"). Production has no sync Worker yet (#252), so
+  // api.yaweloidle.com is held by this assets-only Worker under the name the
+  // real one takes, which replaces it later. Every path answers the 404 page,
+  // marked noindex by public/_headers; commit.txt is written at deploy time so
+  // scripts/verify-api.ts can prove the release. Deployed only by
+  // deploy-prod.yml, in the production account that holds the zone.
+  "name": "yawelo-idle-sync",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "api.yaweloidle.com", "custom_domain": true }],
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page",
+  },
+}

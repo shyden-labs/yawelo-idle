@@ -76,6 +76,13 @@ const CALLS = [
     start: 'the repository root',
   },
   {
+    step: 'deploy-prod.yml / deploy / Deploy the API reserve, tagged with this commit',
+    command: 'deploy',
+    from: '.',
+    configArgs: ['--config', 'apps/sync-worker/reserve/wrangler.jsonc'],
+    start: 'the repository root',
+  },
+  {
     step: "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
     command: 'deploy',
     from: '.',
