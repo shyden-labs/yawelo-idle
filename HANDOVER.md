@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-21 08:40 WIB (progress page v75 at 08:39), session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-1003` (draft PR #1054, updated with develop on GitHub: `git pull` first), `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background.
+**Written:** 2026-11-21 13:25 WIB (progress page v76 at 13:22), session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 1c14d579). No Colima, simulator or USB claim. Nothing running in the background.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -20,10 +20,15 @@
 - #1054's board-orphans red is stale (ran while #1055 had no branch and was still open); it clears on that PR's next push.
 - My slip: told Shyden the iPhone was "probably locked" when iphone-capture lost it; he said it never locked. Cause unknown; memory updated.
 
+## This session (2026-11-21, 12:40 to 13:25 WIB)
+
+- **#1003: PR #1054 merged** (squash 1c14d579) on playwright-devices 0.1.4. AC5(b) refused in run 44872497230 and AC5(a) in run 44785092678; AC1 to AC3 checked on develop (comment on #1003). playwright-devices#39 was closed by its own session on the AC5(b) run. Worktree and branches removed.
+- **Develop is red; dev did not deploy.** Deploy run 44874197584 `test / browsers`: shell.spec's assertion counts were chromium 17, firefox 18, webkit 17, msedge 17. Cause, from Playwright 1.65.1's source: each `expect.poll` attempt is its own `expect` step, and the shared AssertionCounter counts them all. Filed **#1062 (P0, 2 points), blocked by playwright-devices#42**, which playwright-devices-ae is fixing (test first) and will send the version for. #1003 is blocked by #1062, its status is back to Todo, and AC4 is still open.
+
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #1003: still blocked by playwright-devices#39 (no release past 0.1.3). When released: `npm install` in `../yawelo-idle-1003`, re-plant AC5(b) in one commit, see it refused in CI, revert; then ready, merge, read the develop deploy's `one-suite:` totals.
+2. #1062: when playwright-devices-ae sends the release with #42's fix: branch `1062-poll-counted-once` from develop, `npm install @shyden-labs/playwright-devices@">=<ver>"` and restore the `>=` range (npm rewrites it as `^`), run unit, open a PR, merge on green, then read the develop deploy (browsers' assertion counts equal, deploy green) onto #1062 and #1003 (AC4), and close both by hand.
 3. yawelo.com: when Shyden says the Yawelo Chrome profile is connected and signed in to Yawelo's Cloudflare, add records + redirect (308, path kept) and curl it.
 4. Next production release (Shyden approves): carries the tab icon and the API reserve; deploy-prod's verify-api proves #1013 AC1's API host.
 5. #830 AC2 epic titles table waits for Shyden.
