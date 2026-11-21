@@ -93,9 +93,9 @@ describe('the holding page’s security headers (#621 AC2)', () => {
   const rules = (): HeaderRules =>
     headerRules(read('apps/site/holding/public/_headers'));
 
-  it('sets a content security policy with no inline script or style, taking images and media from the media host alone (#713), on every path', () => {
+  it('sets a content security policy with no inline script or style, taking media from the media host alone (#713) and images from there and its own tab icon (#1055), on every path', () => {
     expect(rules().get('/*')?.get('content-security-policy')).toBe(
-      "default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     );
   });
 
