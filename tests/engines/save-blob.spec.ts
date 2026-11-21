@@ -35,19 +35,21 @@ test.beforeAll(async () => {
   expect(bundle).toContain('yaweloIdleBlob');
 });
 
-test('a save blob is the bytes Node writes, and reads back', async ({
-  page,
-  browserName,
-}) => {
-  await page.setContent('<!doctype html><title>save blob</title>');
-  await page.addScriptTag({ content: bundle });
-  const engine = await page.evaluate(() => {
-    const blob = (globalThis as unknown as BlobGlobal).yaweloIdleBlob;
-    return { hex: blob.blobHex(), readsBack: blob.readsBack() };
-  });
-  const node = blobHex();
-  expect.soft(node.length, 'Node wrote a blob').toBeGreaterThan(80);
-  expect.soft(engine.hex, `${browserName}: the blob`).toBe(node);
-  expect.soft(engine.readsBack, `${browserName}: reads back`).toBe(true);
-  expect.soft(readsBack(), 'Node reads back').toBe(true);
-});
+// PLANT (#1003 AC5(b), reverted next commit): a group tag with no group-only reason.
+test(
+  'a save blob is the bytes Node writes, and reads back',
+  { tag: '@desktop' },
+  async ({ page, browserName }) => {
+    await page.setContent('<!doctype html><title>save blob</title>');
+    await page.addScriptTag({ content: bundle });
+    const engine = await page.evaluate(() => {
+      const blob = (globalThis as unknown as BlobGlobal).yaweloIdleBlob;
+      return { hex: blob.blobHex(), readsBack: blob.readsBack() };
+    });
+    const node = blobHex();
+    expect.soft(node.length, 'Node wrote a blob').toBeGreaterThan(80);
+    expect.soft(engine.hex, `${browserName}: the blob`).toBe(node);
+    expect.soft(engine.readsBack, `${browserName}: reads back`).toBe(true);
+    expect.soft(readsBack(), 'Node reads back').toBe(true);
+  },
+);
