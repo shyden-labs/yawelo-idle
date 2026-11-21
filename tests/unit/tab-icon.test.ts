@@ -54,3 +54,57 @@ describe('the icon file (#1055)', () => {
     );
   });
 });
+
+/**
+ * The .ico fallback at /favicon.ico (#1055 AC2): browsers that ignore the
+ * SVG, and every browser before it reads the page, ask for /favicon.ico.
+ * One file, rendered once from the chosen design at 16, 32 and 48 px, each
+ * image stored as PNG (allowed in ICO since Windows Vista).
+ */
+const ICO_DESIGN = 'docs/design/tab-icon/twin-sparkles.ico';
+const ICO_COPIES = [
+  ['the site', 'apps/site/public/favicon.ico'],
+  ['the holding page', 'apps/site/holding/public/favicon.ico'],
+] as const;
+
+describe.each(ICO_COPIES)('%s’s /favicon.ico (#1055 AC2)', (_label, path) => {
+  it('is the .ico rendered from the chosen design', () => {
+    expect(readFileSync(path)).toEqual(readFileSync(ICO_DESIGN));
+  });
+});
+
+describe('the .ico file (#1055 AC2)', () => {
+  const ico = (): Buffer => readFileSync(ICO_DESIGN);
+
+  it('is an icon file holding three images', () => {
+    const file = ico();
+    expect([
+      file.readUInt16LE(0),
+      file.readUInt16LE(2),
+      file.readUInt16LE(4),
+    ]).toEqual([0, 1, 3]);
+  });
+
+  it('holds 16, 32 and 48 px square images, each a PNG inside the file', () => {
+    const file = ico();
+    const entries = [0, 1, 2].map((index) => {
+      const at = 6 + index * 16;
+      const size = file.readUInt32LE(at + 8);
+      const offset = file.readUInt32LE(at + 12);
+      return {
+        width: file.readUInt8(at),
+        height: file.readUInt8(at + 1),
+        png: file.subarray(offset, offset + 8).toString('hex'),
+        inside: offset + size <= file.length,
+      };
+    });
+    expect(entries).toEqual(
+      [16, 32, 48].map((px) => ({
+        width: px,
+        height: px,
+        png: '89504e470d0a1a0a',
+        inside: true,
+      })),
+    );
+  });
+});
