@@ -9,6 +9,7 @@ describe('reading a built folder (#768)', () => {
     const files = readBuild('apps/site/holding/public');
     expect(Object.keys(files).sort()).toEqual([
       '_headers',
+      'favicon.ico',
       'favicon.svg',
       'holding-video.js',
       'robots.txt',

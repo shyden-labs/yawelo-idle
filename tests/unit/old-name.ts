@@ -241,12 +241,18 @@ export type Reading = { readonly text: string } | { readonly refused: string };
  * it could not read would pass over the one file it never judged.
  */
 /**
- * The binary media the site ships (#621): a NUL byte does not refuse these.
+ * The binary media the site ships (#621, and the tab icon #1055): a NUL byte
+ * does not refuse these.
  * Each is read as Latin-1 and as UTF-16 of both byte orders, joined by line
  * breaks, so a name in their metadata is found however it was written. Any
  * other file holding a NUL byte is still refused.
  */
-export const MEDIA_EXTENSIONS: readonly string[] = ['.jpg', '.mp4', '.webm'];
+export const MEDIA_EXTENSIONS: readonly string[] = [
+  '.ico',
+  '.jpg',
+  '.mp4',
+  '.webm',
+];
 
 function mediaText(bytes: Uint8Array): string {
   const latin1 = new TextDecoder('latin1').decode(bytes);
