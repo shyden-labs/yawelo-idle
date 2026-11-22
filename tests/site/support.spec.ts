@@ -34,9 +34,13 @@ function watch(page: Page): { origins: Set<string>; refusals: string[] } {
   return { origins, refusals };
 }
 
-/** ShyDesk's piece, drawn: some field of its form inside the element. */
+/**
+ * ShyDesk's piece, drawn: its Email field, found by its label inside the
+ * piece's open shadow root (relayed by shydesk-b1, 2026-11-22: ShyDesk's own
+ * e2e finds its controls by label).
+ */
 const pieceField = (page: Page) =>
-  page.locator('shydesk-support').locator('form, textarea, input').first();
+  page.locator('shydesk-support').getByLabel('Email');
 
 const contactPage = (locale: Locale, path: string) => {
   test(`the ${locale} support page: ShyDesk’s form from ShyDesk’s host, the page’s words and policy, and no other host reached (#860 AC1, AC5, AC6)`, async ({
