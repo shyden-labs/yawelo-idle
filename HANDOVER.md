@@ -1,12 +1,14 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 09:00 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-1062` (PR #1064), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Background: two pr-verdict waiters (die with the session). Progress page source: `.superpowers/road-to-launch.html`.
+**Written:** 2026-11-22 10:45 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html`.
 
-## Latest (2026-11-22, 08:40 to 09:00 WIB, session `yawelo-idle-07`)
+## Latest (2026-11-22, to 10:45 WIB, session `yawelo-idle-07`)
 
-- **#52 / draft PR #1042:** 2b2ea9c4 failed 6 content-report harness tests: #1046's route limit (10 a minute per network) runs before the daily quota, and the harness keeps counts across tests. Fix 1708bb17: each test request has its own /24 (`cf-connecting-ip`), quota 429s assert `daily_limit`, new test for the route limit on reports (11th from one network: 429 `too_many_requests`, Retry-After, nothing stored). Then **mutation commit 63384748** (content-report limit 11) pushed to prove the new test red in CI. Unit 14,750 green.
-- **#1062 / PR #1064:** playwright-devices 0.1.5 is on npm (shasum 6444564e…, checked on the registry; tarball holds `insideAnExpect`). Branch `1062-poll-counted-once` (worktree `../yawelo-idle-1062`), range `>=0.1.5`, unit 14,698 green, #1062 In Progress. playwright-devices-92 wants the per-browser shell.spec counts from the develop deploy after merge.
-- Waiting on Shyden still: #784 old key delete after a green develop deploy, #830 part 2, next production release.
+- **#1062 and #1003 closed** (comments with evidence): PR #1064 (squash 2ba7cfac) took playwright-devices 0.1.5. Develop deploy run 44979998936: `test / browsers` green, one-suite totals equal on all four browsers; `deploy` green. playwright-devices#42 was closed on this measurement.
+- **#784:** the new DEV key is proven by the same run (every NONPROD step passed; comment on #784). Left: delete the old key `cfat...c5dc` in Yawelo's Cloudflare (Shyden's Yawelo Chrome).
+- **#1066 filed (P0, 3 points, under #331):** that run's `verify-roadmap` went red with drift 2 at 01:30:38Z, just after the 13 epic Public title/summary writes. The cause is not yet measured. Org webhook 698318626's deliveries are kept until about 2026-11-25 and need Shyden's passkey (sudo) in Chrome. The tab is open at the deliveries page.
+- **#52 / PR #1042:** fixed the content-report harness (each request from its own /24, quota 429s assert `daily_limit`, new route-limit test). Mutation 63384748 made only the new test fail (run 44973265398); reverted in fcfaf451 (tree = 1708bb17). CI green on fcfaf451 (build-and-test run 44979975357).
+- **#830 roadmap redesign (Shyden, today):** the 160 story names were "way too much noise… too technical". He asked for features only, players' words, no "behind the scenes" mention, AND a simpler version of the rest of the page (progress bar, plain "expected around" line, recent things built; no points or ticket counts). The 42-feature draft (`.superpowers/sdd/830/groups.tsv`, page https://claude.ai/artifact/4J2uh8qm1TMURUnggAAzgq) is still too many: consolidate further, draft the whole page, ask before building.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -33,9 +35,9 @@
 
 ## Resume steps
 
-1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. PR #1042: `~/.claude/scripts/pr-verdict.sh 1042`. Expected on 63384748: build-and-test red on ONLY the new test "ten a minute from one network…" (11th answers 201). If so, `git revert --no-edit HEAD` in `../yawelo-idle-52`, unit, push; on green mark ready and squash-merge (message keeps the commit reasons, drop the mutation pair). If the other quota tests still fail, read the log first.
-3. PR #1064: on green squash-merge into develop; read the develop deploy's `test / browsers` log for shell.spec counts on all four browsers and the `deploy` job; comment on #1062 (AC1, AC2) and #1003 (AC4), close both by hand; send the counts to playwright-devices-92; remove worktree `../yawelo-idle-1062` and branches.
-4. #784: that green develop deploy proves the new DEV key; comment on #784, then delete the old key `cfat...c5dc` (Shyden's Yawelo Chrome).
-5. Next production release (Shyden approves): tab icon + API reserve; deploy-prod's verify-api proves #1013 AC1.
-6. #830 AC2 part 2: draft each player-facing story's Public title; ask Shyden.
+1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
+2. #1066 (P0): once Shyden passes the passkey, read deliveries 01:15 to 01:35 UTC on org hook 698318626 (load every page, JS loop on "Load more deliveries"), with `/api/roadmap/health`; record them on #1066 and name the cause. Deadline about 2026-11-25.
+3. PR #1042: mark ready, squash-merge on green head fcfaf451 (`--match-head-commit` from a file; the message keeps the commit reasons, without the mutation pair). Left on #52: AC2, AC5/AC9 (Shyden), AC6 (#174), AC11.
+4. #830: draft the consolidated, player-facing roadmap (about 10 to 15 features in all, plus the simpler progress, ETA and recent sections); show it to Shyden as a page and ask.
+5. #784: delete the old key `cfat...c5dc` with Shyden (Yawelo Chrome).
+6. Next production release (Shyden approves): the tab icon and the API reserve; verify-api proves #1013 AC1.
