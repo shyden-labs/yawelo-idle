@@ -1,8 +1,15 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 15:55 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v80).
+**Written:** 2026-11-22 16:08 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-1066` (draft PR 1069), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v81).
 
-## Latest (2026-11-22, to 15:55 WIB, session `yawelo-idle-07`)
+## Latest (2026-11-22, to 16:08 WIB, session `yawelo-idle-07`)
+
+- **#1066 (P0, In Progress): cause measured** (comment on #1066). GitHub can answer a read with a card's **new field values and its old `updatedAt`** (run f, read r10; logs in `.superpowers/sdd/1066/`). The read that shows the change does not show the witness yet, so the card goes into `pending`; the next read shows the witness but finds no change, and `pending` is only cleared by a late webhook (`changed()`), so it becomes drift. Test card values cleared and read back.
+- **PR #1069 (draft)**, branch `1066-late-witness-clears-pending`, worktree `../yawelo-idle-1066`, head `bfa1844d79f90b4e6d4d3a261529e8b4e1d0e0f3` = **tests only** (expected red): `witness.test.ts` (`account()` reports `seen`; 12 unit tests read red locally) and harness `roadmap.test.ts` "counts no drift when the change shows one read before its witness does". CI was still running at 16:08 WIB.
+- **#1067:** AC1 recorded (GitHub docs say nothing about redirects; only 2xx is documented success). **Measured:** the old dev host already answers `308` to POST, yet a board edit at 09:07:25Z reached the dev roadmap (`lastEventAt` 09:07:27.705Z). Not proven whether GitHub followed the 308 or the payload URL was already changed: needs Shyden's Chrome (webhook 698318626 settings + Recent Deliveries).
+- Progress page v81 published 16:08 WIB.
+
+## Earlier (to 15:55 WIB)
 
 - **Merged:** PR #1064 (2ba7cfac, playwright-devices 0.1.5), PR #1042 (b59e321e, content reports; #52 stays open, Todo). **Shut by hand with evidence:** #1062, #1003. Worktrees and branches for both removed.
 - **#784:** the new DEV key is proven (comment). Left: delete the old key `cfat...c5dc` with Shyden (Yawelo Chrome).
@@ -37,7 +44,7 @@
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #1066 (P0): the experiment (two text fields on one card a second apart; read `updatedAt` against the field values repeatedly), then a failing `account()` test, then the fix.
-3. #1067 (P0): GitHub's docs on webhook redirects; change the payload URL with Shyden in Chrome; read it back; check a delivery.
-4. #1068 (P1): spec and plan (reviewed to zero), then TDD. First, ask Shyden to approve which player features each island lists (`.superpowers/sdd/830/features.tsv`, regrouped by stage).
+2. #1066: `~/.claude/scripts/pr-verdict.sh 1069` (it returns early while queued; re-run). Read the harness test failing **by name** and the unit tests failing on CI. Only then write the fix in `../yawelo-idle-1066`: `account()` returns `seen` (numbers of witnesses this read showed); `read()` in `apps/site/worker/roadmap.ts` drops `pending` entries for those numbers within `GRACE_MS`. Unit suite by hand, push, CI green by step names, squash-merge, then AC4 (a text edit then a develop deploy whose `verify-roadmap` passes).
+3. #1067 with Shyden in the Yawelo Chrome: read webhook 698318626's payload URL and a recent delivery's response (does it show 308?), set it to `https://dev.yaweloidle.com/hooks/github`, read back, check a delivery (AC2, AC3); grep the repo for the old URL (AC4).
+4. #1068 (P1): spec and plan; first ask Shyden to approve the island feature lists (`.superpowers/sdd/830/features.tsv`).
 5. #784: delete the old key with Shyden. Next production release (Shyden approves): the tab icon and the API reserve (#1013 AC1).
