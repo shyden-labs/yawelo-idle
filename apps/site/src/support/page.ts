@@ -22,3 +22,6 @@ function carryFragment(): void {
 
 carryFragment();
 window.addEventListener('hashchange', carryFragment);
+
+// A module, so the tests can load it fresh (no exports otherwise).
+export {};

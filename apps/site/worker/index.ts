@@ -36,7 +36,7 @@ import {
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
-import { isSupportPath, supportPage, ticketRedirect } from './support';
+import { isSupportPath, serveSupport } from './support';
 import privateSpec from '../api/private.openapi.json';
 
 export { Roadmap } from './roadmap';
@@ -120,13 +120,6 @@ async function api(request: Request, env: SiteEnv): Promise<Response> {
   return noStore({ error: UNREADABLE }, 503);
 }
 
-/** A support page (#860): the ticket address's language redirect, or the page with ShyDesk's host. */
-async function support(request: Request, env: SiteEnv): Promise<Response> {
-  const redirect = ticketRedirect(request);
-  if (redirect !== undefined) return redirect;
-  return supportPage(await env.ASSETS.fetch(request), env.SHYDESK_HOST);
-}
-
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const refused = await refusal(request, env, workerEqual);
@@ -138,7 +131,8 @@ export default {
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
-      if (isSupportPath(path)) return support(allowed, env);
+      if (isSupportPath(path))
+        return serveSupport(allowed, env.ASSETS, env.SHYDESK_HOST);
       // The holding page on the dev front door or through the dev site's
       // door (#673, #784), the door believed only with this Worker's door
       // secret, compared in constant time; else the site being built.

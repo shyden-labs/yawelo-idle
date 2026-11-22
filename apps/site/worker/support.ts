@@ -144,3 +144,22 @@ export async function supportPage(
   headers.set('Vary', VARY);
   return new Response(html, { status: page.status, headers });
 }
+
+/** Where the built pages are read from (the Worker's ASSETS binding). */
+export interface Assets {
+  fetch(request: Request): Promise<Response>;
+}
+
+/**
+ * A support page's answer: the ticket address's language redirect, or the
+ * built page with ShyDesk's host named and its policy.
+ */
+export async function serveSupport(
+  request: Request,
+  assets: Assets,
+  host: string | undefined,
+): Promise<Response> {
+  return (
+    ticketRedirect(request) ?? supportPage(await assets.fetch(request), host)
+  );
+}

@@ -4,6 +4,7 @@ import {
   passesTheDoor,
   preferredLocale,
   SHYDESK_SENTINEL,
+  serveSupport,
   supportPage,
   supportPolicy,
   ticketRedirect,
@@ -234,4 +235,47 @@ describe('supportPage (#860)', () => {
       );
     },
   );
+});
+
+describe('serveSupport (#860)', () => {
+  const assets = (seen: string[]) => ({
+    fetch: (request: Request): Promise<Response> => {
+      seen.push(new URL(request.url).pathname);
+      return Promise.resolve(
+        new Response(
+          `<script src="${SHYDESK_SENTINEL}/embed.js" defer></script>`,
+          {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          },
+        ),
+      );
+    },
+  });
+
+  it('sends a browser preferring Indonesian on, reading no page', async () => {
+    const seen: string[] = [];
+    const response = await serveSupport(
+      new Request('https://dev.yaweloidle.com/support/ticket', {
+        headers: { 'Accept-Language': 'id' },
+      }),
+      assets(seen),
+      HOST,
+    );
+    expect(response.status).toBe(302);
+    expect(seen).toEqual([]);
+  });
+
+  it('serves the built page with ShyDesk’s host and the policy otherwise', async () => {
+    const seen: string[] = [];
+    const response = await serveSupport(
+      new Request('https://dev.yaweloidle.com/support'),
+      assets(seen),
+      HOST,
+    );
+    expect(seen).toEqual(['/support']);
+    expect(response.headers.get('Content-Security-Policy')).toBe(
+      supportPolicy(HOST),
+    );
+    expect(await response.text()).toContain(`${HOST}/embed.js`);
+  });
 });
