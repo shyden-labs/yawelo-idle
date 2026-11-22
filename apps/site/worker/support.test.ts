@@ -58,12 +58,15 @@ describe('passesTheDoor (#860)', () => {
 });
 
 describe('supportPolicy (#860 AC6)', () => {
-  it('admits only the site and ShyDesk’s host, with Turnstile’s frame and script', () => {
+  it('admits only the site, ShyDesk’s host, Turnstile’s frame and script, and the analytics beacon', () => {
     expect(supportPolicy(HOST)).toBe(
       [
         "default-src 'none'",
-        `script-src 'self' ${HOST} https://challenges.cloudflare.com`,
-        `connect-src ${HOST}`,
+        // Cloudflare Web Analytics' beacon, the site-wide exception (website
+        // spec W17, as the game's policy allows it, #451); it reports to
+        // this origin's own /cdn-cgi/rum.
+        `script-src 'self' ${HOST} https://challenges.cloudflare.com https://static.cloudflareinsights.com/beacon.min.js/`,
+        `connect-src 'self' ${HOST}`,
         'frame-src https://challenges.cloudflare.com',
         "img-src 'self' blob:",
         'media-src blob:',

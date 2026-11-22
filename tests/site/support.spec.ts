@@ -14,7 +14,13 @@ import { supportPolicy } from '../../apps/site/worker/support';
 const DOOR = `https://${HOLDING_DOOR}`;
 const SHYDESK_DEV = 'https://shydesk.shydesk-non-prod.workers.dev';
 const TURNSTILE = 'https://challenges.cloudflare.com';
-const ALLOWED = [DOOR, SHYDESK_DEV, TURNSTILE];
+/**
+ * Cloudflare Web Analytics' beacon, which Cloudflare injects on every page:
+ * the site-wide exception (website spec W17; measured on dev 2026-11-23,
+ * deploy run 45069145980). It reports to the page's own origin.
+ */
+const BEACON = 'https://static.cloudflareinsights.com';
+const ALLOWED = [DOOR, SHYDESK_DEV, TURNSTILE, BEACON];
 /** A made-up token: the ticket view opens and says what it says about it. */
 const TOKEN = '#t=not-a-real-ticket';
 
