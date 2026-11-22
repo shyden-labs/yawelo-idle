@@ -255,3 +255,62 @@ describe('doorTo (#784)', () => {
     );
   });
 });
+
+/**
+ * The support pages and the full site's own files go through the holding
+ * door to the site being built (Shyden, 2026-11-22, #860): ShyDesk allows its
+ * piece on dev.yaweloidle.com, which shows the holding page.
+ */
+describe('servePages lets the support pages through the door (#860)', () => {
+  const SECRET = 'door-secret';
+  const sameBytes: Equal = (a, b) => {
+    const left = new Uint8Array(a);
+    const right = new Uint8Array(b);
+    return (
+      left.length === right.length && left.every((byte, i) => byte === right[i])
+    );
+  };
+  const named = (name: string) => ({
+    fetch: (): Promise<Response> => Promise.resolve(new Response(name)),
+  });
+  const throughDoor = (path: string) =>
+    new Request(
+      `https://yawelo-idle-site-dev.origins.example.workers.dev${path}`,
+      {
+        headers: {
+          [DOOR_SECRET_HEADER]: SECRET,
+          [DOOR_HOST_HEADER]: HOLDING_DOOR,
+        },
+      },
+    );
+  const answer = async (path: string) =>
+    (
+      await servePages(
+        throughDoor(path),
+        SECRET,
+        sameBytes,
+        named('holding'),
+        named('site'),
+      )
+    ).text();
+
+  it.each([
+    '/support',
+    '/support/ticket',
+    '/id/support',
+    '/id/support/ticket',
+    '/_site/Base.abc123.css',
+  ])('answers %s from the site through the dev site’s door', async (path) => {
+    expect(await answer(path)).toBe('site');
+  });
+
+  it.each([
+    '/',
+    '/id/',
+    '/roadmap',
+    '/support-api/embed.js',
+    '/_astro/Holding.abc.css',
+  ])('keeps %s on the holding page through the door', async (path) => {
+    expect(await answer(path)).toBe('holding');
+  });
+});

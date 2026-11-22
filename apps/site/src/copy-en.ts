@@ -12,6 +12,9 @@
 import { line, t } from './copy-line';
 import { digits, duration, rankList, rankName, words } from './figures';
 
+/** The support pages' Indonesian evidence (#860). */
+const SUPPORT_ID = 'file:docs/translations/2026-11-22-support-id.md';
+
 export const COPY_EN = {
   devStrip: line(
     'In development: what you see may change, and the released game could be completely different.',
@@ -337,6 +340,27 @@ export const COPY_EN = {
       'W17',
       'site §3',
       'site §6.3',
+    ),
+  },
+
+  /** The support and ticket pages around ShyDesk's piece (#860, approved 2026-11-22). */
+  support: {
+    title: line('Support', '#860', SUPPORT_ID),
+    intro: line(
+      'Ask a question or report a problem with Yawelo Idle. You can add photos or a video. Replies arrive by email, with a link back to your ticket.',
+      '#860',
+      SUPPORT_ID,
+    ),
+    failed: line(
+      'The support form did not load. Check your connection, then reload this page.',
+      '#860',
+      SUPPORT_ID,
+    ),
+    ticketTitle: line('Your support ticket', '#860', SUPPORT_ID),
+    ticketIntro: line(
+      'Read the replies and answer them here. Keep the link from your email private: anyone who has it can open this ticket.',
+      '#860',
+      SUPPORT_ID,
     ),
   },
 
