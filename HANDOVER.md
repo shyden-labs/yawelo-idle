@@ -10,13 +10,14 @@
 
 - **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
 - **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
-- **Next:** read PR #1077's CI on head 2d9feb4d step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
+- PR #1077 CI on 2d9feb4d: unit green, Worker tests 292 passed / 1 failed (`config.test.ts`: `SHYDESK_HOST` missing from `wrangler.roadmap-test.jsonc`), fixed in 8ecbf60d (push running at 02:35).
+- **Next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
 
 ### #1068 voyage map (P1), branch `x/1068-voyage-map`
 
 - Commits on 461810ae: 3243854f model tests, 916c1a01 model code, 51eb34b9 component tests + map copy, d8003276 dev journeys (read red: 16 failed on deploy-dev 45056613095, evidence on #1068), 7b858fe9 drawing tests (10 red), 79f9d12f drawing, 13f4a594 the page + removals (spec §6). Full unit suite 14,758 passed at 02:28.
 - A self-caught slip: `drawing.ts` was first written before its tests; deleted unrun, tests written and read red, module written fresh (memory updated).
-- Push to `x/1068-voyage-map` + draft PR + In Progress + delete old remote `1068-voyage-map` was running at 02:35 (background job; check `git ls-remote` and `gh pr list --head x/1068-voyage-map`).
+- Pushed as `x/1068-voyage-map`, **draft PR #1082** (head 13f4a594), #1068 In Progress, old remote `1068-voyage-map` deleted. Next: read #1082's CI step by step.
 - Open: the three old intro paragraphs stay on the page until #830 AC1's new short text; the old copy strings stay while the tests use them to check absence.
 
 ### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
@@ -24,6 +25,14 @@
 - `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), local, NOT pushed: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
 - `x/1079-signups` (worktree `../yawelo-idle-1079`), local, NOT pushed: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
 - #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
+
+### For Shyden in the morning (parked questions)
+
+1. #830 AC1: approve the roadmap page's new short text (draft in the latest #830 comment); then Indonesian with read-back.
+2. #1074: the roadmap's "updating" and "could not update" wording, before translation. Start #1074 after #1068 lands (same page and Worker).
+3. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket` (shydesk-b1 sets it once he says yes).
+4. #1078: the DEV pass's one-time Cloudflare setup (repo-template `docs/dev-pass.md`, "One-time setup"); `dev-signin.shyden.co.uk` does not resolve yet.
+5. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
 
 ### Worktrees and scratch
 
