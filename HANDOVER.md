@@ -1,14 +1,15 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 13:10 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html`.
+**Written:** 2026-11-22 15:55 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v80).
 
-## Latest (2026-11-22, to 13:10 WIB, session `yawelo-idle-07`)
+## Latest (2026-11-22, to 15:55 WIB, session `yawelo-idle-07`)
 
-- **Merged:** PR #1064 (2ba7cfac, playwright-devices 0.1.5) and PR #1042 (b59e321e, content reports; #52 stays open, back to Todo). Worktrees and branches removed. **Shut by hand with evidence:** #1062, #1003. playwright-devices#42 was shut on our measurement.
-- **#784:** the new DEV key is proven by develop deploy run 44979998936 (comment). Left: delete the old key `cfat...c5dc` (Shyden's Yawelo Chrome).
-- **#1066 (P0):** AC1 done (comment, copy in `.superpowers/sdd/1066/`). All 26 epic-edit deliveries were sent and answered 202, so no webhook was missed. The Worker's accounting counted drift during a burst of edits a second apart. Refuted: text edits not moving the card's `updatedAt`. Next: the stale-fields experiment, then a failing `account()` test.
-- **#1067 filed (P0, 1 point):** the org webhook still calls `dev.yawelo-idle.shyden.co.uk`; it must move to the new dev host before the old one only redirects.
-- **#830 roadmap redesign:** Shyden picked **option 2, the island map**, with real island graphics. He wants at least 50 designs to mix and match: gallery https://claude.ai/artifact/CmgQ6copqWUPo59hK2hktK (source `.superpowers/sdd/830/island-designs.html`). The 13 features in players' words are in `.superpowers/sdd/830/features.tsv`, and the three shapes in `three-shapes.html`. Bar + "Expected: early 2027" + no ticket numbers, points or behind-the-scenes text, all agreed. Round 1 pick: design 1 (DB `picks/round1`). Round 2 picks: 2, 6, 7, 17, 19, 24 (DB `picks/round2`). Round 3 picks: 1, 2, 3, 4, 16, 17, 20. Round 4 picks: 2, 11. Round 5 (8 combos) went unpicked: Shyden asked instead for done and not-done islands to be obvious and the ship to be accurate. Measured: the finished half is mostly unparented groundwork; per milestone, Shipyard 4/4, Engine 18/18, First words 7/27, First playable 3/43, Saves 4/21, the rest 0. Round 6 (source `island-designs-round6.html`, DB `picks/round6`): the islands are the 9 milestones in build order (each lists its player features), done = tick, flag and lamp, gold route; under way = % ring; the ship on the leg into the first unfinished island at its share done; not-yet islands dimmed, in fog, or uncharted. Waiting on his picks.
+- **Merged:** PR #1064 (2ba7cfac, playwright-devices 0.1.5), PR #1042 (b59e321e, content reports; #52 stays open, Todo). **Shut by hand with evidence:** #1062, #1003. Worktrees and branches for both removed.
+- **#784:** the new DEV key is proven (comment). Left: delete the old key `cfat...c5dc` with Shyden (Yawelo Chrome).
+- **#1066 (P0):** AC1 done (comment). All 26 epic-edit deliveries were sent and answered 202, so no webhook was missed. The Worker's accounting counted drift during a burst a second apart. Refuted: text edits not moving `updatedAt`. Next: the stale-fields experiment, then a failing `account()` test.
+- **#1067 (P0, 1 point):** the org webhook must move off `dev.yawelo-idle.shyden.co.uk`.
+- **#830 / #1068:** Shyden redesigned the public roadmap (all in the #830 comment). The 160 story titles were dropped. The design is one voyage map of the **9 build stages in order**, each island done / under way / not started from its own stories' closed share. The final look is round 6, map 3 (gallery https://claude.ai/artifact/CmgQ6copqWUPo59hK2hktK, source `.superpowers/sdd/830/island-designs-round6.html`, picks in its DB). The page keeps only the map, one progress bar and an expected season. **#1068 filed (P1, 8 points)** for the build. #830 keeps AC1 (simpler page text) and AC3.
+- Progress page v80 published 15:55 WIB.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -36,7 +37,7 @@
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #830: read Shyden's pick from the 50-island gallery; iterate until he settles. Then a plan: a feature grouping on the board (field or shared Public title), the page rebuilt as the map + bar + expected season, tests first, dev for his look, then translation (id) with Google read-back.
-3. #1066: run the experiment (two text fields on one card a second apart; read updatedAt against the field values repeatedly), then a failing `account()` test, then the fix.
-4. #1067: GitHub docs on redirects for webhooks; change the payload URL in Shyden's Chrome; read it back.
-5. #784: delete the old key with Shyden. Next production release: tab icon and API reserve (#1013 AC1).
+2. #1066 (P0): the experiment (two text fields on one card a second apart; read `updatedAt` against the field values repeatedly), then a failing `account()` test, then the fix.
+3. #1067 (P0): GitHub's docs on webhook redirects; change the payload URL with Shyden in Chrome; read it back; check a delivery.
+4. #1068 (P1): spec and plan (reviewed to zero), then TDD. First, ask Shyden to approve which player features each island lists (`.superpowers/sdd/830/features.tsv`, regrouped by stage).
+5. #784: delete the old key with Shyden. Next production release (Shyden approves): the tab icon and the API reserve (#1013 AC1).
