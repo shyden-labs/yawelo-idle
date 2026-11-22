@@ -38,6 +38,7 @@ import {
 import { installationToken, readBoardAndIssues } from './github';
 import {
   account,
+  clearSeen,
   numberOf,
   readStamps,
   type Owed,
@@ -390,6 +391,12 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
         this.state.lastStaleReadAt = startedAt;
       }
       this.state.unseenEvents += counted.unseen;
+      this.state.pending = clearSeen(
+        this.state.pending,
+        counted.seen,
+        startedAt,
+        GRACE_MS,
+      );
       // A runtime population: the cards this read found changed unexplained.
       for (const number of counted.unexplained)
         this.state.pending[String(number)] ??= startedAt;

@@ -187,6 +187,8 @@ function changedNumbers(previous: BoardItem[], items: BoardItem[]): number[] {
 export interface Accounting {
   /** Changed cards a seen witness named. */
   explained: number[];
+  /** Every card a seen witness named, whether or not this read changed it. */
+  seen: number[];
   /** Changed cards no seen witness named. */
   unexplained: number[];
   /** Witnesses still unseen and not expired, kept for the next read. */
@@ -236,9 +238,31 @@ export function account(input: {
     input.previous === null ? [] : changedNumbers(input.previous, input.items);
   return {
     explained: changed.filter((n) => named.has(n)),
+    seen: [...named].sort((a, b) => a - b),
     unexplained: changed.filter((n) => !named.has(n)),
     owed,
     behind,
     unseen,
   };
+}
+
+/**
+ * The pending changes still unexplained once a read's seen witnesses are
+ * counted. GitHub can show a card's new fields one read before its new
+ * updatedAt (#1066), so a witness a later read shows explains its card's
+ * pending change, within the grace, as a late webhook does. One pending
+ * longer stays, to be counted as drift.
+ */
+export function clearSeen(
+  pending: Readonly<Record<string, number>>,
+  seen: readonly number[],
+  at: number,
+  grace: number,
+): Record<string, number> {
+  const named = new Set(seen.map(String));
+  return Object.fromEntries(
+    Object.entries(pending).filter(
+      ([card, since]) => !named.has(card) || at - since > grace,
+    ),
+  );
 }
