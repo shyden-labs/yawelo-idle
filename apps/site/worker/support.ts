@@ -21,6 +21,14 @@ export const SHYDESK_SENTINEL = 'https://shydesk.invalid';
 /** Turnstile's script and frame (Cloudflare's CSP page, 2026-05-05). */
 const TURNSTILE = 'https://challenges.cloudflare.com';
 
+/**
+ * Cloudflare Web Analytics' beacon, which Cloudflare injects on every page:
+ * the site-wide exception to "no third-party requests" (website spec W17),
+ * allowed as the game's policy allows it (apps/web/worker/policy.ts, #451).
+ * The trailing `/` matches every versioned beacon URL (CSP3).
+ */
+const BEACON = 'https://static.cloudflareinsights.com/beacon.min.js/';
+
 /** The full site's built files (`build.assets` in astro.config.ts). */
 export const SITE_FILES = '/_site/';
 
@@ -43,12 +51,13 @@ export function passesTheDoor(pathname: string): boolean {
   return isSupportPath(pathname) || pathname.startsWith(SITE_FILES);
 }
 
-/** The support pages' security policy, admitting the site and ShyDesk's host only. */
+/** The support pages' security policy: the site, ShyDesk's host, Turnstile and the analytics beacon only. */
 export function supportPolicy(host: string): string {
   return [
     "default-src 'none'",
-    `script-src 'self' ${host} ${TURNSTILE}`,
-    `connect-src ${host}`,
+    `script-src 'self' ${host} ${TURNSTILE} ${BEACON}`,
+    // The beacon reports to this origin's own /cdn-cgi/rum.
+    `connect-src 'self' ${host}`,
     `frame-src ${TURNSTILE}`,
     "img-src 'self' blob:",
     'media-src blob:',
