@@ -206,7 +206,7 @@ export const ROUTES: Readonly<
   '/v1/content-reports': {
     method: 'POST',
     query: NO_QUERY,
-    limit: { requests: 10, perSeconds: 60 },
+    limit: { requests: 11, perSeconds: 60 },
     whenUncounted: 'refuse',
     handle: contentReports,
   },
