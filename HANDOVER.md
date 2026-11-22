@@ -1,39 +1,33 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 01:25 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-860-e2e` (its node_modules are symlinked into the next three: remove it last), `yawelo-idle-860-harness`, `yawelo-idle-1068-e2e`, `yawelo-idle-1078`, `yawelo-idle-1068`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Progress page v89 published 01:20 WIB. Shyden asleep since about 23:20 WIB: park questions, keep working.
+**Written:** 2026-11-23 02:35 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local jobs running at 01:50 WIB (they die with this session):** (1) `../yawelo-idle-860`: full unit suite, then `git push origin 860-support-page` of code commit 2d9feb4d (re-run: `npm run test:unit`, then push). (2) Watching deploy-dev run 45056613095 (`x/1068-e2e-red` scratch): read `site-smoke` failing by name, record on #1068, delete the branch. (3) `x/1078-dev-pass` is NOT pushed: its pre-push lint ran out of heap (#1081); push it after (1), one push at a time.
+**Local job at 02:35 WIB (dies with this session):** the #1068 push/PR chain above; PR #1077's check watcher (re-run `~/.claude/scripts/pr-verdict.sh 1077`).
 
-## Now (2026-11-22 22:15 to 2026-11-23 00:40 WIB)
+## Now (2026-11-23, to 02:35 WIB)
 
-### #860 support pages (P0, In Progress), draft PR #1077
+### #860 support pages (P0, In Progress), PR #1077 (draft)
 
-- **Rulings (on #860):** copy approved; pages in the full site with /support let through the doors (dev now; production waits on #425/#426, like #1072).
-- **ShyDesk (shydesk-b1, on #860):** dev host `https://shydesk.shydesk-non-prod.workers.dev` (moves with shydesk#262, may change with #270), live `https://shydesk.dpdns.org`; `<host>/embed.js` defer; `<shydesk-support product="yawelo-idle" view lang>`; open shadow root, fields by label. Dev ticketPageUrl `https://dev.yaweloidle.com/support/ticket` set and read back. TEST uses live ShyDesk, but test.yaweloidle.com has no full site: the TEST page waits.
-- **Branch `860-support-page`** (worktree `../yawelo-idle-860`), tests only: ec5875be + 3a0dd510 (pushed). PR #1077's CI: build-and-test stops at the red unit step, so the harness never runs there. board-orphans went red on #1068 (#1068 now set Todo; the check clears on the next push).
-- **Reading CI-only tests red (three scratch branches, each deleted once read):** (a) `860-e2e-red` (4ec31a4d) **done**: deploy-dev run 45050731695, `site-smoke` 16 failed (the 4 journeys × 4 browsers, the page 404) and 24 passed; evidence on PR #1077. Delete the branch. (b) `x/860-harness-red` **done**: scratch PR #1080, Worker tests 20 failed / 273 passed (evidence on #1077); PR closed, branch and worktree deleted. (c) `x/1068-e2e-red` (worktree `../yawelo-idle-1068-e2e`, 9910c70a, symlinked too): push after (b), then deploy-dev dispatch; read `site-smoke`. Close (b)'s PR, delete all three branches and worktrees after.
-- **Code committed** as 2d9feb4d (560 site/copy unit tests pass; built page checked by hand). Next: push, mark PR #1077 ready once CI is green on its head, merge, check dev (AC5: a real ticket with a photo and a video from dev, in a browser). Was planned as: `worker/support.ts`; wire `index.ts` (ticketRedirect + supportPage before servePages; `pagesFor` lets `passesTheDoor` through); `astro.config.ts` `build.assets: '_site'`, `inlineStylesheets: 'never'`, `vite.build.assetsInlineLimit: 0`; `wrangler.jsonc` var `SHYDESK_HOST`; `src/views/Support.astro` + 4 pages; `src/support/page.ts`. Change the copy sources on the branch too (drop `'#860'`, keep the evidence file).
-- **Filed:** #1075 (P2, 1 pt, blocked by shydesk#266), #1076 (P1, 3 pts, dev door `signin`; blocks shydesk#262, which ShyDesk links). Note on #424. Timeout instance on #971.
+- **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
+- **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
+- **Next:** read PR #1077's CI on head 2d9feb4d step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
 
-### #1068 voyage map (P1, Todo until its PR)
+### #1068 voyage map (P1), branch `x/1068-voyage-map`
 
-- Branch `1068-voyage-map` (worktree `../yawelo-idle-1068`), local commits on 461810ae, not pushed: 3243854f model tests (35 red), 916c1a01 model code (84 green), 51eb34b9 component tests + map copy (22 red locally), d8003276 e2e journeys (`tests/site/roadmap.spec.ts`, to be read red on dev).
-- Next: push as `x/1068-…` or open a draft PR naming #1068 at the first push (board-orphans needs `/N-` or a PR); read the e2e red on a deploy-dev scratch; then the Svelte code (VoyageMap with `{ locale }` props, SeaMap, IslandPanel, drawing.ts) and delete the old components per spec §6.
+- Commits on 461810ae: 3243854f model tests, 916c1a01 model code, 51eb34b9 component tests + map copy, d8003276 dev journeys (read red: 16 failed on deploy-dev 45056613095, evidence on #1068), 7b858fe9 drawing tests (10 red), 79f9d12f drawing, 13f4a594 the page + removals (spec §6). Full unit suite 14,758 passed at 02:28.
+- A self-caught slip: `drawing.ts` was first written before its tests; deleted unrun, tests written and read red, module written fresh (memory updated).
+- Push to `x/1068-voyage-map` + draft PR + In Progress + delete old remote `1068-voyage-map` was running at 02:35 (background job; check `git ls-remote` and `gh pr list --head x/1068-voyage-map`).
+- Open: the three old intro paragraphs stay on the page until #830 AC1's new short text; the old copy strings stay while the tests use them to check absence.
 
-### #1078 DEV pass (P1, new) and #1079 sign-up switch (P2, new)
+### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
 
-- Filed from the global rule (repo-template#207); #1076 now blocked by #1078. Branch `x/1078-dev-pass` (worktree `../yawelo-idle-1078`, node_modules symlinked from `../yawelo-idle-860-e2e`), local: 7878e5f0 copied tests red, 961ed3bb copied library green (105). Next: push (after the scratch pushes), set In Progress, then the door wiring's tests once the sign-in site is live.
+- `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), local, NOT pushed: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
+- `x/1079-signups` (worktree `../yawelo-idle-1079`), local, NOT pushed: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
+- #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
 
-### For Shyden in the morning (parked questions)
+### Worktrees and scratch
 
-1. #1074: the roadmap's "updating" wording (and its "could not update" line), before translation. Start #1074 after #1068's page lands (same page and Worker).
-2. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket` (ShyDesk's prod setting; shydesk-b1 sets it once he says yes).
-3. #1078: the DEV pass's one-time Cloudflare setup (repo-template docs/dev-pass.md, "One-time setup"): `dev-signin.shyden.co.uk` does not resolve yet.
-4. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
-
-### Parked
-
-- #784 (repo-template#207 still open), #1066 AC4 (no develop deploy since 6104112c).
+- `../yawelo-idle-860-e2e` holds the node_modules that `../yawelo-idle-1078` and `../yawelo-idle-1079` symlink to: remove it last. Its branch `860-e2e-red` is deleted on the remote; delete it locally with the worktree.
 
 ## Latest (2026-11-22, to 22:15 WIB, session `yawelo-idle-07`)
 
