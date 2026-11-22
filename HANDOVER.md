@@ -2,7 +2,7 @@
 
 **Written:** 2026-11-23 04:44 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job (dies with this session):** watcher and monitor for PR #1087 on head 137a844f. Merge it when green on a head containing develop (b794a676), #1086 to Todo in the same call, then exercise the 429 on dev (51 reports from one address) and record it on #1086.
+**Local job (dies with this session):** watcher for the develop deploy of d43bcbdc (#1086's merge). Then confirm `/health` shows d43bcbdc and run the dev check (51 reports from one network, the 51st should be 429 with a wait near a day); record on #1086 and close it by hand if every AC holds (the #590 note is the AC3 half).
 
 ## Now (2026-11-23, to 02:35 WIB)
 
@@ -17,7 +17,7 @@
 
 - **After the merge:** develop deploy 45069145980 failed `site-smoke`: the 16 support journeys saw Cloudflare's injected analytics beacon (W17's site-wide exception), which the support policy blocked. PR #1085 (tests d3f55aef red, fix 994251ba) admits it like the game's policy.
 - **AC5 dev half met** (comments on #860): ticket ccaca7b3 with a photo and a video sent from dev at ~04:1x WIB and read back by shydesk-b1 by 04:20 WIB (both attachments open and play); ShyDesk closed it. **AC4 met** with a second ticket (aa7fa58a, link taken by code, opened on dev showing the ticket; the first failure was my misread token); both test tickets closed by shydesk-b1. `.superpowers/ac5.mjs` now saves the link to the ignored `.superpowers/sdd/860/ac5-ticket-link.txt`; `.superpowers/ac4.mjs` opens `$TICKET_LINK`.
-- **#1086 (P0, In Progress), PR #1087**: content reports limited to 50 a day per network (test d996ff3c red first, then e671bf9e in routes.ts); decision on #1086; refusal noted on #590. After merge: exercise the 429 on dev (51 reports from one address) and record it.
+- **#1086 (P0, Todo): PR #1087 merged as d43bcbdc** (green on 137a844f after the harness test was updated); worktree and branches removed. Earlier:: content reports limited to 50 a day per network (test d996ff3c red first, then e671bf9e in routes.ts); decision on #1086; refusal noted on #590. After merge: exercise the 429 on dev (51 reports from one address) and record it.
 - #860 left after #1085: the production half (#425/#426, live ticket address approval) and AC6's policy test is in; then close-out check of every AC.
 
 ### #1068 voyage map (P1), branch `x/1068-voyage-map`
