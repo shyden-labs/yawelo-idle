@@ -18,11 +18,16 @@
 - Branch `1068-voyage-map` (worktree `../yawelo-idle-1068`), local commits on 461810ae, not pushed: 3243854f model tests (35 red), 916c1a01 model code (84 green), 51eb34b9 component tests + map copy (22 red locally), d8003276 e2e journeys (`tests/site/roadmap.spec.ts`, to be read red on dev).
 - Next: push as `x/1068-…` or open a draft PR naming #1068 at the first push (board-orphans needs `/N-` or a PR); read the e2e red on a deploy-dev scratch; then the Svelte code (VoyageMap with `{ locale }` props, SeaMap, IslandPanel, drawing.ts) and delete the old components per spec §6.
 
+### #1078 DEV pass (P1, new) and #1079 sign-up switch (P2, new)
+
+- Filed from the global rule (repo-template#207); #1076 now blocked by #1078. Branch `x/1078-dev-pass` (worktree `../yawelo-idle-1078`, node_modules symlinked from `../yawelo-idle-860-e2e`), local: 7878e5f0 copied tests red, 961ed3bb copied library green (105). Next: push (after the scratch pushes), set In Progress, then the door wiring's tests once the sign-in site is live.
+
 ### For Shyden in the morning (parked questions)
 
 1. #1074: the roadmap's "updating" wording (and its "could not update" line), before translation. Start #1074 after #1068's page lands (same page and Worker).
 2. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket` (ShyDesk's prod setting; shydesk-b1 sets it once he says yes).
-3. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
+3. #1078: the DEV pass's one-time Cloudflare setup (repo-template docs/dev-pass.md, "One-time setup"): `dev-signin.shyden.co.uk` does not resolve yet.
+4. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
 
 ### Parked
 
