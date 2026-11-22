@@ -1,8 +1,8 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 02:36 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
+**Written:** 2026-11-23 03:22 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job at 03:40 WIB (dies with this session):** watcher for PRs #1077 (head b9e75701, a merge of develop; develop has since moved to ee0f4d13, so update-branch again once its CI ends, then CI, then merge) and #1083 (b76a03aa, updated from develop). Re-run `~/.claude/scripts/pr-verdict.sh <pr>`.
+**Local job at 03:22 WIB (dies with this session):** watcher for PRs #1077 (head b9e75701, a merge of develop; develop has since moved to ee0f4d13, so update-branch again once its CI ends, then CI, then merge) and #1083 (b76a03aa, updated from develop). Re-run `~/.claude/scripts/pr-verdict.sh <pr>`.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
