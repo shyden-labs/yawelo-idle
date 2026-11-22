@@ -1,15 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 08:37 WIB (progress page v79), session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 1c14d579). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v79).
+**Written:** 2026-11-22 09:00 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-1062` (PR #1064), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Background: two pr-verdict waiters (die with the session). Progress page source: `.superpowers/road-to-launch.html`.
 
-## Latest (2026-11-22, 07:10 to 07:40 WIB, session `yawelo-idle-07`)
+## Latest (2026-11-22, 08:40 to 09:00 WIB, session `yawelo-idle-07`)
 
-- Every P0 to P2 ticket waits on something outside this session: #1062/#1003 on playwright-devices#42 (open, still 0.1.4); #1013 on the next production release; #784 on Shyden's narrower DEV key (`NONPROD_CLOUDFLARE_API_TOKEN` in `dev` still `updated_at` 2026-11-16T02:02:04Z); #830 on Shyden; #992/#993 on playwright-devices#7.
-- **#713:** production measured (comment on #713): media.yaweloidle.com answers 206 with Content-Range for .mp4 and .webm, 416 out of range; CORP now `cross-origin` (needed for shyden.co.uk's embed after the domain move). Only AC5 left: phones on production (blocked by #992, #993, links added) and the shyden.co.uk#835 embed (already blocked by #713).
-- **#52 / draft PR #1042:** its old red was stale (squash-only ruleset fixed 2026-11-19). Merged develop in (785cdd72); CI then failed 22 content-report Worker tests with 500 `not_configured` (#1046 requires RATE_KEY; that harness set none). Fixed in 2b2ea9c4 (harness passes RATE_KEY), unit 14,750 passed, pushed; CI running.
-- **#830 AC2 part 1 done:** Shyden approved the 13 epics' Public title/summary; written to the board and read back (comment on #830). Next: part 2, each player-facing story's Public title, drafted for his approval.
-- **#784:** the narrower key "GitHub Actions: DEV deploys" made in his Yawelo Chrome (Individual Workers Editor on the four -dev Workers, D1 Write account-wide), measured (4 dev Workers 200, holding-test 403), stored in `dev` (updated 2026-11-22T01:33:41Z). Proof = next green develop deploy; then delete the old key `cfat...c5dc`.
-- **pd#42:** fixed in playwright-devices v0.1.5 (PR #43); npm publish run 44883276209 waits on Shyden's approval in the `npm` environment. playwright-devices-92 messages this repo when it's on npm.
+- **#52 / draft PR #1042:** 2b2ea9c4 failed 6 content-report harness tests: #1046's route limit (10 a minute per network) runs before the daily quota, and the harness keeps counts across tests. Fix 1708bb17: each test request has its own /24 (`cf-connecting-ip`), quota 429s assert `daily_limit`, new test for the route limit on reports (11th from one network: 429 `too_many_requests`, Retry-After, nothing stored). Then **mutation commit 63384748** (content-report limit 11) pushed to prove the new test red in CI. Unit 14,750 green.
+- **#1062 / PR #1064:** playwright-devices 0.1.5 is on npm (shasum 6444564e…, checked on the registry; tarball holds `insideAnExpect`). Branch `1062-poll-counted-once` (worktree `../yawelo-idle-1062`), range `>=0.1.5`, unit 14,698 green, #1062 In Progress. playwright-devices-92 wants the per-browser shell.spec counts from the develop deploy after merge.
+- Waiting on Shyden still: #784 old key delete after a green develop deploy, #830 part 2, next production release.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -37,8 +34,8 @@
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #52 / PR #1042: read the CI verdict on 2b2ea9c4 (`~/.claude/scripts/pr-verdict.sh 1042`). If green, mark ready and squash-merge into develop (develop's own deploy is still red on #1062, so AC11's dev read-back waits on it). Left on #52 after that: AC2 item ids (M2 content), AC5 staff API + AC9 rate rule (need Shyden), AC6 (needs #174), AC11.
-3. #1062: when playwright-devices-92 sends the release with #42's fix: branch `1062-poll-counted-once` from develop, `npm install @shyden-labs/playwright-devices@">=<ver>"` and restore the `>=` range (npm rewrites it as `^`), run unit, open a PR, merge on green, then read the develop deploy (browsers' assertion counts equal, deploy green) onto #1062 and #1003 (AC4), and close both by hand.
-4. #784: key stored 2026-11-22; prove it with the next develop deploy (after #1062) and comment on #784.
-5. Next production release (Shyden approves): carries the tab icon and the API reserve; deploy-prod's verify-api proves #1013 AC1's API host.
-6. #830 AC2 part 2: draft each player-facing story's Public title (open and closed) in the epics' voice; ask Shyden.
+2. PR #1042: `~/.claude/scripts/pr-verdict.sh 1042`. Expected on 63384748: build-and-test red on ONLY the new test "ten a minute from one network…" (11th answers 201). If so, `git revert --no-edit HEAD` in `../yawelo-idle-52`, unit, push; on green mark ready and squash-merge (message keeps the commit reasons, drop the mutation pair). If the other quota tests still fail, read the log first.
+3. PR #1064: on green squash-merge into develop; read the develop deploy's `test / browsers` log for shell.spec counts on all four browsers and the `deploy` job; comment on #1062 (AC1, AC2) and #1003 (AC4), close both by hand; send the counts to playwright-devices-92; remove worktree `../yawelo-idle-1062` and branches.
+4. #784: that green develop deploy proves the new DEV key; comment on #784, then delete the old key `cfat...c5dc` (Shyden's Yawelo Chrome).
+5. Next production release (Shyden approves): tab icon + API reserve; deploy-prod's verify-api proves #1013 AC1.
+6. #830 AC2 part 2: draft each player-facing story's Public title; ask Shyden.
