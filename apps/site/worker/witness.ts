@@ -248,3 +248,24 @@ export function account(input: {
     unseen,
   };
 }
+
+/**
+ * The pending changes left once a read's seen witnesses explain their cards:
+ * GitHub can show a card's new fields one read before its new updatedAt
+ * (#1066), so a witness a later read shows explains the change pending on
+ * its card, within the grace, as a late webhook does. A change pending longer
+ * stays, for the drift count.
+ */
+export function clearSeen(
+  pending: Readonly<Record<string, number>>,
+  seen: readonly number[],
+  at: number,
+  grace: number,
+): Record<string, number> {
+  const cards = new Set(seen.map(String));
+  return Object.fromEntries(
+    Object.entries(pending).filter(
+      ([card, since]) => !cards.has(card) || at - since > grace,
+    ),
+  );
+}

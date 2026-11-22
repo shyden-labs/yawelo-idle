@@ -38,6 +38,7 @@ import {
 import { installationToken, readBoardAndIssues } from './github';
 import {
   account,
+  clearSeen,
   numberOf,
   readStamps,
   type Owed,
@@ -390,12 +391,11 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
         this.state.lastStaleReadAt = startedAt;
       }
       this.state.unseenEvents += counted.unseen;
-      // GitHub can show a card's new fields one read before its new updatedAt
-      // (#1066): a witness this read shows explains the change an earlier read
-      // left pending on its card, within the grace, as a late webhook does.
-      const seen = new Set(counted.seen.map(String));
-      this.keepPending(
-        ([card, since]) => !seen.has(card) || startedAt - since > GRACE_MS,
+      this.state.pending = clearSeen(
+        this.state.pending,
+        counted.seen,
+        startedAt,
+        GRACE_MS,
       );
       // A runtime population: the cards this read found changed unexplained.
       for (const number of counted.unexplained)

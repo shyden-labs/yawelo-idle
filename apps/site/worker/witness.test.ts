@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BoardItem } from '@yawelo-idle/progress';
 import {
   account,
+  clearSeen,
   eventWitness,
   numberOf,
   readStamps,
@@ -631,5 +632,51 @@ describe('account', () => {
     });
     expect(result.owed).toEqual([young]);
     expect(result.unseen).toBe(0);
+  });
+
+  it('lists the cards seen witnesses name in number order', () => {
+    const storyOne: Witness = { ...itemWitness, id: 'PVTI_1' };
+    const result = account({
+      ...base,
+      items: base.previous,
+      stamps: stampsOf([
+        ['PVTI_678', 678, T0],
+        ['PVTI_1', 1, T0],
+      ]),
+      owed: [owed(itemWitness), owed(storyOne)],
+    });
+    expect(result.seen).toEqual([1, 678]);
+  });
+});
+
+// #1066: a witness a read shows clears the change an earlier read left
+// pending on its card, within the grace, as a late webhook does.
+describe('clearSeen', () => {
+  const GRACE = 120_000;
+
+  it('drops a pending card a seen witness names within the grace', () => {
+    expect(
+      clearSeen({ '678': STARTED - 60_000 }, [678], STARTED, GRACE),
+    ).toEqual({});
+  });
+
+  it('drops a pending card a seen witness names at the grace exactly', () => {
+    expect(
+      clearSeen({ '678': STARTED - GRACE }, [678], STARTED, GRACE),
+    ).toEqual({});
+  });
+
+  it('keeps a seen card pending past the grace, for the drift count', () => {
+    expect(
+      clearSeen({ '678': STARTED - GRACE - 1 }, [678], STARTED, GRACE),
+    ).toEqual({ '678': STARTED - GRACE - 1 });
+  });
+
+  it('keeps a pending card no seen witness names', () => {
+    expect(clearSeen({ '1': STARTED - 60_000 }, [678], STARTED, GRACE)).toEqual(
+      {
+        '1': STARTED - 60_000,
+      },
+    );
   });
 });
