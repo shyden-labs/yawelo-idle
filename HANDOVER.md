@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 22:15 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 6104112c), `yawelo-idle-1068` (branch `1068-voyage-map`, head 461810ae, pushed, no PR). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v84, published 22:11 WIB).
+**Written:** 2026-11-22 22:15 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 6104112c), `yawelo-idle-1068` (branch `1068-voyage-map`, head 461810ae, pushed, no PR). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v85, published 22:17 WIB).
 
 ## Latest (2026-11-22, to 22:15 WIB, session `yawelo-idle-07`)
 
@@ -8,6 +8,7 @@
 - **#860 rewritten, no forward** (Shyden confirmed): ShyDesk serves and runs the embed; Yawelo only embeds it and lists its origins. Relayed reachability (Telkomsel OK, Biznet workers.dev OK; IndiHome, XL, Indosat, Smartfren unmeasured) on #860. Origins sent to ShyDesk: `https://dev.yaweloidle.com`, `https://test.yaweloidle.com`; prod `https://yaweloidle.com` is Shyden's.
 - **#1068 (P1, In Progress):** spec `docs/superpowers/specs/2026-11-22-roadmap-voyage-map-design.md` and Indonesian evidence `docs/translations/2026-11-22-roadmap-map-id.md` (25 lines, Google read-back id→en plus en→id second source) committed on `1068-voyage-map`. Shyden's rulings on #1068: season in halves, from the later of the two forecasts, hidden with no forecast; the note text and every map label approved. Next: the tests commit (unit + component + e2e, with copy data and compile-only stubs), pushed to a draft PR and read red by name on CI, then the code. Board read: 9 milestone epics M0–M8 with the AC2 titles; #328, #331, #452 have no milestone and get no island.
 - **#1066 AC4** still waits on the next develop deploy (none since 6104112c's).
+- **#1073 filed** (P1, 1 pt): www.yaweloidle.com has no DNS record; needs Shyden in Yawelo's Cloudflare. **shyden-co-uk-11 told** (Shyden's ask) to switch every Yawelo URL to https://yaweloidle.com and release (measured: yaweloidle.com 200; yawelo.com, www.yawelo.com, yawelo-idle.shyden.co.uk 308 to it).
 - **#784's next step** waits on repo-template-21's DEV-pass pattern (global rule 2026-11-22, repo-template#207, which replaces the door secret) and on Shyden deleting the old key `cfat...c5dc` (Yawelo Chrome).
 
 ## Earlier (2026-11-22, to 20:52 WIB, session `yawelo-idle-07`)
