@@ -1,8 +1,8 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 03:22 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
+**Written:** 2026-11-23 ~03:30 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job at 03:22 WIB (dies with this session):** watcher for PRs #1077 (head b9e75701, a merge of develop; develop has since moved to ee0f4d13, so update-branch again once its CI ends, then CI, then merge) and #1083 (b76a03aa, updated from develop). Re-run `~/.claude/scripts/pr-verdict.sh <pr>`.
+**Local job (dies with this session):** a watcher for PR #1077 (head e3b14141, updated from develop fe30603a) and the develop deploy of fe30603a. Re-run `~/.claude/scripts/pr-verdict.sh 1077`; when green on a head containing develop, merge it (#860 stays open, Status Todo in the same call).
 
 ## Now (2026-11-23, to 02:35 WIB)
 
@@ -24,7 +24,7 @@
 ### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
 
 - `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), **PR #1084 merged** as ee0f4d13 (green on 31b48060); #1078 Todo, worktree and branches removed. Done on it: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
-- `x/1079-signups` (worktree `../yawelo-idle-1079`), pushed, **draft PR #1083**, In Progress; first CI red (sync-routes fixture had no SIGNUPS: 503), fixed in 82918edc with the injected config: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
+- `x/1079-signups` (worktree `../yawelo-idle-1079`), **PR #1083 merged** as fe30603a (#1079 Todo; worktree and branches removed). Left: AC2, read the switch back on dev after the deploy (a `POST /v1/devices` on dev answering 201 shows "open"), and AC3 on #590. Its work: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
 - #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
 
 ### For Shyden in the morning (parked questions)
@@ -35,9 +35,6 @@
 4. #1078: the DEV pass's one-time Cloudflare setup (repo-template `docs/dev-pass.md`, "One-time setup"); `dev-signin.shyden.co.uk` does not resolve yet.
 5. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
 
-### Worktrees and scratch
-
-- `../yawelo-idle-860-e2e` holds the node_modules that `../yawelo-idle-1078` and `../yawelo-idle-1079` symlink to: remove it last. Its branch `860-e2e-red` is deleted on the remote; delete it locally with the worktree.
 
 ## Latest (2026-11-22, to 22:15 WIB, session `yawelo-idle-07`)
 
