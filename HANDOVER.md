@@ -44,7 +44,7 @@
 - **P0 raised by Shyden** (AskUserQuestion, asked by shydesk-b1 for ShyDesk Release 2): #1072, #425, #426, #860 to P0, read back; #784 to P0 too, as #425's blocker (rule #578). board-next now says **#784**.
 - **#860 rewritten, no forward** (Shyden confirmed): ShyDesk serves and runs the embed; Yawelo only embeds it and lists its origins. Relayed reachability (Telkomsel OK, Biznet workers.dev OK; IndiHome, XL, Indosat, Smartfren unmeasured) on #860. Origins sent to ShyDesk: `https://dev.yaweloidle.com`, `https://test.yaweloidle.com`; prod `https://yaweloidle.com` is Shyden's.
 - **#1068 (P1, In Progress):** spec `docs/superpowers/specs/2026-11-22-roadmap-voyage-map-design.md` and Indonesian evidence `docs/translations/2026-11-22-roadmap-map-id.md` (25 lines, Google read-back id→en plus en→id second source) committed on `1068-voyage-map`. Shyden's rulings on #1068: season in halves, from the later of the two forecasts, hidden with no forecast; the note text and every map label approved. Next: the tests commit (unit + component + e2e, with copy data and compile-only stubs), pushed to a draft PR and read red by name on CI, then the code. Board read: 9 milestone epics M0–M8 with the AC2 titles; #328, #331, #452 have no milestone and get no island.
-- **#1066 AC4** still waits on the next develop deploy (none since 6104112c's).
+- **#1066 AC4**: done 2026-11-23, #1066 closed.
 - **#1074 filed** (P1, 5 pts; Shyden raised it from P3: people are asking about progress): Shyden's ruling relayed by shytalk-77: the live roadmap re-reads on visit (last read over 10 min old) instead of the */10 cron; never shows an old board as current while updating; drift accounting moves off `check()`.
 - **#1073 closed** (Shyden: "fix the dns immediately"): PROD yaweloidle.com zone got a proxied `A www 192.0.2.1` and a 308 redirect rule matching only `www.yaweloidle.com`; every curl case measured through 1.1.1.1 (evidence on #1073). The Mac's own resolver still had a cached "not found" at 22:28.
 - **#784's next step** waits on repo-template-21's DEV-pass pattern (global rule 2026-11-22, repo-template#207, which replaces the door secret) and on Shyden deleting the old key `cfat...c5dc` (Yawelo Chrome).
@@ -100,6 +100,6 @@
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach at origin/develop first). It said #784 (P0).
 2. #784: check whether repo-template-21 has sent the DEV-pass pattern (repo-template#207); if not, take the next P0 board-next gives that needs nothing outside (#425/#426/#1072/#860 chain) and say what is parked.
-3. #1066 AC4: read the next develop deploy's `verify-roadmap` step by name, record it, shut the ticket by hand.
+3. (done 2026-11-23: #1066 closed.)
 4. #1068: tests commit in `../yawelo-idle-1068` per the spec's section 7, red on CI by name before any code (global rule 2026-11-22).
 5. With Shyden: delete the old DEV key (#784); approve the next production release (tab icon, API reserve).
