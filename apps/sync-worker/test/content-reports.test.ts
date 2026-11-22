@@ -12,7 +12,12 @@ const ROOT = new URL('..', import.meta.url).pathname;
 
 const server = createTestHarness({
   root: ROOT,
-  workers: [{ configPath: './wrangler.jsonc' }],
+  workers: [
+    {
+      configPath: './wrangler.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
+  ],
 });
 
 let db: D1Database;
