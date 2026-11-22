@@ -2,7 +2,7 @@
 
 **Written:** 2026-11-23 02:36 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local jobs at 02:35 WIB (die with this session; check each on resume):** (1) push `860-support-page` fix 8ecbf60d (`git ls-remote origin 860-support-page`; re-run `git push` from `../yawelo-idle-860`); (2) queued pushes of `x/1079-signups` then `x/1078-dev-pass`, each with a draft PR and In Progress (re-run by hand from each worktree if missing); (3) watcher for PR #1082's checks (re-run `~/.claude/scripts/pr-verdict.sh 1082`). Progress page v91 published 02:34 WIB.
+**Local jobs at 02:55 WIB (die with this session):** watchers for PR #1077 (head 8ecbf60d) and PRs #1082 (50e15c54), #1083, #1084; re-run `~/.claude/scripts/pr-verdict.sh <pr>`. All branches are pushed.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
@@ -17,13 +17,13 @@
 
 - Commits on 461810ae: 3243854f model tests, 916c1a01 model code, 51eb34b9 component tests + map copy, d8003276 dev journeys (read red: 16 failed on deploy-dev 45056613095, evidence on #1068), 7b858fe9 drawing tests (10 red), 79f9d12f drawing, 13f4a594 the page + removals (spec §6). Full unit suite 14,758 passed at 02:28.
 - A self-caught slip: `drawing.ts` was first written before its tests; deleted unrun, tests written and read red, module written fresh (memory updated).
-- Pushed as `x/1068-voyage-map`, **draft PR #1082** (head 13f4a594), #1068 In Progress, old remote `1068-voyage-map` deleted. Next: read #1082's CI step by step.
+- Pushed as `x/1068-voyage-map`, **draft PR #1082**, #1068 In Progress, old remote deleted. First CI: build-and-test and browsers green; coverage red (#804: ten untaken branches in VoyageMap.svelte). Fixed in 50e15c54 (four behaviour tests, each mutation-checked; dead fallbacks removed; 100% branches locally). Next: read #1082's CI on 50e15c54.
 - Open: the three old intro paragraphs stay on the page until #830 AC1's new short text; the old copy strings stay while the tests use them to check absence.
 
 ### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
 
-- `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), local, NOT pushed: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
-- `x/1079-signups` (worktree `../yawelo-idle-1079`), local, NOT pushed: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
+- `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), pushed, **draft PR #1084**, In Progress: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
+- `x/1079-signups` (worktree `../yawelo-idle-1079`), pushed, **draft PR #1083**, In Progress: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
 - #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
 
 ### For Shyden in the morning (parked questions)
