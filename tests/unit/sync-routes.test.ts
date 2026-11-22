@@ -13,7 +13,12 @@ import { memoryCounts } from './memory-counts';
  * checks and its request limit (#164 AC3; spec §12.9), and the router serves
  * nothing the table does not list.
  */
-const PATHS = ['/health', '/v1/devices'] as const;
+const PATHS = [
+  '/health',
+  '/v1/content-reports',
+  '/v1/content-reports/health',
+  '/v1/devices',
+] as const;
 
 /** A D1 statement that answers every query, so a route can run in Node. */
 const statement: ReturnType<SyncEnv['DB']['prepare']> = {
@@ -72,10 +77,35 @@ const fetchRoute = (path: string, method = 'GET', body?: string) =>
   send(path, { method, ...(body === undefined ? {} : { body }) });
 
 /** A request `path` accepts: its own method, and `{}` for a body it reads. */
-const accepted = (path: (typeof PATHS)[number]) =>
-  ROUTES[path].method === 'POST'
-    ? { method: 'POST', body: '{}' }
-    : { method: 'GET' };
+/** A content report the route accepts (#52). */
+const REPORT = JSON.stringify({
+  course: 'en-id',
+  kind: 'lexicon',
+  itemId: 'lex.a',
+  problem: 'other',
+  appVersion: '0.1.0',
+  contentVersion: 'c1',
+  installId: 'install-a',
+  website: '',
+});
+
+/** A request each route accepts, and the status it answers it with. */
+const ACCEPTED: Readonly<
+  Record<
+    (typeof PATHS)[number],
+    { request: { method: string; body?: string }; status: number }
+  >
+> = {
+  '/health': { request: { method: 'GET' }, status: 200 },
+  '/v1/content-reports': {
+    request: { method: 'POST', body: REPORT },
+    status: 201,
+  },
+  '/v1/content-reports/health': { request: { method: 'GET' }, status: 200 },
+  '/v1/devices': { request: { method: 'POST', body: '{}' }, status: 201 },
+};
+
+const accepted = (path: (typeof PATHS)[number]) => ACCEPTED[path].request;
 
 describe('the sync route table (#164 AC3)', () => {
   it('lists exactly the routes the Worker serves', () => {
@@ -143,6 +173,20 @@ describe('the sync route table (#164 AC3)', () => {
     expect((await fetchRoute('/health')).status).toBe(200);
   });
 
+  it('serves /v1/content-reports through the table', async () => {
+    expect(
+      (await fetchRoute('/v1/content-reports', 'POST', REPORT)).status,
+    ).toBe(201);
+  });
+
+  it('serves /v1/content-reports/health through the table', async () => {
+    const response = await fetchRoute('/v1/content-reports/health');
+    expect([response.status, await response.json()]).toEqual([
+      200,
+      { ok: true },
+    ]);
+  });
+
   it('serves /v1/devices through the table', async () => {
     expect((await fetchRoute('/v1/devices', 'POST', '{}')).status).toBe(201);
   });
@@ -166,7 +210,7 @@ describe('the request limits (#164 AC2)', () => {
         refused.headers.get('cache-control'),
         await refused.json(),
       ]).toEqual([
-        path === '/v1/devices' ? 201 : 200,
+        ACCEPTED[path].status,
         429,
         String(ROUTES[path].limit.perSeconds - 30),
         'no-store',
