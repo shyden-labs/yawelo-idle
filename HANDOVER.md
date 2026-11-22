@@ -1,8 +1,8 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 02:35 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
+**Written:** 2026-11-23 02:36 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job at 02:35 WIB (dies with this session):** the #1068 push/PR chain above; PR #1077's check watcher (re-run `~/.claude/scripts/pr-verdict.sh 1077`).
+**Local jobs at 02:35 WIB (die with this session; check each on resume):** (1) push `860-support-page` fix 8ecbf60d (`git ls-remote origin 860-support-page`; re-run `git push` from `../yawelo-idle-860`); (2) queued pushes of `x/1079-signups` then `x/1078-dev-pass`, each with a draft PR and In Progress (re-run by hand from each worktree if missing); (3) watcher for PR #1082's checks (re-run `~/.claude/scripts/pr-verdict.sh 1082`). Progress page v91 published 02:34 WIB.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
