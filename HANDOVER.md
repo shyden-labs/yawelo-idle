@@ -65,7 +65,7 @@
 - **#1066 (P0, In Progress): cause measured** (comment on #1066). GitHub can answer a read with a card's **new field values and its old `updatedAt`** (run f, read r10; logs in `.superpowers/sdd/1066/`). The read that shows the change does not show the witness yet, so the card goes into `pending`; the next read shows the witness but finds no change, and `pending` is only cleared by a late webhook (`changed()`), so it becomes drift. Test card values cleared and read back.
 - **PR #1069 (draft)**, branch `1066-late-witness-clears-pending`, worktree `../yawelo-idle-1066`, head `bfa1844d79f90b4e6d4d3a261529e8b4e1d0e0f3` = **tests only** (expected red): `witness.test.ts` (`account()` reports `seen`; 12 unit tests read red locally) and harness `roadmap.test.ts` "counts no drift when the change shows one read before its witness does". CI was still running at 16:08 WIB.
 - **#1067:** AC1 recorded (GitHub docs say nothing about redirects; only 2xx is documented success). **Measured:** the old dev host already answers `308` to POST, yet a board edit at 09:07:25Z reached the dev roadmap (`lastEventAt` 09:07:27.705Z). Not proven whether GitHub followed the 308 or the payload URL was already changed: needs Shyden's Chrome (webhook 698318626 settings + Recent Deliveries).
-- Progress page v81 published 16:08 WIB.
+- Progress page v95 published 04:27 WIB.
 
 ## Earlier (to 15:55 WIB)
 
@@ -74,7 +74,7 @@
 - **#1066 (P0):** AC1 done (comment). All 26 epic-edit deliveries were sent and answered 202, so no webhook was missed. The Worker's accounting counted drift during a burst a second apart. Refuted: text edits not moving `updatedAt`. Next: the stale-fields experiment, then a failing `account()` test.
 - **#1067 (P0, 1 point):** the org webhook must move off `dev.yawelo-idle.shyden.co.uk`.
 - **#830 / #1068:** Shyden redesigned the public roadmap (all in the #830 comment). The 160 story titles were dropped. The design is one voyage map of the **9 build stages in order**, each island done / under way / not started from its own stories' closed share. The final look is round 6, map 3 (gallery https://claude.ai/artifact/CmgQ6copqWUPo59hK2hktK, source `.superpowers/sdd/830/island-designs-round6.html`, picks in its DB). The page keeps only the map, one progress bar and an expected season. **#1068 filed (P1, 8 points)** for the build. #830 keeps AC1 (simpler page text) and AC3.
-- Progress page v80 published 15:55 WIB.
+- Progress page v95 published 04:27 WIB.
 
 ## Shyden's answers today (2026-11-21)
 
