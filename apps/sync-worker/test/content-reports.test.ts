@@ -156,11 +156,12 @@ describe('refusals write nothing (#52 AC2)', () => {
   });
 });
 
-describe('the route limit (#1046) applies to reports', () => {
-  it('ten a minute from one network, the 11th answers 429 with Retry-After before the quota is read', async () => {
+describe('the route limit (#1046, #1086) applies to reports', () => {
+  it('fifty a day from one network, the 51st answers 429 with Retry-After before the quota is read', async () => {
     const statuses: number[] = [];
-    // one scenario: one network sends eleven reports from eleven installs
-    for (let index = 0; index < 10; index += 1)
+    // one scenario: one network sends 51 reports from 51 installs, so the
+    // per-install quota never binds and only the network's day window does
+    for (let index = 0; index < 50; index += 1)
       statuses.push(
         (
           await post(report(`install-net-${String(index)}`, 'lex.a'), {
@@ -168,15 +169,16 @@ describe('the route limit (#1046) applies to reports', () => {
           })
         ).status,
       );
-    const refused = await post(report('install-net-10', 'lex.a'), {
+    const refused = await post(report('install-net-50', 'lex.a'), {
       'cf-connecting-ip': '198.51.100.21',
     });
-    expect.soft(statuses).toEqual(Array<number>(10).fill(201));
+    expect.soft(statuses).toEqual(Array<number>(50).fill(201));
     expect.soft(refused.status).toBe(429);
     expect.soft(refused.headers.get('retry-after')).toMatch(/^[1-9]\d*$/);
+    expect.soft(Number(refused.headers.get('retry-after'))).toBeGreaterThan(60);
     expect.soft(await refused.json()).toEqual({ error: 'too_many_requests' });
-    expect.soft(await reportsOf('install-net-10')).toEqual([]);
-    expect.soft(await quotaOf('install-net-10')).toEqual([]);
+    expect.soft(await reportsOf('install-net-50')).toEqual([]);
+    expect.soft(await quotaOf('install-net-50')).toEqual([]);
   });
 });
 
