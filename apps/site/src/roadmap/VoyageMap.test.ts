@@ -357,7 +357,11 @@ describe('the voyage map page (#1068)', () => {
     await settle();
     const [socket] = FakeSocket.opened;
     socket?.push(
-      snapshot({ items: board(3), readAt: '2026-11-22T05:00:00.000Z' }),
+      snapshot({
+        version: 2,
+        items: board(3),
+        readAt: '2026-11-22T05:00:00.000Z',
+      }),
     );
     expect(islands(root)[1]?.getAttribute('aria-label')).toBe(
       `The engine, ${fill(en.underWay, { percent: 75 })}`,
