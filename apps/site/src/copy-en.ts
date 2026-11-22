@@ -12,6 +12,9 @@
 import { line, t } from './copy-line';
 import { digits, duration, rankList, rankName, words } from './figures';
 
+/** The voyage map's Indonesian evidence (#1068). */
+const MAP_ID = 'file:docs/translations/2026-11-22-roadmap-map-id.md';
+
 export const COPY_EN = {
   devStrip: line(
     'In development: what you see may change, and the released game could be completely different.',
@@ -323,6 +326,23 @@ export const COPY_EN = {
     done: line('Done', 'site §5'),
     live: line('Live', 'site §5'),
     reconnecting: line('Reconnecting…', 'site §5'),
+  },
+
+  /** The voyage map (#1068), approved by Shyden 2026-11-22 (comments on #1068). */
+  map: {
+    label: line('The voyage to launch', MAP_ID),
+    done: line('Done', MAP_ID),
+    underWay: line('Under way, {percent}% done', MAP_ID),
+    notStarted: line('Not started yet', MAP_ID),
+    brings: line('What this brings', MAP_ID),
+    close: line('Close', MAP_ID),
+    bar: line('{percent}% of the work to launch is done', MAP_ID),
+    season1: line('Expected launch: first half of {year}', MAP_ID),
+    season2: line('Expected launch: second half of {year}', MAP_ID),
+    seasonNote: line(
+      'This is an estimate, not a promise. It can change as the game is built: some parts take longer than planned, and ideas from players can add new work.',
+      MAP_ID,
+    ),
   },
 
   privacy: {
