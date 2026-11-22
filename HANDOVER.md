@@ -1,14 +1,14 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 10:45 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html`.
+**Written:** 2026-11-22 13:10 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html`.
 
-## Latest (2026-11-22, to 10:45 WIB, session `yawelo-idle-07`)
+## Latest (2026-11-22, to 13:10 WIB, session `yawelo-idle-07`)
 
-- **#1062 and #1003 closed** (comments with evidence): PR #1064 (squash 2ba7cfac) took playwright-devices 0.1.5. Develop deploy run 44979998936: `test / browsers` green, one-suite totals equal on all four browsers; `deploy` green. playwright-devices#42 was closed on this measurement.
-- **#784:** the new DEV key is proven by the same run (every NONPROD step passed; comment on #784). Left: delete the old key `cfat...c5dc` in Yawelo's Cloudflare (Shyden's Yawelo Chrome).
-- **#1066 filed (P0, 3 points, under #331):** that run's `verify-roadmap` went red with drift 2 at 01:30:38Z, just after the 13 epic Public title/summary writes. The cause is not yet measured. Org webhook 698318626's deliveries are kept until about 2026-11-25 and need Shyden's passkey (sudo) in Chrome. The tab is open at the deliveries page.
-- **#52 / PR #1042:** fixed the content-report harness (each request from its own /24, quota 429s assert `daily_limit`, new route-limit test). Mutation 63384748 made only the new test fail (run 44973265398); reverted in fcfaf451 (tree = 1708bb17). CI green on fcfaf451 (build-and-test run 44979975357).
-- **#830 roadmap redesign (Shyden, today):** the 160 story names were "way too much noise… too technical". He asked for features only, players' words, no "behind the scenes" mention, AND a simpler version of the rest of the page (progress bar, plain "expected around" line, recent things built; no points or ticket counts). The 42-feature draft (`.superpowers/sdd/830/groups.tsv`, page https://claude.ai/artifact/4J2uh8qm1TMURUnggAAzgq) is still too many: consolidate further, draft the whole page, ask before building.
+- **Merged:** PR #1064 (2ba7cfac, playwright-devices 0.1.5) and PR #1042 (b59e321e, content reports; #52 stays open, back to Todo). Worktrees and branches removed. **Shut by hand with evidence:** #1062, #1003. playwright-devices#42 was shut on our measurement.
+- **#784:** the new DEV key is proven by develop deploy run 44979998936 (comment). Left: delete the old key `cfat...c5dc` (Shyden's Yawelo Chrome).
+- **#1066 (P0):** AC1 done (comment, copy in `.superpowers/sdd/1066/`). All 26 epic-edit deliveries were sent and answered 202, so no webhook was missed. The Worker's accounting counted drift during a burst of edits a second apart. Refuted: text edits not moving the card's `updatedAt`. Next: the stale-fields experiment, then a failing `account()` test.
+- **#1067 filed (P0, 1 point):** the org webhook still calls `dev.yawelo-idle.shyden.co.uk`; it must move to the new dev host before the old one only redirects.
+- **#830 roadmap redesign:** Shyden picked **option 2, the island map**, with real island graphics. He wants at least 50 designs to mix and match: gallery https://claude.ai/artifact/CmgQ6copqWUPo59hK2hktK (source `.superpowers/sdd/830/island-designs.html`). The 13 features in players' words are in `.superpowers/sdd/830/features.tsv`, and the three shapes in `three-shapes.html`. Bar + "Expected: early 2027" + no ticket numbers, points or behind-the-scenes text, all agreed. Waiting on his pick, then the next round.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -36,8 +36,7 @@
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #1066 (P0): once Shyden passes the passkey, read deliveries 01:15 to 01:35 UTC on org hook 698318626 (load every page, JS loop on "Load more deliveries"), with `/api/roadmap/health`; record them on #1066 and name the cause. Deadline about 2026-11-25.
-3. PR #1042: mark ready, squash-merge on green head fcfaf451 (`--match-head-commit` from a file; the message keeps the commit reasons, without the mutation pair). Left on #52: AC2, AC5/AC9 (Shyden), AC6 (#174), AC11.
-4. #830: draft the consolidated, player-facing roadmap (about 10 to 15 features in all, plus the simpler progress, ETA and recent sections); show it to Shyden as a page and ask.
-5. #784: delete the old key `cfat...c5dc` with Shyden (Yawelo Chrome).
-6. Next production release (Shyden approves): the tab icon and the API reserve; verify-api proves #1013 AC1.
+2. #830: read Shyden's pick from the 50-island gallery; iterate until he settles. Then a plan: a feature grouping on the board (field or shared Public title), the page rebuilt as the map + bar + expected season, tests first, dev for his look, then translation (id) with Google read-back.
+3. #1066: run the experiment (two text fields on one card a second apart; read updatedAt against the field values repeatedly), then a failing `account()` test, then the fix.
+4. #1067: GitHub docs on redirects for webhooks; change the payload URL in Shyden's Chrome; read it back.
+5. #784: delete the old key with Shyden. Next production release: tab icon and API reserve (#1013 AC1).
