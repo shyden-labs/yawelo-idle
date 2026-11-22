@@ -32,7 +32,7 @@ function stages(items: PublicItem[]): Stage[]
 ### `apps/site/src/roadmap/layout.ts`
 
 - `ISLANDS`: the 9 island centres in a 1000 × 440 viewBox, from the design: `[100,110] [310,100] [520,118] [720,104] [905,122] [820,300] [600,318] [390,304] [170,318]` (top row left to right, bottom row right to left).
-- `ship(stages)`: `{ from: [x,y], to: [x,y], share: number }` or `{ moored: [x,y] }`.
+- `ship(stages)`: a `Leg` `{ from: [x,y], to: [x,y], share: number, fromHarbour: boolean }` or `{ moored: MOORING }` (`MOORING = [230, 340]`). `fromHarbour` marks the leg whose start is open water, so `shipPoint` does not trim it.
   - First unfinished stage `k` (state not `done`). The ship is on the leg into `k`, at `share = closed / total` of that stage (0 when total is 0).
   - `k = 0` (nothing done): the leg starts at the harbour `HARBOUR = [20, 220]` (open water left of and below island 0), so the ship is on the water before the first island.
   - Every stage done: `{ moored }` beside the last island, `[230, 340]`.
