@@ -2,7 +2,7 @@
 
 **Written:** 2026-11-23 03:30 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job (dies with this session):** watcher for PR #1085 (#860's beacon fix, branch `x/860-beacon`, worktree `../yawelo-idle-860b`). Re-run `~/.claude/scripts/pr-verdict.sh 1085`; merge when green on a head containing develop (#860 back to Todo in the same call), then read the deploy's `site-smoke` support journeys by name.
+**Local jobs (die with this session):** watchers for PR #1085 (#860 beacon fix, worktree `../yawelo-idle-860b`) and PR #1087 (#1086 quota fix, worktree `../yawelo-idle-1086`). Re-run `~/.claude/scripts/pr-verdict.sh <pr>`. Merge each when green on a head containing develop (the second needs `gh pr update-branch` after the first merges), Status to Todo in the same call; then read the deploy's jobs by name.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
@@ -16,8 +16,9 @@
 - **Was next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
 
 - **After the merge:** develop deploy 45069145980 failed `site-smoke`: the 16 support journeys saw Cloudflare's injected analytics beacon (W17's site-wide exception), which the support policy blocked. PR #1085 (tests d3f55aef red, fix 994251ba) admits it like the game's policy.
-- **AC5 dev half met** (comments on #860): ticket ccaca7b3 with a photo and a video sent from dev at ~04:1x WIB and read back by shydesk-b1 by 04:20 WIB (both attachments open and play); ShyDesk closed it. **AC4 unproven**: the link (copied by eye) said "no longer valid"; asked shydesk-b1 whether closed tickets' links stop opening. `.superpowers/ac5.mjs` now saves the link to the ignored `.superpowers/sdd/860/ac5-ticket-link.txt`; `.superpowers/ac4.mjs` opens `$TICKET_LINK`.
-- **#1086 filed (P0, 3 pts)** from a security review: the content-report quota is keyed on a client-chosen install id (pre-existing, #52). Next P0 to work after #1085.
+- **AC5 dev half met** (comments on #860): ticket ccaca7b3 with a photo and a video sent from dev at ~04:1x WIB and read back by shydesk-b1 by 04:20 WIB (both attachments open and play); ShyDesk closed it. **AC4 met** with a second ticket (aa7fa58a, link taken by code, opened on dev showing the ticket; the first failure was my misread token); both test tickets closed by shydesk-b1. `.superpowers/ac5.mjs` now saves the link to the ignored `.superpowers/sdd/860/ac5-ticket-link.txt`; `.superpowers/ac4.mjs` opens `$TICKET_LINK`.
+- **#1086 (P0, In Progress), PR #1087**: content reports limited to 50 a day per network (test 0a… red first, then routes.ts); decision on #1086; refusal noted on #590. After merge: exercise the 429 on dev (51 reports from one address) and record it.
+- #860 left after #1085: the production half (#425/#426, live ticket address approval) and AC6's policy test is in; then close-out check of every AC.
 
 ### #1068 voyage map (P1), branch `x/1068-voyage-map`
 
