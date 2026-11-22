@@ -18,6 +18,12 @@
 - Branch `1068-voyage-map` (worktree `../yawelo-idle-1068`), local commits on 461810ae, not pushed: 3243854f model tests (35 red), 916c1a01 model code (84 green), 51eb34b9 component tests + map copy (22 red locally), d8003276 e2e journeys (`tests/site/roadmap.spec.ts`, to be read red on dev).
 - Next: push as `x/1068-…` or open a draft PR naming #1068 at the first push (board-orphans needs `/N-` or a PR); read the e2e red on a deploy-dev scratch; then the Svelte code (VoyageMap with `{ locale }` props, SeaMap, IslandPanel, drawing.ts) and delete the old components per spec §6.
 
+### For Shyden in the morning (parked questions)
+
+1. #1074: the roadmap's "updating" wording (and its "could not update" line), before translation. Start #1074 after #1068's page lands (same page and Worker).
+2. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket` (ShyDesk's prod setting; shydesk-b1 sets it once he says yes).
+3. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
+
 ### Parked
 
 - #784 (repo-template#207 still open), #1066 AC4 (no develop deploy since 6104112c).
