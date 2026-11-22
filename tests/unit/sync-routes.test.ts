@@ -30,6 +30,7 @@ const DOOR_SECRET = 'the-dev-door-secret';
 
 const env: SyncEnv = {
   COMMIT: 'test',
+  SIGNUPS: 'open',
   RATE_KEY: 'the-rate-key',
   DOOR_SECRET,
   DB: { prepare: () => statement, batch: () => Promise.resolve([]) },

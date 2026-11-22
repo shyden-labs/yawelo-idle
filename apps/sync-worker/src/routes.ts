@@ -38,6 +38,8 @@ interface Statement {
  */
 export interface SyncEnv {
   readonly COMMIT: string;
+  /** The sign-up switch (#1079); a variable, so absent means closed. */
+  readonly SIGNUPS?: string;
   /** The key request counts are hashed under (#164 AC2); a deploy secret. */
   readonly RATE_KEY?: string;
   /** This environment's door secret, so the door's address is believed. */
@@ -111,6 +113,7 @@ const devices = (request: Request, env: SyncEnv): Promise<Response> =>
   registerDevice(request, saveDevice(env), {
     uuid: () => crypto.randomUUID(),
     now: () => Date.now(),
+    signups: env.SIGNUPS,
   });
 
 const NO_QUERY = z.strictObject({});
