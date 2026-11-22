@@ -27,7 +27,7 @@ const copyLang = 'en';
   {copy.voyage.englishNote !== null && (
     <p lang={locale}>{copy.voyage.englishNote}</p>
   )}
-  <VoyageMap client:load copy={copy.voyage} copyLang={copyLang} />
+  <VoyageMap client:load locale={locale} />
   <noscript>
     <p lang={copyLang}>{copy.voyage.failed}</p>
   </noscript>
