@@ -131,6 +131,22 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
   },
 };
 
+/** The voyage map's words (#1068): `{percent}` and `{year}` are filled by `fill`. */
+export interface MapCopy {
+  label: string;
+  done: string;
+  underWay: string;
+  notStarted: string;
+  brings: string;
+  close: string;
+  bar: string;
+  season1: string;
+  season2: string;
+  seasonNote: string;
+  /** The Indonesian page's note that island names stay English; null in English. */
+  islandNamesNote: string | null;
+}
+
 export interface Copy {
   /** The language's own name, shown on the switcher that leads to it. */
   languageName: string;
@@ -149,6 +165,7 @@ export interface Copy {
   notFoundBody: string;
   homeLink: string;
   voyage: VoyageCopy;
+  map: MapCopy;
 }
 
 export const COPY: Record<Locale, Copy> = {
@@ -167,9 +184,38 @@ export const COPY: Record<Locale, Copy> = {
     notFoundBody: COPY_EN.notFound.body.text,
     homeLink: COPY_EN.notFound.home.text,
     voyage: VOYAGE_PLACEHOLDER,
+    map: {
+      label: COPY_EN.map.label.text,
+      done: COPY_EN.map.done.text,
+      underWay: COPY_EN.map.underWay.text,
+      notStarted: COPY_EN.map.notStarted.text,
+      brings: COPY_EN.map.brings.text,
+      close: COPY_EN.map.close.text,
+      bar: COPY_EN.map.bar.text,
+      season1: COPY_EN.map.season1.text,
+      season2: COPY_EN.map.season2.text,
+      seasonNote: COPY_EN.map.seasonNote.text,
+      islandNamesNote: null,
+    },
   },
   id: {
     languageName: 'Bahasa Indonesia',
+    // Each line read back by Google Cloud Translation
+    // (docs/translations/2026-11-22-roadmap-map-id.md, #1068).
+    map: {
+      label: 'Pelayaran menuju peluncuran',
+      done: 'Selesai',
+      underWay: 'Sedang berjalan, {percent}% selesai',
+      notStarted: 'Belum dimulai',
+      brings: 'Yang dihadirkan tahap ini',
+      close: 'Tutup',
+      bar: '{percent}% pekerjaan menuju peluncuran sudah selesai',
+      season1: 'Perkiraan peluncuran: paruh pertama {year}',
+      season2: 'Perkiraan peluncuran: paruh kedua {year}',
+      seasonNote:
+        'Ini perkiraan, bukan janji. Perkiraan ini bisa berubah selama game dibangun: beberapa bagian memakan waktu lebih lama dari rencana, dan ide dari pemain bisa menambah pekerjaan baru.',
+      islandNamesNote: 'Nama pulau di halaman ini tetap dalam bahasa Inggris.',
+    },
     // Google read-back 2026-11-12 (#957): "In development: what you see may
     // change, and the released game may be completely different."
     devStrip:
