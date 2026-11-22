@@ -187,6 +187,11 @@ function changedNumbers(previous: BoardItem[], items: BoardItem[]): number[] {
 export interface Accounting {
   /** Changed cards a seen witness named. */
   explained: number[];
+  /**
+   * Every card a seen witness named, changed in this read or not: a change an
+   * earlier read found before its witness showed is explained by it (#1066).
+   */
+  seen: number[];
   /** Changed cards no seen witness named. */
   unexplained: number[];
   /** Witnesses still unseen and not expired, kept for the next read. */
@@ -236,6 +241,7 @@ export function account(input: {
     input.previous === null ? [] : changedNumbers(input.previous, input.items);
   return {
     explained: changed.filter((n) => named.has(n)),
+    seen: [...named].sort((a, b) => a - b),
     unexplained: changed.filter((n) => !named.has(n)),
     owed,
     behind,
