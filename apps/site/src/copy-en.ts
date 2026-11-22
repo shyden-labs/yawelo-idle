@@ -345,21 +345,18 @@ export const COPY_EN = {
 
   /** The support and ticket pages around ShyDesk's piece (#860, approved 2026-11-22). */
   support: {
-    title: line('Support', '#860', SUPPORT_ID),
+    title: line('Support', SUPPORT_ID),
     intro: line(
       'Ask a question or report a problem with Yawelo Idle. You can add photos or a video. Replies arrive by email, with a link back to your ticket.',
-      '#860',
       SUPPORT_ID,
     ),
     failed: line(
       'The support form did not load. Check your connection, then reload this page.',
-      '#860',
       SUPPORT_ID,
     ),
-    ticketTitle: line('Your support ticket', '#860', SUPPORT_ID),
+    ticketTitle: line('Your support ticket', SUPPORT_ID),
     ticketIntro: line(
       'Read the replies and answer them here. Keep the link from your email private: anyone who has it can open this ticket.',
-      '#860',
       SUPPORT_ID,
     ),
   },
