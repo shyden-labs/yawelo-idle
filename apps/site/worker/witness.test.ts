@@ -348,6 +348,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -364,6 +365,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -380,6 +382,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [1],
       owed: [],
       behind: false,
@@ -408,6 +411,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [owed(issueWitness)],
       behind: true,
@@ -424,6 +428,28 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
+      unexplained: [],
+      owed: [],
+      behind: false,
+      unseen: 0,
+    });
+  });
+
+  // #1066: GitHub can answer a read with a card's new field values and its
+  // old updatedAt (measured 2026-11-22), so the change shows one read before
+  // the witness does. The later read that shows the witness names the card,
+  // so the change the earlier read left unexplained can still be explained.
+  it('names the card a seen witness shows though this read found no change on it', () => {
+    const result = account({
+      ...base,
+      items: base.previous,
+      stamps: stampsOf([['PVTI_678', 678, T0]]),
+      owed: [owed(itemWitness)],
+    });
+    expect(result).toEqual({
+      explained: [],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -476,6 +502,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -492,6 +519,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -508,6 +536,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [owed(goneIssue)],
       behind: true,
@@ -545,6 +574,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [owed(issueWitness)],
       behind: true,
@@ -562,6 +592,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [],
       behind: true,
@@ -581,6 +612,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [young],
       behind: true,

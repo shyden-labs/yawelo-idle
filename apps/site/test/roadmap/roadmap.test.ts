@@ -244,6 +244,12 @@ const cardAdded = (number = 99): Witness => ({
   updatedAt: CHANGED_AT,
   gone: false,
 });
+const storyNineEdited = (): Witness => ({
+  kind: 'item',
+  id: fixtureCardId(9),
+  updatedAt: CHANGED_AT,
+  gone: false,
+});
 const storyNineArchived = (): Witness => ({
   kind: 'item',
   id: fixtureCardId(9),
@@ -534,6 +540,38 @@ describe('drift', () => {
     });
     expect(health.drift).toBe(0);
     expect(health.driftTotal).toBe(0);
+  });
+
+  // #1066, measured 2026-11-22: GitHub answered a read with a card's new
+  // field values and its old updatedAt. That read finds the change before it
+  // shows the webhook's witness; the next read shows the witness, and the
+  // change is explained then, within the grace.
+  it('counts no drift when the change shows one read before its witness does', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      const early = boardWithStoryNineClosed();
+      const nine = early
+        .flatMap((p) => p.data.node.items.nodes)
+        .find((n) => n.content.number === 9);
+      const before = fixturePages()
+        .flatMap((p) => p.data.node.items.nodes)
+        .find((n) => n.content.number === 9);
+      if (nine === undefined || before === undefined)
+        throw new Error('the fixture has no story 9');
+      nine.updatedAt = before.updatedAt;
+      await configureFake({ pages: early });
+      clock.at += 60_000;
+      await r.changed(storyNineEdited());
+      expect((await r.health()).pendingDriftSince).not.toBeNull();
+      await configureFake({ pages: boardWithStoryNineClosed() });
+      clock.at += 60_000;
+      await r.check();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health.drift).toBe(0);
+    expect(health.driftTotal).toBe(0);
+    expect(health.pendingDriftSince).toBeNull();
   });
 
   it('counts drift when the webhook comes only after the grace', async () => {
