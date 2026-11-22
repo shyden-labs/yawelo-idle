@@ -2,7 +2,7 @@
 
 **Written:** 2026-11-23 04:30 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local jobs (die with this session):** watcher for PR #1087 (#1086, worktree `../yawelo-idle-1086`; behind develop b794a676 now, so `gh pr update-branch 1087` once its CI ends, then CI, then merge); watcher for the develop deploy of b794a676 (read `site-smoke`'s support journeys by name: they should pass now).
+**Local jobs (die with this session):** watcher for the develop deploy of b794a676; watcher for PR #1087 on head 137a844f (harness test updated for the daily window; pushed with a 4 GB Node heap for the lint, #1081). Merge #1087 when green on a head containing develop, #1086 to Todo in the same call, then exercise the 429 on dev.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
@@ -39,6 +39,7 @@
 2. #1074: the roadmap's "updating" and "could not update" wording, before translation. Start #1074 after #1068 lands (same page and Worker).
 3. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket` (shydesk-b1 sets it once he says yes).
 4. #1078: the DEV pass's one-time Cloudflare setup (repo-template `docs/dev-pass.md`, "One-time setup"); `dev-signin.shyden.co.uk` does not resolve yet.
+6. #1081 (P2): raise its level? The pre-push lint now runs out of Node's 2 GB heap even at load 4 (third crash, 04:4x WIB); pushes tonight used `NODE_OPTIONS=--max-old-space-size=4096` as a stopgap.
 5. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
 
 
