@@ -46,10 +46,26 @@ const report = (installId: string, itemId: string) => ({
   website: '',
 });
 
+/**
+ * The route's own request limit (#1046: 10 a minute per network) runs before
+ * the install's daily quota, and the harness keeps its counts across tests.
+ * So each request comes from its own /24 network unless a test names one,
+ * and the quota tests below measure the quota alone.
+ */
+let networks = 0;
+const nextAddress = () => {
+  networks += 1;
+  return `10.${String(networks >> 8)}.${String(networks & 255)}.1`;
+};
+
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   server.fetch('https://sync.test/v1/content-reports', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
+    headers: {
+      'content-type': 'application/json',
+      'cf-connecting-ip': nextAddress(),
+      ...headers,
+    },
     body: JSON.stringify(body),
   });
 
@@ -140,6 +156,30 @@ describe('refusals write nothing (#52 AC2)', () => {
   });
 });
 
+describe('the route limit (#1046) applies to reports', () => {
+  it('ten a minute from one network, the 11th answers 429 with Retry-After before the quota is read', async () => {
+    const statuses: number[] = [];
+    // one scenario: one network sends eleven reports from eleven installs
+    for (let index = 0; index < 10; index += 1)
+      statuses.push(
+        (
+          await post(report(`install-net-${String(index)}`, 'lex.a'), {
+            'cf-connecting-ip': '198.51.100.20',
+          })
+        ).status,
+      );
+    const refused = await post(report('install-net-10', 'lex.a'), {
+      'cf-connecting-ip': '198.51.100.21',
+    });
+    expect.soft(statuses).toEqual(Array<number>(10).fill(201));
+    expect.soft(refused.status).toBe(429);
+    expect.soft(refused.headers.get('retry-after')).toMatch(/^[1-9]\d*$/);
+    expect.soft(await refused.json()).toEqual({ error: 'too_many_requests' });
+    expect.soft(await reportsOf('install-net-10')).toEqual([]);
+    expect.soft(await quotaOf('install-net-10')).toEqual([]);
+  });
+});
+
 describe('ten a day per install (#52 AC3)', () => {
   it('the 10th is accepted and the 11th answers 429', async () => {
     const statuses = await sendInOrder('install-limit', 11);
@@ -158,6 +198,7 @@ describe('ten a day per install (#52 AC3)', () => {
       .run();
     const response = await post(report('install-resolved', 'item-new'));
     expect.soft(response.status).toBe(429);
+    expect.soft(await response.json()).toEqual({ error: 'daily_limit' });
     expect.soft(await reportsOf('install-resolved')).toEqual([]);
   });
 
@@ -174,6 +215,14 @@ describe('ten a day per install (#52 AC3)', () => {
         ...Array<number>(10).fill(201),
         ...Array<number>(10).fill(429),
       ]);
+    const refusals = await Promise.all(
+      responses
+        .filter((response) => response.status === 429)
+        .map((response) => response.json()),
+    );
+    expect
+      .soft(refusals)
+      .toEqual(Array.from({ length: 10 }, () => ({ error: 'daily_limit' })));
     expect.soft(await reportsOf('install-burst')).toHaveLength(10);
     expect
       .soft(await quotaOf('install-burst'))

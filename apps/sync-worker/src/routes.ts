@@ -115,7 +115,7 @@ const devices = (request: Request, env: SyncEnv): Promise<Response> =>
 
 const NO_QUERY = z.strictObject({});
 
-/** The CHECK on content_report_quota.n (migration 0002) refusing the 11th. */
+/** The CHECK on content_report_quota.n (migration 0003) refusing the 11th. */
 const DAILY_LIMIT_CHECK = 'CHECK constraint failed: content_report_daily_limit';
 /** SQLite's message when content_reports_one_per_item refuses a row. */
 const ONE_PER_ITEM = 'UNIQUE constraint failed: content_reports.install_id';
