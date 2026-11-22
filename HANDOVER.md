@@ -1,16 +1,26 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 00:05 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860` (branch `860-support-page`, tests commit ec5875be, push in progress), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 6104112c), `yawelo-idle-1068` (branch `1068-voyage-map`, head 461810ae, pushed, no PR). No Colima, simulator or USB claim. Progress page source: `.superpowers/road-to-launch.html` (v87, published 22:40 WIB). Shyden went to sleep about 23:20 WIB (relayed by repo-template-21): park questions, keep working.
+**Written:** 2026-11-23 00:40 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-860-e2e`, `yawelo-idle-1068`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Progress page source `.superpowers/road-to-launch.html` (edited for v88, not yet published). Shyden asleep since about 23:20 WIB (relayed by repo-template-21): park questions, keep working.
 
-## Now (2026-11-22, 22:15 to 00:05 WIB): #860 support pages (P0, In Progress)
+## Now (2026-11-22 22:15 to 2026-11-23 00:40 WIB)
 
-- **Shyden's rulings (AskUserQuestion, both recorded on #860):** page copy approved as written; the pages live in the **full site, with /support let through the doors** (dev now; production waits on #425/#426 like #1072).
-- **ShyDesk details (shydesk-b1, on #860):** dev host `https://shydesk.shydesk-non-prod.workers.dev` (moves with shydesk#262, may change with shydesk#270), live `https://shydesk.dpdns.org`; `<host>/embed.js` defer; `<shydesk-support product="yawelo-idle" view="contact|ticket" lang>`; open shadow root, find fields by label ("Email", "Subject", "Message", "Send", "Photos and videos"). Dev `ticketPageUrl` set to `https://dev.yaweloidle.com/support/ticket` and read back. TEST uses LIVE ShyDesk (shydesk#263 live), but test.yaweloidle.com has no full site, so the TEST page waits.
-- **Design:** `apps/site/worker/support.ts` (paths, `passesTheDoor` incl. `/_site/`, `supportPolicy`, `preferredLocale`, `ticketRedirect` (id browsers from /support/ticket unless Sec-Fetch-Site same-origin), `supportPage` replacing `https://shydesk.invalid` with `SHYDESK_HOST`). Site build assets move to `/_site/` so the door can pass them. Code drafts (not yet run) in ignored `.superpowers/sdd/860/`.
-- **Tests commit ec5875be** (tests + copy + stub): unit read red locally (54 support + 5 door). Next: push (first push hit an "Abort trap: 6" in pre-push lint, cause unmeasured; second push running), open a draft PR, read the harness tests red on CI by name; push a scratch branch with only `tests/site/support.spec.ts` on develop and dispatch deploy-dev on it to read the e2e red; then the code commit. Change the spec's `pieceField` to find the Email field by label first (tests change, before code).
-- **Filed:** #1075 (P2, 1 pt, blocked by shydesk#266: drop style-src 'unsafe-inline'), #1076 (P1, 3 pts: dev door `signin` for the DEV-pass embed; blocks shydesk#262, ShyDesk links it). #424 covers the site-wide CSP; add a note there that the support pages carry their own.
-- **#1068 (P1):** on `1068-voyage-map` (worktree `../yawelo-idle-1068`), two local commits, not pushed: 3243854f (model tests + stubs + features data; 35 red locally, features mutation-checked) and 916c1a01 (stages/layout/season code; 84 green). Next: copy keys (map lines are in `docs/translations/2026-11-22-roadmap-map-id.md`), the rewritten `VoyageMap.test.ts` (red locally), the e2e journey rewrite (red on CI), then the Svelte code.
-- **Parked:** #784 (repo-template#207 still open, no DEV-pass pattern sent); #1066 AC4 (no develop deploy since 6104112c).
+### #860 support pages (P0, In Progress), draft PR #1077
+
+- **Rulings (on #860):** copy approved; pages in the full site with /support let through the doors (dev now; production waits on #425/#426, like #1072).
+- **ShyDesk (shydesk-b1, on #860):** dev host `https://shydesk.shydesk-non-prod.workers.dev` (moves with shydesk#262, may change with #270), live `https://shydesk.dpdns.org`; `<host>/embed.js` defer; `<shydesk-support product="yawelo-idle" view lang>`; open shadow root, fields by label. Dev ticketPageUrl `https://dev.yaweloidle.com/support/ticket` set and read back. TEST uses live ShyDesk, but test.yaweloidle.com has no full site: the TEST page waits.
+- **Branch `860-support-page`** (worktree `../yawelo-idle-860`), tests only: ec5875be + 3a0dd510 (pushed). PR #1077's CI: build-and-test stops at the red unit step, so the harness never runs there. board-orphans went red on #1068 (#1068 now set Todo; the check clears on the next push).
+- **Reading CI-only tests red:** (a) scratch `860-e2e-red` (worktree `../yawelo-idle-860-e2e`, 4ec31a4d = develop + copy data, stub, i18n test, `tests/site/support.spec.ts`; copy sources cite only the evidence file, because the copy-source test refuses `#860`): push running in background, then `gh workflow run deploy-dev.yml --ref 860-e2e-red`; read `site-smoke` failing by name. (b) Next: scratch `x/860-harness-red` = (a) + `apps/site/test/site.test.ts` from 3a0dd510, as a draft PR; read "Worker tests" failing by name; then close it and delete both scratch branches.
+- **Then the code** (drafts, not yet run, in ignored `.superpowers/sdd/860/`): `worker/support.ts`; wire `index.ts` (ticketRedirect + supportPage before servePages; `pagesFor` lets `passesTheDoor` through); `astro.config.ts` `build.assets: '_site'`, `inlineStylesheets: 'never'`, `vite.build.assetsInlineLimit: 0`; `wrangler.jsonc` var `SHYDESK_HOST`; `src/views/Support.astro` + 4 pages; `src/support/page.ts`. Change the copy sources on the branch too (drop `'#860'`, keep the evidence file).
+- **Filed:** #1075 (P2, 1 pt, blocked by shydesk#266), #1076 (P1, 3 pts, dev door `signin`; blocks shydesk#262, which ShyDesk links). Note on #424. Timeout instance on #971.
+
+### #1068 voyage map (P1, Todo until its PR)
+
+- Branch `1068-voyage-map` (worktree `../yawelo-idle-1068`), local commits on 461810ae, not pushed: 3243854f model tests (35 red), 916c1a01 model code (84 green), 51eb34b9 component tests + map copy (22 red locally), d8003276 e2e journeys (`tests/site/roadmap.spec.ts`, to be read red on dev).
+- Next: push as `x/1068-…` or open a draft PR naming #1068 at the first push (board-orphans needs `/N-` or a PR); read the e2e red on a deploy-dev scratch; then the Svelte code (VoyageMap with `{ locale }` props, SeaMap, IslandPanel, drawing.ts) and delete the old components per spec §6.
+
+### Parked
+
+- #784 (repo-template#207 still open), #1066 AC4 (no develop deploy since 6104112c).
 
 ## Latest (2026-11-22, to 22:15 WIB, session `yawelo-idle-07`)
 
