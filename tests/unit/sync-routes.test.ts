@@ -220,6 +220,30 @@ describe('the request limits (#164 AC2)', () => {
     },
   );
 
+  it('refuses the 51st content report of a day from one network, whatever install id each names (#1086)', async () => {
+    const counts = memoryCounts();
+    const statuses: number[] = [];
+    let last: Response | undefined;
+    // one scenario: one network rotating its install id on every report
+    for (let n = 0; n <= 50; n += 1) {
+      last = await send('/v1/content-reports', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...(JSON.parse(REPORT) as Record<string, string>),
+          installId: `install-${String(n)}`,
+          itemId: `lex.${String(n)}`,
+        }),
+        counts,
+      });
+      statuses.push(last.status);
+    }
+    expect([
+      statuses.at(-2),
+      statuses.at(-1),
+      last?.headers.get('retry-after'),
+    ]).toEqual([201, 429, String(24 * 60 * 60 - 30)]);
+  });
+
   it('counts every address in one network together', async () => {
     const counts = memoryCounts();
     // one scenario: two addresses in one /24 share /health's 60

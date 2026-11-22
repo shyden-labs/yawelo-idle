@@ -209,7 +209,10 @@ export const ROUTES: Readonly<
   '/v1/content-reports': {
     method: 'POST',
     query: NO_QUERY,
-    limit: { requests: 10, perSeconds: 60 },
+    // A day's window per network (#1086): the per-install daily quota names
+    // an install id the client chooses, so a client rotating ids is held
+    // here, by a network it cannot choose, at 50 reports a day.
+    limit: { requests: 50, perSeconds: 86_400 },
     whenUncounted: 'refuse',
     handle: contentReports,
   },
