@@ -2,11 +2,11 @@
 
 **Written:** 2026-11-23 03:30 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job (dies with this session):** watcher for the develop deploy of 67d248db (#860's merge); re-check with `gh run list --workflow deploy-dev.yml --branch develop`.
+**Local job (dies with this session):** watcher for PR #1085 (#860's beacon fix, branch `x/860-beacon`, worktree `../yawelo-idle-860b`). Re-run `~/.claude/scripts/pr-verdict.sh 1085`; merge when green on a head containing develop (#860 back to Todo in the same call), then read the deploy's `site-smoke` support journeys by name.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
-### #860 support pages (P0, Todo): PR #1077 merged as 67d248db
+### #860 support pages (P0, In Progress): PR #1077 merged as 67d248db; fix PR #1085 open
 
 - **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
 - **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
@@ -14,6 +14,10 @@
 - PR #1077 CI on 2d9feb4d: unit green, Worker tests 292 passed / 1 failed (`config.test.ts`: `SHYDESK_HOST` missing from `wrangler.roadmap-test.jsonc`), fixed in 8ecbf60d (push running at 02:35).
 - **Merged** as 67d248db (every check and step green on e3b14141); worktree and branches removed. AC5 prepared: test files `.superpowers/sdd/860/ac5-photo.png`, `ac5-video.mp4`; script `../yawelo-idle-dev-scripts/.superpowers/ac5.mjs` (needs `DEV_PASSWORD`, `AC5_EMAIL`); shydesk-b1 answered: use `e2e-yawelo-ac5@example.com` (dev mail is not set up, so the piece's "email could not be sent" is expected) and dev Turnstile is the always-pass test key. Run `AC5_EMAIL=e2e-yawelo-ac5@example.com DEV_PASSWORD=… node .superpowers/ac5.mjs` from `../yawelo-idle-dev-scripts` once dev serves 67d248db, then send shydesk-b1 the subject `AC5 check from Yawelo Idle dev (#860)` for the read-back. Then read the deploy's `site-smoke` support journeys.
 - **Was next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
+
+- **After the merge:** develop deploy 45069145980 failed `site-smoke`: the 16 support journeys saw Cloudflare's injected analytics beacon (W17's site-wide exception), which the support policy blocked. PR #1085 (tests d3f55aef red, fix 994251ba) admits it like the game's policy.
+- **AC5 dev half met** (comments on #860): ticket ccaca7b3 with a photo and a video sent from dev at ~04:1x WIB and read back by shydesk-b1 by 04:20 WIB (both attachments open and play); ShyDesk closed it. **AC4 unproven**: the link (copied by eye) said "no longer valid"; asked shydesk-b1 whether closed tickets' links stop opening. `.superpowers/ac5.mjs` now saves the link to the ignored `.superpowers/sdd/860/ac5-ticket-link.txt`; `.superpowers/ac4.mjs` opens `$TICKET_LINK`.
+- **#1086 filed (P0, 3 pts)** from a security review: the content-report quota is keyed on a client-chosen install id (pre-existing, #52). Next P0 to work after #1085.
 
 ### #1068 voyage map (P1), branch `x/1068-voyage-map`
 
