@@ -2,7 +2,7 @@
 
 **Written:** 2026-11-23 02:36 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-1068`, `yawelo-idle-1078`, `yawelo-idle-1079`, `yawelo-idle-860-e2e` (deps for 1078/1079), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local jobs at 02:55 WIB (die with this session):** watchers for PR #1077 (head 8ecbf60d) and PRs #1082 (50e15c54), #1083, #1084; re-run `~/.claude/scripts/pr-verdict.sh <pr>`. All branches are pushed.
+**Local jobs at 03:15 WIB (die with this session):** watchers for PR #1077 (head 99e647dd), #1083 (82918edc), #1084 (31b48060, branch updated from develop), and the develop deploy of d022eb61. Re-run `~/.claude/scripts/pr-verdict.sh <pr>`. Merges into develop are refused unless the head contains develop's latest commit: after a merge, `gh pr update-branch <pr>` the others once their running CI ends.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
@@ -10,6 +10,7 @@
 
 - **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
 - **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
+- SonarCloud gate on 8ecbf60d: 77.1% new-code coverage (80% needed; page.ts and index.ts support() untested by unit). Fixed in 99e647dd (page.test.ts, mutation-checked; serveSupport() moved and tested red first).
 - PR #1077 CI on 2d9feb4d: unit green, Worker tests 292 passed / 1 failed (`config.test.ts`: `SHYDESK_HOST` missing from `wrangler.roadmap-test.jsonc`), fixed in 8ecbf60d (push running at 02:35).
 - **Next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
 
@@ -17,13 +18,13 @@
 
 - Commits on 461810ae: 3243854f model tests, 916c1a01 model code, 51eb34b9 component tests + map copy, d8003276 dev journeys (read red: 16 failed on deploy-dev 45056613095, evidence on #1068), 7b858fe9 drawing tests (10 red), 79f9d12f drawing, 13f4a594 the page + removals (spec §6). Full unit suite 14,758 passed at 02:28.
 - A self-caught slip: `drawing.ts` was first written before its tests; deleted unrun, tests written and read red, module written fresh (memory updated).
-- Pushed as `x/1068-voyage-map`, **draft PR #1082**, #1068 In Progress, old remote deleted. First CI: build-and-test and browsers green; coverage red (#804: ten untaken branches in VoyageMap.svelte). Fixed in 50e15c54 (four behaviour tests, each mutation-checked; dead fallbacks removed; 100% branches locally). Next: read #1082's CI on 50e15c54.
+- **PR #1082 merged** into develop as d022eb61 (every check and step green on 50e15c54; coverage fixed with four mutation-checked tests and dead fallbacks removed). #1068 set Todo; worktree and branches removed. Next: read the develop deploy's `site-smoke` (the four roadmap journeys) by name, then check AC by AC on dev (AC8: Shyden sees it on dev before production) and close by hand only with every AC evidenced.
 - Open: the three old intro paragraphs stay on the page until #830 AC1's new short text; the old copy strings stay while the tests use them to check absence.
 
 ### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
 
-- `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), pushed, **draft PR #1084**, In Progress: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
-- `x/1079-signups` (worktree `../yawelo-idle-1079`), pushed, **draft PR #1083**, In Progress: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
+- `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), pushed, **PR #1084** green on 4a9b6ac4, merge refused (behind develop), branch updated to 31b48060, CI rerunning; merge it then, #1078 to Todo: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
+- `x/1079-signups` (worktree `../yawelo-idle-1079`), pushed, **draft PR #1083**, In Progress; first CI red (sync-routes fixture had no SIGNUPS: 503), fixed in 82918edc with the injected config: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
 - #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
 
 ### For Shyden in the morning (parked questions)
