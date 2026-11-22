@@ -1,12 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-21 15:15 WIB (progress page v77 at 15:15), session `yawelo-idle-53`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 1c14d579). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v77).
+**Written:** 2026-11-22 07:40 WIB (progress page v78 at 07:36), session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-52` (draft PR #1042), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop 1c14d579). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v78).
 
-## Latest (2026-11-21, 14:00 to 15:15 WIB)
+## Latest (2026-11-22, 07:10 to 07:40 WIB, session `yawelo-idle-07`)
 
-- **yawelo.com done (#1013 AC1 part):** Shyden connected the Yawelo profile. In the prod account's yawelo.com zone: `A @` and `A www` 192.0.2.1 proxied, one Single Redirect (all requests, `concat("https://yaweloidle.com", http.request.uri.path)`, 308, query kept). curl: apex and www, http and https, POST → 308 to the same path on yaweloidle.com; follow ends 200. Evidence comment on #1013. #1013 now waits only on the next production release (api host via verify-api).
-- **#784 DEV key:** Shyden chose "Workers + database": a new Non-Prod key, Workers Scripts Edit on `yawelo-idle-{sync,web,holding,site}-dev` only, plus D1 Edit (per-database if offered). Cloudflare docs list D1 Edit account-wide only. **Shyden makes the key and replaces `NONPROD_CLOUDFLARE_API_TOKEN` in the `dev` environment**; proof = next green develop deploy (blocked by #1062), then delete the old key. Comment on #784. #784 set to Todo (no branch names it).
-- playwright-devices still 0.1.4; pd#42 OPEN.
+- Every P0 to P2 ticket waits on something outside this session: #1062/#1003 on playwright-devices#42 (open, still 0.1.4); #1013 on the next production release; #784 on Shyden's narrower DEV key (`NONPROD_CLOUDFLARE_API_TOKEN` in `dev` still `updated_at` 2026-11-16T02:02:04Z); #830 on Shyden; #992/#993 on playwright-devices#7.
+- **#713:** production measured (comment on #713): media.yaweloidle.com answers 206 with Content-Range for .mp4 and .webm, 416 out of range; CORP now `cross-origin` (needed for shyden.co.uk's embed after the domain move). Only AC5 left: phones on production (blocked by #992, #993, links added) and the shyden.co.uk#835 embed (already blocked by #713).
+- **#52 / draft PR #1042 resumed:** its red was stale (squash-only ruleset fixed 2026-11-19 14:21 WIB, after that run). Merged develop in (785cdd72), unit 14,750 passed, pushed; CI verdict was running at handover.
 
 ## Shyden's answers today (2026-11-21)
 
@@ -34,7 +34,8 @@
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #1062: when playwright-devices-ae sends the release with #42's fix: branch `1062-poll-counted-once` from develop, `npm install @shyden-labs/playwright-devices@">=<ver>"` and restore the `>=` range (npm rewrites it as `^`), run unit, open a PR, merge on green, then read the develop deploy (browsers' assertion counts equal, deploy green) onto #1062 and #1003 (AC4), and close both by hand.
-3. #784: when Shyden says the narrower DEV key is saved, read the secret's `updated_at`, then prove it with the next develop deploy (after #1062) and comment on #784.
-4. Next production release (Shyden approves): carries the tab icon and the API reserve; deploy-prod's verify-api proves #1013 AC1's API host.
-5. #830 AC2 epic titles table waits for Shyden.
+2. #52 / PR #1042: read the CI verdict on 785cdd72 (`~/.claude/scripts/pr-verdict.sh 1042`). If green, mark ready and squash-merge into develop (develop's own deploy is still red on #1062, so AC11's dev read-back waits on it). Left on #52 after that: AC2 item ids (M2 content), AC5 staff API + AC9 rate rule (need Shyden), AC6 (needs #174), AC11.
+3. #1062: when playwright-devices-ae sends the release with #42's fix: branch `1062-poll-counted-once` from develop, `npm install @shyden-labs/playwright-devices@">=<ver>"` and restore the `>=` range (npm rewrites it as `^`), run unit, open a PR, merge on green, then read the develop deploy (browsers' assertion counts equal, deploy green) onto #1062 and #1003 (AC4), and close both by hand.
+4. #784: when Shyden says the narrower DEV key is saved, read the secret's `updated_at`, then prove it with the next develop deploy (after #1062) and comment on #784.
+5. Next production release (Shyden approves): carries the tab icon and the API reserve; deploy-prod's verify-api proves #1013 AC1's API host.
+6. #830 AC2 epic titles table waits for Shyden.
