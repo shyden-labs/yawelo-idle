@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 05:05 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. develop at b794a676. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached). **Nothing running.** No Colima, simulator or USB claim. Progress page v100 published 05:04 WIB. Shyden asleep since about 23:20 WIB.
+**Written:** 2026-11-23 05:05 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. develop at d43bcbdc. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached). **Nothing running.** No Colima, simulator or USB claim. Progress page v100 published 05:04 WIB. Shyden asleep since about 23:20 WIB.
 
 ## Now (2026-11-23, to 05:05 WIB)
 
