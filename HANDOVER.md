@@ -2,11 +2,11 @@
 
 **Written:** 2026-11-23 04:28 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local jobs (die with this session):** watchers for PR #1085 (#860 beacon fix, worktree `../yawelo-idle-860b`) and PR #1087 (#1086 quota fix, worktree `../yawelo-idle-1086`). Re-run `~/.claude/scripts/pr-verdict.sh <pr>`. Merge each when green on a head containing develop (the second needs `gh pr update-branch` after the first merges), Status to Todo in the same call; then read the deploy's jobs by name.
+**Local jobs (die with this session):** watcher for PR #1087 (#1086, worktree `../yawelo-idle-1086`; behind develop b794a676 now, so `gh pr update-branch 1087` once its CI ends, then CI, then merge); watcher for the develop deploy of b794a676 (read `site-smoke`'s support journeys by name: they should pass now).
 
 ## Now (2026-11-23, to 02:35 WIB)
 
-### #860 support pages (P0, In Progress): PR #1077 merged as 67d248db; fix PR #1085 open
+### #860 support pages (P0, Todo): PR #1077 merged as 67d248db; beacon fix PR #1085 merged as b794a676
 
 - **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
 - **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
