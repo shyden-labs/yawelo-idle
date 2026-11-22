@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 03:30 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
+**Written:** 2026-11-23 04:28 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
 **Local jobs (die with this session):** watchers for PR #1085 (#860 beacon fix, worktree `../yawelo-idle-860b`) and PR #1087 (#1086 quota fix, worktree `../yawelo-idle-1086`). Re-run `~/.claude/scripts/pr-verdict.sh <pr>`. Merge each when green on a head containing develop (the second needs `gh pr update-branch` after the first merges), Status to Todo in the same call; then read the deploy's jobs by name.
 
