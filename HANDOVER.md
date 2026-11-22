@@ -1,8 +1,14 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-22 16:08 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-1066` (draft PR 1069), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v81).
+**Written:** 2026-11-22 20:15 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Nothing running in the background. Progress page source: `.superpowers/road-to-launch.html` (v82).
 
-## Latest (2026-11-22, to 16:08 WIB, session `yawelo-idle-07`)
+## Latest (2026-11-22, to 20:15 WIB, session `yawelo-idle-07`)
+
+- **#1066: started again** (Shyden: "TDD failed then... clean slate, start again"). PR #1069 closed unmerged: its pending-clearing code and seen's sort had no red test first (memory `feedback-failing-test-before-any-code`, fourth instance). New draft **PR #1071**, branch `1066-seen-witness-clears-pending`, worktree `../yawelo-idle-1066b`. Red first: the harness test on CI (run 45020793203, `drift > counts no drift when the witness shows one read after the change`, expected 1 to be 0, the only failure); 12 `seen` tests, then the order test, then 4 `clearSeen` tests, each red locally before its code. **Merged** as `6104112c9bb4` (every step green on head `c6cc30cd7e25`, SonarCloud too); worktree and branches removed. Dev deploy run 45023545667 all green, `verify-roadmap` success. Text edits on #1066's card (13:04:11Z set, 13:07:22Z cleared): health drift 0, pending null, staleReads 0 (comment on #1066). #1066 set Todo (no branch). AC4 waits only on the next develop deploy's `verify-roadmap`. A gate unit run hit a #971 timeout first (load 71, swap 3.5 GB; comment on #971).
+- **#1068: island features approved** by Shyden (option 1 of https://claude.ai/artifact/ErmQbhpvXDPv4U66CLrbQ4), grouping in the #1068 comment. Shipyard and The engine share "Behind the scenes: the tools and the game engine everything else is built on."
+- FYI from shytalk-77: Shyden ruled on DEV/TEST auth for every project (DEV gate with no shared secret in builds; TEST no password gate; on/off switch for registrations everywhere). repo-template-21 will send the pattern; change nothing until then.
+
+## Earlier (2026-11-22, to 16:08 WIB, session `yawelo-idle-07`)
 
 - **#1066 (P0, In Progress): cause measured** (comment on #1066). GitHub can answer a read with a card's **new field values and its old `updatedAt`** (run f, read r10; logs in `.superpowers/sdd/1066/`). The read that shows the change does not show the witness yet, so the card goes into `pending`; the next read shows the witness but finds no change, and `pending` is only cleared by a late webhook (`changed()`), so it becomes drift. Test card values cleared and read back.
 - **PR #1069 (draft)**, branch `1066-late-witness-clears-pending`, worktree `../yawelo-idle-1066`, head `bfa1844d79f90b4e6d4d3a261529e8b4e1d0e0f3` = **tests only** (expected red): `witness.test.ts` (`account()` reports `seen`; 12 unit tests read red locally) and harness `roadmap.test.ts` "counts no drift when the change shows one read before its witness does". CI was still running at 16:08 WIB.
@@ -44,7 +50,7 @@
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. #1066: `~/.claude/scripts/pr-verdict.sh 1069` (it returns early while queued; re-run). Read the harness test failing **by name** and the unit tests failing on CI. Only then write the fix in `../yawelo-idle-1066`: `account()` returns `seen` (numbers of witnesses this read showed); `read()` in `apps/site/worker/roadmap.ts` drops `pending` entries for those numbers within `GRACE_MS`. Unit suite by hand, push, CI green by step names, squash-merge, then AC4 (a text edit then a develop deploy whose `verify-roadmap` passes).
-3. #1067 with Shyden in the Yawelo Chrome: read webhook 698318626's payload URL and a recent delivery's response (does it show 308?), set it to `https://dev.yaweloidle.com/hooks/github`, read back, check a delivery (AC2, AC3); grep the repo for the old URL (AC4).
-4. #1068 (P1): spec and plan; first ask Shyden to approve the island feature lists (`.superpowers/sdd/830/features.tsv`).
+2. #1066 AC4: read the next develop deploy's `verify-roadmap` step by name (any merge to develop after 13:07Z), record it on the ticket, then shut it by hand. Board-next said #1013 next (P0, waits on Shyden: the production release and yawelo.com).
+3. #1067 with Shyden in the Yawelo Chrome: read webhook 698318626's payload URL and a recent delivery's response (308?), set it to `https://dev.yaweloidle.com/hooks/github`, read back, check a delivery (AC2, AC3); grep the repo for the old URL (AC4).
+4. #1068 (P1): spec and plan; Indonesian for the approved features (Google read-back, D18).
 5. #784: delete the old key with Shyden. Next production release (Shyden approves): the tab icon and the API reserve (#1013 AC1).
