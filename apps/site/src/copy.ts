@@ -165,7 +165,16 @@ export interface Copy {
   notFoundBody: string;
   homeLink: string;
   voyage: VoyageCopy;
+  support: SupportCopy;
   map: MapCopy;
+}
+
+/** The support and ticket pages' own words around ShyDesk's piece (#860). */
+export interface SupportCopy {
+  intro: string;
+  /** Shown when ShyDesk's piece did not load. */
+  failed: string;
+  ticketIntro: string;
 }
 
 export const COPY: Record<Locale, Copy> = {
@@ -177,6 +186,8 @@ export const COPY: Record<Locale, Copy> = {
     titles: {
       home: 'Yawelo Idle',
       roadmap: COPY_EN.roadmap.title.text,
+      support: COPY_EN.support.title.text,
+      supportTicket: COPY_EN.support.ticketTitle.text,
     },
     launchListSoon: 'The launch list opens soon.',
     englishOnlyNote: 'This page is available in English only.',
@@ -184,6 +195,11 @@ export const COPY: Record<Locale, Copy> = {
     notFoundBody: COPY_EN.notFound.body.text,
     homeLink: COPY_EN.notFound.home.text,
     voyage: VOYAGE_PLACEHOLDER,
+    support: {
+      intro: COPY_EN.support.intro.text,
+      failed: COPY_EN.support.failed.text,
+      ticketIntro: COPY_EN.support.ticketIntro.text,
+    },
     map: {
       label: COPY_EN.map.label.text,
       done: COPY_EN.map.done.text,
@@ -222,7 +238,14 @@ export const COPY: Record<Locale, Copy> = {
       'Dalam pengembangan: yang Anda lihat bisa berubah, dan game yang dirilis bisa sama sekali berbeda.',
     comingSoon: 'Segera hadir',
     tagline: 'Petualangan idle menjelajahi bahasa sungguhan.',
-    titles: { home: 'Yawelo Idle', roadmap: 'Peta jalan' },
+    titles: {
+      home: 'Yawelo Idle',
+      roadmap: 'Peta jalan',
+      // docs/translations/2026-11-22-support-id.md (#860): Google read-back
+      // "Help" and "Your support ticket".
+      support: 'Bantuan',
+      supportTicket: 'Tiket bantuan Anda',
+    },
     launchListSoon: 'Daftar peluncuran segera dibuka.',
     // Google read-back 2026-11-08: "This page is available in English only."
     englishOnlyNote: 'Halaman ini hanya tersedia dalam bahasa Inggris.',
@@ -242,6 +265,16 @@ export const COPY: Record<Locale, Copy> = {
         'Persentase ini menghitung cerita yang sudah selesai dari semua cerita yang direncanakan sejauh ini. Satu cerita adalah satu bagian pekerjaan. Cerita baru ditambahkan seiring game berkembang, jadi angkanya bisa turun maupun naik. Poin menunjukkan besarnya pekerjaan yang tersisa: pekerjaan yang lebih besar punya poin lebih banyak. Tanggalnya adalah perkiraan dari laju tujuh hari terakhir, bukan janji.',
       englishNote:
         'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.',
+    },
+    // Each line read back by Google Cloud Translation
+    // (docs/translations/2026-11-22-support-id.md, #860).
+    support: {
+      intro:
+        'Ajukan pertanyaan atau laporkan masalah tentang Yawelo Idle. Anda dapat menambahkan foto atau video. Balasan dikirim lewat email, beserta tautan kembali ke tiket Anda.',
+      failed:
+        'Formulir bantuan tidak dapat dimuat. Periksa koneksi Anda, lalu muat ulang halaman ini.',
+      ticketIntro:
+        'Baca balasan dan tanggapi di sini. Jaga kerahasiaan tautan dari email Anda: siapa pun yang memilikinya dapat membuka tiket ini.',
     },
   },
 };

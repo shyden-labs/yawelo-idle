@@ -13,7 +13,13 @@ export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = 'en';
 
 /** The pages that have an address of their own; the 404 has none. */
-export const PAGES = ['home', 'roadmap', 'privacy'] as const;
+export const PAGES = [
+  'home',
+  'roadmap',
+  'privacy',
+  'support',
+  'supportTicket',
+] as const;
 export type Page = (typeof PAGES)[number];
 
 /**
@@ -47,6 +53,8 @@ const SLUGS: Record<Page, string> = {
   home: '',
   roadmap: 'roadmap',
   privacy: 'privacy',
+  support: 'support',
+  supportTicket: 'support/ticket',
 };
 
 /**

@@ -12,6 +12,8 @@
 import { line, t } from './copy-line';
 import { digits, duration, rankList, rankName, words } from './figures';
 
+/** The support pages' Indonesian evidence (#860). */
+const SUPPORT_ID = 'file:docs/translations/2026-11-22-support-id.md';
 /** The voyage map's Indonesian evidence (#1068). */
 const MAP_ID = 'file:docs/translations/2026-11-22-roadmap-map-id.md';
 
@@ -357,6 +359,24 @@ export const COPY_EN = {
       'W17',
       'site §3',
       'site §6.3',
+    ),
+  },
+
+  /** The support and ticket pages around ShyDesk's piece (#860, approved 2026-11-22). */
+  support: {
+    title: line('Support', SUPPORT_ID),
+    intro: line(
+      'Ask a question or report a problem with Yawelo Idle. You can add photos or a video. Replies arrive by email, with a link back to your ticket.',
+      SUPPORT_ID,
+    ),
+    failed: line(
+      'The support form did not load. Check your connection, then reload this page.',
+      SUPPORT_ID,
+    ),
+    ticketTitle: line('Your support ticket', SUPPORT_ID),
+    ticketIntro: line(
+      'Read the replies and answer them here. Keep the link from your email private: anyone who has it can open this ticket.',
+      SUPPORT_ID,
     ),
   },
 

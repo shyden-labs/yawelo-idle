@@ -36,6 +36,7 @@ import {
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
+import { isSupportPath, serveSupport } from './support';
 import privateSpec from '../api/private.openapi.json';
 
 export { Roadmap } from './roadmap';
@@ -130,6 +131,8 @@ export default {
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
+      if (isSupportPath(path))
+        return serveSupport(allowed, env.ASSETS, env.SHYDESK_HOST);
       // The holding page on the dev front door or through the dev site's
       // door (#673, #784), the door believed only with this Worker's door
       // secret, compared in constant time; else the site being built.

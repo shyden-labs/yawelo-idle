@@ -19,6 +19,8 @@
     { "binding": "HOLDING", "service": "yawelo-idle-holding-dev" },
   ],
   "vars": {
+    // ShyDesk's dev host (#860), as wrangler.jsonc sets it.
+    "SHYDESK_HOST": "https://shydesk.shydesk-non-prod.workers.dev",
     "ROADMAP_APP_ID": "5294556",
     "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
     "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",

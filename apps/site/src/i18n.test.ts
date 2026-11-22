@@ -14,9 +14,15 @@ import {
 } from './i18n';
 
 describe('the site’s languages and pages (#332 AC1)', () => {
-  it('has English and Indonesian, and the three pages with addresses', () => {
+  it('has English and Indonesian, and the five pages with addresses (#860 adds support)', () => {
     expect(LOCALES).toEqual(['en', 'id']);
-    expect(PAGES).toEqual(['home', 'roadmap', 'privacy']);
+    expect(PAGES).toEqual([
+      'home',
+      'roadmap',
+      'privacy',
+      'support',
+      'supportTicket',
+    ]);
   });
 
   it('indexes production only', () => {
@@ -30,6 +36,10 @@ describe('the site’s languages and pages (#332 AC1)', () => {
     ['id', 'home', '/id/'],
     ['id', 'roadmap', '/id/roadmap'],
     ['id', 'privacy', '/id/privacy'],
+    ['en', 'support', '/support'],
+    ['en', 'supportTicket', '/support/ticket'],
+    ['id', 'support', '/id/support'],
+    ['id', 'supportTicket', '/id/support/ticket'],
   ] as [Locale, Page, string][])('puts %s %s at %s', (locale, page, path) => {
     expect(pagePath(locale, page)).toBe(path);
   });
