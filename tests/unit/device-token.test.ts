@@ -152,6 +152,7 @@ describe('registerDevice (#163 AC1, AC3, AC4)', () => {
         uuid: () => `id-${String((next += 1))}`,
         now: () => 1_000,
         random: filled(5),
+        signups: 'open',
       },
     );
     return { response, saved };
