@@ -1,47 +1,33 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 04:50 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
+**Written:** 2026-11-23 05:05 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. develop at b794a676. Worktrees: `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached). **Nothing running.** No Colima, simulator or USB claim. Progress page v100 published 05:04 WIB. Shyden asleep since about 23:20 WIB.
 
-**Local job (dies with this session):** watcher for the develop deploy of d43bcbdc (#1086's merge). Then confirm `/health` shows d43bcbdc and run the dev check (51 reports from one network, the 51st should be 429 with a wait near a day); record on #1086 and close it by hand if every AC holds (the #590 note is the AC3 half).
+## Now (2026-11-23, to 05:05 WIB)
 
-## Now (2026-11-23, to 02:35 WIB)
+Merged into develop tonight, each with every check green and read by step: #1068 voyage map (PR #1082), #1078 DEV-pass library (PR #1084), #1079 sign-up switch (PR #1083), #860 support pages (PR #1077) and its analytics-beacon policy fix (PR #1085), #1086 content-report cap (PR #1087). Closed by hand with evidence: #1066, #1086.
 
-### #860 support pages (P0, Todo): PR #1077 merged as 67d248db; beacon fix PR #1085 merged as b794a676; dev all green, 16 support journeys pass on 4 browsers, AC status on #860 (only the production half left)
+### Open tickets touched, and what is left
 
-- **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
-- **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
-- SonarCloud gate on 8ecbf60d: 77.1% new-code coverage (80% needed; page.ts and index.ts support() untested by unit). Fixed in 99e647dd (page.test.ts, mutation-checked; serveSupport() moved and tested red first).
-- PR #1077 CI on 2d9feb4d: unit green, Worker tests 292 passed / 1 failed (`config.test.ts`: `SHYDESK_HOST` missing from `wrangler.roadmap-test.jsonc`), fixed in 8ecbf60d (push running at 02:35).
-- **Merged** as 67d248db (every check and step green on e3b14141); worktree and branches removed. AC5 prepared: test files `.superpowers/sdd/860/ac5-photo.png`, `ac5-video.mp4`; script `../yawelo-idle-dev-scripts/.superpowers/ac5.mjs` (needs `DEV_PASSWORD`, `AC5_EMAIL`); shydesk-b1 answered: use `e2e-yawelo-ac5@example.com` (dev mail is not set up, so the piece's "email could not be sent" is expected) and dev Turnstile is the always-pass test key. Run `AC5_EMAIL=e2e-yawelo-ac5@example.com DEV_PASSWORD=… node .superpowers/ac5.mjs` from `../yawelo-idle-dev-scripts` once dev serves 67d248db, then send shydesk-b1 the subject `AC5 check from Yawelo Idle dev (#860)` for the read-back. Then read the deploy's `site-smoke` support journeys.
-- **Was next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
-
-- **After the merge:** develop deploy 45069145980 failed `site-smoke`: the 16 support journeys saw Cloudflare's injected analytics beacon (W17's site-wide exception), which the support policy blocked. PR #1085 (tests d3f55aef red, fix 994251ba) admits it like the game's policy.
-- **AC5 dev half met** (comments on #860): ticket ccaca7b3 with a photo and a video sent from dev at ~04:1x WIB and read back by shydesk-b1 by 04:20 WIB (both attachments open and play); ShyDesk closed it. **AC4 met** with a second ticket (aa7fa58a, link taken by code, opened on dev showing the ticket; the first failure was my misread token); both test tickets closed by shydesk-b1. `.superpowers/ac5.mjs` now saves the link to the ignored `.superpowers/sdd/860/ac5-ticket-link.txt`; `.superpowers/ac4.mjs` opens `$TICKET_LINK`.
-- **#1086 (P0, Todo): PR #1087 merged as d43bcbdc** (green on 137a844f after the harness test was updated); worktree and branches removed. Earlier:: content reports limited to 50 a day per network (test d996ff3c red first, then e671bf9e in routes.ts); decision on #1086; refusal noted on #590. After merge: exercise the 429 on dev (51 reports from one address) and record it.
-- #860 left after #1085: the production half (#425/#426, live ticket address approval) and AC6's policy test is in; then close-out check of every AC.
-
-### #1068 voyage map (P1), branch `x/1068-voyage-map`
-
-- Commits on 461810ae: 3243854f model tests, 916c1a01 model code, 51eb34b9 component tests + map copy, d8003276 dev journeys (read red: 16 failed on deploy-dev 45056613095, evidence on #1068), 7b858fe9 drawing tests (10 red), 79f9d12f drawing, 13f4a594 the page + removals (spec §6). Full unit suite 14,758 passed at 02:28.
-- A self-caught slip: `drawing.ts` was first written before its tests; deleted unrun, tests written and read red, module written fresh (memory updated).
-- **PR #1082 merged** into develop as d022eb61; the develop deploy (run 45063877258) is all green and `site-smoke` passed the four voyage journeys on all four browsers (24 passed; evidence and AC-by-AC status on #1068: AC1 waits on #830 AC1's text, AC6 on a device run, AC8 on Shyden seeing it on dev). Earlier note (every check and step green on 50e15c54; coverage fixed with four mutation-checked tests and dead fallbacks removed). #1068 set Todo; worktree and branches removed. Next: read the develop deploy's `site-smoke` (the four roadmap journeys) by name, then check AC by AC on dev (AC8: Shyden sees it on dev before production) and close by hand only with every AC evidenced.
-- Open: the three old intro paragraphs stay on the page until #830 AC1's new short text; the old copy strings stay while the tests use them to check absence.
-
-### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
-
-- `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), **PR #1084 merged** as ee0f4d13 (green on 31b48060); #1078 Todo, worktree and branches removed. Done on it: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
-- `x/1079-signups` (worktree `../yawelo-idle-1079`), **PR #1083 merged** as fe30603a (#1079 Todo). AC2 read back on dev (201 at both addresses, /health commit fe30603a; comment on #1079); TEST and prod switch states wait for those sync deploys; AC3 on #590. Its work: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
-- #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
+- **#860 (P0, Todo):** dev fully evidenced (16 journeys green on 4 browsers; real ticket with photo and video read back by ShyDesk; ticket link opens the ticket). Left: the production half (#425/#426, and Shyden's approval of the live ticket address).
+- **#1068 (P1, Todo):** live on dev; AC status on the ticket. Left: AC1 (old intro paragraphs, waiting on #830 AC1's approved text), AC6 device run, AC8 Shyden sees it on dev.
+- **#1078 (P1, Todo):** library merged; door wiring waits on Shyden's Cloudflare setup for `dev-signin.shyden.co.uk`. #1076 waits on it.
+- **#1079 (P2, Todo):** dev reads "open" (201); TEST/prod states when those sync Workers deploy; AC3 on #590.
+- **#1081 (P2):** whole-repo lint at Node's 2 GB heap (measurements on the ticket); pushes tonight used `NODE_OPTIONS=--max-old-space-size=4096`.
+- **#1075 (P2):** waits on shydesk#266.
 
 ### For Shyden in the morning (parked questions)
 
-1. #830 AC1: approve the roadmap page's new short text (draft in the latest #830 comment); then Indonesian with read-back.
-2. #1074: the roadmap's "updating" and "could not update" wording, before translation. Start #1074 after #1068 lands (same page and Worker).
-3. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket` (shydesk-b1 sets it once he says yes).
-4. #1078: the DEV pass's one-time Cloudflare setup (repo-template `docs/dev-pass.md`, "One-time setup"); `dev-signin.shyden.co.uk` does not resolve yet.
-6. #1081 (P2): raise its level? The pre-push lint now runs out of Node's 2 GB heap even at load 4 (third crash, 04:4x WIB); pushes tonight used `NODE_OPTIONS=--max-old-space-size=4096` as a stopgap.
-5. #784: delete the old DEV key `cfat...c5dc` (Yawelo Chrome); approve the next production release (tab icon, API reserve).
+1. #830 AC1: approve the roadmap page's new short text (draft in the latest #830 comment).
+2. #1074: the roadmap's "updating" and "could not update" wording.
+3. #860: approve the live ShyDesk ticket address `https://yaweloidle.com/support/ticket`.
+4. #1078: the DEV pass's one-time Cloudflare setup (repo-template `docs/dev-pass.md`).
+5. #1081: raise its level? It now blocks ordinary pushes.
+6. #784: delete the old DEV key `cfat...c5dc`; approve the next production release.
 
+### Resume steps
+
+1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
+2. Act on Shyden's answers above; otherwise the next ticket board-next gives that needs nothing outside.
 
 ## Latest (2026-11-22, to 22:15 WIB, session `yawelo-idle-07`)
 
