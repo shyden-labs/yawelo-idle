@@ -2,17 +2,18 @@
 
 **Written:** 2026-11-23 03:30 WIB, session `yawelo-idle-07`. Branch `handover/2026-10-17-d`. Worktrees: `yawelo-idle-860`, `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Shyden asleep since about 23:20 WIB: park questions, keep working.
 
-**Local job (dies with this session):** a watcher for PR #1077 (head e3b14141, updated from develop fe30603a) and the develop deploy of fe30603a. Re-run `~/.claude/scripts/pr-verdict.sh 1077`; when green on a head containing develop, merge it (#860 stays open, Status Todo in the same call).
+**Local job (dies with this session):** watcher for the develop deploy of 67d248db (#860's merge); re-check with `gh run list --workflow deploy-dev.yml --branch develop`.
 
 ## Now (2026-11-23, to 02:35 WIB)
 
-### #860 support pages (P0, In Progress), PR #1077 (draft)
+### #860 support pages (P0, Todo): PR #1077 merged as 67d248db
 
 - **All CI-only tests read red before code** (evidence on #1077): dev journeys 16 failed on deploy-dev 45050731695 (page 404); harness 20 failed on scratch PR #1080 (closed; scratch branches and worktree deleted).
 - **Code pushed** as 2d9feb4d (`worker/support.ts`, index/routes wiring, `SHYDESK_HOST`, `/_site/` assets, `Support.astro` + 4 pages, `support/page.ts`, copy sources cite the evidence file). Local unit: 25 timeouts at load 305, all in untouched code (comment on #971).
 - SonarCloud gate on 8ecbf60d: 77.1% new-code coverage (80% needed; page.ts and index.ts support() untested by unit). Fixed in 99e647dd (page.test.ts, mutation-checked; serveSupport() moved and tested red first).
 - PR #1077 CI on 2d9feb4d: unit green, Worker tests 292 passed / 1 failed (`config.test.ts`: `SHYDESK_HOST` missing from `wrangler.roadmap-test.jsonc`), fixed in 8ecbf60d (push running at 02:35).
-- **Next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
+- **Merged** as 67d248db (every check and step green on e3b14141); worktree and branches removed. AC5 prepared: test files `.superpowers/sdd/860/ac5-photo.png`, `ac5-video.mp4`; script `../yawelo-idle-dev-scripts/.superpowers/ac5.mjs` (needs `DEV_PASSWORD`, `AC5_EMAIL`); asked shydesk-b1 which test email to use and whether dev Turnstile passes headless. Then read the deploy's `site-smoke` support journeys.
+- **Was next:** read PR #1077's CI on the new head step by step; if green, mark ready and squash-merge into develop (Status mutation in the same call: #860 stays open); after the dev deploy read `site-smoke` (the support journey) by name; then AC5 by hand in a browser: a real ticket with a photo and a video sent from https://dev.yaweloidle.com/support, received in ShyDesk dev (ask shydesk-b1 to confirm receipt). Production half waits on #425/#426 and Shyden's approval of the live ticket address.
 
 ### #1068 voyage map (P1), branch `x/1068-voyage-map`
 
@@ -24,7 +25,7 @@
 ### #1078 DEV pass (P1) and #1079 sign-up switch (P2)
 
 - `x/1078-dev-pass` (worktree `../yawelo-idle-1078`), **PR #1084 merged** as ee0f4d13 (green on 31b48060); #1078 Todo, worktree and branches removed. Done on it: library + tests copied (7878e5f0 red, 961ed3bb green), form.ts re-copied with repo-template's chunked-body fix (2d0b1263 red, 4a9b6ac4 green; 108 tests). Its first push died on #1081 (lint out of heap); push again at low load, then set In Progress. Door wiring waits on Shyden's Cloudflare setup.
-- `x/1079-signups` (worktree `../yawelo-idle-1079`), **PR #1083 merged** as fe30603a (#1079 Todo; worktree and branches removed). Left: AC2, read the switch back on dev after the deploy (a `POST /v1/devices` on dev answering 201 shows "open"), and AC3 on #590. Its work: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
+- `x/1079-signups` (worktree `../yawelo-idle-1079`), **PR #1083 merged** as fe30603a (#1079 Todo). AC2 read back on dev (201 at both addresses, /health commit fe30603a; comment on #1079); TEST and prod switch states wait for those sync deploys; AC3 on #590. Its work: fed69bae tests (11 red), b558e6b0 code (`SIGNUPS`, 503 `signups_closed`; 35 pass). Push, set In Progress, PR.
 - #1081 (P2, 3 pts) filed: pre-push lint ran out of Node's 2 GB heap twice under load.
 
 ### For Shyden in the morning (parked questions)
