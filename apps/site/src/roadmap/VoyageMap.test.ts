@@ -1,85 +1,101 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import type { PublicSnapshot } from '@yawelo-idle/progress';
+import type { PublicItem, PublicSnapshot } from '@yawelo-idle/progress';
 import { COPY } from '../copy';
-import IslandScreen from './Island.svelte';
+import type { Locale } from '../i18n';
+import { FEATURES } from './features';
+import { expectedSeason } from './season';
+import { estimates } from './summary';
 import VoyageMap from './VoyageMap.svelte';
-import type { Island, Voyage } from './voyage';
+import { fill } from './voyage';
 
 /**
- * The voyage map (#827), mounted in jsdom the #806 way, with `fetch` and the
- * snapshot-to-voyage step stood in: it says it is loading, then draws the
- * islands, the ship and the other work, nothing after launch; it says
- * so when the snapshot cannot be read; and it opens one island at a time.
+ * The voyage map page (#1068, spec §4 and §7), mounted in jsdom the #806
+ * way with `fetch` and the live socket stood in: nine island buttons named
+ * and stated from the snapshot, one progress bar, the expected season and
+ * its note (hidden with no forecast), one island panel open at a time, and
+ * a newer socket snapshot drawn when it comes.
  */
-const drawn = vi.hoisted(() => ({ voyage: null as Voyage | null }));
-vi.mock('./voyage', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./voyage')>()),
-  voyage: () => drawn.voyage,
-}));
-
-const copy = COPY.en.voyage;
-
-const island = (
-  epic: number,
-  name: string,
-  over: Partial<Island> = {},
-): Island => ({
-  epic,
-  name,
+const item = (over: Partial<PublicItem> & { number: number }): PublicItem => ({
+  epic: false,
   milestone: null,
-  summary: null,
-  status: 'not started',
-  built: [],
-  left: [],
-  behindTheScenes: 0,
-  ticketsLeft: 0,
-  pointsLeft: 0,
+  state: 'OPEN',
+  closedAt: null,
+  estimate: 3,
+  parent: null,
+  publicTitle: null,
+  publicSummary: null,
+  waiting: false,
   ...over,
 });
 
-const MAP: Voyage = {
-  islands: [
-    island(1, 'M1: Foundations', { status: 'done' }),
-    island(2, 'M2: First words', { status: 'part done' }),
-  ],
-  shipAt: 2,
-  other: { ticketsLeft: 4, pointsLeft: 13, built: 1 },
-};
+const NAMES = [
+  'Shipyard',
+  'The engine',
+  'First words',
+  'First playable',
+  'Saves and sync',
+  'Fair play',
+  'The wider world',
+  'Desktop and phone apps',
+  'Into the stores',
+];
+
+/** Epics 100–108 for M0–M8; M0 done (2 of 2), M1 under way, the rest 0 of 1. */
+function board(closedInM1 = 1): PublicItem[] {
+  const epics = NAMES.map((name, milestone) =>
+    item({ number: 100 + milestone, epic: true, milestone, publicTitle: name }),
+  );
+  const m0 = [200, 201].map((number) =>
+    item({ number, parent: 100, state: 'CLOSED' }),
+  );
+  const m1 = [0, 1, 2, 3].map((n) =>
+    item({
+      number: 210 + n,
+      parent: 101,
+      state: n < closedInM1 ? 'CLOSED' : 'OPEN',
+    }),
+  );
+  const rest = [2, 3, 4, 5, 6, 7, 8].map((m) =>
+    item({ number: 300 + m, parent: 100 + m }),
+  );
+  return [...epics, ...m0, ...m1, ...rest];
+}
+
+const snapshot = (
+  over: Partial<PublicSnapshot> = {},
+  pace = [1, 2, 0, 1, 3, 0, 1],
+): PublicSnapshot => ({
+  version: 1,
+  items: board(),
+  progress: {
+    tickets: { closed: 3, total: 13, pace },
+    effort: {
+      available: true,
+      openPoints: 30,
+      assumedClosed: 0,
+      scoredMean: 3,
+      pace: pace.map((n) => n * 3),
+    },
+  },
+  readAt: '2026-11-22T04:00:00.000Z',
+  ...over,
+});
 
 const fetchStub = vi.fn<typeof fetch>();
 let mounted: ReturnType<typeof mount> | undefined;
 
-const respond = (response: Response): void => {
-  fetchStub.mockResolvedValue(response);
+const serve = (body: PublicSnapshot): void => {
+  fetchStub.mockResolvedValue(
+    new Response(JSON.stringify(body), { status: 200 }),
+  );
 };
 
-/** A snapshot as /api/roadmap.json serves it; its items are drawn by the stand-in. */
-/** What the Worker serves (#840). */
-type Snapshot = PublicSnapshot;
-
-const SNAPSHOT: Snapshot = {
-  version: 1,
-  items: [],
-  progress: {
-    tickets: {
-      closed: 1,
-      total: 4,
-      pace: [1, 0, 0, 0, 0, 0, 0],
-    },
-    effort: { available: false, scored: 2, open: 3 },
-  },
-  readAt: '2026-11-02T04:00:00.000Z',
-};
-
-const json = (): Response =>
-  new Response(JSON.stringify(SNAPSHOT), { status: 200 });
-
-const view = (): HTMLElement => {
+const view = (locale: Locale = 'en'): HTMLElement => {
   const target = document.createElement('div');
   document.body.append(target);
-  mounted = mount(VoyageMap, { target, props: { copy, copyLang: 'en' } });
+  mounted = mount(VoyageMap, { target, props: { locale } });
   flushSync();
   return target;
 };
@@ -90,25 +106,26 @@ const settle = async (): Promise<void> => {
   flushSync();
 };
 
-const text = (root: HTMLElement, selector: string): string[] =>
-  [...root.querySelectorAll(selector)].map((e) => e.textContent.trim());
+const islands = (root: HTMLElement): HTMLButtonElement[] => [
+  ...root.querySelectorAll<HTMLButtonElement>('button[data-island]'),
+];
 
-const press = (root: HTMLElement, epic: number): void => {
+const press = (root: HTMLElement, milestone: number): void => {
   root
-    .querySelector<HTMLButtonElement>(`[data-epic="${String(epic)}"] button`)
+    .querySelector<HTMLButtonElement>(
+      `button[data-island="${String(milestone)}"]`,
+    )
     ?.click();
   flushSync();
 };
 
-const expanded = (root: HTMLElement): string[] =>
-  [...root.querySelectorAll('button[aria-expanded="true"]')].map(
-    (b) => b.getAttribute('aria-controls') ?? '',
-  );
+const panels = (root: HTMLElement): HTMLElement[] => [
+  ...root.querySelectorAll<HTMLElement>('[data-island-panel]'),
+];
 
 /** The live socket stood in (#829): it records itself and is driven by hand. */
 class FakeSocket extends EventTarget {
   static opened: FakeSocket[] = [];
-  closed = false;
   readonly url: string;
   constructor(url: string) {
     super();
@@ -116,294 +133,253 @@ class FakeSocket extends EventTarget {
     FakeSocket.opened.push(this);
   }
   close(): void {
-    this.closed = true;
+    // The stand-in holds no connection.
   }
-  push(snapshot: Snapshot): void {
+  push(body: PublicSnapshot): void {
     this.dispatchEvent(
-      new MessageEvent('message', { data: JSON.stringify(snapshot) }),
+      new MessageEvent('message', { data: JSON.stringify(body) }),
     );
-    flushSync();
-  }
-  drop(kind: 'close' | 'error'): void {
-    this.dispatchEvent(new Event(kind));
     flushSync();
   }
 }
 
-const socket = (): FakeSocket => {
-  const [first] = FakeSocket.opened;
-  if (first === undefined) throw new Error('no socket was opened');
-  return first;
+// The first mount in a test worker pays Svelte's and jsdom's one-time set-up
+// (over 1 s once under the full parallel suite, PR #849's unit run). It runs
+// in the first beforeEach, before that test's own timing starts mattering; a
+// throw there fails that test by name (a beforeAll throw would skip them all,
+// #97).
+let warmed = false;
+const warmUp = (): void => {
+  warmed = true;
+  vi.stubGlobal('fetch', () => new Promise<Response>(() => undefined));
+  vi.stubGlobal('WebSocket', FakeSocket);
+  void unmount(
+    mount(VoyageMap, {
+      target: document.createElement('div'),
+      props: { locale: 'en' },
+    }),
+  );
+  vi.unstubAllGlobals();
 };
 
-// The first mount in a test worker pays Svelte's and jsdom's one-time set-up:
-// 31-91 ms alone, but 1,242 ms once under the full parallel suite (PR #849's
-// unit run), past the 1 s limit, on whichever test mounted first. It runs
-// here, with the file's import, as #544 did for ESLint's first lint.
-void unmount(
-  mount(IslandScreen, {
-    target: document.createElement('div'),
-    props: {
-      item: {
-        epic: 1,
-        name: 'warm',
-        milestone: null,
-        summary: null,
-        status: 'not started',
-        built: [],
-        left: [],
-        behindTheScenes: 0,
-        ticketsLeft: 0,
-        pointsLeft: 0,
-      },
-      ship: false,
-      open: false,
-      onToggle: () => undefined,
-      copy: COPY.en.voyage,
-      copyLang: 'en',
-    },
-  }),
-);
-
 beforeEach(() => {
+  if (!warmed) warmUp();
   FakeSocket.opened = [];
   vi.stubGlobal('WebSocket', FakeSocket);
-  drawn.voyage = MAP;
   fetchStub.mockReset();
   vi.stubGlobal('fetch', fetchStub);
 });
 
-const leave = (): void => {
+afterEach(() => {
   if (mounted !== undefined) void unmount(mounted);
   mounted = undefined;
-};
-
-afterEach(() => {
-  leave();
   document.body.replaceChildren();
   vi.unstubAllGlobals();
 });
 
-describe('the voyage map', () => {
+const en = COPY.en.map;
+
+describe('the voyage map page (#1068)', () => {
   it('asks for the roadmap snapshot as JSON', () => {
-    respond(json());
+    serve(snapshot());
     view();
     expect(fetchStub.mock.calls).toEqual([
       ['/api/roadmap.json', { headers: { Accept: 'application/json' } }],
     ]);
   });
 
-  it('says it is reading the board, and is busy, until the snapshot comes', () => {
+  it('says it is reading the board until the snapshot comes, with no islands yet', () => {
     fetchStub.mockReturnValue(new Promise<Response>(() => undefined));
     const root = view();
-    expect([
-      text(root, 'p'),
-      root.querySelector('.voyage')?.getAttribute('aria-busy'),
-    ]).toEqual([['Reading the board…'], 'true']);
+    expect(root.textContent).toContain(COPY.en.voyage.loading);
+    expect(islands(root)).toEqual([]);
   });
 
-  it('draws one island per epic, in order, with the ship at its island', async () => {
-    respond(json());
+  it('says so when the snapshot cannot be read', async () => {
+    fetchStub.mockResolvedValue(new Response('{}', { status: 503 }));
     const root = view();
     await settle();
-    expect([
-      text(root, '.islands .island-name'),
-      text(root, '[data-epic="2"] .ship'),
-      root.querySelectorAll('.ship').length,
-      root.querySelector('.voyage')?.getAttribute('aria-busy'),
-    ]).toEqual([
-      ['M1: Foundations', 'M2: First words'],
-      ['⛵ The ship is here'],
-      1,
-      'false',
+    expect(root.textContent).toContain(COPY.en.voyage.failed);
+    expect(islands(root)).toEqual([]);
+  });
+
+  it('draws nine island buttons in milestone order, each named with its state', async () => {
+    serve(snapshot());
+    const root = view();
+    await settle();
+    expect(islands(root).map((b) => b.getAttribute('aria-label'))).toEqual([
+      `Shipyard, ${en.done}`,
+      `The engine, ${fill(en.underWay, { percent: 25 })}`,
+      ...NAMES.slice(2).map((name) => `${name}, ${en.notStarted}`),
     ]);
   });
 
-  it('draws one list of islands and nothing after launch', async () => {
-    respond(json());
+  it('hides the drawing itself from screen readers, with the map named', async () => {
+    serve(snapshot());
     const root = view();
     await settle();
-    expect([
-      root.querySelectorAll('ol.islands').length,
-      root.querySelector('.voyage > h2'),
-    ]).toEqual([1, null]);
+    expect(root.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      root.querySelector('[data-voyage]')?.getAttribute('aria-label'),
+    ).toBe(en.label);
   });
 
-  it('counts the other work on no island', async () => {
-    respond(json());
+  it('shows one progress bar with the all-in-scope figure, labelled in words', async () => {
+    const body = snapshot();
+    serve(body);
     const root = view();
     await settle();
-    expect(text(root, '.other')).toEqual([
-      'Other work, on no island: 4 stories and 13 points left',
-    ]);
+    const { percent } = estimates(
+      body.progress,
+      body.readAt.slice(0, 10),
+    ).tickets;
+    const bars = root.querySelectorAll('progress');
+    expect(bars).toHaveLength(1);
+    expect(bars[0]?.getAttribute('value')).toBe(String(percent));
+    expect(bars[0]?.getAttribute('max')).toBe('100');
+    expect(root.querySelector('[data-bar-label]')?.textContent.trim()).toBe(
+      fill(en.bar, { percent }),
+    );
   });
 
-  it('says nothing of other work when none is left', async () => {
-    drawn.voyage = {
-      ...MAP,
-      other: { ticketsLeft: 0, pointsLeft: 0, built: 3 },
-    };
-    respond(json());
+  it('shows the expected season from the later forecast, with its note', async () => {
+    const body = snapshot();
+    serve(body);
     const root = view();
     await settle();
-    expect(root.querySelector('.other')).toBeNull();
+    const season = expectedSeason(
+      estimates(body.progress, body.readAt.slice(0, 10)),
+    );
+    expect(season, 'the fixture has both forecasts').not.toBeNull();
+    const line = season?.half === 1 ? en.season1 : en.season2;
+    expect(root.querySelector('[data-season]')?.textContent.trim()).toBe(
+      fill(line, { year: season?.year ?? 0 }),
+    );
+    expect(root.querySelector('[data-season-note]')?.textContent.trim()).toBe(
+      en.seasonNote,
+    );
   });
 
-  it('says the roadmap could not be read when the answer is not OK', async () => {
-    respond(new Response('down', { status: 503 }));
+  it('hides the season and its note with no forecast', async () => {
+    serve(snapshot({}, [0, 0, 0, 0, 0, 0, 0]));
     const root = view();
     await settle();
-    expect([
-      text(root, '[role="alert"]'),
-      root.querySelector('.islands'),
-      root.querySelector('.voyage')?.getAttribute('aria-busy'),
-    ]).toEqual([['The roadmap could not be read just now.'], null, 'false']);
+    expect(root.querySelector('[data-season]')).toBeNull();
+    expect(root.querySelector('[data-season-note]')).toBeNull();
   });
 
-  it('says the roadmap could not be read when the request fails', async () => {
-    fetchStub.mockRejectedValue(new TypeError('offline'));
+  it.each([
+    ['the summary heading', COPY.en.voyage.summary.heading],
+    ['the live line', COPY.en.voyage.live],
+    ['the recently-shipped list', COPY.en.voyage.summary.shipped],
+    ['the waiting-on-decisions list', COPY.en.voyage.summary.waiting],
+    ['the built list', COPY.en.voyage.built],
+    ['the left list', COPY.en.voyage.left],
+  ])('shows none of the old page: %s', async (_what, gone) => {
+    serve(snapshot());
     const root = view();
     await settle();
-    expect(text(root, '[role="alert"]')).toEqual([
-      'The roadmap could not be read just now.',
-    ]);
+    expect(root.textContent).not.toContain(gone);
   });
 
-  it('draws the summary above the islands from the same snapshot', async () => {
-    respond(json());
+  it('opens an island’s panel with its name, state and features', async () => {
+    serve(snapshot());
     const root = view();
     await settle();
-    const summary = root.querySelector('.roadmap-summary');
-    expect([
-      summary?.querySelector('h2')?.textContent,
-      summary?.compareDocumentPosition(root.querySelector('.islands') as Node),
-      text(root, '.roadmap-summary .whats-left tfoot td'),
-    ]).toEqual([
-      'Where the voyage stands',
-      Node.DOCUMENT_POSITION_FOLLOWING,
-      ['4', '13'],
-    ]);
+    press(root, 3);
+    const [panel] = panels(root);
+    expect(panels(root)).toHaveLength(1);
+    expect(panel?.querySelector('h2')?.textContent.trim()).toBe(
+      'First playable',
+    );
+    expect(panel?.textContent).toContain(en.notStarted);
+    expect(panel?.textContent).toContain(en.brings);
+    expect(
+      [...(panel?.querySelectorAll('li') ?? [])].map((li) =>
+        li.textContent.trim(),
+      ),
+    ).toEqual(FEATURES.en[3]);
+    expect(
+      root
+        .querySelector('button[data-island="3"]')
+        ?.getAttribute('aria-expanded'),
+    ).toBe('true');
   });
 
-  it('starts with every island closed', async () => {
-    respond(json());
+  it('keeps one panel open at a time', async () => {
+    serve(snapshot());
     const root = view();
     await settle();
-    expect(expanded(root)).toEqual([]);
+    press(root, 3);
+    press(root, 5);
+    expect(
+      panels(root).map((p) => p.querySelector('h2')?.textContent.trim()),
+    ).toEqual(['Fair play']);
   });
 
-  it('opens the island pressed', async () => {
-    respond(json());
+  it('closes the panel when its island is pressed again', async () => {
+    serve(snapshot());
+    const root = view();
+    await settle();
+    press(root, 3);
+    press(root, 3);
+    expect(panels(root)).toEqual([]);
+  });
+
+  it('closes the panel with its close button', async () => {
+    serve(snapshot());
     const root = view();
     await settle();
     press(root, 2);
-    expect(expanded(root)).toEqual(['panel-2']);
+    const close =
+      panels(root)[0]?.querySelector<HTMLButtonElement>('button[data-close]');
+    expect(close?.textContent.trim()).toBe(en.close);
+    close?.click();
+    flushSync();
+    expect(panels(root)).toEqual([]);
   });
 
-  it('opens one island at a time', async () => {
-    respond(json());
+  it('closes the panel with Escape', async () => {
+    serve(snapshot());
     const root = view();
     await settle();
-    press(root, 1);
     press(root, 2);
-    expect(expanded(root)).toEqual(['panel-2']);
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    flushSync();
+    expect(panels(root)).toEqual([]);
   });
 
-  it('closes the open island when it is pressed again', async () => {
-    respond(json());
+  it('draws a newer snapshot from the live socket', async () => {
+    serve(snapshot());
     const root = view();
     await settle();
-    press(root, 1);
-    press(root, 1);
-    expect(expanded(root)).toEqual([]);
+    const [socket] = FakeSocket.opened;
+    socket?.push(
+      snapshot({ items: board(3), readAt: '2026-11-22T05:00:00.000Z' }),
+    );
+    expect(islands(root)[1]?.getAttribute('aria-label')).toBe(
+      `The engine, ${fill(en.underWay, { percent: 75 })}`,
+    );
   });
 
-  it('opens the live socket at the Worker’s address', () => {
-    respond(json());
-    view();
-    expect(FakeSocket.opened.map((o) => o.url)).toEqual([
-      'ws://localhost:3000/api/roadmap/live',
-    ]);
-  });
-
-  it('says nothing of being live until the socket speaks', async () => {
-    respond(json());
-    const root = view();
+  it('notes on the Indonesian page that island names stay English', async () => {
+    serve(snapshot());
+    const root = view('id');
     await settle();
-    expect(root.querySelector('.live-state')).toBeNull();
+    expect(
+      root.querySelector('[data-island-names-note]')?.textContent.trim(),
+    ).toBe(COPY.id.map.islandNamesNote);
+    expect(islands(root)[0]?.getAttribute('aria-label')).toBe(
+      `Shipyard, ${COPY.id.map.done}`,
+    );
   });
 
-  it('says it is live once the socket delivers a snapshot', async () => {
-    respond(json());
-    const root = view();
+  it('has no island-names note on the English page', async () => {
+    serve(snapshot());
+    const root = view('en');
     await settle();
-    socket().push(SNAPSHOT);
-    expect(text(root, '.live-state')).toEqual([
-      'Live: changes on the board show here as they happen.',
-    ]);
-  });
-
-  it('redraws from a newer pushed snapshot, without a reload', async () => {
-    respond(json());
-    const root = view();
-    await settle();
-    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Pushed')] };
-    socket().push({ ...SNAPSHOT, version: 2 });
-    expect(text(root, '.islands .island-name')).toEqual(['M5: Pushed']);
-  });
-
-  it('keeps what it shows over an older pushed snapshot', async () => {
-    respond(new Response(JSON.stringify({ ...SNAPSHOT, version: 3 })));
-    const root = view();
-    await settle();
-    drawn.voyage = { ...MAP, islands: [island(5, 'M5: Stale')] };
-    socket().push({ ...SNAPSHOT, version: 2 });
-    expect(text(root, '.islands .island-name')).toEqual([
-      'M1: Foundations',
-      'M2: First words',
-    ]);
-  });
-
-  it('says it is not live when the socket is refused', async () => {
-    respond(json());
-    const root = view();
-    await settle();
-    socket().drop('error');
-    expect(text(root, '.live-state')).toEqual([
-      'Not live: this is the board as it was when the page loaded.',
-    ]);
-  });
-
-  it('says it is not live when the socket closes, keeping the snapshot read', async () => {
-    respond(json());
-    const root = view();
-    await settle();
-    socket().push(SNAPSHOT);
-    socket().drop('close');
-    expect([
-      text(root, '.live-state'),
-      root.querySelectorAll('.island').length,
-    ]).toEqual([
-      ['Not live: this is the board as it was when the page loaded.'],
-      2,
-    ]);
-  });
-
-  it('draws a pushed snapshot when the JSON read failed', async () => {
-    respond(new Response('down', { status: 503 }));
-    const root = view();
-    await settle();
-    socket().push(SNAPSHOT);
-    expect([
-      root.querySelector('[role="alert"]'),
-      root.querySelectorAll('.island').length,
-    ]).toEqual([null, 2]);
-  });
-
-  it('closes the socket when it leaves the page', () => {
-    respond(json());
-    view();
-    leave();
-    expect(socket().closed).toBe(true);
+    expect(root.querySelector('[data-island-names-note]')).toBeNull();
   });
 });
