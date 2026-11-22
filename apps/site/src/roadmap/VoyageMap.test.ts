@@ -260,6 +260,38 @@ describe('the voyage map page (#1068)', () => {
     );
   });
 
+  it('shows the first half when the later forecast falls in it', async () => {
+    const base = snapshot();
+    const body = {
+      ...base,
+      progress: {
+        ...base.progress,
+        tickets: { ...base.progress.tickets, total: 200 },
+      },
+    };
+    serve(body);
+    const root = view();
+    await settle();
+    const season = expectedSeason(
+      estimates(body.progress, body.readAt.slice(0, 10)),
+    );
+    expect(season?.half, 'the fixture lands in a first half').toBe(1);
+    expect(root.querySelector('[data-season]')?.textContent.trim()).toBe(
+      fill(en.season1, { year: season?.year ?? 0 }),
+    );
+  });
+
+  it('draws only the stages the board has, when an epic is missing', async () => {
+    serve(
+      snapshot({
+        items: board().filter((i) => i.number !== 108 && i.parent !== 108),
+      }),
+    );
+    const root = view();
+    await settle();
+    expect(islands(root)).toHaveLength(8);
+  });
+
   it('hides the season and its note with no forecast', async () => {
     serve(snapshot({}, [0, 0, 0, 0, 0, 0, 0]));
     const root = view();
@@ -351,6 +383,18 @@ describe('the voyage map page (#1068)', () => {
     expect(panels(root)).toEqual([]);
   });
 
+  it('keeps the panel open when another key is pressed', async () => {
+    serve(snapshot());
+    const root = view();
+    await settle();
+    press(root, 2);
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
+    );
+    flushSync();
+    expect(panels(root)).toHaveLength(1);
+  });
+
   it('draws a newer snapshot from the live socket', async () => {
     serve(snapshot());
     const root = view();
@@ -365,6 +409,17 @@ describe('the voyage map page (#1068)', () => {
     );
     expect(islands(root)[1]?.getAttribute('aria-label')).toBe(
       `The engine, ${fill(en.underWay, { percent: 75 })}`,
+    );
+  });
+
+  it('keeps what it drew when the live socket brings a snapshot no newer', async () => {
+    serve(snapshot());
+    const root = view();
+    await settle();
+    const [socket] = FakeSocket.opened;
+    socket?.push(snapshot({ version: 1, items: board(3) }));
+    expect(islands(root)[1]?.getAttribute('aria-label')).toBe(
+      `The engine, ${fill(en.underWay, { percent: 25 })}`,
     );
   });
 

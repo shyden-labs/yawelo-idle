@@ -57,15 +57,35 @@
     };
   });
 
-  const drawn = $derived(snapshot === null ? [] : stages(snapshot.items));
-  const names = $derived(drawn.map((s) => islandName(s, copy.voyage)));
-  const both = $derived(
-    snapshot === null
-      ? null
-      : estimates(snapshot.progress, snapshot.readAt.slice(0, 10)),
-  );
-  const season = $derived(both === null ? null : expectedSeason(both));
-  const picture = $derived(drawing(drawn, names, ship(drawn)));
+  /** One island button: its stage, the name it shows and its place on the picture. */
+  interface Spot {
+    stage: Stage;
+    name: string;
+    x: number;
+    y: number;
+  }
+
+  /** Everything the page draws from one snapshot. */
+  const model = (shown: PublicSnapshot) => {
+    const drawn = stages(shown.items);
+    const spots: Spot[] = ISLANDS.flatMap(([x, y], k) => {
+      const stage = drawn[k];
+      return stage === undefined
+        ? []
+        : [{ stage, name: islandName(stage, copy.voyage), x, y }];
+    });
+    const both = estimates(shown.progress, shown.readAt.slice(0, 10));
+    return {
+      spots,
+      both,
+      season: expectedSeason(both),
+      picture: drawing(
+        drawn,
+        spots.map((spot) => spot.name),
+        ship(drawn),
+      ),
+    };
+  };
 
   const stateText = (stage: Stage): string =>
     stage.state === 'done'
@@ -77,10 +97,6 @@
   const toggle = (milestone: number): void => {
     open = open === milestone ? null : milestone;
   };
-
-  const opened = $derived(
-    open === null ? undefined : drawn.findIndex((s) => s.milestone === open),
-  );
 </script>
 
 <svelte:document
@@ -97,65 +113,61 @@
       <p>{copy.voyage.loading}</p>
     {/if}
   {:else}
+    {@const m = model(snapshot)}
+    {@const shown = m.spots.find((spot) => spot.stage.milestone === open)}
     <div class="sea" data-voyage role="group" aria-label={words.label}>
       <div class="chart">
-        <Shape shape={picture} />
-        {#each drawn as stage, k (stage.epic)}
-          {@const [x, y] = ISLANDS[k] ?? [0, 0]}
+        <Shape shape={m.picture} />
+        {#each m.spots as spot (spot.stage.epic)}
           <button
             type="button"
             class="island"
-            data-island={stage.milestone}
-            aria-label={`${names[k] ?? ''}, ${stateText(stage)}`}
-            aria-expanded={open === stage.milestone}
+            data-island={spot.stage.milestone}
+            aria-label={`${spot.name}, ${stateText(spot.stage)}`}
+            aria-expanded={open === spot.stage.milestone}
             aria-controls="island-panel"
-            style:left={`${String(x / 10)}%`}
-            style:top={`${String(y / 4.4)}%`}
+            style:left={`${String(spot.x / 10)}%`}
+            style:top={`${String(spot.y / 4.4)}%`}
             onclick={() => {
-              toggle(stage.milestone);
+              toggle(spot.stage.milestone);
             }}
           ></button>
         {/each}
       </div>
     </div>
-    {#if opened !== undefined && opened >= 0}
-      {@const stage = drawn[opened]}
-      {#if stage !== undefined}
-        <div class="panel" id="island-panel" data-island-panel>
-          <h2>{names[opened]}</h2>
-          <p>{stateText(stage)}</p>
-          <h3>{words.brings}</h3>
-          <ul>
-            {#each FEATURES[locale][stage.milestone as Milestone] as line (line)}
-              <li>{line}</li>
-            {/each}
-          </ul>
-          <button
-            type="button"
-            data-close
-            onclick={() => {
-              open = null;
-            }}>{words.close}</button
-          >
-        </div>
-      {/if}
-    {/if}
-    {#if both !== null}
-      <div class="progress">
-        <progress
-          value={both.tickets.percent}
-          max="100"
-          aria-labelledby="voyage-bar-label"
-        ></progress>
-        <p id="voyage-bar-label" data-bar-label>
-          {fill(words.bar, { percent: both.tickets.percent })}
-        </p>
+    {#if shown}
+      <div class="panel" id="island-panel" data-island-panel>
+        <h2>{shown.name}</h2>
+        <p>{stateText(shown.stage)}</p>
+        <h3>{words.brings}</h3>
+        <ul>
+          {#each FEATURES[locale][shown.stage.milestone as Milestone] as line (line)}
+            <li>{line}</li>
+          {/each}
+        </ul>
+        <button
+          type="button"
+          data-close
+          onclick={() => {
+            open = null;
+          }}>{words.close}</button
+        >
       </div>
     {/if}
-    {#if season !== null}
+    <div class="progress">
+      <progress
+        value={m.both.tickets.percent}
+        max="100"
+        aria-labelledby="voyage-bar-label"
+      ></progress>
+      <p id="voyage-bar-label" data-bar-label>
+        {fill(words.bar, { percent: m.both.tickets.percent })}
+      </p>
+    </div>
+    {#if m.season}
       <p data-season>
-        {fill(season.half === 1 ? words.season1 : words.season2, {
-          year: season.year,
+        {fill(m.season.half === 1 ? words.season1 : words.season2, {
+          year: m.season.year,
         })}
       </p>
       <p data-season-note>{words.seasonNote}</p>
