@@ -269,14 +269,18 @@ jobs:
 
   # The game's browser smoke (tests/web), re-run against dev once verify has
   # seen this commit served there (#123 DoD). Same pinned image as CI's
-  # build-and-test, which carries all three browsers, so nothing is installed.
+  # browsers job: it carries Chromium, Firefox and WebKit, and Edge is
+  # downloaded first, as root, since the image lacks it (#1003).
   smoke:
     needs: verify
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
-      options: --user 1001
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     environment:
       name: dev
       url: https://dev.yaweloidle.com
@@ -295,11 +299,22 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
+      # Playwright's image lacks Edge, so each run downloads it (Shyden,
+      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
+      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
+      - name: Install Edge (Playwright's image lacks it)
+        timeout-minutes: 3
+        run: npx --no playwright install --with-deps msedge
       - name: Smoke the game on dev (every supported target, behind the dev password)
         id: suite
-        # One measured limit, at least 3 times its slowest run (#476).
-        timeout-minutes: 1
+        # A first limit since Edge joined (#1003), until its first runs are
+        # measured (#476): then at least 3 times the slowest.
+        timeout-minutes: 2
         env:
           WEB_SMOKE_URL: https://dev.yaweloidle.com/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
@@ -327,7 +342,10 @@ jobs:
     timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
-      options: --user 1001
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     environment:
       name: dev
       url: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/roadmap
@@ -346,7 +364,17 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
+      # Playwright's image lacks Edge, so each run downloads it (Shyden,
+      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
+      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
+      - name: Install Edge (Playwright's image lacks it)
+        timeout-minutes: 3
+        run: npx --no playwright install --with-deps msedge
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
         # A first limit, until its first run is measured (#476): then at

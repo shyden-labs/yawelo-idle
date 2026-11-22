@@ -38,6 +38,11 @@ interface Event {
   readonly kind: 'console' | 'pageerror';
   readonly type: string;
   readonly text: string;
+  /**
+   * Where the browser says it happened: for a resource that failed to load,
+   * the resource's own address, so a failure names what failed (#1003).
+   */
+  readonly url: string;
 }
 
 test("the shell: no console or page errors, no axe violations, its Content Security Policy refusing what it should, and Cloudflare's real beacon running (#123, #451, #819)", async ({
@@ -49,10 +54,16 @@ test("the shell: no console or page errors, no axe violations, its Content Secur
       kind: 'console',
       type: message.type(),
       text: message.text(),
+      url: message.location().url,
     });
   });
   page.on('pageerror', (error) => {
-    events.push({ kind: 'pageerror', type: 'error', text: error.message });
+    events.push({
+      kind: 'pageerror',
+      type: 'error',
+      text: error.message,
+      url: page.url(),
+    });
   });
   await page.addInitScript(() => {
     const seen: string[] = [];

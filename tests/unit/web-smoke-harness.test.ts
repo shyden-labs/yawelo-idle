@@ -3,8 +3,10 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { webSmokeConfig } from '../../playwright.web.config';
 import { siteSmokeConfig } from '../site/smoke-config';
+import { desktopProjects } from '@shyden-labs/playwright-devices/desktop';
 import { runOf } from './workflow-steps';
-import { BROWSER_TARGETS } from '../browser-targets';
+import { DESKTOP_BROWSERS } from '../desktop-targets';
+import { expectEdgeInstalledBefore } from './edge-install';
 
 /**
  * The web smoke suite stays wired (#123 AC3), locally and against dev (#123
@@ -29,7 +31,7 @@ interface Step {
 
 interface Job {
   needs?: string | string[];
-  container?: { image?: string };
+  container?: { image?: string; options?: string };
   environment?: unknown;
   // A reusable-workflow call (`uses:`) has no steps of its own.
   steps?: Step[];
@@ -66,8 +68,8 @@ const jobsRunning = (run: string): [string, Job][] =>
   );
 
 describe('the web smoke suite (#123 AC3)', () => {
-  it('runs on every supported target (#883)', () => {
-    expect(local().projects).toEqual(BROWSER_TARGETS);
+  it('runs on every desktop browser (#883, #1003)', () => {
+    expect(local().projects).toEqual(desktopProjects(DESKTOP_BROWSERS));
   });
 
   it('loads the built game from its own Worker config, started fresh', () => {
@@ -92,12 +94,12 @@ describe('the web smoke suite (#123 AC3)', () => {
       scripts: Record<string, string>;
     };
     expect(pkg.scripts['test:web']).toBe(
-      'npm run build --workspace @yawelo-idle/web && playwright test -c playwright.web.config.ts',
+      'npm run build --workspace @yawelo-idle/web && scripts/browser-suite.sh web playwright.web.config.ts',
     );
   });
 
-  it('runs in CI, once, after the cross-engine check', () => {
-    const steps = ci.jobs['build-and-test']?.steps ?? [];
+  it('runs in CI’s browsers job, once, after the cross-engine check', () => {
+    const steps = ci.jobs['browsers']?.steps ?? [];
     const runs = steps.map((s) => runOf(s));
     expect(runs.filter((run) => run === 'npm run test:web')).toHaveLength(1);
     expect(runs.indexOf('npm run test:web')).toBe(
@@ -124,8 +126,8 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     );
   });
 
-  it('runs on every supported target (#883), retrying nothing', () => {
-    expect(dev().projects).toEqual(BROWSER_TARGETS);
+  it('runs on every desktop browser (#883, #1003), retrying nothing', () => {
+    expect(dev().projects).toEqual(desktopProjects(DESKTOP_BROWSERS));
     expect(dev().retries).toBe(0);
     expect(dev().forbidOnly).toBe(true);
   });
@@ -135,7 +137,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
       scripts: Record<string, string>;
     };
     expect(pkg.scripts['test:web:dev']).toBe(
-      'playwright test -c playwright.web.config.ts',
+      'scripts/browser-suite.sh web playwright.web.config.ts',
     );
   });
 
@@ -156,10 +158,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
       WEB_SMOKE_URL: DEV_URL,
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
     });
-    const installs = steps.filter((s) => /playwright install/.test(runOf(s)));
-    expect(installs, 'no step installs browsers: the image has them').toEqual(
-      [],
-    );
+    expectEdgeInstalledBefore(job, 'npm run test:web:dev');
   });
 
   it('posts dev-verified only once the dev smoke, the site suite (#827), the holding page’s dev copy (#621) and the roadmap (#708) have passed', () => {
@@ -254,8 +253,8 @@ describe('the site suite against dev (#827)', () => {
     );
   });
 
-  it('runs on every supported target (#883), retrying nothing', () => {
-    expect(site().projects).toEqual(BROWSER_TARGETS);
+  it('runs on every desktop browser (#883, #1003), retrying nothing', () => {
+    expect(site().projects).toEqual(desktopProjects(DESKTOP_BROWSERS));
     expect(site().retries).toBe(0);
     expect(site().forbidOnly).toBe(true);
   });
@@ -265,7 +264,7 @@ describe('the site suite against dev (#827)', () => {
       scripts: Record<string, string>;
     };
     expect(pkg.scripts['test:site:dev']).toBe(
-      'playwright test -c playwright.site.config.ts',
+      'scripts/browser-suite.sh site playwright.site.config.ts',
     );
   });
 
@@ -285,9 +284,7 @@ describe('the site suite against dev (#827)', () => {
       SITE_SMOKE_URL: SITE_URL,
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
     });
-    expect(steps.filter((s) => /playwright install/.test(runOf(s)))).toEqual(
-      [],
-    );
+    expectEdgeInstalledBefore(job, 'npm run test:site:dev');
   });
 
   it('keeps a screenshot of each failing test (#864)', () => {

@@ -128,6 +128,16 @@ describe('develop allows squash merges only (#679)', () => {
     });
   });
 
+  it('fails, naming the method, when the rule allows merge commits alone', async () => {
+    const result = await check(develop([pullRule(7, ['merge'])]));
+    expect(result).toEqual({
+      ok: false,
+      lines: [
+        'develop allows merge: 1 pull-request rule (ruleset 7) must allow squash alone (#679). Read 1 rule on develop.',
+      ],
+    });
+  });
+
   it('fails, naming the extra method, when the rule also allows rebase', async () => {
     const result = await check(develop([pullRule(7, ['squash', 'rebase'])]));
     expect(result).toEqual({
