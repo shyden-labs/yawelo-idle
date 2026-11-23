@@ -73,13 +73,20 @@ export function emailProblems(
   return [...missing, ...shown];
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+/** Reads every build, prints each problem by folder, and fails if any. */
+export function main(
+  read: (folder: string) => Record<string, string> = readBuild,
+): number {
   const problems = Object.entries(BUILDS).flatMap(([folder, expected]) =>
-    emailProblems(readBuild(folder), expected).map((p) => `${folder}/${p}`),
+    emailProblems(read(folder), expected).map((p) => `${folder}/${p}`),
   );
   for (const p of problems) console.error(p);
-  if (problems.length > 0) process.exit(1);
+  if (problems.length > 0) return 1;
   console.log(
     `no-email: no address or mailto: in ${Object.keys(BUILDS).join(', ')}`,
   );
+  return 0;
 }
+
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  process.exitCode = main();

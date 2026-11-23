@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { BUILDS, emailProblems } from '../../scripts/no-email.ts';
+import { BUILDS, emailProblems, main } from '../../scripts/no-email.ts';
 import { runOf } from './workflow-steps';
 
 /**
@@ -139,5 +139,44 @@ describe('the check in CI (#1090 AC2)', () => {
       built: build >= 0 && devCopy > build,
       checkedAfter: check > devCopy,
     }).toEqual({ built: true, checkedAfter: true });
+  });
+});
+
+describe('the command (#1090)', () => {
+  /** Every expected page of every build, each with `body` in it. */
+  const builds = (body: string) => (folder: string) =>
+    Object.fromEntries(
+      (BUILDS[folder] ?? []).map((page) => [page, html(body)]),
+    );
+
+  it('passes and says what it read when no page shows an address', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const code = main(builds('<p>Ask through the form</p>'));
+    expect({ code, log: log.mock.calls, error: error.mock.calls }).toEqual({
+      code: 0,
+      log: [
+        [
+          'no-email: no address or mailto: in apps/site/dist, apps/site/dist-holding, apps/site/dist-holding-dev, apps/web/dist',
+        ],
+      ],
+      error: [],
+    });
+    log.mockRestore();
+    error.mockRestore();
+  });
+
+  it('fails naming each page by its folder', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const read = (folder: string) =>
+      folder === 'apps/web/dist'
+        ? { 'play/index.html': html('<p>a@b.org</p>') }
+        : builds('')(folder);
+    const code = main(read);
+    expect({ code, error: error.mock.calls }).toEqual({
+      code: 1,
+      error: [['apps/web/dist/play/index.html: shows a@b.org']],
+    });
+    error.mockRestore();
   });
 });
