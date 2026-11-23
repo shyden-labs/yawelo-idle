@@ -71,6 +71,7 @@ const ORDER = [
   'Build the holding page',
   'Make its dev copy',
   'No built page loads from a free shared domain',
+  'No built page shows an email address',
 ];
 
 /** The steps a docs-only change runs (AC2). */
@@ -105,6 +106,7 @@ const SKIPPED: Record<string, string> = {
   'Build the holding page': `\${{ ${SKIP} }}`,
   'Make its dev copy': `\${{ ${SKIP} }}`,
   'No built page loads from a free shared domain': `\${{ ${SKIP} }}`,
+  'No built page shows an email address': `\${{ ${SKIP} }}`,
 };
 
 describe('build-and-test’s steps (#360 AC2)', () => {

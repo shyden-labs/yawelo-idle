@@ -169,6 +169,11 @@ jobs:
       - name: No built page loads from a free shared domain
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: node scripts/free-hosts.ts apps/site/dist apps/site/dist-holding apps/site/dist-holding-dev
+      # No built page shows an email address or a mailto: link: support
+      # requests come only through the support form (#1090).
+      - name: No built page shows an email address
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: node scripts/no-email.ts
 
   # The browser suites, on every desktop browser (#1003): Playwright's image
   # carries Chromium, Firefox and WebKit, and Edge is downloaded first (Shyden,
