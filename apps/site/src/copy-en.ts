@@ -16,6 +16,8 @@ import { digits, duration, rankList, rankName, words } from './figures';
 const SUPPORT_ID = 'file:docs/translations/2026-11-22-support-id.md';
 /** The voyage map's Indonesian evidence (#1068). */
 const MAP_ID = 'file:docs/translations/2026-11-22-roadmap-map-id.md';
+/** The roadmap's "Last updated" line's Indonesian evidence (#1074). */
+const UPDATED_ID = 'file:docs/translations/2026-11-23-roadmap-updated-id.md';
 
 export const COPY_EN = {
   devStrip: line(
@@ -345,6 +347,8 @@ export const COPY_EN = {
       'This is an estimate, not a promise. It can change as the game is built: some parts take longer than planned, and ideas from players can add new work.',
       MAP_ID,
     ),
+    /** Shyden's ruling, 2026-11-23 (#1074): date, time and the visitor's zone. */
+    lastUpdated: line('Last updated {date}, {time} {zone}', UPDATED_ID),
   },
 
   privacy: {

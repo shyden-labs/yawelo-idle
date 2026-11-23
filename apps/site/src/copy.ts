@@ -143,6 +143,8 @@ export interface MapCopy {
   season1: string;
   season2: string;
   seasonNote: string;
+  /** When the board shown was read: `{date}`, `{time}` and `{zone}` (#1074). */
+  lastUpdated: string;
   /** The Indonesian page's note that island names stay English; null in English. */
   islandNamesNote: string | null;
 }
@@ -211,6 +213,7 @@ export const COPY: Record<Locale, Copy> = {
       season1: COPY_EN.map.season1.text,
       season2: COPY_EN.map.season2.text,
       seasonNote: COPY_EN.map.seasonNote.text,
+      lastUpdated: COPY_EN.map.lastUpdated.text,
       islandNamesNote: null,
     },
   },
@@ -230,6 +233,9 @@ export const COPY: Record<Locale, Copy> = {
       season2: 'Perkiraan peluncuran: paruh kedua {year}',
       seasonNote:
         'Ini perkiraan, bukan janji. Perkiraan ini bisa berubah selama game dibangun: beberapa bagian memakan waktu lebih lama dari rencana, dan ide dari pemain bisa menambah pekerjaan baru.',
+      // docs/translations/2026-11-23-roadmap-updated-id.md (#1074): Google
+      // read-back "Last updated {date}, {time} {zone}".
+      lastUpdated: 'Terakhir diperbarui {date}, {time} {zone}',
       islandNamesNote: 'Nama pulau di halaman ini tetap dalam bahasa Inggris.',
     },
     // Google read-back 2026-11-12 (#957): "In development: what you see may
