@@ -22,6 +22,7 @@
     "test:properties": "vitest run -c vitest.properties.config.ts",
     "test:logs": "vitest run -c vitest.logs.config.ts",
     "test:coverage": "node scripts/coverage.ts measure",
+    "test:worker:coverage": "npm run build --workspace @yawelo-idle/web && npm run build:harness --workspace @yawelo-idle/site && node scripts/worker-coverage-build.ts && npm run test:worker && node scripts/worker-coverage-report.ts",
     "test:engines": "scripts/browser-suite.sh engines playwright.engines.config.ts",
     "test:web": "npm run build --workspace @yawelo-idle/web && scripts/browser-suite.sh web playwright.web.config.ts",
     "test:web:dev": "scripts/browser-suite.sh web playwright.web.config.ts",
