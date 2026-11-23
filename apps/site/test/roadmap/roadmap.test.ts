@@ -376,6 +376,8 @@ describe('reading the board', () => {
         'items',
         'progress',
         'readAt',
+        'readFailed',
+        'stale',
         'version',
       ]);
       expect(Object.keys(health).sort()).toEqual([
@@ -1210,6 +1212,7 @@ describe('the live socket', () => {
     await stub.setClock(T0 + 601_000);
     const socket = await open(stub);
     expect(await socket.next()).toMatchObject({ version: 1, stale: true });
+    await stub.settled();
     expect(await socket.next()).toMatchObject({ version: 1, stale: false });
     expect((await boardReads()) - before).toBe(1);
   });
