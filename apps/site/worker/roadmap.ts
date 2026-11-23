@@ -163,6 +163,8 @@ interface State {
   lastCheckAt: number | null;
   /** When the last read that succeeded started (#1074). */
   lastGoodReadAt: number | null;
+  /** The Worker version that made the last good read (#1074). */
+  readByVersion: string | null;
   drift: number;
   driftTotal: number;
   lastDriftAt: number | null;
@@ -182,6 +184,7 @@ const EMPTY: State = {
   lastEventAt: null,
   lastCheckAt: null,
   lastGoodReadAt: null,
+  readByVersion: null,
   drift: 0,
   driftTotal: 0,
   lastDriftAt: null,
@@ -248,9 +251,9 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     });
   }
 
-  /** The deployed Worker version (#1074); a stub until its code lands. */
+  /** The deployed Worker version (#1074); a test replaces it. */
   version(): string {
-    return '';
+    return this.env.CF_VERSION_METADATA.id;
   }
 
   /** The clock; a test replaces it to move time. */
@@ -324,14 +327,24 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
   }
 
   /**
-   * A visit (#1074): when the last good read is over REFRESH_AFTER_MS old and
-   * no visit's read runs, starts one, tells open pages the board is stale,
-   * and tells them again when it ends. True when it started one.
+   * A visit (#1074): when no visit's read runs, the last good read is over
+   * REFRESH_AFTER_MS old or was made by another Worker version, and no read
+   * failed within REFRESH_AFTER_MS, starts one, tells open pages the board is
+   * stale, and tells them again when it ends. True when it started one.
    */
   private visit(): boolean {
     if (this.refreshing !== null) return false;
-    const last = this.state.lastGoodReadAt;
-    if (last !== null && this.now() - last <= REFRESH_AFTER_MS) return false;
+    const now = this.now();
+    const within = (at: number | null): boolean =>
+      at !== null && now - at <= REFRESH_AFTER_MS;
+    const s = this.state;
+    // A deploy's first visit reads with the new code, so the record verify
+    // judges is the deployed code's (#708).
+    if (within(s.lastGoodReadAt) && s.readByVersion === this.version())
+      return false;
+    // While reads fail, visits wait as long as a good read would, so a
+    // failing GitHub is not asked again on every visit (PR #1088 review).
+    if (s.readFailingSince !== null && within(s.lastCheckAt)) return false;
     this.refreshing = this.check().finally(() => {
       this.refreshing = null;
       this.broadcast();
@@ -475,6 +488,7 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       }
       this.state.dropped = countDropped(dropped);
       this.state.lastGoodReadAt = startedAt;
+      this.state.readByVersion = this.version();
       this.state.readFailingSince = null;
       this.state.readError = null;
     } catch (error) {
