@@ -248,6 +248,11 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     });
   }
 
+  /** The deployed Worker version (#1074); a stub until its code lands. */
+  version(): string {
+    return '';
+  }
+
   /** The clock; a test replaces it to move time. */
   now(): number {
     return Date.now();

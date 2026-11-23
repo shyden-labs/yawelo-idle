@@ -496,7 +496,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
+      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -510,7 +510,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
+      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -572,7 +572,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago: the cron is not running',
+      'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago, though verify visited the roadmap first',
     ]);
   });
 
@@ -589,7 +589,7 @@ describe('roadmapProblems (#341)', () => {
     expect(
       roadmapProblems(health({ lastCheckAt: null }), NOW, DEPLOYED),
     ).toEqual([
-      'roadmap: last check null, more than 20 minutes ago: the cron is not running',
+      'roadmap: last check null, more than 20 minutes ago, though verify visited the roadmap first',
     ]);
   });
 
@@ -633,7 +633,7 @@ describe('roadmapProblems (#341)', () => {
     ).toEqual({
       checked: ALL_ROADMAP_CHECKS,
       problems: [
-        'roadmap: last check soon, more than 20 minutes ago: the cron is not running',
+        'roadmap: last check soon, more than 20 minutes ago, though verify visited the roadmap first',
       ],
     });
   });
@@ -910,7 +910,7 @@ describe('verifyDev', () => {
     const replaced = (at: number) =>
       `roadmap: last check ${before(at)} was made before the deploy at ${new Date(at).toISOString()}, by the code that deploy replaced`;
 
-    it('waits past checks the old code made, then judges the first one after the deploy, with the password', async () => {
+    it('visits once, then waits past checks the old code made and judges the first one after the deploy, with the password', async () => {
       reset();
       const at = deployed();
       roadmapLooks = [
@@ -925,7 +925,16 @@ describe('verifyDev', () => {
       // test before they were checked (measured on #332).
       const looked = looks();
       expect(looked).toBe(3);
+      // One visit first, so the deployed code reads the board (#1074): with
+      // no cron, nothing else would make a check after the deploy.
+      expect(seenUrls.filter((url) => url.startsWith('/api/roadmap'))).toEqual([
+        '/api/roadmap.json',
+        ROADMAP,
+        ROADMAP,
+        ROADMAP,
+      ]);
       expect(seenAuthorization).toEqual([
+        basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
@@ -957,7 +966,7 @@ describe('verifyDev', () => {
       expect(
         await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
       ).toEqual([
-        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
+        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
       ]);
       expect(looks()).toBe(1);
     });

@@ -36,6 +36,7 @@ globalThis.fetch = async (input, init) => {
 };
 
 const CLOCK = 'test-clock';
+const VERSION = 'test-version';
 
 export class Roadmap extends SiteRoadmap {
   override now(): number {
@@ -45,6 +46,15 @@ export class Roadmap extends SiteRoadmap {
   /** Resolves once the read a visit started, if any, has ended (#1074). */
   async settled(): Promise<void> {
     await this.refreshing;
+  }
+
+  override version(): string {
+    return this.ctx.storage.kv.get<string>(VERSION) ?? super.version();
+  }
+
+  /** Makes this object run as Worker version `id`, as a deploy would (#1074). */
+  setVersion(id: string): void {
+    this.ctx.storage.kv.put(VERSION, id);
   }
 
   /** Moves this object's clock to `at` (ms since the epoch). */

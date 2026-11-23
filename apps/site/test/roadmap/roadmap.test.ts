@@ -79,6 +79,7 @@ interface Socket {
 }
 interface RoadmapStub {
   setClock(at: number): Promise<void>;
+  setVersion(id: string): Promise<void>;
   check(): Promise<void>;
   changed(witness: Witness | null): Promise<void>;
   health(): Promise<Health>;
@@ -89,7 +90,7 @@ interface RoadmapStub {
     init?: RequestInit,
   ): Promise<{ status: number; webSocket: Socket | null }>;
 }
-type Calls = Omit<RoadmapStub, 'setClock' | 'fetch'>;
+type Calls = Omit<RoadmapStub, 'setClock' | 'setVersion' | 'fetch'>;
 
 const today = () => new Date().toISOString().slice(0, 10);
 // The virtual clock starts at the real time, so "today" is the fake's today;
@@ -942,6 +943,24 @@ describe('reading on visit (#1074)', () => {
       return r.snapshot();
     });
     expect(after).toMatchObject({ version: 1, readFailed: true });
+  });
+
+  // A deploy's first visit reads with the new code, so dev verify judges a
+  // check the deployed code made (#708), with no cron to make one.
+  it('reads on a visit when the last good read was made by another version of the Worker', async () => {
+    const stub = await fresh();
+    await inRoadmap((r) => r.check(), stub);
+    const before = await boardReads();
+    await stub.setVersion('the next deploy');
+    const { served, health } = await inRoadmap(async (r, clock) => {
+      clock.at += 60_000;
+      const served = await r.snapshot();
+      await r.settled();
+      return { served, health: await r.health() };
+    }, stub);
+    expect(served).toMatchObject({ stale: true });
+    expect((await boardReads()) - before).toBe(1);
+    expect(health.lastCheckAt).toBe(new Date(T0 + 60_000).toISOString());
   });
 
   // A failing GitHub must not let every visitor start a read (security
