@@ -10,7 +10,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { createTestHarness } from 'wrangler';
 
@@ -19,7 +19,9 @@ type Harness = ReturnType<HarnessFactory>;
 type Options = NonNullable<Parameters<HarnessFactory>[0]>;
 type WorkerInput = Options['workers'][number];
 
-const REPO = fileURLToPath(new URL('../../', import.meta.url));
+// From the file path, not a URL: the Workers' tsconfigs type URL as the
+// runtime's, which node:url does not take.
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** A config's build folder name: its path from the repo root, `/` as `__`. */
 export function buildKey(configFile: string, repoRoot: string): string {

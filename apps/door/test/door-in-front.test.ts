@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomBytes } from 'node:crypto';
-import { createTestHarness, unstable_startWorker } from 'wrangler';
+import { unstable_startWorker } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 import { DOOR_SECRET_HEADER, DOORS } from '../worker/door';
 
 /**

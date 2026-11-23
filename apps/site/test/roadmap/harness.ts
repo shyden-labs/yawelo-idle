@@ -1,5 +1,5 @@
 import { createPrivateKey, generateKeyPairSync } from 'node:crypto';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../../tests/support/create-covered-harness';
 import {
   FIXTURE_REPO,
   FIXTURE_TITLE,
