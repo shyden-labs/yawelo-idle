@@ -944,6 +944,28 @@ describe('reading on visit (#1074)', () => {
     expect(after).toMatchObject({ version: 1, readFailed: true });
   });
 
+  // A failing GitHub must not let every visitor start a read (security
+  // review of PR #1088): the next try waits as long as a good read would.
+  it('does not read again within 10 minutes of a failed read, however many visits come', async () => {
+    const { reads, after } = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ graphqlStatus: 502 });
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      await r.snapshot();
+      await r.settled();
+      const before = await boardReads();
+      clock.at += 60_000;
+      await Promise.all([r.snapshot(), r.snapshot(), r.snapshot()]);
+      await r.settled();
+      return {
+        reads: (await boardReads()) - before,
+        after: await r.snapshot(),
+      };
+    });
+    expect(reads).toBe(0);
+    expect(after).toMatchObject({ stale: false, readFailed: true });
+  });
+
   it('clears the failure once a later visit’s read succeeds', async () => {
     const after = await inRoadmap(async (r, clock) => {
       await r.check();
@@ -952,6 +974,7 @@ describe('reading on visit (#1074)', () => {
       await r.snapshot();
       await r.settled();
       await configureFake({ graphqlStatus: 200 });
+      clock.at += REFRESH_AFTER_MS + 1_000;
       await r.snapshot();
       await r.settled();
       return r.snapshot();
