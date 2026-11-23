@@ -9,7 +9,7 @@
  *   meant for, so nothing reaches GitHub and the fake judges what GitHub would.
  * - `Roadmap.now()` reads a clock a test sets (`setClock`), kept in the
  *   object's own storage so an eviction cannot reset it; unset, it is the
- *   real clock.
+ *   real clock. `settled()` waits for a read a visit started (#1074).
  * - A fetch or a cron event finishes once its `waitUntil` work has settled.
  * - `verifySignature` is callable over RPC, so its tests run it where it
  *   runs: `crypto.subtle.timingSafeEqual` is workerd's, not Node's.
@@ -40,6 +40,11 @@ const CLOCK = 'test-clock';
 export class Roadmap extends SiteRoadmap {
   override now(): number {
     return this.ctx.storage.kv.get<number>(CLOCK) ?? super.now();
+  }
+
+  /** Resolves once the read a visit started, if any, has ended (#1074). */
+  async settled(): Promise<void> {
+    await this.refreshing;
   }
 
   /** Moves this object's clock to `at` (ms since the epoch). */

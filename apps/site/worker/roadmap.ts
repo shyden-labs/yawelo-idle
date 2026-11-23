@@ -208,6 +208,8 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
   private dirty = false;
   /** The running read loop, if any. */
   private draining: Promise<void> | null = null;
+  /** The read a visit started, while it runs (#1074). */
+  protected refreshing: Promise<void> | null = null;
 
   constructor(ctx: DurableObjectState, env: RoadmapEnv) {
     super(ctx, env);

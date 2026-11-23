@@ -47,6 +47,8 @@ interface Snapshot {
   version: number;
   items: { number: number }[];
   progress: unknown;
+  stale: boolean;
+  readFailed: boolean;
 }
 interface Health {
   version: number;
@@ -81,6 +83,7 @@ interface RoadmapStub {
   changed(witness: Witness | null): Promise<void>;
   health(): Promise<Health>;
   snapshot(): Promise<Snapshot | null>;
+  settled(): Promise<void>;
   fetch(
     url: string,
     init?: RequestInit,
@@ -128,6 +131,7 @@ async function inRoadmap<T>(
       changed: at('changed'),
       health: at('health'),
       snapshot: at('snapshot'),
+      settled: at('settled'),
     },
     clock,
   );
@@ -865,6 +869,127 @@ describe('a read behind its webhook (#689)', () => {
   });
 });
 
+describe('reading on visit (#1074)', () => {
+  /**
+   * Shyden, 2026-11-22: the roadmap re-reads when it is visited and its last
+   * good read is over 10 minutes old, never on a timer, and never shows an
+   * old board as current while that read runs.
+   */
+  const REFRESH_AFTER_MS = 600_000;
+
+  it('reads again when a visit finds the last good read 10:01 old, serving the board stale meanwhile', async () => {
+    const { served, reads, after } = await inRoadmap(async (r, clock) => {
+      await r.check();
+      const before = await boardReads();
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      const served = await r.snapshot();
+      await r.settled();
+      return {
+        served,
+        reads: (await boardReads()) - before,
+        after: await r.snapshot(),
+      };
+    });
+    expect(served).toMatchObject({
+      version: 1,
+      stale: true,
+      readFailed: false,
+    });
+    expect(reads).toBe(1);
+    expect(after).toMatchObject({
+      version: 1,
+      stale: false,
+      readFailed: false,
+    });
+  });
+
+  it('does not read when a visit finds the last good read 9:59 old', async () => {
+    const { served, reads } = await inRoadmap(async (r, clock) => {
+      await r.check();
+      const before = await boardReads();
+      clock.at += REFRESH_AFTER_MS - 1_000;
+      const served = await r.snapshot();
+      await r.settled();
+      return { served, reads: (await boardReads()) - before };
+    });
+    expect(served).toMatchObject({ stale: false, readFailed: false });
+    expect(reads).toBe(0);
+  });
+
+  it('shares one read among visits while it runs', async () => {
+    const { served, reads } = await inRoadmap(async (r, clock) => {
+      await r.check();
+      const before = await boardReads();
+      await configureFake({ graphqlDelayMs: 200 });
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      const served = await Promise.all(
+        Array.from({ length: 5 }, () => r.snapshot()),
+      );
+      await r.settled();
+      return { served, reads: (await boardReads()) - before };
+    });
+    expect(served.map((s) => s?.stale)).toEqual([true, true, true, true, true]);
+    expect(reads).toBe(1);
+  });
+
+  it('says the read failed when a visit’s read fails, keeping the last board', async () => {
+    const after = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ graphqlStatus: 502 });
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      await r.snapshot();
+      await r.settled();
+      return r.snapshot();
+    });
+    expect(after).toMatchObject({ version: 1, readFailed: true });
+  });
+
+  it('clears the failure once a later visit’s read succeeds', async () => {
+    const after = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ graphqlStatus: 502 });
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      await r.snapshot();
+      await r.settled();
+      await configureFake({ graphqlStatus: 200 });
+      await r.snapshot();
+      await r.settled();
+      return r.snapshot();
+    });
+    expect(after).toMatchObject({
+      version: 1,
+      stale: false,
+      readFailed: false,
+    });
+  });
+
+  it('counts a difference a visit’s read found with no webhook as drift, once the grace has passed', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      await configureFake({ pages: boardWithExtraStory() });
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      await r.snapshot();
+      await r.settled();
+      clock.at += GRACE_MS + 1;
+      return r.health();
+    });
+    expect(health).toMatchObject({ version: 2, drift: 1 });
+  });
+
+  it('drops a webhook a visit’s read does not show within the grace, counting it unseen', async () => {
+    const health = await inRoadmap(async (r, clock) => {
+      await r.check();
+      clock.at += 60_000;
+      await r.changed(storyNineClosed);
+      clock.at += REFRESH_AFTER_MS + 1_000;
+      await r.snapshot();
+      await r.settled();
+      return r.health();
+    });
+    expect(health.unseenEvents).toBe(1);
+  });
+});
+
 describe('the live socket', () => {
   /**
    * The stated ceiling on one wait for the socket (#341). The suite has no
@@ -979,6 +1104,72 @@ describe('the live socket', () => {
     await configureFake({ pages: boardWithExtraStory() });
     await inRoadmap((r) => r.changed(cardAdded()), stub);
     expect((await socket.next()).version).toBe(2);
+  });
+
+  it('sends the board marked stale when a visit starts a read, then the fresh board when it lands (#1074)', async () => {
+    const stub = await fresh();
+    await inRoadmap((r) => r.check(), stub);
+    const socket = await open(stub);
+    expect(await socket.next()).toMatchObject({ version: 1, stale: false });
+    await configureFake({ pages: boardWithExtraStory() });
+    await inRoadmap(async (r, clock) => {
+      clock.at += 601_000;
+      await r.snapshot();
+      await r.settled();
+    }, stub);
+    expect(await socket.next()).toMatchObject({ version: 1, stale: true });
+    expect(await socket.next()).toMatchObject({
+      version: 2,
+      stale: false,
+      readFailed: false,
+    });
+  });
+
+  it('sends the board no longer stale when the visit’s read finds it unchanged (#1074)', async () => {
+    const stub = await fresh();
+    await inRoadmap((r) => r.check(), stub);
+    const socket = await open(stub);
+    await socket.next();
+    await inRoadmap(async (r, clock) => {
+      clock.at += 601_000;
+      await r.snapshot();
+      await r.settled();
+    }, stub);
+    expect(await socket.next()).toMatchObject({ version: 1, stale: true });
+    expect(await socket.next()).toMatchObject({ version: 1, stale: false });
+  });
+
+  it('sends the board marked failed when the visit’s read fails (#1074)', async () => {
+    const stub = await fresh();
+    await inRoadmap((r) => r.check(), stub);
+    const socket = await open(stub);
+    await socket.next();
+    await configureFake({ graphqlStatus: 502 });
+    await inRoadmap(async (r, clock) => {
+      clock.at += 601_000;
+      await r.snapshot();
+      await r.settled();
+    }, stub);
+    expect(await socket.next()).toMatchObject({
+      stale: true,
+      readFailed: false,
+    });
+    expect(await socket.next()).toMatchObject({
+      version: 1,
+      stale: false,
+      readFailed: true,
+    });
+  });
+
+  it('starts a read when a socket opens on a board last read over 10 minutes ago (#1074)', async () => {
+    const stub = await fresh();
+    await inRoadmap((r) => r.check(), stub);
+    const before = await boardReads();
+    await stub.setClock(T0 + 601_000);
+    const socket = await open(stub);
+    expect(await socket.next()).toMatchObject({ version: 1, stale: true });
+    expect(await socket.next()).toMatchObject({ version: 1, stale: false });
+    expect((await boardReads()) - before).toBe(1);
   });
 
   it('refuses a request that is not a WebSocket upgrade', async () => {

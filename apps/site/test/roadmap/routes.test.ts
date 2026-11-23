@@ -7,8 +7,8 @@ import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
  * The site Worker's roadmap routes (#341): the webhook's door at
  * `/hooks/github` (outside the dev password, guarded by its signature), the
  * three `/api/roadmap*` paths behind the password (R6, measured 2026-10-06:
- * every engine sends cached Basic credentials on the socket upgrade), and the
- * cron. Called through wrangler's harness (#506) with a dev hostname so the
+ * every engine sends cached Basic credentials on the socket upgrade). There
+ * is no cron (#1074): the roadmap reads on visit. Called through wrangler's harness (#506) with a dev hostname so the
  * gate applies; each call returns once the work it handed to `waitUntil` is
  * done (test/roadmap-worker/test-worker.ts).
  */
@@ -238,12 +238,5 @@ describe('/api/roadmap*', () => {
     expect(response.status).toBe(101);
     response.webSocket?.accept();
     response.webSocket?.close(1000, 'done');
-  });
-});
-
-describe('the cron', () => {
-  it('reads the whole board on its schedule', async () => {
-    await world.server.getWorker().scheduled({ cron: '*/10 * * * *' });
-    expect(await boardReads()).toBe(1);
   });
 });
