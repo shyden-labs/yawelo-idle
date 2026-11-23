@@ -42,7 +42,7 @@ export const BUILDS: Readonly<Record<string, readonly string[]>> = {
   ],
   'apps/site/dist-holding': HOLDING_PAGES,
   'apps/site/dist-holding-dev': HOLDING_PAGES,
-  'apps/web/dist': ['index.html'],
+  'apps/web/dist': ['play/index.html'],
 };
 
 /** The address pattern #1090 names, and the mailto: scheme. */

@@ -119,7 +119,7 @@ describe('the pages it expects (#1090 AC3)', () => {
   });
 
   it('expects the game shell', () => {
-    expect(BUILDS['apps/web/dist']).toEqual(['index.html']);
+    expect(BUILDS['apps/web/dist']).toEqual(['play/index.html']);
   });
 });
 
