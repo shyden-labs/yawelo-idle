@@ -457,7 +457,7 @@ export function healthJudgement(probe: Probe, sha: string): Judgement {
   ]);
 }
 
-/** Two of the roadmap's 10-minute checks (website spec §5.2 item 6). */
+/** How old the last check may be once verify has visited the roadmap (#1074). */
 const ROADMAP_CHECK_MAX_AGE_MS = 20 * 60_000;
 
 /** The roadmap check that the record was made after the deploy (#708). */
@@ -490,8 +490,8 @@ interface RoadmapHealth {
  * The live roadmap's health (#341): the board has been read, no missed webhook
  * is outstanding (drift stays until a webhook is seen delivering a change
  * again, operator decision 2026-10-06), reads are not still failing at a
- * check after the one that failed (#693), and the 10-minute check ran within
- * two intervals. Only a record whose last check came at or after
+ * check after the one that failed (#693), and a check ran within 20 minutes
+ * (verify visits first, so one should have, #1074). Only a record whose last check came at or after
  * `deployedAtMs` is judged: an earlier one is the previous code's (#708).
  */
 export function roadmapJudgement(
@@ -549,7 +549,7 @@ export function roadmapJudgement(
           ? undefined
           : // The times the judgement rests on, so the next drift is measured
             // from verify's own output, not inferred (#689).
-            `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift ${stamped(body.lastDriftAt)}, last event ${stamped(body.lastEventAt)}, last check ${stamped(body.lastCheckAt)})`,
+            `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift ${stamped(body.lastDriftAt)}, last event ${stamped(body.lastEventAt)}, last check ${stamped(body.lastCheckAt)})`,
     },
     {
       name: 'reads',
@@ -569,7 +569,7 @@ export function roadmapJudgement(
         const at = Date.parse(String(body.lastCheckAt));
         return Number.isFinite(at) && nowMs - at <= ROADMAP_CHECK_MAX_AGE_MS
           ? undefined
-          : `roadmap: last check ${shown(body.lastCheckAt)}, more than 20 minutes ago: the cron is not running`;
+          : `roadmap: last check ${shown(body.lastCheckAt)}, more than 20 minutes ago, though verify visited the roadmap first`;
       },
     },
     noIndexCheck('roadmap', probe),
@@ -584,8 +584,10 @@ export function roadmapProblems(
 }
 
 /**
- * The live roadmap's health as the deployed code reports it (#708): waits
- * for the site's first 10-minute check at or after `deployedAtMs`, looking
+ * The live roadmap's health as the deployed code reports it (#708): visits
+ * `/api/roadmap.json` once, since a visit is what makes the deployed code read
+ * the board (#1074; there is no cron), then waits for the site's first check
+ * at or after `deployedAtMs`, looking
  * `polls` times `pollMs` apart, then judges that record once. A record the
  * previous code made is waited past, never judged; anything else (a failed
  * request, a wrong status, a record from after the deploy with a problem)
@@ -606,6 +608,12 @@ export async function verifyRoadmap(
     );
   const url = new URL('/api/roadmap/health', target.webUrl).href;
   const headers = { Authorization: basicAuthorization(target.password) };
+  // The visit only starts a read; its answer is not judged. A visit that
+  // fails outright shows up below as a health record with no check after
+  // the deploy, named at the last look.
+  await fetch(new URL('/api/roadmap.json', target.webUrl), { headers })
+    .then((response) => response.arrayBuffer())
+    .catch(() => undefined);
   let previous: readonly string[] = [];
   for (let poll = 1; poll <= polls; poll += 1) {
     // The judgement the probe got, or none when the request failed outright.
