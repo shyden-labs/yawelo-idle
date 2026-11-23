@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { matchesGlob } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { GROUPS, lintRuns } from '../../scripts/lint.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { GROUPS, lintRuns, main } from '../../scripts/lint.ts';
 
 /**
  * `npm run lint` runs ESLint in groups, one process after another (#1081):
@@ -70,5 +70,53 @@ describe('the lint, run in groups (#1081)', () => {
       scripts: Record<string, string>;
     };
     expect(manifest.scripts.lint).toBe('node scripts/lint.ts');
+  });
+
+  it('runs every group, in order, and passes when each run does', () => {
+    const seen: string[][] = [];
+    const code = main((args) => {
+      seen.push(args);
+      return { status: 0, signal: null };
+    });
+    expect({ code, seen }).toEqual({ code: 0, seen: lintRuns(GROUPS) });
+  });
+
+  it('carries on after a failed run, names it, and fails at the end', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const seen: string[][] = [];
+    const code = main((args) => {
+      seen.push(args);
+      if (args.includes('packages/core')) return { status: 1, signal: null };
+      if (args.includes('apps/site'))
+        return {
+          status: null,
+          signal: null,
+          error: new Error('heap out of memory'),
+        };
+      return { status: 0, signal: null };
+    });
+    expect({ code, runs: seen.length, logged: error.mock.calls }).toEqual({
+      code: 1,
+      runs: lintRuns(GROUPS).length,
+      logged: [
+        ['lint: eslint --max-warnings 0 apps/site failed (heap out of memory)'],
+        [
+          'lint: eslint --max-warnings 0 packages/core failed (status 1, signal null)',
+        ],
+      ],
+    });
+    error.mockRestore();
+  });
+
+  it('names the signal when a run is killed', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const code = main(() => ({ status: null, signal: 'SIGKILL' }));
+    expect({ code, first: error.mock.calls[0] }).toEqual({
+      code: 1,
+      first: [
+        'lint: eslint --max-warnings 0 apps/site failed (status null, signal SIGKILL)',
+      ],
+    });
+    error.mockRestore();
   });
 });

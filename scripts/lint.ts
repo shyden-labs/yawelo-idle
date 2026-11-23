@@ -33,24 +33,34 @@ export function lintRuns(groups: readonly (readonly string[])[]): string[][] {
   ];
 }
 
-/** Runs every group, even after one fails, and fails if any did. */
-function main(): number {
+/** What one ESLint run reports back: `spawnSync`'s result, as far as `main` reads it. */
+export interface LintRun {
+  status: number | null;
+  signal: NodeJS.Signals | null;
+  error?: Error;
+}
+
+/** Runs ESLint with these arguments in its own Node process, output shown. */
+function runEslint(args: readonly string[]): LintRun {
   // `bin/eslint.js` is not in ESLint's exports; its package.json is.
   const eslint = join(
     dirname(createRequire(import.meta.url).resolve('eslint/package.json')),
     'bin',
     'eslint.js',
   );
+  return spawnSync(process.execPath, [eslint, ...args], { stdio: 'inherit' });
+}
+
+/** Runs every group, even after one fails, and fails if any did. */
+export function main(run: (args: string[]) => LintRun = runEslint): number {
   let failed = 0;
   // A runtime population: the runs lintRuns builds.
   for (const args of lintRuns(GROUPS)) {
-    const run = spawnSync(process.execPath, [eslint, ...args], {
-      stdio: 'inherit',
-    });
-    if (run.status !== 0) {
+    const result = run(args);
+    if (result.status !== 0) {
       failed += 1;
       console.error(
-        `lint: eslint ${args.join(' ')} failed (${run.error?.message ?? `status ${String(run.status)}, signal ${String(run.signal)}`})`,
+        `lint: eslint ${args.join(' ')} failed (${result.error?.message ?? `status ${String(result.status)}, signal ${String(result.signal)}`})`,
       );
     }
   }
