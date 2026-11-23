@@ -11,15 +11,20 @@
  *   that the read shows. A witness the read does not show yet (GitHub
  *   answering from before its own webhook) stays owed for the next read, and
  *   the read is counted as late; it explains nothing else.
- * - The scheduled check (`check`, every 10 minutes) reads the whole board on
- *   its own. A difference no witness explains within the grace is drift,
+ * - The check (`check`) reads the whole board on its own. It runs when a
+ *   visit (the JSON or the live socket) finds the last good read over 10
+ *   minutes old (#1074, Shyden 2026-11-22): no schedule, so nothing runs
+ *   while nobody visits, and a missed webhook is repaired by the next visit.
+ *   Visits share one such read; while it runs the board is served `stale`,
+ *   and when it ends it is sent again to every open page. A difference no witness explains within the grace is drift,
  *   made loud by `/api/roadmap/health` and dev verify until a webhook is seen
  *   delivering a change again; it is an independent reading of the source of
  *   truth, not a retry.
  * - A failed read keeps the last snapshot and says since when reads fail. A
  *   board listing short of the issues the repository names on it is a failed
  *   read (#751), since the listing's own count shrinks with it.
- *   Nothing reads again by itself: the next event or check is the next read.
+ *   Nothing reads again by itself: the next event or visit is the next read.
+ *   The board is served `readFailed` until a read succeeds.
  *
  * Each new version goes to every open page over hibernating WebSockets.
  */
@@ -51,6 +56,17 @@ import {
  * change, and a check drops a witness still unseen this long after its event.
  */
 export const GRACE_MS = 120_000;
+
+/** A visit reads again once the last good read is older than this (#1074). */
+export const REFRESH_AFTER_MS = 600_000;
+
+/** What the page receives (#1074): the public part and how fresh it is. */
+export interface LiveSnapshot extends PublicSnapshot {
+  /** A visit's read of the board is under way: the board is not current. */
+  stale: boolean;
+  /** The last read failed: the board could not be updated. */
+  readFailed: boolean;
+}
 
 /** No read's stamps: a card's number then comes from the cards known before. */
 const NO_STAMPS: Stamps = { items: new Map(), issues: new Map() };
@@ -145,6 +161,8 @@ interface State {
   pending: Record<string, number>;
   lastEventAt: number | null;
   lastCheckAt: number | null;
+  /** When the last read that succeeded started (#1074). */
+  lastGoodReadAt: number | null;
   drift: number;
   driftTotal: number;
   lastDriftAt: number | null;
@@ -163,6 +181,7 @@ const EMPTY: State = {
   pending: {},
   lastEventAt: null,
   lastCheckAt: null,
+  lastGoodReadAt: null,
   drift: 0,
   driftTotal: 0,
   lastDriftAt: null,
@@ -288,15 +307,42 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
     };
   }
 
-  /** The public part of the last read (#840), or null before any read. */
-  async snapshot(): Promise<PublicSnapshot | null> {
-    if (this.state.lastCheckAt === null) await this.check();
+  /**
+   * The public part of the last read (#840) and its freshness, or null
+   * before any good read. The very first visit waits for its read.
+   */
+  async snapshot(): Promise<LiveSnapshot | null> {
+    const first = this.state.lastCheckAt === null;
+    this.visit();
+    if (first) await this.refreshing;
     return this.served();
   }
 
-  private served(): PublicSnapshot | null {
+  /**
+   * A visit (#1074): when the last good read is over REFRESH_AFTER_MS old and
+   * no visit's read runs, starts one, tells open pages the board is stale,
+   * and tells them again when it ends. True when it started one.
+   */
+  private visit(): boolean {
+    if (this.refreshing !== null) return false;
+    const last = this.state.lastGoodReadAt;
+    if (last !== null && this.now() - last <= REFRESH_AFTER_MS) return false;
+    this.refreshing = this.check().finally(() => {
+      this.refreshing = null;
+      this.broadcast();
+    });
+    this.broadcast();
+    return true;
+  }
+
+  private served(): LiveSnapshot | null {
     const read = this.state.snapshot;
-    return read === null ? null : publicSnapshot(read);
+    if (read === null) return null;
+    return {
+      ...publicSnapshot(read),
+      stale: this.refreshing !== null,
+      readFailed: this.state.readFailingSince !== null,
+    };
   }
 
   /** `/api/roadmap/live`: a hibernating socket that gets every version. */
@@ -308,8 +354,12 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
       WebSocket,
     ];
     this.ctx.acceptWebSocket(server);
-    const served = this.served();
-    if (served !== null) server.send(JSON.stringify(served));
+    // A visit that starts a read has already sent the board to every socket,
+    // this one included.
+    if (!this.visit()) {
+      const served = this.served();
+      if (served !== null) server.send(JSON.stringify(served));
+    }
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -415,9 +465,11 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
           items: sorted,
           progress: measured,
         };
-        this.broadcast();
+        // A visit's read sends the board when it ends, fresh (#1074).
+        if (this.refreshing === null) this.broadcast();
       }
       this.state.dropped = countDropped(dropped);
+      this.state.lastGoodReadAt = startedAt;
       this.state.readFailingSince = null;
       this.state.readError = null;
     } catch (error) {
@@ -447,7 +499,9 @@ export class Roadmap extends DurableObject<RoadmapEnv> {
   }
 
   private broadcast(): void {
-    const message = JSON.stringify(this.served());
+    const served = this.served();
+    if (served === null) return;
+    const message = JSON.stringify(served);
     // A runtime population: the sockets open at this moment.
     for (const socket of this.ctx.getWebSockets()) socket.send(message);
   }

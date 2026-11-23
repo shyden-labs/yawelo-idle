@@ -145,7 +145,4 @@ export default {
       );
     });
   },
-  scheduled(_controller, env, ctx): void {
-    ctx.waitUntil(roadmap(env).check());
-  },
 } satisfies ExportedHandler<SiteEnv>;

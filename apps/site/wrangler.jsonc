@@ -58,5 +58,4 @@
     "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Roadmap"] }],
-  "triggers": { "crons": ["*/10 * * * *"] },
 }

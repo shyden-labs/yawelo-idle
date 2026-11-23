@@ -10,7 +10,7 @@
  * - `Roadmap.now()` reads a clock a test sets (`setClock`), kept in the
  *   object's own storage so an eviction cannot reset it; unset, it is the
  *   real clock. `settled()` waits for a read a visit started (#1074).
- * - A fetch or a cron event finishes once its `waitUntil` work has settled.
+ * - A fetch finishes once its `waitUntil` work has settled.
  * - `verifySignature` is callable over RPC, so its tests run it where it
  *   runs: `crypto.subtle.timingSafeEqual` is workerd's, not Node's.
  */
@@ -92,12 +92,6 @@ export default class TestSite extends WorkerEntrypoint<SiteEnv> {
     );
     await work.settled();
     return response;
-  }
-
-  override async scheduled(controller: ScheduledController): Promise<void> {
-    const work = tracking(this.ctx);
-    site.scheduled(controller, this.env, work.ctx);
-    await work.settled();
   }
 
   verifySignature(
