@@ -1,16 +1,23 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-23 21:20 WIB, session `yawelo-idle-44`. Branch `handover/2026-10-17-d`. develop at d43bcbdc. Worktrees: `yawelo-idle-1074` (PR #1088, draft), `yawelo-idle-1081` (PR #1089), `yawelo-idle-1090` (PR #1091, draft), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim.
+**Written:** 2026-11-23 22:58 WIB, session `yawelo-idle-44`. Branch `handover/2026-10-17-d`. develop at 0835db5f. Worktrees: `yawelo-idle-1093` (PR #1094, draft), `yawelo-idle-1074` (PR #1088, draft), `yawelo-idle-1081` (PR #1089), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at develop). No Colima, simulator or USB claim. Road to Launch page republished 22:55 WIB (version 106).
 
 ## Now
 
-- **#1074 (P1, In Progress), PR #1088 (draft), worktree `../yawelo-idle-1074`, head `5322d65f` (pushed).** Worker half done: CI run 45162800654's build-and-test job passed, the two harness tests included. Page half done: "Last updated {date}, {time} {zone}" (`apps/site/src/roadmap/updated.ts`), zone name language-neutral per Shyden ("Local names where known", #1074 comment). **Blocked by #1093** (Sonar: 20.3% new coverage, roadmap.ts 28/28 uncovered because workerd suites are not measured; Shyden chose "Measure Worker tests too"). Also waits on #1092 (browsers job: Edge install timeout).
-- **#1093 (P1, 8 pts, Todo):** Worker suites' coverage into Sonar. AC1 first: measure how a workerd Worker's statements can be counted while the harness (plain Vitest in Node, Worker separate) runs. Next ticket by priority after P0s.
-- **#1092 (P2, 2 pts, Todo):** Edge install timed out at 3 min on PRs #1089, #1091, #1088. Shyden: cache browser installs between runs.
-- **#1081 (P2, In Progress), PR #1089, head `05ac223b`:** all 5 required checks green (Sonar fixed by injectable `main(run)`). Shyden: wait for a green browsers run before merging (blocked in practice on #1092). AC3 (3 runs under load >100) still owed.
-- **#1090 (P2, In Progress), PR #1091 (draft), head `5b685f93`:** check proven red on CI run 45161676075 (`apps/site/dist/support.html: shows support@yaweloidle.com`), plant reverted, Sonar gap (CLI block) covered. Read CI on `5b685f93` by step; un-draft and merge when green (browsers job likely hits #1092).
-- All P0s wait on Shyden: #784, #425/#426/#1072, #860 and #1013 (next production release), #992–#1000 (playwright-devices#7).
-- #971 got a repeat comment: 7 unit timeouts at load 137 / ~130 MB free; same files pass alone.
+The chain: **#1092 → #1081 → #1093 → #1074**, all P1 (#1081 and #1092 raised from P2 by the blocker rule, with blocked-by links set).
+
+- **#1090: done.** PR #1091 squash-merged (0835db5f), issue closed with evidence.
+- **#1092 (P1, Todo):** Edge install. The AC1 figures are on the ticket: 40 runs, 35 passed in 19–54 s and 4 stalled at 180 s, so the fix is to cache the download, not raise the limit. A correction comment says the 3-minute limit _was_ measured (PR #1054). Next: keep Edge between runs (an actions/cache of the .deb, or an image that holds it), with a test pinning the step.
+- **#1081 (P1, In Progress), PR #1089, head `05ac223b`:** its fix is the lint OOM that now blocks #1093. It waits on a green browsers run (#1092). AC3 (3 runs under load >100) is still owed.
+- **#1093 (P1, In Progress), PR #1094 (draft), worktree `../yawelo-idle-1093`:**
+  - Remote head `cc2da36b`.
+  - Local and unpushed: `a60b3517` (adds the two scripts to `tests/integration/script-loads.test.ts`) and `ebc7086b` (switches the harness tests to `tests/support/create-covered-harness.ts`).
+  - The push is refused by the pre-push lint, which runs out of heap (`FATAL ... heap out of memory`, exit 134, twice). Measured on the #1093 ticket: develop peaks at 2.27 GB and passes; V8's limit is 2,144 MB. That is #1081.
+  - The AC1 route is on the ticket: workerd refuses V8 coverage, so istanbul-instrumented bundles are read over the harness's RPC.
+  - The unit tests and mutation runs are done (14 mutations, all caught).
+  - CI on `cc2da36b`: sonar-coverage failed only at script-loads, which `a60b3517` fixes.
+- **#1074 (P1), PR #1088 (draft), head `5322d65f`:** blocked by #1093 (Sonar new-code coverage).
+- All P0s wait on Shyden: #784, #425/#426/#1072, #860 and #1013 (next production release), and #992–#1000 (playwright-devices#7).
 
 ## For Shyden (parked questions)
 
@@ -21,7 +28,8 @@
 
 ## Resume steps
 
-1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach at origin/develop first).
-2. Read CI by step on PR #1091 (`5b685f93`) and #1088 (`5322d65f`): `gh run list --branch <branch>`; Sonar per-file via `curl "https://sonarcloud.io/api/measures/component_tree?component=shyden-labs_yawelo-idle&pullRequest=<n>&metricKeys=new_uncovered_lines,new_lines_to_cover&qualifiers=FIL"`.
-3. Start #1092 (cache browser installs; small, unblocks three PRs) or #1093 per board-next.
-4. Act on Shyden's answers above.
+1. `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach it at origin/develop first).
+2. Start #1092 in a new worktree: tests first (a workflow test pinning the cached install), then the step. The red-first test lives in tests/unit (workflow text), so it can run locally.
+3. Once #1092 merges, read a green browsers run on PR #1089, do #1081's AC3, and merge it.
+4. Then in `../yawelo-idle-1093`, after `git merge origin/develop`: push `a60b3517` alone (`git push origin a60b3517:refs/heads/1093-worker-coverage`). Read sonar-coverage failing at "Measure the Worker suites' coverage" with `no counts for apps/site/wrangler.jsonc`, then push the rest.
+5. Next on #1093: measure the new step's time on 5 runs and set its limit (#476); then check that PR #1088's Sonar per-file figure for `apps/site/worker/roadmap.ts` reads covered (AC3) and re-read the coverage thresholds (AC4). Gap to ticket: the door's own Worker and `health-broken-d1` start through `unstable_startWorker`, so they are not counted.
