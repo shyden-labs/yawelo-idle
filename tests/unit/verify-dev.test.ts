@@ -9,6 +9,7 @@ import type { AddressInfo } from 'node:net';
 import {
   NO_INDEX,
   basicAuthorization,
+  failureReason,
   gateJudgement,
   gameShellJudgement,
   gameShellProblems,
@@ -193,6 +194,51 @@ describe('stylesheetProblems (#673)', () => {
       checked: ['status'],
       problems: [`${label}: status 404 with the password, expected 200`],
     });
+  });
+});
+
+/**
+ * Node's fetch throws `TypeError: fetch failed` and keeps the real reason (a
+ * DNS miss, a reset, a TLS refusal) in `cause` (#1101: a dev deploy failed
+ * naming only "fetch failed").
+ */
+describe('failureReason (#1101)', () => {
+  it("names the cause's code and message", () => {
+    const cause = Object.assign(new Error('read ECONNRESET'), {
+      code: 'ECONNRESET',
+    });
+    expect(failureReason(new TypeError('fetch failed', { cause }))).toBe(
+      'fetch failed (ECONNRESET: read ECONNRESET)',
+    );
+  });
+
+  it('names a cause with no code by its message', () => {
+    const cause = new Error('other side closed');
+    expect(failureReason(new TypeError('fetch failed', { cause }))).toBe(
+      'fetch failed (other side closed)',
+    );
+  });
+
+  it('names a cause that is not an Error as text', () => {
+    expect(
+      failureReason(new TypeError('fetch failed', { cause: 'socket hang up' })),
+    ).toBe('fetch failed (socket hang up)');
+  });
+
+  it('names a cause that is a plain object by its JSON, not [object Object]', () => {
+    expect(
+      failureReason(
+        new TypeError('fetch failed', { cause: { code: 'UND_ERR_SOCKET' } }),
+      ),
+    ).toBe('fetch failed ({"code":"UND_ERR_SOCKET"})');
+  });
+
+  it('reads as the message alone when there is no cause', () => {
+    expect(failureReason(new Error('fetch failed'))).toBe('fetch failed');
+  });
+
+  it('reads a thrown value that is not an Error as text', () => {
+    expect(failureReason('aborted')).toBe('aborted');
   });
 });
 
@@ -988,7 +1034,11 @@ describe('verifyDev', () => {
       expect(
         await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
       ).toEqual([
-        `roadmap: request to ${new URL(ROADMAP, base).href} failed: fetch failed`,
+        expect.stringMatching(
+          new RegExp(
+            `^roadmap: request to ${new URL(ROADMAP, base).href.replaceAll('.', '\\.')} failed: fetch failed \\(.+\\)$`,
+          ),
+        ),
       ]);
       expect(looks()).toBe(1);
     });
