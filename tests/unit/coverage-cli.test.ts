@@ -345,8 +345,8 @@ describe('coverage fails below one overall threshold (#795)', () => {
     );
   });
 
-  it('holds the figures #1093 measured in CI, rounded down', () => {
-    expect(THRESHOLDS).toEqual({ statements: 94, branches: 82 });
+  it('holds the figures #1103 measured in CI, rounded down', () => {
+    expect(THRESHOLDS).toEqual({ statements: 94, branches: 83 });
   });
 });
 

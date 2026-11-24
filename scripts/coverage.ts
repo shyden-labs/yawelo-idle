@@ -18,16 +18,15 @@ import { COVERAGE_SUITES, coverageConfigFile } from './coverage-config.ts';
 import { WORKER_CONFIGS } from './worker-coverage-build.ts';
 
 /**
- * The overall thresholds, in percent: the figures measured in CI by #1093
- * (run 45354626088 on b98f93ba: statements 1,718 of 28,883 untested, 94.0%;
- * branches 1,399 of 7,905, 82.3%), rounded down. Those runs did NOT count
- * the Worker suites: the gate joined the Vitest suites only, so every
- * Worker statement was untested in them (#1103, which joins the Worker
- * suites and re-measures these from its first CI run). They were 85 and 76 from #798's run 41089966299,
- * before the Worker suites joined the report. Raise them as coverage
- * grows; lower one only in the change that removes tested code, saying so.
+ * The overall thresholds, in percent: the figures measured in CI by #1103
+ * (run 45509404083 on 767f9439, the first to judge Worker code by its
+ * workerd suites: statements 1,486 of 29,067 untested, 94.8%; branches
+ * 1,314 of 7,934, 83.4%), rounded down. Before that join they were 94 and
+ * 82 (#1093, Vitest suites only), and 85 and 76 before that (#798).
+ * Raise them as coverage grows; lower one only in the change that removes
+ * tested code, saying so.
  */
-export const THRESHOLDS = { statements: 94, branches: 82 } as const;
+export const THRESHOLDS = { statements: 94, branches: 83 } as const;
 
 export interface Count {
   untested: number;

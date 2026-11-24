@@ -32,36 +32,37 @@ export type ReportDeps = {
   out: string;
 };
 
-export async function main({
-  configs,
-  dir,
-  repo,
-  out,
-}: ReportDeps): Promise<void> {
-  for (const config of configs) {
-    const key = buildKey(join(repo, config), repo);
-    const raw = join(dir, 'raw', key);
-    const files = existsSync(raw) ? readdirSync(raw) : [];
-    if (files.length === 0) {
-      throw new Error(
-        `no counts for ${config}: did its Worker suite run under coverage?`,
-      );
-    }
-    const maps = files.map(
-      (file) =>
-        JSON.parse(readFileSync(join(raw, file), 'utf8')) as CoverageMapData,
-    );
-    const report = join(out, `worker-${key}`);
-    mkdirSync(report, { recursive: true });
-    const mapped = await mappedFrom(maps, repo);
-    writeFileSync(join(report, 'lcov.info'), lcovOf(mapped, repo));
-    // The same counts as a coverage map, which the overall gate judges
-    // Worker code by (scripts/coverage.ts, #1103).
-    writeFileSync(
-      join(report, 'coverage-final.json'),
-      JSON.stringify(mapped.toJSON()),
+export async function main(deps: ReportDeps): Promise<void> {
+  await Promise.all(deps.configs.map((config) => reportOne(config, deps)));
+}
+
+/** One Worker config's counts, mapped to source and written as reports. */
+async function reportOne(
+  config: string,
+  { dir, repo, out }: Omit<ReportDeps, 'configs'>,
+): Promise<void> {
+  const key = buildKey(join(repo, config), repo);
+  const raw = join(dir, 'raw', key);
+  const files = existsSync(raw) ? readdirSync(raw) : [];
+  if (files.length === 0) {
+    throw new Error(
+      `no counts for ${config}: did its Worker suite run under coverage?`,
     );
   }
+  const maps = files.map(
+    (file) =>
+      JSON.parse(readFileSync(join(raw, file), 'utf8')) as CoverageMapData,
+  );
+  const report = join(out, `worker-${key}`);
+  mkdirSync(report, { recursive: true });
+  const mapped = await mappedFrom(maps, repo);
+  writeFileSync(join(report, 'lcov.info'), lcovOf(mapped, repo));
+  // The same counts as a coverage map, which the overall gate judges
+  // Worker code by (scripts/coverage.ts, #1103).
+  writeFileSync(
+    join(report, 'coverage-final.json'),
+    JSON.stringify(mapped.toJSON()),
+  );
 }
 
 if (import.meta.main) {
