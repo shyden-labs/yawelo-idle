@@ -156,13 +156,15 @@ describe('sonarcloud.yml', () => {
     const text = read('sonarcloud.yml');
     expect({
       measures: text.includes('run: npm run test:coverage'),
-      // The Worker suites, counted in their own runtime (#1093).
-      measuresWorkers: text.includes('npm run test:worker:coverage'),
+      // The Worker suites, counted in their own runtime (#1093), run inside
+      // `npm run test:coverage` now, which judges Worker code by them
+      // (#1103): no second step runs them again.
+      measuresWorkersAgain: text.includes('npm run test:worker:coverage'),
       uploads: text.includes('uses: actions/upload-artifact@'),
       downloads: text.includes('uses: actions/download-artifact@'),
     }).toEqual({
       measures: true,
-      measuresWorkers: true,
+      measuresWorkersAgain: false,
       uploads: true,
       downloads: true,
     });
@@ -170,13 +172,12 @@ describe('sonarcloud.yml', () => {
 
   // A docs-only change measures nothing (#360), so its scan runs without a
   // report: the scan and its verdict still run, and no step is skipped and passed.
-  it('skips only the install, the two measures and the hand-over on a docs-only change', () => {
+  it('skips only the install, the measure and the hand-over on a docs-only change', () => {
     const conditioned = read('sonarcloud.yml')
       .split('\n')
       .filter((l) => /^\s+if:/.test(l))
       .map((l) => l.trim());
     expect(conditioned).toEqual([
-      "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
       "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
       "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
       "if: ${{ steps.classify.outputs.scope != 'docs-only' }}",
