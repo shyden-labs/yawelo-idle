@@ -30,7 +30,7 @@ describe('fresh Worker types (#591)', () => {
   // plain commands, which tests/guards/erasable-syntax.test.ts parses.
   it('lint rebuilds every Worker’s types before it judges them', () => {
     expect(root['prelint']).toBe('npm run --silent types');
-    expect(root['lint']).toMatch(/^eslint /);
+    expect(root['lint']).toBe('node scripts/lint.ts');
   });
 
   it('typecheck rebuilds every Worker’s types before it judges them', () => {

@@ -46,6 +46,16 @@ const idOf = (step: Step) => step.name ?? step.uses?.split('@')[0] ?? '?';
 
 const SKIP = "steps.classify.outputs.scope != 'docs-only'";
 
+/**
+ * A step's condition skips it on docs-only: the skip alone, or the skip with
+ * more added by `&&` (the Edge cache's save, #1092). An `||` could run it there.
+ */
+const skipsOnDocs = (condition?: string): boolean =>
+  condition === `\${{ ${SKIP} }}` ||
+  (condition?.startsWith(`\${{ ${SKIP} && `) === true &&
+    condition.endsWith(' }}') &&
+    !condition.includes('||'));
+
 /** Every step, in order: today's order with the classifier after Node. */
 const ORDER = [
   'The default branch is develop',
@@ -172,7 +182,26 @@ describe('the browsers job’s steps (#1003)', () => {
       browsers().findIndex((s) => s.id === 'classify') + 1,
     );
     expect(after.length).toBeGreaterThan(0);
-    expect(after.map((s) => s.if)).toEqual(after.map(() => `\${{ ${SKIP} }}`));
+    expect(after.filter((s) => !skipsOnDocs(s.if)).map(idOf)).toEqual([]);
+  });
+
+  it.each([
+    ['an || after the skip', `\${{ ${SKIP} || always() }}`],
+    ['the skip not first', `\${{ always() && ${SKIP} }}`],
+    ['an || after an &&', `\${{ ${SKIP} && x || y }}`],
+    ['no condition', undefined],
+  ])(
+    'refuses a condition that could run a step on docs-only: %s',
+    (_label, condition) => {
+      expect(skipsOnDocs(condition)).toBe(false);
+    },
+  );
+
+  it('accepts the skip alone and the skip with more added by &&', () => {
+    expect(skipsOnDocs(`\${{ ${SKIP} }}`)).toBe(true);
+    expect(skipsOnDocs(`\${{ ${SKIP} && steps.x.outputs.y != 'z' }}`)).toBe(
+      true,
+    );
   });
 });
 

@@ -28,7 +28,7 @@
     "test:web:dev": "scripts/browser-suite.sh web playwright.web.config.ts",
     "test:site:dev": "scripts/browser-suite.sh site playwright.site.config.ts",
     "prelint": "npm run --silent types",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "node scripts/lint.ts",
     "pretypecheck": "npm run --silent types",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests/web && tsc --noEmit -p tests/site && npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
