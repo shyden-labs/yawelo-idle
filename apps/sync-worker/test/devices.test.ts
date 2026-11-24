@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 
 /**
  * POST /v1/devices (#163; spec §6.6, D6): an anonymous device registers and

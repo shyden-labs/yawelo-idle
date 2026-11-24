@@ -60,6 +60,8 @@ const SCRIPTS = [
   'scripts/verify-dev.ts',
   'scripts/verify-prod.ts',
   'scripts/verify-roadmap.ts',
+  'scripts/worker-coverage-build.ts',
+  'scripts/worker-coverage-report.ts',
 ] as const;
 
 describe('the scripts load under Node’s own loader (#391)', () => {

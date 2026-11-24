@@ -4,8 +4,8 @@ import { shippedPackages, type Lockfile } from './third-party-notices.ts';
 /**
  * Judges every package in package-lock.json against the licence rule (#464,
  * Shyden 2026-10-07): what ships to players must be permissive; build and
- * test tools may also be weak copyleft, since their code is only run, never
- * handed on. GPL, AGPL, SSPL, a missing or an unreadable licence is red.
+ * test tools may also be weak copyleft or ask only for credit, since their
+ * code is only run, never handed on. GPL, AGPL, SSPL, a missing or an unreadable licence is red.
  * The tier comes from npm: a package it does not mark `dev` ships.
  */
 
@@ -33,12 +33,19 @@ export const WEAK_COPYLEFT = [
   'MPL-2.0',
 ] as const;
 
+/**
+ * Licences asking only for credit, which a build or test tool may carry: no
+ * licence is refused unless it would go against our own (Shyden,
+ * 2026-11-09). caniuse-lite's data, which istanbul's Babel brings (#1093).
+ */
+export const ATTRIBUTION = ['CC-BY-4.0'] as const;
+
 /** Whether a package ships to players or only builds and tests the game. */
 export type Tier = 'shipped' | 'build';
 
 const ALLOWED: Readonly<Record<Tier, ReadonlySet<string>>> = {
   shipped: new Set(PERMISSIVE),
-  build: new Set([...PERMISSIVE, ...WEAK_COPYLEFT]),
+  build: new Set([...PERMISSIVE, ...WEAK_COPYLEFT, ...ATTRIBUTION]),
 };
 
 const IDENTIFIER = /^[A-Za-z0-9.+-]+$/;
