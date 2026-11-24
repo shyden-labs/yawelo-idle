@@ -243,8 +243,8 @@ describe('coverage fails below one overall threshold (#795)', () => {
     );
   });
 
-  it('holds the figures CI measured with Svelte counted, rounded down', () => {
-    expect(THRESHOLDS).toEqual({ statements: 85, branches: 76 });
+  it('holds the figures CI measured with every Worker suite counted, rounded down', () => {
+    expect(THRESHOLDS).toEqual({ statements: 94, branches: 82 });
   });
 });
 

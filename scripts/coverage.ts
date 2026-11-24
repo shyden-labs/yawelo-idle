@@ -15,12 +15,13 @@ import { COVERAGE_SUITES, coverageConfigFile } from './coverage-config.ts';
 
 /**
  * The overall thresholds, in percent: the figures measured in CI with
- * Svelte counted (#798, run 41089966299: statements 2,720 of 19,234
- * untested, 85.86%; branches 1,275 of 5,542, 76.99%), rounded down. Develop at f4a9bd3 measured 88.3% and 81.2% before #795
- * removed machinery better tested than the rest. Raise them as coverage
+ * every Worker suite counted (#1093, run 45354626088 on b98f93ba:
+ * statements 1,718 of 28,883 untested, 94.0%; branches 1,399 of 7,905,
+ * 82.3%), rounded down. They were 85 and 76 from #798's run 41089966299,
+ * before the Worker suites joined the report. Raise them as coverage
  * grows; lower one only in the change that removes tested code, saying so.
  */
-export const THRESHOLDS = { statements: 85, branches: 76 } as const;
+export const THRESHOLDS = { statements: 94, branches: 82 } as const;
 
 export interface Count {
   untested: number;
