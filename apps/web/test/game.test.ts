@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 import { inlineTags, startTags } from '../../../tests/inline-tags';
 
 /**

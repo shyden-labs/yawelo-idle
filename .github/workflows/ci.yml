@@ -169,6 +169,11 @@ jobs:
       - name: No built page loads from a free shared domain
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: node scripts/free-hosts.ts apps/site/dist apps/site/dist-holding apps/site/dist-holding-dev
+      # No built page shows an email address or a mailto: link: support
+      # requests come only through the support form (#1090).
+      - name: No built page shows an email address
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: node scripts/no-email.ts
 
   # The browser suites, on every desktop browser (#1003): Playwright's image
   # carries Chromium, Firefox and WebKit, and Edge is downloaded first (Shyden,
@@ -214,12 +219,54 @@ jobs:
       - name: Install (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm ci
-      # Measured on PR #1054: 25, 26 and 56 s, so 3 times the slowest is
-      # 168 s (#476).
+      # Edge comes from packages.microsoft.com, 206 MB, and on 2026-11-23 four
+      # of 40 runs stalled there at the 3-minute limit (#1092). apt keeps its
+      # downloads in a folder the cache holds between runs, so a run downloads
+      # only what a newer Edge brings (tests/unit/edge-install-ci.test.ts).
+      - name: Keep apt's downloads in the Edge cache folder
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: |
+          rm -f /etc/apt/apt.conf.d/docker-clean
+          mkdir -p /root/edge-debs/partial
+          printf '%s\n' 'Dir::Cache::Archives "/root/edge-debs";' 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/99-edge-cache
+      # The run id never matches, so the prefix restores the newest download.
+      - name: Restore the Edge download
+        id: edge-cache
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/edge-debs
+          key: msedge-debs-${{ github.run_id }}
+          restore-keys: msedge-debs-
+      # Uncached, 40 runs to 2026-11-23 took 19–54 s (#1092), so 3 times the
+      # slowest is 162 s (#476). The inner 165 s fires before the step's 3
+      # minutes, so a stall names the download it was on.
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        run: npx --no playwright install --with-deps msedge
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
+      - name: Read the installed Edge version and drop older downloads
+        id: edge
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        run: |
+          version=$(dpkg-query -W -f='${Version}' microsoft-edge-stable)
+          test -n "$version"
+          find /root/edge-debs -name 'microsoft-edge-stable_*.deb' ! -name "microsoft-edge-stable_${version}_*" -delete
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Save the Edge download for later runs
+        if: ${{ steps.classify.outputs.scope != 'docs-only' && steps.edge-cache.outputs.cache-matched-key != format('msedge-debs-{0}', steps.edge.outputs.version) }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/edge-debs
+          key: msedge-debs-${{ steps.edge.outputs.version }}
       # Each suite: one measured limit, at least 3 times its slowest run
       # (#476), and none inside it. On PR #1054 with Edge: engines 27 and 32 s
       # (96 s), web smoke 9 and 11 s (33 s).

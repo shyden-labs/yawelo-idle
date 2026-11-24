@@ -661,6 +661,25 @@ export interface Outcome {
 }
 
 /**
+ * Why a request failed, in words. Node's fetch throws `fetch failed` and keeps
+ * the real reason (a DNS miss, a reset, a TLS refusal) in `cause`, so the cause
+ * is named too (#1101).
+ */
+export function failureReason(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const { cause } = error;
+  if (cause === undefined) return error.message;
+  if (!(cause instanceof Error)) {
+    const text = typeof cause === 'string' ? cause : JSON.stringify(cause);
+    return `${error.message} (${text})`;
+  }
+  const code = (cause as { code?: unknown }).code;
+  const named =
+    typeof code === 'string' ? `${code}: ${cause.message}` : cause.message;
+  return `${error.message} (${named})`;
+}
+
+/**
  * Probes `url` and judges the answer. A request that fails outright (a dropped
  * connection, DNS not yet resolving a new hostname) is reported, never thrown,
  * so the report names it.
@@ -675,9 +694,8 @@ export async function check(
   try {
     answer = await probe(url, headers);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
     return {
-      problems: [`${label}: request to ${url} failed: ${reason}`],
+      problems: [`${label}: request to ${url} failed: ${failureReason(error)}`],
       answer: null,
     };
   }

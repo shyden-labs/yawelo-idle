@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomBytes } from 'node:crypto';
-import { createTestHarness, unstable_startWorker } from 'wrangler';
+import { unstable_startWorker } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { coveredStartWorker } from '../../../tests/support/covered-start-worker';
 import { DOOR_SECRET_HEADER, DOORS } from '../worker/door';
 
 /**
@@ -134,29 +136,33 @@ const toOrigin = async (request: Request) => {
 
 beforeAll(async () => {
   await origins.listen();
-  door = await unstable_startWorker({
-    config: new URL('../wrangler.jsonc', import.meta.url).pathname,
-    bindings: {
-      ORIGIN_DOMAIN: { type: 'plain_text', value: ORIGIN_DOMAIN },
-      DEV_DOOR_SECRET: { type: 'secret_text', value: SECRET },
-      TEST_DOOR_SECRET: {
-        type: 'secret_text',
-        value: randomBytes(32).toString('hex'),
+  // Counted under coverage from its instrumented build (#1093 AC2).
+  door = await coveredStartWorker(
+    {
+      config: new URL('../wrangler.jsonc', import.meta.url).pathname,
+      bindings: {
+        ORIGIN_DOMAIN: { type: 'plain_text', value: ORIGIN_DOMAIN },
+        DEV_DOOR_SECRET: { type: 'secret_text', value: SECRET },
+        TEST_DOOR_SECRET: {
+          type: 'secret_text',
+          value: randomBytes(32).toString('hex'),
+        },
+      },
+      dev: {
+        server: { port: 0 },
+        inspector: false,
+        watch: false,
+        outboundService: toOrigin,
+        // Keep each request's own host: by default wrangler rewrites every
+        // request to the first route's host (dev.), measured in PR #940's run
+        // on 105ad6ee, where a request to the sync Worker's door reached the
+        // site's (installed wrangler, getUserWorkerInnerUrlOverrides).
+        inferOriginFromRoutes: false,
+        structuredLogsHandler: (log: Log) => doorLogs.push(log),
       },
     },
-    dev: {
-      server: { port: 0 },
-      inspector: false,
-      watch: false,
-      outboundService: toOrigin,
-      // Keep each request's own host: by default wrangler rewrites every
-      // request to the first route's host (dev.), measured in PR #940's run
-      // on 105ad6ee, where a request to the sync Worker's door reached the
-      // site's (installed wrangler, getUserWorkerInnerUrlOverrides).
-      inferOriginFromRoutes: false,
-      structuredLogsHandler: (log: Log) => doorLogs.push(log),
-    },
-  });
+    { start: unstable_startWorker },
+  );
 });
 
 afterAll(async () => {

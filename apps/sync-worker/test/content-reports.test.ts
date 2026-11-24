@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 
 /**
  * POST /v1/content-reports against real local D1 (#52 AC1 to AC4, AC6 to AC8;

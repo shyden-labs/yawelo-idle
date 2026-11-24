@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 import {
   BLOCKING_ROBOTS_TXT,
   challengeResponse,
@@ -319,16 +319,17 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
 });
 
 describe('the roadmap page’s own text, in its language (#830)', () => {
-  /** The Indonesian page's note that the board's own text stays English. */
-  const NOTE =
+  /**
+   * The old Indonesian note that ticket titles and island summaries stayed
+   * English. The voyage map (#1068) shows no ticket titles and its summaries
+   * are Indonesian, so neither page shows it (#830, 2026-11-24).
+   */
+  const OLD_NOTE =
     'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.';
 
-  it.each([
-    ['en', false],
-    ['id', true],
-  ] as const)(
-    'the %s roadmap says what it shows, what launch means and how to read it (note shown: %s)',
-    async (locale, noted) => {
+  it.each(['en', 'id'] as const)(
+    'the %s roadmap says what it shows, what launch means and how to read it, with no ticket-titles note',
+    async (locale) => {
       const html = await (
         await get(`${DEV}${pagePath(locale, 'roadmap')}`, authorised)
       ).text();
@@ -337,8 +338,8 @@ describe('the roadmap page’s own text, in its language (#830)', () => {
         html.includes(`<p lang="${locale}">${intro}</p>`),
         html.includes(`<p lang="${locale}">${launch}</p>`),
         html.includes(`<p lang="${locale}">${howToRead}</p>`),
-        html.includes(`<p lang="${locale}">${NOTE}</p>`),
-      ]).toEqual([true, true, true, noted]);
+        html.includes(OLD_NOTE),
+      ]).toEqual([true, true, true, false]);
     },
   );
 });

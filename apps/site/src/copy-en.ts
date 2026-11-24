@@ -310,18 +310,16 @@ export const COPY_EN = {
   roadmap: {
     title: line('Roadmap', 'site §5'),
     intro: line(
-      'This is where the work on Yawelo Idle stands, read live from the development board. It updates by itself as work moves, with no need to reload.',
-      'W5',
-      'site §5',
-      'file:docs/translations/2026-11-14-roadmap-id.md',
+      'This map shows how far Yawelo Idle has come on its way to launch. Each island is one stage of building the game. Tap or click an island to see what it brings.',
+      'file:docs/translations/2026-11-24-roadmap-words-id.md',
     ),
     launch: line(
       'Launch is the day Yawelo Idle opens to everyone, free to play in your browser.',
       'file:docs/translations/2026-11-14-roadmap-id.md',
     ),
     howToRead: line(
-      'The percentage counts finished stories out of all the stories planned so far. A story is one piece of work. New stories are added as the game grows, so the figure can fall as well as rise. Points show the size of the work left: a bigger job has more points. The date is a forecast from the last seven days’ pace, not a promise.',
-      'file:docs/translations/2026-11-14-roadmap-id.md',
+      'The bar shows how much of the planned work is done. New work is added as the game grows, so the bar can move back as well as forward.',
+      'file:docs/translations/2026-11-24-roadmap-words-id.md',
     ),
     byTickets: line('By stories', 'site §5'),
     byEffort: line('By effort', 'site §5'),

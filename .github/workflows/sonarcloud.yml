@@ -73,6 +73,14 @@ jobs:
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         timeout-minutes: 12
         run: npm run test:coverage
+      # The Worker suites run in workerd, where Vitest's coverage cannot see
+      # the Worker: each Worker is served instrumented and its counts become
+      # coverage/worker-<config>/lcov.info (#1093). The limit is not yet
+      # measured: #1093 sets it from its first CI runs (#476).
+      - name: Measure the Worker suites' coverage (each Worker instrumented in workerd)
+        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
+        timeout-minutes: 8
+        run: WORKER_COVERAGE_DIR="$RUNNER_TEMP/worker-coverage" npm run test:worker:coverage
       - name: Hand the report to the scan
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
