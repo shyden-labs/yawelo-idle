@@ -61,9 +61,9 @@ export function supportPolicy(host: string): string {
     `frame-src ${TURNSTILE}`,
     "img-src 'self' blob:",
     'media-src blob:',
-    // ShyDesk's piece writes a <style> into its shadow root until
-    // shyden-labs/shydesk#266; #1075 takes this away.
-    "style-src 'self' 'unsafe-inline'",
+    // No inline styles (#1075): ShyDesk's piece styles its shadow root with
+    // adoptedStyleSheets since shyden-labs/shydesk#266.
+    "style-src 'self'",
     "font-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
