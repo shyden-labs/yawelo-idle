@@ -26,7 +26,9 @@ interface Job {
  * A job that runs a browser suite installs Edge once, before the suite, as
  * root, inside one limit (#1003). Playwright's image carries Chromium, Firefox
  * and WebKit only (its v1.65.1 Dockerfile.noble), and Edge's installer needs
- * root, so the job sets no `--user` (Shyden, 2026-11-20: download Edge each run).
+ * root, so the job sets no `--user`. Its download is cached between runs
+ * (#1092, tests/unit/edge-install-ci.test.ts), so the step runs the command
+ * inside a timeout that names a stalled download.
  */
 export function expectEdgeInstalledBefore(
   job: Job | undefined,
@@ -38,10 +40,15 @@ export function expectEdgeInstalledBefore(
   expect(job?.env?.['HOME'], 'root runs with its own home').toBe('/root');
   const steps = job?.steps ?? [];
   const runs = steps.map((s) => runOf(s));
-  expect(runs.filter((run) => /playwright install/.test(run))).toEqual([
-    EDGE_INSTALL,
-  ]);
-  const install = runs.indexOf(EDGE_INSTALL);
+  const installs = runs.flatMap((run, i) =>
+    /playwright install/.test(run) ? [i] : [],
+  );
+  expect(installs, 'one step installs a browser').toHaveLength(1);
+  const install = installs[0] ?? -1;
+  expect(
+    runs[install]?.split('\n').filter((line) => line.includes(EDGE_INSTALL)),
+    'and it runs the Edge install once',
+  ).toHaveLength(1);
   const safe = runs.indexOf(SAFE_WORKSPACE);
   expect(safe, 'the workspace is marked safe for root').toBeGreaterThan(-1);
   expect(safe, 'before the install runs git').toBeLessThan(
