@@ -253,18 +253,19 @@ export const COPY: Record<Locale, Copy> = {
     notFoundBody: 'Tidak ada halaman di alamat ini.',
     homeLink: 'Kembali ke beranda',
     // The page's own text is Indonesian, each line read back by Google
-    // Cloud Translation (docs/translations/2026-11-14-roadmap-id.md, #830);
-    // the map's labels stay English placeholders for now.
+    // Cloud Translation (docs/translations/2026-11-24-roadmap-words-id.md
+    // and docs/translations/2026-11-14-roadmap-id.md, #830). No note on
+    // ticket titles: the map shows none, and its own note says island names
+    // stay English.
     voyage: {
       ...VOYAGE_PLACEHOLDER,
       intro:
-        'Inilah perkembangan pengerjaan Yawelo Idle, dibaca langsung dari papan pengembangan. Halaman ini diperbarui sendiri saat pekerjaan berjalan, tanpa perlu dimuat ulang.',
+        'Peta ini menunjukkan sejauh mana Yawelo Idle telah berjalan menuju peluncuran. Setiap pulau adalah satu tahap pembuatan game. Ketuk atau klik sebuah pulau untuk melihat apa yang dibawanya.',
       launch:
         'Peluncuran adalah hari ketika Yawelo Idle dibuka untuk semua orang, gratis dimainkan di peramban Anda.',
       howToRead:
-        'Persentase ini menghitung cerita yang sudah selesai dari semua cerita yang direncanakan sejauh ini. Satu cerita adalah satu bagian pekerjaan. Cerita baru ditambahkan seiring game berkembang, jadi angkanya bisa turun maupun naik. Poin menunjukkan besarnya pekerjaan yang tersisa: pekerjaan yang lebih besar punya poin lebih banyak. Tanggalnya adalah perkiraan dari laju tujuh hari terakhir, bukan janji.',
-      englishNote:
-        'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.',
+        'Bilah ini menunjukkan berapa banyak pekerjaan yang direncanakan sudah selesai. Pekerjaan baru ditambahkan seiring game berkembang, jadi bilahnya bisa mundur maupun maju.',
+      englishNote: null,
     },
     // Each line read back by Google Cloud Translation
     // (docs/translations/2026-11-22-support-id.md, #860).
