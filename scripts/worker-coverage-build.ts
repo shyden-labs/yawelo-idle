@@ -24,6 +24,7 @@ import { instrumentWorker } from './worker-coverage.ts';
 
 /** Every config the Worker suites serve through wrangler's test harness. */
 export const WORKER_CONFIGS: readonly string[] = [
+  'apps/door/wrangler.jsonc',
   'apps/site/wrangler.jsonc',
   'apps/site/wrangler.roadmap-test.jsonc',
   'apps/sync-worker/wrangler.jsonc',

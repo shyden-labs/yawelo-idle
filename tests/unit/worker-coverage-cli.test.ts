@@ -122,8 +122,9 @@ describe('worker-coverage-build', () => {
     }).toThrow(`expected one bundle with a source map from ${config}`);
   });
 
-  it('builds every config the Worker suites serve through the harness', () => {
+  it('builds every config the Worker suites serve through the harness and the door suite starts (#1093 AC2)', () => {
     expect([...WORKER_CONFIGS].sort()).toEqual([
+      'apps/door/wrangler.jsonc',
       'apps/site/wrangler.jsonc',
       'apps/site/wrangler.roadmap-test.jsonc',
       'apps/sync-worker/wrangler.injected.jsonc',
