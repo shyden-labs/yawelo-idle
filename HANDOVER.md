@@ -1,13 +1,13 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-24 15:15 WIB, session `yawelo-idle-dd`. Branch `handover/2026-10-17-d`. develop at 6f04f065. Worktrees: `yawelo-idle-1093` (PR #1094, draft, head 6e31cc19, all green), `yawelo-idle-1074` (PR #1088, draft), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at 6f04f065). No Colima, simulator or USB claim. No background job running.
+**Written:** 2026-11-24 15:18 WIB, session `yawelo-idle-dd`. Branch `handover/2026-10-17-d`. develop at 6f04f065. Worktrees: `yawelo-idle-1093` (PR #1094, draft, head b98f93ba, CI queued at 15:16 WIB, branch BEHIND develop by #1102's merge), `yawelo-idle-1074` (PR #1088, draft), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at 6f04f065). No Colima, simulator or USB claim. No background job running.
 
 ## Now
 
 - **#1092 closed:** 11 warm Edge installs 17–24 s; limit 3 min kept (covers the uncached 54 s × 3). Evidence on the ticket.
 - **#1101 closed:** PR #1102 merged as 6f04f065, worktree and branches removed. Dev deploy of 5069830d (run 45317594635) passed every job.
 - **#830:** AC1 met (both pages measured on dev at 5069830d through `yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev`; Shyden 2026-11-24: the Indonesian ticket-titles note stays out). AC2 open; AC3 waits on #1074.
-- **#1093 AC2 door, uncommitted in `../yawelo-idle-1093`** (on 6e31cc19): `tests/support/covered-start-worker.ts` (+ unit test, red first, 4 mutations caught) serves the door from its instrumented build under `unstable_startWorker` and saves counts before dispose; door added to `WORKER_CONFIGS` and `sonar-project.properties`; door test uses it. Unit suite rc 0 (15,035 passed); typecheck re-run after an import fix (door tsconfig refuses `.ts` imports). Commit message: scratchpad `commit-1093-door.txt` (scratch, may be gone: rewrite from the diff).
+- **#1093 AC2 door, pushed as b98f93ba** on PR #1094: `tests/support/covered-start-worker.ts` (+ unit test, red first, 4 mutations caught) serves the door from its instrumented build under `unstable_startWorker`, saves counts before dispose; door in `WORKER_CONFIGS` and `sonar-project.properties`. Laptop: unit rc 0 (15,035), typecheck rc 0, lint rc 0. CI verdict not yet read.
 - **#1093** (PR #1094 draft): the 57 roadmap 500s were the coverage wrapper's (`TestSite.fetch` static call on a class default export); fixed test-first in 6bfbbb46, all roadmap tests pass instrumented, `roadmap.ts` 120/120. **AC2 gap:** the door Worker itself (`apps/door/test/door-in-front.test.ts` starts it via `unstable_startWorker`, uninstrumented; `apps/door/worker/index.ts` in no Worker report). Findings on #1093.
 - All P0s wait on Shyden: #784, #860, #1013, and #992–#1000 (playwright-devices#7).
 
@@ -19,5 +19,5 @@
 ## Resume steps
 
 1. `ListAgents`, then `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach it at origin/develop first).
-2. #1093 in `../yawelo-idle-1093`: `npm run typecheck` (rc 0 needed), re-run `tests/unit/covered-start-worker.test.ts tests/unit/worker-coverage-cli.test.ts`, commit, push; read the door's report (`worker-apps__door__wrangler`) in the `sonar-coverage` artifact. Then ready the PR, merge when green, and do AC3 (#1088's Sonar per-file figure for `roadmap.ts`) and AC4 (re-read thresholds in `scripts/coverage.ts`).
+2. #1093: `~/.claude/scripts/pr-verdict.sh 1094` (background); read each job by name on b98f93ba; in the `sonar-coverage` artifact check `worker-apps__door__wrangler/lcov.info` lists `apps/door/worker/index.ts` (AC2 evidence on the ticket). Then update the branch from develop (merge, no rebase), ready the PR, merge when green, then AC3 (#1088's Sonar per-file figure for `roadmap.ts`; #1088's gate now fails on new coverage 20.3% < 80) and AC4 (re-read thresholds in `scripts/coverage.ts`).
 3. Then #1074 (PR #1088) on develop, then #830 AC3.
