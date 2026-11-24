@@ -127,6 +127,35 @@ describe('instrumentWorker', () => {
     ).toBe('first');
   });
 
+  it('serves a class default export with its handlers, env and RPC methods kept', async () => {
+    // The roadmap tests' Worker exports a WorkerEntrypoint class, whose
+    // handlers live on its prototype (apps/site/test/roadmap-worker).
+    const classy = [
+      'class Base { constructor(ctx, env) { this.ctx = ctx; this.env = env; } }',
+      'class Site extends Base {',
+      '  fetch(request) { return new Response(this.env.NAME + new URL(request.url).pathname); }',
+      '  twice(n) { return n * 2; }',
+      '}',
+      'export {',
+      '  Site as default',
+      '};',
+    ].join('\n');
+    const path = uniquePath();
+    const worker = new (
+      await load(instrumentWorker(classy, undefined, path))
+    ).default({}, { NAME: 'site' }) as Entrypoint & {
+      twice(n: number): number;
+    };
+
+    expect(await (await worker.fetch(new Request('https://x/a'))).text()).toBe(
+      'site/a',
+    );
+    expect(worker.twice(3)).toBe(6);
+    expect(Object.keys(JSON.parse(worker.coverage()) as object)).toContain(
+      path,
+    );
+  });
+
   it.each([
     ['none', 'var a = 1;\nexport { a };', 0],
     [

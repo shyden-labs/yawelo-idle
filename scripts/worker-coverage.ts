@@ -49,7 +49,8 @@ function defaultLists(code: string): DefaultList[] {
 
 /**
  * Instruments a Worker bundle and serves its default export through an
- * entrypoint that forwards every handler the bundle has and adds
+ * entrypoint that forwards every handler the bundle has (or, for a class
+ * default export, extends it, keeping its RPC methods) and adds
  * `coverage()`, the JSON of every count this isolate holds. `map` is the
  * bundle's source map; `bundlePath` names the bundle in the counts.
  */
@@ -85,14 +86,24 @@ export function instrumentWorker(
     (name) =>
       `  ${name}(event) { return ${only.local}.${name}(event, this.env, this.ctx); }`,
   ).join('\n');
+  // A class default export (a WorkerEntrypoint, its handlers and RPC methods
+  // on its prototype) is extended; a handler object is forwarded to.
   return `${instrumented}
 import { WorkerEntrypoint as __yaweloEntrypoint } from 'cloudflare:workers';
-class __YaweloCovered extends __yaweloEntrypoint {
+const __yaweloCoverage = () => JSON.stringify(globalThis.__coverage__ ?? {});
+let __YaweloCovered;
+if (typeof ${only.local} === 'function') {
+  __YaweloCovered = class extends ${only.local} {
+    coverage() { return __yaweloCoverage(); }
+  };
+} else {
+  __YaweloCovered = class extends __yaweloEntrypoint {
 ${forwarded}
-  coverage() { return JSON.stringify(globalThis.__coverage__ ?? {}); }
-}
-for (const name of ${JSON.stringify(HANDLERS)}) {
-  if (typeof ${only.local}[name] !== 'function') delete __YaweloCovered.prototype[name];
+    coverage() { return __yaweloCoverage(); }
+  };
+  for (const name of ${JSON.stringify(HANDLERS)}) {
+    if (typeof ${only.local}[name] !== 'function') delete __YaweloCovered.prototype[name];
+  }
 }
 export default __YaweloCovered;
 `;
