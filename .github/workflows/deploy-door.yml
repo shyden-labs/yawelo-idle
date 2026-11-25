@@ -69,6 +69,8 @@ jobs:
           ORIGIN_DOMAIN: ${{ secrets.DOOR_ORIGIN_DOMAIN }}
           DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           TEST_DOOR_SECRET: ${{ secrets.TEST_DOOR_SECRET }}
+          # The DEV pass public keys (#1078): public, so a variable.
+          DEV_PASS_KEYS: ${{ vars.DEV_PASS_KEYS }}
         run: |
           path="$(node scripts/door-secrets.ts)"
           echo "path=$path" >> "$GITHUB_OUTPUT"
