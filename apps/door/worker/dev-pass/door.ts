@@ -129,6 +129,43 @@ function wantsPage(request: Request): boolean {
   );
 }
 
+/** A CORS preflight from an embedding page, when this door allows any. */
+function isPreflight(request: Request, env: DoorEnv): boolean {
+  return (
+    request.method === 'OPTIONS' &&
+    env.embedOrigins !== undefined &&
+    request.headers.has('access-control-request-method')
+  );
+}
+
+/** The preflight's answer: allowed for a listed origin, refused otherwise. */
+function preflight(embedOrigin: string | undefined): Response {
+  if (embedOrigin === undefined) return reply(403);
+  return reply(204, {
+    ...cors(embedOrigin),
+    'access-control-allow-headers': 'X-Dev-Pass, Content-Type',
+    'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
+    'access-control-max-age': '600',
+  });
+}
+
+/** No valid pass: 401 for an embed or a non-page, else off to sign in. */
+function turnedAway(
+  request: Request,
+  url: URL,
+  host: string,
+  embedOrigin: string | undefined,
+): Response {
+  if (embedOrigin !== undefined) return reply(401, cors(embedOrigin));
+  if (!wantsPage(request)) return reply(401);
+  const signin = new URL('/pass', SIGNIN_ORIGIN);
+  signin.search = new URLSearchParams({
+    for: host,
+    back: url.pathname + url.search,
+  }).toString();
+  return reply(302, { location: signin.toString() });
+}
+
 export async function handleDevDoor(
   request: Request,
   env: DoorEnv,
@@ -152,19 +189,7 @@ export async function handleDevDoor(
     origin !== null && env.embedOrigins?.includes(origin) === true
       ? origin
       : undefined;
-  if (
-    request.method === 'OPTIONS' &&
-    env.embedOrigins !== undefined &&
-    request.headers.has('access-control-request-method')
-  ) {
-    if (embedOrigin === undefined) return reply(403);
-    return reply(204, {
-      ...cors(embedOrigin),
-      'access-control-allow-headers': 'X-Dev-Pass, Content-Type',
-      'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
-      'access-control-max-age': '600',
-    });
-  }
+  if (isPreflight(request, env)) return preflight(embedOrigin);
 
   const pass =
     request.headers.get(PASS_HEADER) ??
@@ -174,16 +199,7 @@ export async function handleDevDoor(
     keys: env.keys,
     now: env.now,
   });
-  if (!check.ok) {
-    if (embedOrigin !== undefined) return reply(401, cors(embedOrigin));
-    if (!wantsPage(request)) return reply(401);
-    const signin = new URL('/pass', SIGNIN_ORIGIN);
-    signin.search = new URLSearchParams({
-      for: env.host,
-      back: url.pathname + url.search,
-    }).toString();
-    return reply(302, { location: signin.toString() });
-  }
+  if (!check.ok) return turnedAway(request, url, env.host, embedOrigin);
 
   const headers = new Headers(request.headers);
   headers.delete(PASS_HEADER);

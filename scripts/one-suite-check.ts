@@ -40,7 +40,7 @@ export function checkSuite(
 const SUITES: readonly Suite[] = ['engines', 'web', 'site'];
 
 const isSuite = (name: string | undefined): name is Suite =>
-  SUITES.some((suite) => suite === name);
+  name !== undefined && (SUITES as readonly string[]).includes(name);
 
 /** Where main reads, and where it prints. */
 export interface Io {
