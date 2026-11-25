@@ -349,7 +349,9 @@ async function rawWhole(length: number): Promise<string> {
       socket.write(Buffer.alloc(length, 'x'));
     });
     socket.once('data', (data: Buffer) => {
-      done(/^HTTP\/1\.1 (\d{3})/.exec(data.toString('latin1'))?.[1] ?? 'none');
+      const text = data.toString('latin1');
+      const code = /^HTTP\/1\.1 (\d{3})/.exec(text)?.[1] ?? 'none';
+      done(code === '413' ? code : `${code} ${text.slice(0, 400)}`);
     });
     socket.on('error', (error: NodeJS.ErrnoException) => {
       done(`error ${error.code ?? error.message}`);
@@ -357,13 +359,16 @@ async function rawWhole(length: number): Promise<string> {
   });
 }
 
-describe('PROBE #1107 round 2', () => {
+describe('PROBE #1107 round 3 (capped read)', () => {
   it('200 whole-body posts of 1 MiB + 1', async () => {
     const tally: Record<string, number> = {};
+    const others: string[] = [];
     for (let i = 0; i < 200; i++) {
       const outcome = await rawWhole(OVER_A_MIB);
-      tally[outcome] = (tally[outcome] ?? 0) + 1;
+      const key = outcome.slice(0, 3);
+      tally[key] = (tally[key] ?? 0) + 1;
+      if (key !== '413' && others.length < 2) others.push(outcome);
     }
-    expect(JSON.stringify(tally)).toBe('tally');
+    expect(JSON.stringify({ tally, others })).toBe('tally');
   }, 600_000);
 });
