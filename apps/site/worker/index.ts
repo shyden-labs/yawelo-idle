@@ -49,9 +49,6 @@ interface SiteEnv extends RoadmapEnv {
   readonly DOOR_SECRET?: string;
 }
 
-/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
-const MAX_HOOK_BYTES = 1_048_576;
-
 const roadmap = (env: SiteEnv) => env.ROADMAP.getByName('board');
 
 const noStore = (body: unknown, status = 200): Response =>
@@ -65,11 +62,8 @@ async function hook(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return new Response(null, { status: 405, headers: { Allow: 'POST' } });
-  const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > MAX_HOOK_BYTES) return new Response(null, { status: 413 });
+  // RED-FIRST MUTATION (#1107): both size checks removed; restored next commit.
   const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_HOOK_BYTES)
-    return new Response(null, { status: 413 });
   const signature = request.headers.get('X-Hub-Signature-256');
   if (!(await verifySignature(env.ROADMAP_WEBHOOK_SECRET, body, signature)))
     return new Response(null, { status: 401 });

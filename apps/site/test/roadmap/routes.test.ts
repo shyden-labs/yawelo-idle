@@ -1,3 +1,4 @@
+import { connect } from 'node:net';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
@@ -38,6 +39,49 @@ afterAll(async () => {
 type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
   world.server.fetch(`${HOST}${path}`, init);
+
+const OVER_A_MIB = 1_048_577;
+const HOOK_HEADERS = {
+  'X-GitHub-Event': 'issues',
+  'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
+};
+
+/**
+ * Raw HTTP/1.1: a POST to /hooks/github declaring `length` bytes and sending
+ * none. Its status code, or why none came within 5 s.
+ */
+async function statusOfHeadersOnly(length: number): Promise<string> {
+  const { url } = await world.server.listen();
+  return new Promise((resolve) => {
+    const socket = connect(Number(url.port), url.hostname);
+    const done = (outcome: string) => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(outcome);
+    };
+    const timer = setTimeout(() => {
+      done('no answer in 5 s with the body unsent');
+    }, 5000);
+    socket.on('connect', () => {
+      const lines = [
+        'POST /hooks/github HTTP/1.1',
+        `Host: ${new URL(HOST).host}`,
+        `Content-Length: ${String(length)}`,
+        ...Object.entries(HOOK_HEADERS).map(([k, v]) => `${k}: ${v}`),
+      ];
+      socket.write(`${lines.join('\r\n')}\r\n\r\n`);
+    });
+    socket.once('data', (data: Buffer) => {
+      done(
+        /^HTTP\/1\.1 (\d{3})/.exec(data.toString('latin1'))?.[1] ??
+          'no status line',
+      );
+    });
+    socket.on('error', (error: NodeJS.ErrnoException) => {
+      done(`socket error ${error.code ?? error.message}`);
+    });
+  });
+}
 
 async function deliver(event: string, payload: unknown, signature?: string) {
   const body = JSON.stringify(payload);
@@ -144,14 +188,30 @@ describe('/hooks/github', () => {
     expect(response.status).toBe(400);
   });
 
-  it('refuses a body over 1 MiB before checking its signature', async () => {
+  // Headers alone: the Worker answers from Content-Length and closes the
+  // connection, so a body still in flight could read as a reset (#1107).
+  it('refuses a declared body over 1 MiB with 413 before any of it arrives', async () => {
+    expect(await statusOfHeadersOnly(OVER_A_MIB)).toBe('413');
+  });
+
+  it('refuses an undeclared body over 1 MiB with 413 before checking its signature', async () => {
+    const chunk = new TextEncoder().encode('x'.repeat(64 * 1024));
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent >= OVER_A_MIB) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(chunk);
+        sent += chunk.byteLength;
+      },
+    });
     const response = await call('/hooks/github', {
       method: 'POST',
-      body: 'x'.repeat(1_048_577),
-      headers: {
-        'X-GitHub-Event': 'issues',
-        'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
-      },
+      body,
+      duplex: 'half',
+      headers: HOOK_HEADERS,
     });
     expect(response.status).toBe(413);
   });
