@@ -15,3 +15,4 @@
 2. PR 1110: read commit 1's CI (both new tests red by name), commit + push commit 2, read its red, write commit 3, unit, push, green; record AC2/AC3 on #1107; mark ready; merge.
 3. PR #1105: update from develop, green, merge. Then #1088 (`yawelo-idle-1074`).
 4. PR #1109: green + Sonar read, merge.
+5. **Then ShyDesk's blockers before #784** (Shyden, 2026-11-25, AskUserQuestion; #1076 raised to P0): #860 (blocks shydesk#237), #1076 (blocks shydesk#262), #1072 (blocks shydesk#78), then #784. board-next would pick #784 first by number: this order overrides it. Tell `shydesk-a9` (SendMessage) as each one lands.
