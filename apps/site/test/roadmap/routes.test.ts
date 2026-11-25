@@ -311,3 +311,71 @@ describe('the cron', () => {
     expect(await boardReads()).toBe(1);
   });
 });
+
+// PROBE (#1107, scratch PR, never merged): raw-socket timelines per job.
+async function timeline(
+  path: string,
+  length: number,
+  body: string | undefined,
+): Promise<string> {
+  const { url } = await world.server.listen();
+  const t0 = Date.now();
+  const events: string[] = [`listen=${url.href}`];
+  const at = (what: string) =>
+    events.push(`${String(Date.now() - t0)}ms ${what}`);
+  return new Promise((resolve) => {
+    const socket = connect(Number(url.port), url.hostname);
+    const timer = setTimeout(() => {
+      at('timeout 5s');
+      socket.destroy();
+      resolve(events.join(' | '));
+    }, 5000);
+    socket.on('connect', () => {
+      at('connect');
+      const lines = [
+        `POST ${path} HTTP/1.1`,
+        `Host: ${new URL(HOST).host}`,
+        `Content-Length: ${String(length)}`,
+        ...Object.entries(HOOK_HEADERS).map(([k, v]) => `${k}: ${v}`),
+      ];
+      socket.write(`${lines.join('\r\n')}\r\n\r\n${body ?? ''}`);
+    });
+    socket.on('data', (data: Buffer) => {
+      at(`data ${JSON.stringify(data.toString('latin1').slice(0, 60))}`);
+    });
+    socket.on('end', () => {
+      at('end');
+    });
+    socket.on('close', (hadError: boolean) => {
+      at(`close hadError=${String(hadError)}`);
+      clearTimeout(timer);
+      resolve(events.join(' | '));
+    });
+    socket.on('error', (error: NodeJS.ErrnoException) => {
+      at(`error ${error.code ?? error.message}`);
+    });
+  });
+}
+
+describe('PROBE #1107', () => {
+  it('A: hook, declared 1 MiB + 1, headers only', async () => {
+    expect(await timeline('/hooks/github', OVER_A_MIB, undefined)).toBe('A');
+  }, 20_000);
+  it('B: hook, declared 10, headers only', async () => {
+    expect(await timeline('/hooks/github', 10, undefined)).toBe('B');
+  }, 20_000);
+  it('C: hook, declared 10, body sent', async () => {
+    expect(await timeline('/hooks/github', 10, '0123456789')).toBe('C');
+  }, 20_000);
+  it('D: unrouted path, declared 1 MiB + 1, headers only', async () => {
+    expect(await timeline('/no-such-route', OVER_A_MIB, undefined)).toBe('D');
+  }, 20_000);
+  it('E: env', () => {
+    expect(
+      JSON.stringify({
+        cov: process.env.WORKER_COVERAGE_DIR ?? null,
+        node: process.version,
+      }),
+    ).toBe('E');
+  });
+});
