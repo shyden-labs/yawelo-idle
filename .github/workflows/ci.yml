@@ -286,7 +286,7 @@ jobs:
   # without measuring.
   coverage:
     runs-on: ubuntu-26.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
       options: --user 1001
@@ -313,10 +313,11 @@ jobs:
       - name: Install (a warning fails it)
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         run: scripts/fail-on-warnings.sh npm ci
-      - name: Measure coverage (every suite pull-request CI runs)
+      # The Worker suites run inside it too, and judge the Worker code (#1103).
+      - name: Measure coverage (every suite pull-request CI runs, the Worker suites included)
         id: measure
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        timeout-minutes: 12
+        timeout-minutes: 20
         run: npm run test:coverage
       # Only after a measure that ran: an upload after a skipped one would fail
       # on a report nothing wrote, a second red step that misleads (#353).

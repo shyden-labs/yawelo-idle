@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CoverageMapData } from 'istanbul-lib-coverage';
 import {
@@ -6,7 +9,9 @@ import {
   suiteFailure,
   THRESHOLDS,
   totalsOf,
+  judgedMaps,
   untestedScreens,
+  workerMaps,
 } from '../../scripts/coverage';
 
 /** One file's map: two statements, one branch with two arms. */
@@ -56,6 +61,103 @@ describe('every suite is joined before the totals are taken (#795)', () => {
       statements: { untested: 2, total: 4 },
       branches: { untested: 2, total: 4 },
     });
+  });
+});
+
+describe('Worker code is judged by what its workerd suites ran (#1103)', () => {
+  const ROOT = '/repo';
+  const totals = (vitest: CoverageMapData[], workers: CoverageMapData[]) =>
+    totalsOf([judgedMaps(vitest, workers, ROOT)]);
+
+  it('names a Vitest file from the repo root, keeping its counts', () => {
+    expect(
+      Object.keys(
+        judgedMaps([fileMap('/repo/a.ts', [1, 0], [1, 0])], [], ROOT),
+      ),
+    ).toEqual(['a.ts']);
+    expect(totals([fileMap('/repo/a.ts', [1, 0], [1, 0])], [])).toEqual({
+      statements: { untested: 1, total: 2 },
+      branches: { untested: 1, total: 2 },
+    });
+  });
+
+  it('judges a Worker file by its Worker suite when that ran more of it than Vitest did', () => {
+    expect(
+      totals(
+        [fileMap('/repo/w.ts', [0, 0], [0, 0])],
+        [fileMap('w.ts', [1, 1], [1, 0])],
+      ),
+    ).toEqual({
+      statements: { untested: 0, total: 2 },
+      branches: { untested: 1, total: 2 },
+    });
+  });
+
+  it('keeps the Vitest map of a file Vitest ran more of', () => {
+    expect(
+      totals(
+        [fileMap('/repo/w.ts', [1, 1], [1, 1])],
+        [fileMap('w.ts', [1, 0], [0, 0])],
+      ),
+    ).toEqual({
+      statements: { untested: 0, total: 2 },
+      branches: { untested: 0, total: 2 },
+    });
+  });
+
+  it("never adds two loaders' counts of one file together (#733)", () => {
+    // Vitest ran the first statement, the Worker the second: judged by one
+    // map, one statement stays untested.
+    expect(
+      totals(
+        [fileMap('/repo/w.ts', [1, 0], [0, 0])],
+        [fileMap('w.ts', [0, 1], [0, 0])],
+      ).statements,
+    ).toEqual({ untested: 1, total: 2 });
+  });
+
+  it('takes the one bundle that ran most of a file two bundles serve, not their sum', () => {
+    expect(
+      totals(
+        [],
+        [fileMap('w.ts', [1, 0], [0, 0]), fileMap('w.ts', [0, 1], [1, 1])],
+      ),
+    ).toEqual({
+      statements: { untested: 1, total: 2 },
+      branches: { untested: 0, total: 2 },
+    });
+  });
+
+  it('adds a file only a Worker suite saw', () => {
+    expect(
+      totals(
+        [fileMap('/repo/a.ts', [1, 1], [1, 1])],
+        [fileMap('w.ts', [1, 0], [1, 0])],
+      ).statements,
+    ).toEqual({ untested: 1, total: 4 });
+  });
+});
+
+describe("the Worker suites' maps are read one per config (#1103)", () => {
+  it("reads each config's map from its report folder", () => {
+    const out = mkdtempSync(join(tmpdir(), 'coverage-workers-'));
+    mkdirSync(join(out, 'worker-apps__a__wrangler'));
+    writeFileSync(
+      join(out, 'worker-apps__a__wrangler', 'coverage-final.json'),
+      JSON.stringify(fileMap('w.ts', [1, 0], [0, 0])),
+    );
+
+    expect(workerMaps(out, ['apps/a/wrangler.jsonc'])).toEqual([
+      fileMap('w.ts', [1, 0], [0, 0]),
+    ]);
+  });
+
+  it('refuses a config with no map, naming it', () => {
+    const out = mkdtempSync(join(tmpdir(), 'coverage-workers-'));
+
+    expect(() => workerMaps(out, ['apps/b/wrangler.jsonc'])).toThrow(
+      'no Worker coverage for apps/b/wrangler.jsonc: did `npm run test:worker:coverage` run?',
+    );
   });
 });
 
@@ -243,8 +345,8 @@ describe('coverage fails below one overall threshold (#795)', () => {
     );
   });
 
-  it('holds the figures CI measured with every Worker suite counted, rounded down', () => {
-    expect(THRESHOLDS).toEqual({ statements: 94, branches: 82 });
+  it('holds the figures #1103 measured in CI, rounded down', () => {
+    expect(THRESHOLDS).toEqual({ statements: 94, branches: 83 });
   });
 });
 

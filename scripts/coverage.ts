@@ -7,21 +7,26 @@
  *   node scripts/coverage.ts
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { isAbsolute, join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import libCoverage from 'istanbul-lib-coverage';
-import type { CoverageMapData } from 'istanbul-lib-coverage';
+import type { CoverageMapData, FileCoverageData } from 'istanbul-lib-coverage';
+import { buildKey } from '../tests/support/covered-harness.ts';
 import { COVERAGE_SUITES, coverageConfigFile } from './coverage-config.ts';
+import { WORKER_CONFIGS } from './worker-coverage-build.ts';
 
 /**
- * The overall thresholds, in percent: the figures measured in CI with
- * every Worker suite counted (#1093, run 45354626088 on b98f93ba:
- * statements 1,718 of 28,883 untested, 94.0%; branches 1,399 of 7,905,
- * 82.3%), rounded down. They were 85 and 76 from #798's run 41089966299,
- * before the Worker suites joined the report. Raise them as coverage
- * grows; lower one only in the change that removes tested code, saying so.
+ * The overall thresholds, in percent: the figures measured in CI by #1103
+ * (run 45509404083 on 767f9439, the first to judge Worker code by its
+ * workerd suites: statements 1,486 of 29,067 untested, 94.8%; branches
+ * 1,314 of 7,934, 83.4%), rounded down. Before that join they were 94 and
+ * 82 (#1093, Vitest suites only), and 85 and 76 before that (#798).
+ * Raise them as coverage grows; lower one only in the change that removes
+ * tested code, saying so.
  */
-export const THRESHOLDS = { statements: 94, branches: 82 } as const;
+export const THRESHOLDS = { statements: 94, branches: 83 } as const;
 
 export interface Count {
   untested: number;
@@ -82,6 +87,85 @@ export function totalsOf(maps: readonly CoverageMapData[]): Totals {
       total: summary.branches.total,
     },
   };
+}
+
+/** A path named from the repo root, as the Worker reports name theirs. */
+function fromRoot(path: string, repoRoot: string): string {
+  return isAbsolute(path)
+    ? relative(repoRoot, path).split(sep).join('/')
+    : path;
+}
+
+/**
+ * The one map the gate judges (#1103): the Vitest suites' maps joined, as
+ * they always were, and each Worker bundle's map beside them. A file more
+ * than one loader saw (the Vitest suites, which count a Worker's source as
+ * never run, and each bundle that serves it) is judged by the one that ran
+ * most of its statements, then of its branch arms, the first seen (the
+ * Vitest suites) on a full tie. Two loaders' counts
+ * of one file are never added together (#733): their statement maps differ.
+ */
+export function judgedMaps(
+  vitest: readonly CoverageMapData[],
+  workers: readonly CoverageMapData[],
+  repoRoot: string,
+): CoverageMapData {
+  // Each file as plain data named from the root (an entry may be a
+  // FileCoverage instance, whose spread would lose its methods).
+  const named = (map: CoverageMapData): FileCoverageData[] =>
+    Object.values(map).map((entry) => {
+      const data = libCoverage.createFileCoverage(entry).data;
+      return { ...data, path: fromRoot(data.path, repoRoot) };
+    });
+  const joined = libCoverage.createCoverageMap({});
+  for (const map of vitest)
+    for (const data of named(map)) joined.addFileCoverage(data);
+  const judged = joined.toJSON();
+  const count = (hits: readonly number[]): number =>
+    hits.filter((n) => n > 0).length;
+  const ran = (data: FileCoverageData): [number, number] => [
+    count(Object.values(data.s)),
+    count(Object.values(data.b).flat()),
+  ];
+  const more = (
+    [statements, arms]: [number, number],
+    [heldStatements, heldArms]: [number, number],
+  ): boolean =>
+    statements > heldStatements ||
+    (statements === heldStatements && arms > heldArms);
+  for (const map of workers)
+    for (const data of named(map)) {
+      const held = judged[data.path];
+      if (
+        held === undefined ||
+        more(ran(data), ran(libCoverage.createFileCoverage(held).data))
+      )
+        judged[data.path] = data;
+    }
+  return judged;
+}
+
+/**
+ * Each Worker config's map, as `scripts/worker-coverage-report.ts` wrote it
+ * under `out` (`worker-<key>/coverage-final.json`). A config with none is
+ * refused, naming it: its code would otherwise count as never run.
+ */
+export function workerMaps(
+  out: string,
+  configs: readonly string[],
+): CoverageMapData[] {
+  return configs.map((config) => {
+    const file = join(
+      out,
+      `worker-${buildKey(join('/', config), '/')}`,
+      'coverage-final.json',
+    );
+    if (!existsSync(file))
+      throw new Error(
+        `no Worker coverage for ${config}: did \`npm run test:worker:coverage\` run?`,
+      );
+    return JSON.parse(readFileSync(file, 'utf8')) as CoverageMapData;
+  });
 }
 
 /**
@@ -174,15 +258,31 @@ function measure(): void {
     const failure = suiteFailure(name, run);
     if (failure !== undefined) die(failure);
   }
+  // The Worker suites run in workerd, which Vitest's coverage cannot see:
+  // their counts come from each Worker's instrumented bundle (#1093), and
+  // the gate judges Worker code by them (#1103).
+  console.log('coverage: the Worker suites');
+  const workerRun = spawnSync('npm', ['run', 'test:worker:coverage'], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      WORKER_COVERAGE_DIR: mkdtempSync(join(tmpdir(), 'worker-coverage-')),
+    },
+  });
+  const workerFailure = suiteFailure('Worker', workerRun);
+  if (workerFailure !== undefined) die(workerFailure);
   const maps = COVERAGE_SUITES.map(
     ({ name }) =>
       JSON.parse(
         readFileSync(join('coverage', name, 'coverage-final.json'), 'utf8'),
       ) as CoverageMapData,
   );
-  const totals = totalsOf(maps);
+  const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+  const totals = totalsOf([
+    judgedMaps(maps, workerMaps('coverage', WORKER_CONFIGS), repoRoot),
+  ]);
   console.log(
-    `coverage: every suite joined\n` +
+    `coverage: every suite joined, Worker code judged by its Worker suites\n` +
       `  statements: ${percent(totals.statements)}\n` +
       `  branches: ${percent(totals.branches)}`,
   );

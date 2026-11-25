@@ -1,7 +1,9 @@
 /**
  * Turns the counts the Worker suites saved (tests/support/covered-harness.ts)
  * into one lcov per config, `coverage/worker-<key>/lcov.info`, which
- * sonar-project.properties reads beside the Vitest suites' reports (#1093).
+ * sonar-project.properties reads beside the Vitest suites' reports (#1093),
+ * and the same counts as `coverage-final.json`, which the overall gate
+ * reads (#1103).
  * Each report holds one bundle's counts only, never joined with another
  * loader's map of the same files (#733).
  *
@@ -19,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import type { CoverageMapData } from 'istanbul-lib-coverage';
 import { buildKey } from '../tests/support/covered-harness.ts';
 import { WORKER_CONFIGS } from './worker-coverage-build.ts';
-import { lcovFrom } from './worker-coverage.ts';
+import { lcovOf, mappedFrom } from './worker-coverage.ts';
 
 export type ReportDeps = {
   configs: readonly string[];
@@ -30,29 +32,37 @@ export type ReportDeps = {
   out: string;
 };
 
-export async function main({
-  configs,
-  dir,
-  repo,
-  out,
-}: ReportDeps): Promise<void> {
-  for (const config of configs) {
-    const key = buildKey(join(repo, config), repo);
-    const raw = join(dir, 'raw', key);
-    const files = existsSync(raw) ? readdirSync(raw) : [];
-    if (files.length === 0) {
-      throw new Error(
-        `no counts for ${config}: did its Worker suite run under coverage?`,
-      );
-    }
-    const maps = files.map(
-      (file) =>
-        JSON.parse(readFileSync(join(raw, file), 'utf8')) as CoverageMapData,
+export async function main(deps: ReportDeps): Promise<void> {
+  await Promise.all(deps.configs.map((config) => reportOne(config, deps)));
+}
+
+/** One Worker config's counts, mapped to source and written as reports. */
+async function reportOne(
+  config: string,
+  { dir, repo, out }: Omit<ReportDeps, 'configs'>,
+): Promise<void> {
+  const key = buildKey(join(repo, config), repo);
+  const raw = join(dir, 'raw', key);
+  const files = existsSync(raw) ? readdirSync(raw) : [];
+  if (files.length === 0) {
+    throw new Error(
+      `no counts for ${config}: did its Worker suite run under coverage?`,
     );
-    const report = join(out, `worker-${key}`);
-    mkdirSync(report, { recursive: true });
-    writeFileSync(join(report, 'lcov.info'), await lcovFrom(maps, repo));
   }
+  const maps = files.map(
+    (file) =>
+      JSON.parse(readFileSync(join(raw, file), 'utf8')) as CoverageMapData,
+  );
+  const report = join(out, `worker-${key}`);
+  mkdirSync(report, { recursive: true });
+  const mapped = await mappedFrom(maps, repo);
+  writeFileSync(join(report, 'lcov.info'), lcovOf(mapped, repo));
+  // The same counts as a coverage map, which the overall gate judges
+  // Worker code by (scripts/coverage.ts, #1103).
+  writeFileSync(
+    join(report, 'coverage-final.json'),
+    JSON.stringify(mapped.toJSON()),
+  );
 }
 
 if (import.meta.main) {

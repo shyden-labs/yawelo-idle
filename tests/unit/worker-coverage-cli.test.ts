@@ -162,6 +162,34 @@ describe('worker-coverage-report', () => {
     );
   });
 
+  it("writes each config's counts as a coverage map too, named from the repo root, for the overall gate (#1103)", async () => {
+    const { root, config, dir } = world();
+    const { run } = dryRun(['index.js', 'index.js.map']);
+    build({ configs: [config], dir, repo: root, run });
+    const key = buildKey(join(root, config), root);
+    const counts = await countsFor(join(FIXTURES, 'bundle.js'));
+    mkdirSync(join(dir, 'raw', key), { recursive: true });
+    writeFileSync(join(dir, 'raw', key, 'one.json'), counts);
+
+    await report({
+      configs: [config],
+      dir,
+      repo: REPO,
+      out: join(root, 'coverage'),
+    });
+
+    const map = JSON.parse(
+      readFileSync(
+        join(root, 'coverage', `worker-${key}`, 'coverage-final.json'),
+        'utf8',
+      ),
+    ) as Record<string, { path: string; s: Record<string, number> }>;
+    const file = 'tests/unit/fixtures/worker-coverage/fixture-worker.ts';
+    expect(Object.keys(map)).toEqual([file]);
+    expect(map[file]?.path).toBe(file);
+    expect(Object.values(map[file]?.s ?? {}).length).toBeGreaterThan(0);
+  });
+
   it('refuses a config whose suites saved no counts, naming it', async () => {
     const { root, config, dir } = world();
 
