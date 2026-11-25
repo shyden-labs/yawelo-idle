@@ -4,15 +4,14 @@
 
 ## Now
 
-- **PR #1088 red on 4d75a136**: (a) board-orphans: #1093 was In Progress with no branch; moved to Todo and read back. (b) coverage 93.9% < 94%: the whole drop is `apps/site/worker/roadmap.ts` (126 -> 155 statements, all counted untested), measured from the `coverage` artifacts of runs 45441949764 and 45398129974. Cause: the gate (`scripts/coverage.ts`) never joined the Worker suites; #1093's AC4 claim was wrong (corrected on #1093).
-- **#1103** filed (P1, 5 points, blocks #1074 and #1093). Shyden picked "Count server tests" (recorded on #1103). Code written in `yawelo-idle-1103`: `judgedMaps`/`workerMaps` in `scripts/coverage.ts`, `measure()` runs `npm run test:worker:coverage`, report writes `coverage-final.json` (`mappedFrom`, `lcovOf`), Sonar's separate Worker step folded into the coverage step (step 20 min, job 30), pins updated. Tests watched red (9 + 2), mutation caught (3 red). `tests/unit` 9,765 green.
-- **#1104** filed (P1, 5 points, blocked by #1074, blocks #759): roadmap page shows the board at once, no failure text, socket reconnects (global freshness rule). #1074 AC4/AC5/AC7 reworded to Shyden's 2026-11-23 ruling.
-- ShyTalk (shytalk-87) got Yawelo's roadmap page build description.
-- New global rule 2026-11-25, "SonarCloud: always fix first" (via repo-template). Sonar read: develop has 21 open code smells, 0 dismissed, 0 hotspots. Filed **#1106** (P2, 5 points) listing all 21.
+- **PR #1105 (#1103)** head 1088e994: thresholds re-set from run 45509404083 (94.8% / 83.4% -> 94 / 83, pin red first), Sonar S9382 dealt with; evidence on #1103. Every check green but `sonar-coverage`, which failed on the flaky test below (not a #1103 defect). No re-run: #1107 first, then update-branch.
+- **#1107** filed (P0, 3 pts, blocks #1103): `apps/site/test/roadmap/routes.test.ts` "refuses a body over 1 MiB" sometimes reads ECONNRESET instead of 413 (2 of the last 40 sonarcloud runs). Hypothesis, unmeasured: the Worker's early 413 (from Content-Length, body unread) drops the socket while the client is still uploading. Worktree `yawelo-idle-1107` branch `probe/1107-early-413`, **draft PR 1108 = scratch probe** (`probe-1107.test.ts`, fails on purpose and prints `PROBE-1107 {...}`: raw-socket events + 200-repeat outcome counts). Never merge it; shut it once read; the real change goes on a fresh branch `1107-hook-413-reset` from develop (TDD).
+- **#784**: old key `cfat...c5dc` deleted from the Non-Prod account (Shyden's ruling, recorded on #784). Next: confirm the next develop deploy passes without it.
+- #1104 (P1) after #1074; #1106 (P2) Sonar smells.
 
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`.
-2. `~/.claude/scripts/pr-verdict.sh 1105` (background). On green: read the coverage step's joined figure and confirm `apps/site/worker/roadmap.ts` is judged by the harness (the `coverage` artifact's `worker-*/coverage-final.json`). Then re-set the thresholds and the step/job limits from that run, red-first pin, and note them on #1103 (AC2/AC3). Before merging, read Sonar's issues on PR #1105 (`api/issues/search?componentKeys=shyden-labs_yawelo-idle&pullRequest=1105`) and fix every one in the PR (global rule). Merge into develop once CI is green on the head SHA.
-3. After #1105 merges: merge develop into #1088 (`yawelo-idle-1074`), full unit run, push, CI; read Sonar's per-file roadmap.ts figure (#1093 AC3), then #830 AC3.
-4. #1104 (P1) after #1074.
+2. Read PR 1108's `PROBE-1107` line (`gh run view <run> --log-failed 2>&1 | grep PROBE-1107`), record it on #1107 AC1, shut PR 1108 and delete its branch.
+3. #1107 on a fresh branch from develop, red first; PR; merge on green.
+4. Update #1105 from develop, CI green, merge. Then #1088 (`yawelo-idle-1074`): merge develop, unit run, push; #1093 AC3, #830 AC3.
