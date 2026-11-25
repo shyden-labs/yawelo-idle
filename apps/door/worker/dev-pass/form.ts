@@ -32,18 +32,16 @@ async function readUpToCap(
 ): Promise<Uint8Array | 413> {
   const reader = body.getReader();
   const bytes = new Uint8Array(MAX_FORM_BYTES);
-  let length = 0;
-  for (
-    let chunk = await reader.read();
-    !chunk.done;
-    chunk = await reader.read()
-  ) {
+  // One read at a time, so nothing is pulled past the chunk that passes the cap.
+  const readFrom = async (length: number): Promise<Uint8Array | 413> => {
+    const chunk = await reader.read();
+    if (chunk.done) return bytes.subarray(0, length);
     if (length + chunk.value.byteLength > MAX_FORM_BYTES) {
       await reader.cancel();
       return 413;
     }
     bytes.set(chunk.value, length);
-    length += chunk.value.byteLength;
-  }
-  return bytes.subarray(0, length);
+    return readFrom(length + chunk.value.byteLength);
+  };
+  return readFrom(0);
 }

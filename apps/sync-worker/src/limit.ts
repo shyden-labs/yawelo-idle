@@ -31,7 +31,7 @@ function ipv6Groups(address: string): string[] | undefined {
   const tail = split(halves[1]);
   const missing = 8 - head.length - tail.length;
   if (halves.length === 2 ? missing < 1 : missing !== 0) return undefined;
-  const groups = [...head, ...Array<string>(missing).fill('0'), ...tail];
+  const groups = [...head, ...new Array<string>(missing).fill('0'), ...tail];
   return groups.every((group) => IPV6_GROUP.test(group)) ? groups : undefined;
 }
 
