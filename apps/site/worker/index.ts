@@ -49,13 +49,37 @@ interface SiteEnv extends RoadmapEnv {
   readonly DOOR_SECRET?: string;
 }
 
-/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
-const MAX_HOOK_BYTES = 1_048_576;
-
 const roadmap = (env: SiteEnv) => env.ROADMAP.getByName('board');
 
 const noStore = (body: unknown, status = 200): Response =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
+
+/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
+const MAX_HOOK_BYTES = 1_048_576;
+
+/**
+ * The stream's bytes, or 413 with the stream cancelled as soon as they pass
+ * `MAX_HOOK_BYTES`, so a body with no declared length is never read whole
+ * (#1107; as apps/door/worker/dev-pass/form.ts reads a form).
+ */
+async function readUpToCap(
+  stream: ReadableStream<Uint8Array>,
+): Promise<ArrayBuffer | 413> {
+  const reader = stream.getReader();
+  const bytes = new Uint8Array(MAX_HOOK_BYTES);
+  // One read at a time, so nothing is pulled past the chunk that passes the cap.
+  const readFrom = async (length: number): Promise<ArrayBuffer | 413> => {
+    const chunk = await reader.read();
+    if (chunk.done) return bytes.slice(0, length).buffer;
+    if (length + chunk.value.byteLength > MAX_HOOK_BYTES) {
+      await reader.cancel();
+      return 413;
+    }
+    bytes.set(chunk.value, length);
+    return readFrom(length + chunk.value.byteLength);
+  };
+  return readFrom(0);
+}
 
 /** `/hooks/github`: signature first, then only this board's events cause a read. */
 async function hook(
@@ -65,11 +89,15 @@ async function hook(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return new Response(null, { status: 405, headers: { Allow: 'POST' } });
-  const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > MAX_HOOK_BYTES) return new Response(null, { status: 413 });
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_HOOK_BYTES)
+  // A declared length is refused before reading; a non-number one never
+  // reaches the Worker (the server answers 400, routes.test.ts).
+  if (Number(request.headers.get('Content-Length')) > MAX_HOOK_BYTES)
     return new Response(null, { status: 413 });
+  const body =
+    request.body === null
+      ? new ArrayBuffer(0)
+      : await readUpToCap(request.body as ReadableStream<Uint8Array>);
+  if (body === 413) return new Response(null, { status: 413 });
   const signature = request.headers.get('X-Hub-Signature-256');
   if (!(await verifySignature(env.ROADMAP_WEBHOOK_SECRET, body, signature)))
     return new Response(null, { status: 401 });
