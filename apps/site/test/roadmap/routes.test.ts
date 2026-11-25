@@ -312,70 +312,45 @@ describe('the cron', () => {
   });
 });
 
-// PROBE (#1107, scratch PR, never merged): raw-socket timelines per job.
-async function timeline(
-  path: string,
-  length: number,
-  body: string | undefined,
-): Promise<string> {
+// PROBE (#1107, scratch PR, never merged): 200 whole-body posts, raw socket.
+async function rawWhole(length: number): Promise<string> {
   const { url } = await world.server.listen();
-  const t0 = Date.now();
-  const events: string[] = [`listen=${url.href}`];
-  const at = (what: string) =>
-    events.push(`${String(Date.now() - t0)}ms ${what}`);
   return new Promise((resolve) => {
     const socket = connect(Number(url.port), url.hostname);
-    const timer = setTimeout(() => {
-      at('timeout 5s');
+    const done = (outcome: string) => {
+      clearTimeout(timer);
       socket.destroy();
-      resolve(events.join(' | '));
+      resolve(outcome);
+    };
+    const timer = setTimeout(() => {
+      done('timeout');
     }, 5000);
     socket.on('connect', () => {
-      at('connect');
       const lines = [
-        `POST ${path} HTTP/1.1`,
+        'POST /hooks/github HTTP/1.1',
         `Host: ${new URL(HOST).host}`,
         `Content-Length: ${String(length)}`,
         ...Object.entries(HOOK_HEADERS).map(([k, v]) => `${k}: ${v}`),
       ];
-      socket.write(`${lines.join('\r\n')}\r\n\r\n${body ?? ''}`);
+      socket.write(`${lines.join('\r\n')}\r\n\r\n`);
+      socket.write(Buffer.alloc(length, 'x'));
     });
-    socket.on('data', (data: Buffer) => {
-      at(`data ${JSON.stringify(data.toString('latin1').slice(0, 60))}`);
-    });
-    socket.on('end', () => {
-      at('end');
-    });
-    socket.on('close', (hadError: boolean) => {
-      at(`close hadError=${String(hadError)}`);
-      clearTimeout(timer);
-      resolve(events.join(' | '));
+    socket.once('data', (data: Buffer) => {
+      done(/^HTTP\/1\.1 (\d{3})/.exec(data.toString('latin1'))?.[1] ?? 'none');
     });
     socket.on('error', (error: NodeJS.ErrnoException) => {
-      at(`error ${error.code ?? error.message}`);
+      done(`error ${error.code ?? error.message}`);
     });
   });
 }
 
-describe('PROBE #1107', () => {
-  it('A: hook, declared 1 MiB + 1, headers only', async () => {
-    expect(await timeline('/hooks/github', OVER_A_MIB, undefined)).toBe('A');
-  }, 20_000);
-  it('B: hook, declared 10, headers only', async () => {
-    expect(await timeline('/hooks/github', 10, undefined)).toBe('B');
-  }, 20_000);
-  it('C: hook, declared 10, body sent', async () => {
-    expect(await timeline('/hooks/github', 10, '0123456789')).toBe('C');
-  }, 20_000);
-  it('D: unrouted path, declared 1 MiB + 1, headers only', async () => {
-    expect(await timeline('/no-such-route', OVER_A_MIB, undefined)).toBe('D');
-  }, 20_000);
-  it('E: env', () => {
-    expect(
-      JSON.stringify({
-        cov: process.env.WORKER_COVERAGE_DIR ?? null,
-        node: process.version,
-      }),
-    ).toBe('E');
-  });
+describe('PROBE #1107 round 2', () => {
+  it('200 whole-body posts of 1 MiB + 1', async () => {
+    const tally: Record<string, number> = {};
+    for (let i = 0; i < 200; i++) {
+      const outcome = await rawWhole(OVER_A_MIB);
+      tally[outcome] = (tally[outcome] ?? 0) + 1;
+    }
+    expect(JSON.stringify(tally)).toBe('tally');
+  }, 600_000);
 });
