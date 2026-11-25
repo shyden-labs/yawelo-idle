@@ -13,6 +13,7 @@
 
 import { handleDevDoor } from './dev-pass/door';
 import type { PublicKeys } from './dev-pass/pass';
+import { DOORS, type Environment } from './doors';
 
 /** The header carrying the door secret; any value a caller sent is replaced. */
 export const DOOR_SECRET_HEADER = 'x-yawelo-door-secret';
@@ -32,38 +33,7 @@ export const DOOR_HOST_HEADER = 'x-yawelo-door';
  */
 export const DOOR_CLIENT_HEADER = 'x-yawelo-client';
 
-export type Environment = 'dev' | 'test';
-
-export interface Door {
-  /** The Worker this door reaches, by its name in the non-PROD account. */
-  readonly worker: string;
-  /** Whose door secret the request carries. */
-  readonly environment: Environment;
-}
-
-/**
- * Every door, by host. Doors sit on PROD's zone, yaweloidle.com (Shyden,
- * 2026-11-09). A Map, not an object literal: a lookup by an arbitrary host
- * must not find a key every plain object inherits, such as `constructor`.
- */
-export const DOORS: ReadonlyMap<string, Door> = new Map([
-  [
-    'dev.yaweloidle.com',
-    { worker: 'yawelo-idle-site-dev', environment: 'dev' },
-  ],
-  [
-    'dev-api.yaweloidle.com',
-    { worker: 'yawelo-idle-sync-dev', environment: 'dev' },
-  ],
-  [
-    'dev-holding.yaweloidle.com',
-    { worker: 'yawelo-idle-holding-dev', environment: 'dev' },
-  ],
-  [
-    'test.yaweloidle.com',
-    { worker: 'yawelo-idle-holding-test', environment: 'test' },
-  ],
-]);
+export { DOORS, type Door, type Environment } from './doors';
 
 /** What the deploy gives the door: no binding, only these four values. */
 export interface DoorEnv {
