@@ -46,7 +46,7 @@ export const BUILDS: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** The address pattern #1090 names, and the mailto: scheme. */
-const SHOWN = /mailto:|[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}/gi;
+const SHOWN = /mailto:|[^\s@<>"']+@[^\s@<>"'](?:[^\s@<>"'.]*\.)+[a-z]{2,}/gi;
 
 /**
  * One problem per distinct address in each page, and one per expected page

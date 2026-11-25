@@ -53,7 +53,7 @@ describe('readBody (#164 AC1, AC4)', () => {
 
   it('accepts a body of exactly the limit', async () => {
     const body = bodyOf(MAX);
-    expect(new TextEncoder().encode(body).length).toBe(MAX);
+    expect(new TextEncoder().encode(body)).toHaveLength(MAX);
     expect((await readBody(post(body), schema, MAX)).ok).toBe(true);
   });
 

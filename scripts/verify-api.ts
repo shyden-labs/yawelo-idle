@@ -71,8 +71,10 @@ async function waitForCommit(
   wait: Wait,
   look: Look,
 ): Promise<string | undefined> {
-  let last = 'no answer yet';
-  for (let attempt = 1; attempt <= wait.polls; attempt += 1) {
+  const never = (last: string): string =>
+    `/commit.txt: never served commit ${sha} in ${String(wait.polls)} looks ${String(wait.pollMs)} ms apart; last: ${last}`;
+  const poll = async (attempt: number): Promise<string | undefined> => {
+    let last: string;
     try {
       const answer = await look(`${origin}/commit.txt`);
       if (answer.status === 200 && served(answer.body) === sha)
@@ -81,10 +83,11 @@ async function waitForCommit(
     } catch (error) {
       last = message(error);
     }
-    if (attempt < wait.polls)
-      await new Promise((done) => setTimeout(done, wait.pollMs));
-  }
-  return `/commit.txt: never served commit ${sha} in ${String(wait.polls)} looks ${String(wait.pollMs)} ms apart; last: ${last}`;
+    if (attempt >= wait.polls) return never(last);
+    await new Promise((done) => setTimeout(done, wait.pollMs));
+    return poll(attempt + 1);
+  };
+  return wait.polls < 1 ? never('no answer yet') : poll(1);
 }
 
 /** Every problem the reserve at `origin` shows, after waiting for `sha`. */
@@ -99,13 +102,14 @@ export async function verifyApi(
   if (waited !== undefined) return [waited];
   const answers: Partial<Record<ApiPath, Probe>> = {};
   const failures: string[] = [];
-  for (const path of API_PATHS) {
-    try {
-      answers[path] = await look(`${origin}${path}`);
-    } catch (error) {
-      failures.push(`${path}: request failed: ${message(error)}`);
-    }
-  }
+  const settled = await Promise.allSettled(
+    API_PATHS.map((path) => look(`${origin}${path}`)),
+  );
+  settled.forEach((outcome, index) => {
+    const path = API_PATHS[index] as ApiPath;
+    if (outcome.status === 'fulfilled') answers[path] = outcome.value;
+    else failures.push(`${path}: request failed: ${message(outcome.reason)}`);
+  });
   if (failures.length > 0) return failures;
   return apiProblems(answers as Record<ApiPath, Probe>, sha, notFoundPage);
 }

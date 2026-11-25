@@ -53,7 +53,7 @@ export async function loadOrCreateSaveKey(
   store: SaveKeyStore,
 ): Promise<Uint8Array> {
   const kept = await store.get(SAVE_KEY_NAME);
-  if (kept !== undefined && kept.byteLength === SAVE_KEY_LENGTH) return kept;
+  if (kept?.byteLength === SAVE_KEY_LENGTH) return kept;
   const fresh = new Uint8Array(SAVE_KEY_LENGTH);
   crypto.getRandomValues(fresh);
   await store.set(SAVE_KEY_NAME, fresh);
@@ -120,11 +120,11 @@ function encodingsOf(key: Uint8Array): { hex: string; others: string[] } {
   const hex = Array.from(key, (byte) =>
     byte.toString(16).padStart(2, '0'),
   ).join('');
-  const base64 = btoa(String.fromCharCode(...key));
+  const base64 = btoa(String.fromCodePoint(...key));
   const base64url = base64
     .replaceAll('+', '-')
     .replaceAll('/', '_')
-    .replace(/=+$/u, '');
+    .replace(/={1,2}$/u, '');
   return { hex, others: [base64, base64url] };
 }
 

@@ -88,7 +88,7 @@ export function preferredLocale(header: string | null): Locale {
       .map((param) => param.trim().toLowerCase())
       .find((param) => param.startsWith('q='));
     const q = qParam === undefined ? 1 : Number(qParam.slice(2));
-    if (!(q > 0)) continue;
+    if (Number.isNaN(q) || q <= 0) continue;
     if (best === undefined || q > best.q) best = { locale, q };
   }
   return best?.locale ?? DEFAULT_LOCALE;
