@@ -1,18 +1,17 @@
 // Copied unchanged from shyden-labs/repo-template develop 4e8fcf7 (docs/dev-pass.md) for
-// shyden-labs/yawelo-idle#1078, apart from import paths without `.ts` (and, in door.ts, one `String()` for this repo's lint).
+// shyden-labs/yawelo-idle#1078, apart from import paths without `.ts` (and, in door.ts, one `String()` for this repo's lint),
+// and here `CryptoKey` from the runtime's globals instead of `node:crypto`, which the door Worker's types do not have.
 // The DEV pass (shyden-labs/repo-template#207): a short-lived, signed ticket that
 // opens one product's `dev.` door. `v1.<kid>.<payload>.<sig>`, each part base64url
 // without padding; `sig` is Ed25519 over the ASCII bytes `v1.<kid>.<payload>`.
 // Pure WebCrypto, so the same file runs in a Cloudflare Worker and in Node.
-// The type import is erased: it only names WebCrypto's types, as the template has no DOM lib.
-import type { webcrypto } from 'node:crypto';
 
 export type PassKind = 'browser' | 'app' | 'machine' | 'embed';
 /** A door's keys: `kid` → the Ed25519 public key's JWK `x`. Public, so plain vars, not secrets. */
 export type PublicKeys = Readonly<Record<string, string>>;
 export interface SigningKey {
   readonly kid: string;
-  readonly privateKey: webcrypto.CryptoKey;
+  readonly privateKey: CryptoKey;
 }
 export interface PassClaims {
   /** The one door this pass opens, e.g. `dev.yaweloidle.com`. */
@@ -53,16 +52,16 @@ const VERSION = 'v1';
 const encoder = new TextEncoder();
 
 export function toBase64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
+  return btoa(String.fromCodePoint(...bytes))
     .replaceAll('+', '-')
     .replaceAll('/', '_')
-    .replace(/=+$/, '');
+    .replace(/={1,2}$/, '');
 }
 
 /** Throws on anything that is not base64. */
 export function fromBase64url(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value.replaceAll('-', '+').replaceAll('_', '/'));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return Uint8Array.from(binary, (char) => char.codePointAt(0) as number);
 }
 
 export async function mintPass(
@@ -178,7 +177,7 @@ export async function verifyPass(
 /** A control character, a space, DEL or a backslash. */
 function hasUnsafeChar(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
+    const code = value.codePointAt(index) as number;
     if (code <= 0x20 || code === 0x7f || code === 0x5c) return true;
   }
   return false;

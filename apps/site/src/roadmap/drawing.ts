@@ -32,10 +32,12 @@ const FONT = 'Inter, system-ui, sans-serif';
 
 /** The design's seeded source (mulberry32), seeded as round 6 seeds its map. */
 function seeded(seed: number): () => number {
-  let s = seed;
+  // A 32-bit cell wraps each sum to a signed 32-bit integer, as mulberry32 needs.
+  const cell = new DataView(new ArrayBuffer(4));
+  cell.setInt32(0, seed);
   return () => {
-    s |= 0;
-    s = (s + 0x6d2b79f5) | 0;
+    cell.setInt32(0, cell.getInt32(0) + 0x6d2b79f5);
+    const s = cell.getInt32(0);
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -390,6 +392,12 @@ function drawShip(svg: Shape, x: number, y: number) {
   add(b, 'path', { d: 'M-2,-24 l0,-5 l6,2z', fill: GOLD });
 }
 
+/** A leg's opacity: full once travelled, then the next leg, then the rest. */
+function routeOpacity(travelled: boolean, next: boolean): number {
+  if (travelled) return 1;
+  return next ? 0.8 : 0.4;
+}
+
 /** The leg from island a to island b, bowed down onto the water. */
 function drawLeg(
   svg: Shape,
@@ -406,7 +414,7 @@ function drawLeg(
     'stroke-width': travelled ? 3.5 : 2.4,
     'stroke-dasharray': travelled ? 'none' : '2 10',
     'stroke-linecap': 'round',
-    opacity: travelled ? 1 : next ? 0.8 : 0.4,
+    opacity: routeOpacity(travelled, next),
   });
 }
 

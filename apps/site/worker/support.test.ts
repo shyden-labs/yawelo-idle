@@ -95,6 +95,7 @@ describe('preferredLocale (#860)', () => {
     ['', 'en'],
     ['*', 'en'],
     ['id;q=0', 'en'],
+    ['id;q=abc', 'en'],
     ['ID-id', 'id'],
     ['indonesian', 'en'],
   ] as const)('reads %j as %s', (header, locale) => {

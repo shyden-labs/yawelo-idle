@@ -1,3 +1,4 @@
+import { connect } from 'node:net';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
@@ -38,6 +39,54 @@ afterAll(async () => {
 type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
   world.server.fetch(`${HOST}${path}`, init);
+
+const HOOK_HEADERS = {
+  'X-GitHub-Event': 'issues',
+  'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
+};
+
+/**
+ * Raw HTTP/1.1: a POST to /hooks/github declaring `length` and sending
+ * `sent` bytes of body after the headers. The first status code that comes
+ * back, or why none came within 5 s. A reset after that status is not read:
+ * a server may close as soon as it has answered (#1107).
+ */
+async function statusOfRawPost(
+  length: number | string,
+  sent: number,
+): Promise<string> {
+  const { url } = await world.server.listen();
+  return new Promise((resolve) => {
+    const socket = connect(Number(url.port), url.hostname);
+    const done = (outcome: string) => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(outcome);
+    };
+    const timer = setTimeout(() => {
+      done('no answer in 5 s');
+    }, 5000);
+    socket.on('connect', () => {
+      const lines = [
+        'POST /hooks/github HTTP/1.1',
+        `Host: ${new URL(HOST).host}`,
+        `Content-Length: ${String(length)}`,
+        ...Object.entries(HOOK_HEADERS).map(([k, v]) => `${k}: ${v}`),
+      ];
+      socket.write(`${lines.join('\r\n')}\r\n\r\n`);
+      if (sent > 0) socket.write(Buffer.alloc(sent, 'x'));
+    });
+    socket.once('data', (data: Buffer) => {
+      done(
+        /^HTTP\/1\.1 (\d{3})/.exec(data.toString('latin1'))?.[1] ??
+          'no status line',
+      );
+    });
+    socket.on('error', (error: NodeJS.ErrnoException) => {
+      done(`socket error ${error.code ?? error.message}`);
+    });
+  });
+}
 
 async function deliver(event: string, payload: unknown, signature?: string) {
   const body = JSON.stringify(payload);
@@ -144,16 +193,10 @@ describe('/hooks/github', () => {
     expect(response.status).toBe(400);
   });
 
-  it('refuses a body over 1 MiB before checking its signature', async () => {
-    const response = await call('/hooks/github', {
-      method: 'POST',
-      body: 'x'.repeat(1_048_577),
-      headers: {
-        'X-GitHub-Event': 'issues',
-        'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
-      },
-    });
-    expect(response.status).toBe(413);
+  // A length that is not a number must never read as small (#1107's
+  // security review): the request is refused before the Worker sees it.
+  it('refuses a declared length that is not a number with 400', async () => {
+    expect(await statusOfRawPost('abc', 0)).toBe('400');
   });
 
   it('refuses any method but POST, naming POST', async () => {

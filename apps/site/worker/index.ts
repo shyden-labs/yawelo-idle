@@ -36,6 +36,7 @@ import {
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
+import { declaredOverCap, readUpToCap } from './body';
 import { isSupportPath, serveSupport } from './support';
 import privateSpec from '../api/private.openapi.json';
 
@@ -48,9 +49,6 @@ interface SiteEnv extends RoadmapEnv {
   /** This environment's door secret (#784), which every door request carries. */
   readonly DOOR_SECRET?: string;
 }
-
-/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
-const MAX_HOOK_BYTES = 1_048_576;
 
 const roadmap = (env: SiteEnv) => env.ROADMAP.getByName('board');
 
@@ -65,11 +63,14 @@ async function hook(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return new Response(null, { status: 405, headers: { Allow: 'POST' } });
-  const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > MAX_HOOK_BYTES) return new Response(null, { status: 413 });
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_HOOK_BYTES)
+  // A declared length is refused before reading.
+  if (declaredOverCap(request.headers))
     return new Response(null, { status: 413 });
+  const body =
+    request.body === null
+      ? new ArrayBuffer(0)
+      : await readUpToCap(request.body as ReadableStream<Uint8Array>);
+  if (body === 413) return new Response(null, { status: 413 });
   const signature = request.headers.get('X-Hub-Signature-256');
   if (!(await verifySignature(env.ROADMAP_WEBHOOK_SECRET, body, signature)))
     return new Response(null, { status: 401 });

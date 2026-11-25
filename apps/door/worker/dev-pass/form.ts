@@ -1,5 +1,6 @@
 // Copied unchanged from shyden-labs/repo-template develop 8837f073 (docs/dev-pass.md; the chunked-body cap, shyden-labs/repo-template#216) for
-// shyden-labs/yawelo-idle#1078, apart from import paths without `.ts` (and, in door.ts, one `String()` for this repo's lint).
+// shyden-labs/yawelo-idle#1078, apart from import paths without `.ts` (and, in door.ts, one `String()` for this repo's lint),
+// and here the body typed as bytes: the Workers runtime types it ReadableStream<any>, which this repo's lint refuses.
 // Reading a small urlencoded form at a public door (shyden-labs/repo-template#207):
 // no multipart parsing, and a body over 4 KiB is never decoded. A body of no
 // declared length is counted as it streams in and cancelled once it passes the
@@ -21,7 +22,9 @@ export async function readForm(
   if (Number(request.headers.get('content-length')) > MAX_FORM_BYTES)
     return 413;
   const bytes =
-    request.body === null ? new Uint8Array(0) : await readUpToCap(request.body);
+    request.body === null
+      ? new Uint8Array(0)
+      : await readUpToCap(request.body as ReadableStream<Uint8Array>);
   if (bytes === 413) return 413;
   return new URLSearchParams(new TextDecoder().decode(bytes));
 }
@@ -32,18 +35,16 @@ async function readUpToCap(
 ): Promise<Uint8Array | 413> {
   const reader = body.getReader();
   const bytes = new Uint8Array(MAX_FORM_BYTES);
-  let length = 0;
-  for (
-    let chunk = await reader.read();
-    !chunk.done;
-    chunk = await reader.read()
-  ) {
+  // One read at a time, so nothing is pulled past the chunk that passes the cap.
+  const readFrom = async (length: number): Promise<Uint8Array | 413> => {
+    const chunk = await reader.read();
+    if (chunk.done) return bytes.subarray(0, length);
     if (length + chunk.value.byteLength > MAX_FORM_BYTES) {
       await reader.cancel();
       return 413;
     }
     bytes.set(chunk.value, length);
-    length += chunk.value.byteLength;
-  }
-  return bytes.subarray(0, length);
+    return readFrom(length + chunk.value.byteLength);
+  };
+  return readFrom(0);
 }

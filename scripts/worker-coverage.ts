@@ -138,14 +138,14 @@ function lcovText(map: libCoverage.CoverageMap, repoRoot: string): string {
 }
 
 /**
- * The lcov of one bundle's counts (any number of runs, added up), mapped back
- * to the source files under `repoRoot`. Files outside it, and under
- * node_modules, are left out.
+ * One bundle's counts (any number of runs, added up), mapped back to the
+ * source files under `repoRoot` and named from it. Files outside it, and
+ * under node_modules, are left out.
  */
-export async function lcovFrom(
+export async function mappedFrom(
   maps: readonly CoverageMapData[],
   repoRoot: string,
-): Promise<string> {
+): Promise<libCoverage.CoverageMap> {
   const joined = libCoverage.createCoverageMap({});
   for (const data of maps) joined.merge(data);
   const mapped = await createSourceMapStore().transformCoverage(joined);
@@ -160,5 +160,19 @@ export async function lcovFrom(
       });
     }
   }
-  return kept.files().length === 0 ? '' : lcovText(kept, repoRoot);
+  return kept;
+}
+
+/** The lcov of a `mappedFrom` map, what Sonar reads: empty for no files. */
+export const lcovOf = (
+  kept: libCoverage.CoverageMap,
+  repoRoot: string,
+): string => (kept.files().length === 0 ? '' : lcovText(kept, repoRoot));
+
+/** The lcov of one bundle's counts, mapped as `mappedFrom` maps them. */
+export async function lcovFrom(
+  maps: readonly CoverageMapData[],
+  repoRoot: string,
+): Promise<string> {
+  return lcovOf(await mappedFrom(maps, repoRoot), repoRoot);
 }
