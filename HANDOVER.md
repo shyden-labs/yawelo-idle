@@ -4,14 +4,14 @@
 
 ## Now
 
-- **PR #1105 (#1103)** head 1088e994: thresholds re-set from run 45509404083 (94.8% / 83.4% -> 94 / 83, pin red first), Sonar S9382 dealt with; evidence on #1103. Every check green but `sonar-coverage`, which failed on the flaky test below (not a #1103 defect). No re-run: #1107 first, then update-branch.
-- **#1107** filed (P0, 3 pts, blocks #1103): `apps/site/test/roadmap/routes.test.ts` "refuses a body over 1 MiB" sometimes reads ECONNRESET instead of 413 (2 of the last 40 sonarcloud runs). Hypothesis, unmeasured: the Worker's early 413 (from Content-Length, body unread) drops the socket while the client is still uploading. Worktree `yawelo-idle-1107` branch `probe/1107-early-413`, **draft PR 1108 = scratch probe** (`probe-1107.test.ts`, fails on purpose and prints `PROBE-1107 {...}`: raw-socket events + 200-repeat outcome counts). Never merge it; shut it once read; the real change goes on a fresh branch `1107-hook-413-reset` from develop (TDD).
-- **#784**: old key `cfat...c5dc` deleted from the Non-Prod account (Shyden's ruling, recorded on #784). Next: confirm the next develop deploy passes without it.
-- #1104 (P1) after #1074; #1106 (P2) Sonar smells.
+- **#1107 (P0)** cause measured (on #1107): the Worker answers 413 from Content-Length and closes; a client still uploading reads ECONNRESET. Scratch PR 1108 shut, branch deleted. **Draft PR 1110** (`yawelo-idle-1107`, branch `1107-hook-413-reset`): commit 1 (76a55192, pushed) = new tests + Worker size checks removed (red-first mutation; CI must show "refuses a declared body over 1 MiB..." and "...undeclared..." failing by name). **Commit 2 prepared, uncommitted**: Worker restored from HEAD~1, undeclared test now an endless stream with a 10 s limit (must be red on CI: Worker reads the whole body). **Commit 3 after that red**: Worker reads the hook body capped (stop at 1 MiB + 1, cancel, 413), like `apps/door/worker/dev-pass/form.ts`. The security review flagged the unbounded read; this is its fix.
+- **PR #1105 (#1103)** head 1088e994: green except `sonar-coverage` (the #1107 race). After #1107 merges: update-branch, CI, merge.
+- **PR #1109 (#1106)**: 20 Sonar smells; unit 15,042 green locally; CI running. Then read Sonar on PR 1109 (fix any new), merge, tick #1106's lines from Sonar's develop read.
+- **#784**: old key `cfat...c5dc` deleted (recorded on #784). Next: the next develop deploy passes without it.
 
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`.
-2. Read PR 1108's `PROBE-1107` line (`gh run view <run> --log-failed 2>&1 | grep PROBE-1107`), record it on #1107 AC1, shut PR 1108 and delete its branch.
-3. #1107 on a fresh branch from develop, red first; PR; merge on green.
-4. Update #1105 from develop, CI green, merge. Then #1088 (`yawelo-idle-1074`): merge develop, unit run, push; #1093 AC3, #830 AC3.
+2. PR 1110: read commit 1's CI (both new tests red by name), commit + push commit 2, read its red, write commit 3, unit, push, green; record AC2/AC3 on #1107; mark ready; merge.
+3. PR #1105: update from develop, green, merge. Then #1088 (`yawelo-idle-1074`).
+4. PR #1109: green + Sonar read, merge.
