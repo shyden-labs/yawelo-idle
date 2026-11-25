@@ -304,12 +304,52 @@ jobs:
       - name: Mark the workspace safe for root's git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
-      # Playwright's image lacks Edge, so each run downloads it (Shyden,
-      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
-      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
+      # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). It comes
+      # from packages.microsoft.com, 206 MB, so apt keeps its downloads in the
+      # folder ci.yml's browsers job caches under the same key (#1092, #1115).
+      - name: Keep apt's downloads in the Edge cache folder
+        run: |
+          rm -f /etc/apt/apt.conf.d/docker-clean
+          mkdir -p /root/edge-debs/partial
+          printf '%s\n' 'Dir::Cache::Archives "/root/edge-debs";' 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/99-edge-cache
+      # The run id never matches, so the prefix restores the newest download.
+      - name: Restore the Edge download
+        id: edge-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/edge-debs
+          key: msedge-debs-${{ github.run_id }}
+          restore-keys: msedge-debs-
+      # 20 passing installs in deploy-dev's 10 runs to 2026-11-26 took
+      # 18–55 s, and run 45668410232's smoke stalled at 180 s (#1115), so 3
+      # times the slowest is 165 s (#476). The inner 165 s fires before the
+      # step's 3 minutes, so a stall names the download it was on.
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
-        run: npx --no playwright install --with-deps msedge
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
+      - name: Read the installed Edge version and drop older downloads
+        id: edge
+        run: |
+          version=$(dpkg-query -W -f='${Version}' microsoft-edge-stable)
+          test -n "$version"
+          find /root/edge-debs -name 'microsoft-edge-stable_*.deb' ! -name "microsoft-edge-stable_${version}_*" -delete
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # Only smoke saves: site-smoke runs beside it and would race it for
+      # the same key.
+      - name: Save the Edge download for later runs
+        if: ${{ steps.edge-cache.outputs.cache-matched-key != format('msedge-debs-{0}', steps.edge.outputs.version) }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/edge-debs
+          key: msedge-debs-${{ steps.edge.outputs.version }}
       - name: Smoke the game on dev (every supported target, behind the dev password)
         id: suite
         # A first limit since Edge joined (#1003), until its first runs are
@@ -369,12 +409,37 @@ jobs:
       - name: Mark the workspace safe for root's git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
-      # Playwright's image lacks Edge, so each run downloads it (Shyden,
-      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
-      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
+      # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). It comes
+      # from packages.microsoft.com, 206 MB, so apt keeps its downloads in the
+      # folder ci.yml's browsers job caches under the same key (#1092, #1115).
+      - name: Keep apt's downloads in the Edge cache folder
+        run: |
+          rm -f /etc/apt/apt.conf.d/docker-clean
+          mkdir -p /root/edge-debs/partial
+          printf '%s\n' 'Dir::Cache::Archives "/root/edge-debs";' 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/99-edge-cache
+      # The run id never matches, so the prefix restores the newest download.
+      - name: Restore the Edge download
+        id: edge-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/edge-debs
+          key: msedge-debs-${{ github.run_id }}
+          restore-keys: msedge-debs-
+      # 20 passing installs in deploy-dev's 10 runs to 2026-11-26 took
+      # 18–55 s, and run 45668410232's smoke stalled at 180 s (#1115), so 3
+      # times the slowest is 165 s (#476). The inner 165 s fires before the
+      # step's 3 minutes, so a stall names the download it was on.
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
-        run: npx --no playwright install --with-deps msedge
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
         # A first limit, until its first run is measured (#476): then at
