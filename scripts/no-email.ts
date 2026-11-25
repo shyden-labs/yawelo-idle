@@ -98,6 +98,24 @@ function domainEnd(text: string, start: number): number {
   return -1;
 }
 
+/**
+ * From a run of address characters starting at `pos`: the address it starts
+ * and where it ends, or, with none, where to look next. No address starts
+ * later in the same run, as its domain would be the same; only a `mailto:`
+ * inside it can still match.
+ */
+function scanRun(
+  text: string,
+  pos: number,
+): { address?: string; next: number } {
+  const at = runEnd(text, pos);
+  const end = text[at] === '@' ? domainEnd(text, at + 1) : -1;
+  if (end !== -1) return { address: text.slice(pos, end), next: end };
+  let next = pos + 1;
+  while (next < at && !mailtoAt(text, next)) next++;
+  return { next };
+}
+
 /** Every address and `mailto:` in `text`, in order, as written. */
 export function shownAddresses(text: string): string[] {
   const found: string[] = [];
@@ -109,18 +127,9 @@ export function shownAddresses(text: string): string[] {
     } else if (isStop(text[pos])) {
       pos++;
     } else {
-      const at = runEnd(text, pos);
-      const end = text[at] === '@' ? domainEnd(text, at + 1) : -1;
-      if (end === -1) {
-        // No address starts anywhere in this run, as its domain is the
-        // same; only a mailto: inside it can still match.
-        let next = pos + 1;
-        while (next < at && !mailtoAt(text, next)) next++;
-        pos = next;
-      } else {
-        found.push(text.slice(pos, end));
-        pos = end;
-      }
+      const { address, next } = scanRun(text, pos);
+      if (address !== undefined) found.push(address);
+      pos = next;
     }
   }
   return found;
