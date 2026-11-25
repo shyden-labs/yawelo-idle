@@ -1,21 +1,26 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-25 22:50 WIB, session `yawelo-idle-7a`. Branch `handover/2026-10-17-d`. develop at b77e60a3. Worktrees: `yawelo-idle-1107` (draft PR 1110), `yawelo-idle-probe1107` (scratch draft PR 1111, never merge), `yawelo-idle-1103` (PR #1105), `yawelo-idle-1074` (PR #1088), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. No local job running.
+**Written:** 2026-11-26 01:25 WIB, session `yawelo-idle-7a`. Branch `handover/2026-10-17-d`. develop at fd13d6d4 (#1113 merged; #1110 merged as 7d5c181a). Shyden is asleep (relayed by repo-template 25 Nov ~23:15 WIB): keep working by Priority, park his decisions. Worktrees: `yawelo-idle-1103` (PR #1105, head 99784682), `yawelo-idle-1074` (PR #1088), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. No local job running.
 
 ## Now
 
-- **#1107 (P0), PR 1110** (`yawelo-idle-1107`, head 108cb7e5 = 047e582d + develop merged; unit 15,062 passed). Done this session: `readUpToCap` in its own module `apps/site/worker/body.ts`, unit-tested in-process (`body.test.ts`, red first: "expected 65 to be 17"); the endless route test is dropped. Probe round 3 gave no tally: the endless test OOMed Node in both jobs first.
-  - Next: (1) read probe round 4 (PR 1111, the probe merged with 108cb7e5, no endless test): the 500 text in sonar-coverage's tally. (2) Decide from it: asset router absent with `prebuiltWorkerDir`, or the instrumented build? (3) Settle the whole-body declared route test (AC: no route test may race). (4) Close PR 1111, delete its branch and the `yawelo-idle-probe1107` worktree.
-  - Progress posted on #1107 (comment 7167400531). CI on PR 1110 (108cb7e5) and probe PR 1111 (e1f8751d) started 22:55 WIB.
-- **#1106**: PRs 1109 and 1112 merged. Sonar develop last analysed 11b50915; its run on b77e60a3 (#1112) was in progress at 22:46 WIB. The two open issues it shows (S9382 `scripts/worker-coverage-report.ts`, S8786 `scripts/no-email.ts`) predate it. Close #1106 once Sonar develop shows 0 open, read from the API (S9382 lands with PR #1105).
-- **#1078 (P0): UNBLOCKED 23:05 WIB.** `shyden-co-uk-9f` reports the DEV sign-in live at `https://dev-signin.shyden.co.uk`: keys `{ "2026-11": "OBLprb_S4Kn2C--HFVaeA3_s6gEsApDiRAWPLc6WsK8" }`, all three Yawelo dev hosts in its map (their read-back), Access allows Shyden only, no machine service token (CI uses the door secret to workers.dev per AC3). Their full report, to post on #1078 once GitHub's incident clears (it refused the post at 23:06 WIB): `.superpowers/sdd/1078-signin-live.md`. develop has only the copied library (PR #1084): wire the doors (AC1–AC3) red first on CI, then AC5 in a real browser after deploy.
-
-- **#860**: dev half met; blocked by #425/#426 (links added). ShyDesk DEV read back 11-25: ticket URL `https://dev.yaweloidle.com/support/ticket`. TEST loads PROD ShyDesk.
-- **PR #1088**: coverage 93.9% because Worker files count 0% in Node coverage; waits on #1105.
+- **#1107: CLOSED** with evidence (comment 7170462981). PR #1110 merged; dev deploy run 45668410232: deploy and all verify jobs passed, smoke failed at the Edge install (→ #1115).
+- **#1115 (new, P1, 2 pts, Todo):** deploy-dev's two Edge installs (`deploy-dev.yml` lines ~310 and ~375) lack #1092's cache and named stall; this run's smoke timed out on a slow Ubuntu mirror. dev-verified is skipped until it is fixed.
+- **#1078 (P0, Todo):** AC1 and AC2 are merged in code (fd13d6d4). `production` environment variable `DEV_PASS_KEYS` set and read back. **Nothing is live**: the door deploys only through `deploy-door.yml` (workflow_dispatch, `production`, Shyden approves). Before that deploy (#1078 comment 7170734330):
+  1. Move deploy-dev's verify, smoke and verify-holding jobs off `dev.` / `dev-api.` / `dev-holding.yaweloidle.com` onto the origins' workers.dev addresses with the door secret (AC3 first half). Tests red first.
+  2. **Decision for Shyden (parked):** the roadmap webhook (org hook 698318626) posts to `https://dev.yaweloidle.com/hooks/github` through the door; a pass check would refuse it. Recommend (a): the site's dev door forwards `POST /hooks/github` without a pass (the Worker checks GitHub's HMAC first). Ask with `AskUserQuestion` when he is back.
+  3. Then the door deploy (his approval), AC3 second half (drop the origins' `DEV_PASSWORD` gate), AC5 real-browser check in every desktop browser.
+  - Keys rotate only when `shyden-co-uk-9f` announces it; add the kid, deploy, confirm back.
+- **#1106**: Sonar develop: 1 open, S9382 `scripts/worker-coverage-report.ts`, lands with PR #1105. Close #1106 once the API shows 0.
+- **PR #1105**: green on f4b29e9c, then behind; develop merged in, head 99784682 (unit 15,093 passed), CI running. Merge when green on that head.
+- **PR #1088**: waits on #1105.
+- **#860**: dev half met; blocked by #425/#426.
+- repo-template filed #221 for the dev-pass Worker typing (it will message when it lands; Yawelo's casts stay until then).
 
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`.
-2. #1107 as above in `yawelo-idle-1107`; probe via PR 1111. Then close PR 1111 and delete its branch and worktree.
-3. PR #1105 (waits on #1107): update from develop, green, merge. Then #1088, then close #1106 on Sonar 0.
-4. #1078 (unblocked, P0) once GitHub recovers; then ShyDesk's order: #860 (prod waits on #425/#426), #1076 (needs #1078), #1072, then #784.
+2. `~/.claude/scripts/pr-verdict.sh 1105`: merge if green on 99784682 (`--match-head-commit` from a file); clean its worktree and branches; then read Sonar develop and close #1106 at 0; then #1088.
+3. #1078 step 1 (CI off the doors), then #1115.
+4. Ask Shyden the webhook question; then the door deploy with his approval.
+5. Then ShyDesk's order: #860 (prod waits on #425/#426), #1076 (needs #1078), #1072, then #784.
