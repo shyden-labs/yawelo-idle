@@ -95,6 +95,10 @@ describe('where an address starts and ends (#1106: the same matches as the old p
     expect(shownIn('xmailto:y@a.com')).toEqual(['xmailto:y@a.com']);
   });
 
+  it('finds a mailto: inside a word that holds no address', () => {
+    expect(shownIn('see xmailto:y')).toEqual(['mailto:']);
+  });
+
   it('keeps every label of a long domain', () => {
     expect(shownIn('a@x.y.museum!')).toEqual(['a@x.y.museum']);
   });
