@@ -36,6 +36,7 @@ import {
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
+import { MAX_HOOK_BYTES, readUpToCap } from './body';
 import { isSupportPath, serveSupport } from './support';
 import privateSpec from '../api/private.openapi.json';
 
@@ -53,33 +54,6 @@ const roadmap = (env: SiteEnv) => env.ROADMAP.getByName('board');
 
 const noStore = (body: unknown, status = 200): Response =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
-
-/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
-const MAX_HOOK_BYTES = 1_048_576;
-
-/**
- * The stream's bytes, or 413 with the stream cancelled as soon as they pass
- * `MAX_HOOK_BYTES`, so a body with no declared length is never read whole
- * (#1107; as apps/door/worker/dev-pass/form.ts reads a form).
- */
-async function readUpToCap(
-  stream: ReadableStream<Uint8Array>,
-): Promise<ArrayBuffer | 413> {
-  const reader = stream.getReader();
-  const bytes = new Uint8Array(MAX_HOOK_BYTES);
-  // One read at a time, so nothing is pulled past the chunk that passes the cap.
-  const readFrom = async (length: number): Promise<ArrayBuffer | 413> => {
-    const chunk = await reader.read();
-    if (chunk.done) return bytes.slice(0, length).buffer;
-    if (length + chunk.value.byteLength > MAX_HOOK_BYTES) {
-      await reader.cancel();
-      return 413;
-    }
-    bytes.set(chunk.value, length);
-    return readFrom(length + chunk.value.byteLength);
-  };
-  return readFrom(0);
-}
 
 /** `/hooks/github`: signature first, then only this board's events cause a read. */
 async function hook(
