@@ -47,10 +47,15 @@ const HOOK_HEADERS = {
 };
 
 /**
- * Raw HTTP/1.1: a POST to /hooks/github declaring `length` bytes and sending
- * none. Its status code, or why none came within 5 s.
+ * Raw HTTP/1.1: a POST to /hooks/github declaring `length` and sending
+ * `sent` bytes of body after the headers. The first status code that comes
+ * back, or why none came within 5 s. A reset after that status is not read:
+ * a server may close as soon as it has answered (#1107).
  */
-async function statusOfHeadersOnly(length: number): Promise<string> {
+async function statusOfRawPost(
+  length: number | string,
+  sent: number,
+): Promise<string> {
   const { url } = await world.server.listen();
   return new Promise((resolve) => {
     const socket = connect(Number(url.port), url.hostname);
@@ -60,7 +65,7 @@ async function statusOfHeadersOnly(length: number): Promise<string> {
       resolve(outcome);
     };
     const timer = setTimeout(() => {
-      done('no answer in 5 s with the body unsent');
+      done('no answer in 5 s');
     }, 5000);
     socket.on('connect', () => {
       const lines = [
@@ -70,6 +75,7 @@ async function statusOfHeadersOnly(length: number): Promise<string> {
         ...Object.entries(HOOK_HEADERS).map(([k, v]) => `${k}: ${v}`),
       ];
       socket.write(`${lines.join('\r\n')}\r\n\r\n`);
+      if (sent > 0) socket.write(Buffer.alloc(sent, 'x'));
     });
     socket.once('data', (data: Buffer) => {
       done(
@@ -188,10 +194,17 @@ describe('/hooks/github', () => {
     expect(response.status).toBe(400);
   });
 
-  // Headers alone: the Worker answers from Content-Length and closes the
-  // connection, so a body still in flight could read as a reset (#1107).
-  it('refuses a declared body over 1 MiB with 413 before any of it arrives', async () => {
-    expect(await statusOfHeadersOnly(OVER_A_MIB)).toBe('413');
+  // The whole body is sent, as Cloudflare's edge waits for it before the
+  // Worker answers (measured on dev, #1107); only the status line is read,
+  // so a close after the answer cannot fail the test.
+  it('refuses a declared body over 1 MiB with 413 before checking its signature', async () => {
+    expect(await statusOfRawPost(OVER_A_MIB, OVER_A_MIB)).toBe('413');
+  });
+
+  // A length that is not a number must never read as small (#1107's
+  // security review): the request is refused before the Worker sees it.
+  it('refuses a declared length that is not a number with 400', async () => {
+    expect(await statusOfRawPost('abc', 0)).toBe('400');
   });
 
   // A body that never ends: the Worker must stop reading at the cap and
