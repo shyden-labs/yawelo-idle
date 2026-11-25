@@ -68,6 +68,11 @@ export interface DoorEnv {
   readonly ORIGIN_DOMAIN: string;
   readonly DEV_DOOR_SECRET: string;
   readonly TEST_DOOR_SECRET: string;
+  /**
+   * The DEV pass public keys, JSON `{ "<kid>": "<x>" }` (#1078): the sign-in's
+   * keys, a set so a rotation can overlap (repo-template docs/dev-pass.md).
+   */
+  readonly DEV_PASS_KEYS: string;
 }
 
 export type Fetch = (request: Request) => Promise<Response>;
