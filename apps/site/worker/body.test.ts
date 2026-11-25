@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_HOOK_BYTES, readUpToCap } from './body';
+import { declaredOverCap, MAX_HOOK_BYTES, readUpToCap } from './body';
 
 const CHUNK_BYTES = 65_536;
 
@@ -75,5 +75,22 @@ describe('readUpToCap (#1107)', () => {
     const { stream } = counted(() => null);
     const body = await readUpToCap(stream);
     expect((body as ArrayBuffer).byteLength).toBe(0);
+  });
+});
+
+describe('declaredOverCap (#1107)', () => {
+  const declaring = (length: string) =>
+    new Headers({ 'Content-Length': length });
+
+  it('is true for a declared length one byte over the cap', () => {
+    expect(declaredOverCap(declaring(String(MAX_HOOK_BYTES + 1)))).toBe(true);
+  });
+
+  it('is false for a declared length of exactly the cap', () => {
+    expect(declaredOverCap(declaring(String(MAX_HOOK_BYTES)))).toBe(false);
+  });
+
+  it('is false with no declared length, which the capped read then counts', () => {
+    expect(declaredOverCap(new Headers())).toBe(false);
   });
 });

@@ -40,7 +40,6 @@ type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
   world.server.fetch(`${HOST}${path}`, init);
 
-const OVER_A_MIB = 1_048_577;
 const HOOK_HEADERS = {
   'X-GitHub-Event': 'issues',
   'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
@@ -192,13 +191,6 @@ describe('/hooks/github', () => {
       },
     });
     expect(response.status).toBe(400);
-  });
-
-  // The whole body is sent, as Cloudflare's edge waits for it before the
-  // Worker answers (measured on dev, #1107); only the status line is read,
-  // so a close after the answer cannot fail the test.
-  it('refuses a declared body over 1 MiB with 413 before checking its signature', async () => {
-    expect(await statusOfRawPost(OVER_A_MIB, OVER_A_MIB)).toBe('413');
   });
 
   // A length that is not a number must never read as small (#1107's

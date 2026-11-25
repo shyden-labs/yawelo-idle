@@ -30,3 +30,12 @@ export async function readUpToCap(
   }
   return bytes.slice(0, length).buffer;
 }
+
+/**
+ * Whether a declared length passes `MAX_HOOK_BYTES`, so the body is refused
+ * before any of it is read. A length that is not a number never reaches the
+ * Worker: the server answers 400 (apps/site/test/roadmap/routes.test.ts).
+ */
+export function declaredOverCap(headers: Headers): boolean {
+  return Number(headers.get('Content-Length')) > MAX_HOOK_BYTES;
+}

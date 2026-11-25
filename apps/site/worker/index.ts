@@ -36,7 +36,7 @@ import {
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
-import { MAX_HOOK_BYTES, readUpToCap } from './body';
+import { declaredOverCap, readUpToCap } from './body';
 import { isSupportPath, serveSupport } from './support';
 import privateSpec from '../api/private.openapi.json';
 
@@ -63,9 +63,8 @@ async function hook(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return new Response(null, { status: 405, headers: { Allow: 'POST' } });
-  // A declared length is refused before reading; a non-number one never
-  // reaches the Worker (the server answers 400, routes.test.ts).
-  if (Number(request.headers.get('Content-Length')) > MAX_HOOK_BYTES)
+  // A declared length is refused before reading.
+  if (declaredOverCap(request.headers))
     return new Response(null, { status: 413 });
   const body =
     request.body === null
