@@ -1,26 +1,20 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 01:25 WIB, session `yawelo-idle-7a`. Branch `handover/2026-10-17-d`. develop at fd13d6d4 (#1113 merged; #1110 merged as 7d5c181a). Shyden is asleep (relayed by repo-template 25 Nov ~23:15 WIB): keep working by Priority, park his decisions. Worktrees: `yawelo-idle-1103` (PR #1105, head 99784682), `yawelo-idle-1074` (PR #1088), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. No local job running.
+**Written:** 2026-11-26 06:47 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 24ee73c6 (#1105 merged). Shyden relayed (via repo-template): continue; **no devices available**, park device steps. Worktrees: `yawelo-idle-1074` (PR #1088, head 67f4268a), `yawelo-idle-1106` (PR #1116, head 1db01b2d), `yawelo-idle-1115` (PR #1117, head b52ce5b3), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. No local job running. Session notes: `.superpowers/sdd/1072/data-inventory.md`, `.superpowers/sdd/1078/step1-plan.md` (git-ignored).
 
 ## Now
 
-- **#1107: CLOSED** with evidence (comment 7170462981). PR #1110 merged; dev deploy run 45668410232: deploy and all verify jobs passed, smoke failed at the Edge install (→ #1115).
-- **#1115 (new, P1, 2 pts, Todo):** deploy-dev's two Edge installs (`deploy-dev.yml` lines ~310 and ~375) lack #1092's cache and named stall; this run's smoke timed out on a slow Ubuntu mirror. dev-verified is skipped until it is fixed.
-- **#1078 (P0, Todo):** AC1 and AC2 are merged in code (fd13d6d4). `production` environment variable `DEV_PASS_KEYS` set and read back. **Nothing is live**: the door deploys only through `deploy-door.yml` (workflow_dispatch, `production`, Shyden approves). Before that deploy (#1078 comment 7170734330):
-  1. Move deploy-dev's verify, smoke and verify-holding jobs off `dev.` / `dev-api.` / `dev-holding.yaweloidle.com` onto the origins' workers.dev addresses with the door secret (AC3 first half). Tests red first.
-  2. **Decision for Shyden (parked):** the roadmap webhook (org hook 698318626) posts to `https://dev.yaweloidle.com/hooks/github` through the door; a pass check would refuse it. Recommend (a): the site's dev door forwards `POST /hooks/github` without a pass (the Worker checks GitHub's HMAC first). Ask with `AskUserQuestion` when he is back.
-  3. Then the door deploy (his approval), AC3 second half (drop the origins' `DEV_PASSWORD` gate), AC5 real-browser check in every desktop browser.
-  - Keys rotate only when `shyden-co-uk-9f` announces it; add the kid, deploy, confirm back.
-- **#1106**: Sonar develop: 1 open, S9382 `scripts/worker-coverage-report.ts`, lands with PR #1105. Close #1106 once the API shows 0.
-- **PR #1105**: green on f4b29e9c, then behind; develop merged in, head 99784682 (unit 15,093 passed), CI running. Merge when green on that head.
-- **PR #1088**: waits on #1105.
-- **#860**: dev half met; blocked by #425/#426.
-- repo-template filed #221 for the dev-pass Worker typing (it will message when it lands; Yawelo's casts stay until then).
+- **PR #1088** (#1074): develop merged in (unit 15,101 passed). board-orphans failed once because #1103 was left In Progress with its branch deleted; #1103 set to Todo (read back), job re-run passed. CI running on 67f4268a.
+- **#1103 (Todo):** code merged (#1105). AC2 needs coverage + sonar-coverage green on #1088's head; AC3 thresholds re-measured (94/83 in #1105's commit); then close with evidence.
+- **PR #1116** (#1106, In Progress): body.ts reads with `for await` (Sonar S9382 on develop; recursion dropped: one pending promise per chunk). Unit 15,093. After merge: Sonar develop open count must read 0 (it read 2 before #1105's analysis: body.ts and worker-coverage-report.ts), then close #1106.
+- **PR #1117** (#1115, In Progress): deploy-dev's smoke/site-smoke use ci.yml's Edge cache + 165 s named stall (20 measured installs 18–55 s). Only smoke saves. Test red first (15 cases). Unit 15,117. DoD after merge: read the next deploy-dev's Edge install times from the log.
+- **#1072 (P0):** measured state commented (7177934259): test/prod serve the holding page only; **no privacy policy text exists** (site `/privacy` is a placeholder). The text belongs to #423 (P3, blocked by #635, #343) and #246 (P3, still titled "UK GDPR"). **Question for Shyden:** raise #423/#635/#343 to P0 and link #423 as #1072's blocker (a level move is his). Data inventory started.
+- **#1078 (P0):** step 1 planned (notes file), start after #1117 merges (same workflow file). Risk noted: a Playwright-wide door-secret header would leak to the analytics/media hosts; scope it per origin. Webhook decision still parked for Shyden.
 
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`.
-2. `~/.claude/scripts/pr-verdict.sh 1105`: merge if green on 99784682 (`--match-head-commit` from a file); clean its worktree and branches; then read Sonar develop and close #1106 at 0; then #1088.
-3. #1078 step 1 (CI off the doors), then #1115.
-4. Ask Shyden the webhook question; then the door deploy with his approval.
-5. Then ShyDesk's order: #860 (prod waits on #425/#426), #1076 (needs #1078), #1072, then #784.
+2. `~/.claude/scripts/pr-verdict.sh` for 1116, 1117, 1088; merge each green on its head (`--match-head-commit` from a file); clean worktree + branches **and set the ticket's status in the same step** (Todo if still open).
+3. Close #1106 at Sonar 0; close #1103 on #1088's evidence; #1115 after the deploy-dev log read.
+4. #1078 step 1 per `.superpowers/sdd/1078/step1-plan.md`.
+5. Ask Shyden (AskUserQuestion): the webhook route (#1078), and raising #423/#635/#343 for #1072.
