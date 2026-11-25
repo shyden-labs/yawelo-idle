@@ -325,7 +325,7 @@ async function rawWhole(length: number): Promise<string> {
     socket.once('data', (data: Buffer) => {
       const text = data.toString('latin1');
       const code = /^HTTP\/1\.1 (\d{3})/.exec(text)?.[1] ?? 'none';
-      done(code === '413' ? code : `${code} ${text.slice(0, 400)}`);
+      done(code === '413' ? code : `${code} ${text.slice(0, 2000)}`);
     });
     socket.on('error', (error: NodeJS.ErrnoException) => {
       done(`error ${error.code ?? error.message}`);
@@ -341,8 +341,10 @@ describe('PROBE #1107 round 3 (capped read)', () => {
       const outcome = await rawWhole(OVER_A_MIB);
       const key = outcome.slice(0, 3);
       tally[key] = (tally[key] ?? 0) + 1;
-      if (key !== '413' && others.length < 2) others.push(outcome);
+      if (key !== '413' && others.length < 4) others.push(outcome);
     }
+    for (const other of others)
+      console.log(`PROBE-500 ${JSON.stringify(other)}`);
     expect(JSON.stringify({ tally, others })).toBe('tally');
   }, 600_000);
 });
