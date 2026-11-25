@@ -299,7 +299,7 @@ describe('the cron', () => {
   });
 });
 
-// PROBE (#1107, scratch PR, never merged): 200 whole-body posts, raw socket.
+// PROBE (#1107, scratch PR, never merged): 600 whole-body posts, raw socket.
 async function rawWhole(length: number): Promise<string> {
   const { url } = await world.server.listen();
   return new Promise((resolve) => {
@@ -333,11 +333,11 @@ async function rawWhole(length: number): Promise<string> {
   });
 }
 
-describe('PROBE #1107 round 3 (capped read)', () => {
-  it('200 whole-body posts of 1 MiB + 1', async () => {
+describe('PROBE #1107 round 6 (capped read, 600)', () => {
+  it('600 whole-body posts of 1 MiB + 1', async () => {
     const tally: Record<string, number> = {};
     const others: string[] = [];
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 600; i++) {
       const outcome = await rawWhole(OVER_A_MIB);
       const key = outcome.slice(0, 3);
       tally[key] = (tally[key] ?? 0) + 1;
@@ -346,5 +346,5 @@ describe('PROBE #1107 round 3 (capped read)', () => {
     for (const other of others)
       console.log(`PROBE-500 ${JSON.stringify(other)}`);
     expect(JSON.stringify({ tally, others })).toBe('tally');
-  }, 600_000);
+  }, 1_800_000);
 });
