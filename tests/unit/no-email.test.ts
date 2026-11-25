@@ -81,6 +81,81 @@ describe('a built page showing an email address (#1090)', () => {
   });
 });
 
+const shownIn = (text: string): string[] =>
+  emailProblems({ 'index.html': text }, ['index.html']).map((problem) =>
+    problem.replace('index.html: shows ', ''),
+  );
+
+describe('where an address starts and ends (#1106: the same matches as the old pattern)', () => {
+  it('ends an address before the full stop that ends its sentence', () => {
+    expect(shownIn('Write to a@b.co.')).toEqual(['a@b.co']);
+  });
+
+  it('takes a mailto: inside a longer address as part of that address', () => {
+    expect(shownIn('xmailto:y@a.com')).toEqual(['xmailto:y@a.com']);
+  });
+
+  it('keeps every label of a long domain', () => {
+    expect(shownIn('a@x.y.museum!')).toEqual(['a@x.y.museum']);
+  });
+
+  it('needs a top-level domain of two letters or more', () => {
+    expect(shownIn('a@b.c')).toEqual([]);
+  });
+
+  it('accepts a domain that starts with a full stop', () => {
+    expect(shownIn('a@.b.co')).toEqual(['a@.b.co']);
+  });
+
+  it('stops at the letters of the last label, where a second @ follows', () => {
+    expect(shownIn('a@b.coc@d.org')).toEqual(['a@b.coc']);
+  });
+
+  it('finds MAILTO: in capitals', () => {
+    expect(shownIn('MAILTO:x')).toEqual(['MAILTO:']);
+  });
+
+  it('ends at the last label with two letters, before a digit', () => {
+    expect(shownIn('a@b.c1.de9')).toEqual(['a@b.c1.de']);
+  });
+
+  it('starts a second address after an @ with no domain', () => {
+    expect(shownIn('a@b@c.io')).toEqual(['b@c.io']);
+  });
+
+  it('finds nothing when no label ends in two letters', () => {
+    expect(shownIn('p@q.r.s1')).toEqual([]);
+  });
+});
+
+// Each page below took the old backtracking pattern 0.9 to 9.6 s at 40,000
+// characters (measured 2026-11-25): its time grew with the square of the
+// length (Sonar S8786).
+const LONG = 40_000;
+const checkedQuickly = (text: string): number => {
+  const start = performance.now();
+  shownIn(text);
+  return performance.now() - start;
+};
+
+describe('a long page is checked in time that grows with its length (#1106)', () => {
+  it('reads 40,000 letters with no @ in under 100 ms', () => {
+    expect(checkedQuickly('a'.repeat(LONG))).toBeLessThan(100);
+  });
+
+  it('reads an @ followed by 40,000 one-letter labels in under 100 ms', () => {
+    expect(checkedQuickly(`x@${'a.'.repeat(LONG)}`)).toBeLessThan(100);
+  });
+
+  it('reads an @ followed by 40,000 full stops in under 100 ms', () => {
+    expect(checkedQuickly(`x@a${'.'.repeat(LONG)}`)).toBeLessThan(100);
+  });
+
+  it('reads an @ followed by 40,000 labels ending in a digit in under 100 ms', () => {
+    expect(checkedQuickly(`x@a${'b.1'.repeat(LONG)}`)).toBeLessThan(100);
+  });
+});
+
 describe('the pages it expects (#1090 AC3)', () => {
   it('reads the site, the holding page, its dev copy and the game shell', () => {
     expect(Object.keys(BUILDS)).toEqual([
