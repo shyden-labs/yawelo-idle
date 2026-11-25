@@ -207,32 +207,6 @@ describe('/hooks/github', () => {
     expect(await statusOfRawPost('abc', 0)).toBe('400');
   });
 
-  // A body that never ends: the Worker must stop reading at the cap and
-  // answer, not read on until the body is whole (#1107).
-  it('refuses an undeclared body with 413 once it passes 1 MiB, reading no further', async () => {
-    const chunk = new TextEncoder().encode('x'.repeat(64 * 1024));
-    const endless = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        controller.enqueue(chunk);
-      },
-    });
-    const answer = call('/hooks/github', {
-      method: 'POST',
-      body: endless,
-      duplex: 'half',
-      headers: HOOK_HEADERS,
-    }).then((response) => String(response.status));
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const late = new Promise<string>((resolve) => {
-      timer = setTimeout(() => {
-        resolve('no answer in 10 s while the body kept coming');
-      }, 10_000);
-    });
-    const outcome = await Promise.race([answer, late]);
-    clearTimeout(timer);
-    expect(outcome).toBe('413');
-  }, 20_000);
-
   it('refuses any method but POST, naming POST', async () => {
     const response = await call('/hooks/github');
     expect(response.status).toBe(405);

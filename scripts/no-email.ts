@@ -45,8 +45,95 @@ export const BUILDS: Readonly<Record<string, readonly string[]>> = {
   'apps/web/dist': ['play/index.html'],
 };
 
-/** The address pattern #1090 names, and the mailto: scheme. */
-const SHOWN = /mailto:|[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}/gi;
+/**
+ * What #1090 calls an address: a local part and a domain, each a run of
+ * characters other than white space, `@`, `<`, `>`, `"` and `'`, the domain
+ * ending in a label of two or more ASCII letters after a full stop; and the
+ * `mailto:` scheme in any case. Scanned by hand, left to right, rather than by
+ * a backtracking pattern, whose time grew with the square of a page's length
+ * (#1106, Sonar S8786): each character is read a fixed number of times.
+ */
+const MAILTO = 'mailto:';
+const STOP = /[\s@<>"']/;
+
+const isStop = (c: string | undefined): boolean =>
+  c === undefined || STOP.test(c);
+
+const isAsciiLetter = (c: string | undefined): boolean =>
+  c !== undefined && /^[a-z]$/i.test(c);
+
+/** Whether `mailto:` starts at `i`, ASCII letters in either case. */
+function mailtoAt(text: string, i: number): boolean {
+  for (let k = 0; k < MAILTO.length; k++) {
+    const c = text.codePointAt(i + k);
+    const want = MAILTO.codePointAt(k) ?? 0;
+    const upper = want >= 97 && want <= 122 ? want - 32 : want;
+    if (c !== want && c !== upper) return false;
+  }
+  return true;
+}
+
+/** The end of the run of address characters starting at `from`. */
+function runEnd(text: string, from: number): number {
+  let i = from;
+  while (i < text.length && !isStop(text[i])) i++;
+  return i;
+}
+
+/**
+ * Where a domain starting at `start` ends: after the letters of the last
+ * full stop (past its first character) that two or more letters follow, or
+ * -1 when there is none.
+ */
+function domainEnd(text: string, start: number): number {
+  if (isStop(text[start])) return -1;
+  const end = runEnd(text, start + 1);
+  let dot = text.lastIndexOf('.', end - 1);
+  while (dot > start) {
+    let k = dot + 1;
+    while (k < end && isAsciiLetter(text[k])) k++;
+    if (k - dot > 2) return k;
+    dot = text.lastIndexOf('.', dot - 1);
+  }
+  return -1;
+}
+
+/**
+ * From a run of address characters starting at `pos`: the address it starts
+ * and where it ends, or, with none, where to look next. No address starts
+ * later in the same run, as its domain would be the same; only a `mailto:`
+ * inside it can still match.
+ */
+function scanRun(
+  text: string,
+  pos: number,
+): { address?: string; next: number } {
+  const at = runEnd(text, pos);
+  const end = text[at] === '@' ? domainEnd(text, at + 1) : -1;
+  if (end !== -1) return { address: text.slice(pos, end), next: end };
+  let next = pos + 1;
+  while (next < at && !mailtoAt(text, next)) next++;
+  return { next };
+}
+
+/** Every address and `mailto:` in `text`, in order, as written. */
+export function shownAddresses(text: string): string[] {
+  const found: string[] = [];
+  let pos = 0;
+  while (pos < text.length) {
+    if (mailtoAt(text, pos)) {
+      found.push(text.slice(pos, pos + MAILTO.length));
+      pos += MAILTO.length;
+    } else if (isStop(text[pos])) {
+      pos++;
+    } else {
+      const { address, next } = scanRun(text, pos);
+      if (address !== undefined) found.push(address);
+      pos = next;
+    }
+  }
+  return found;
+}
 
 /**
  * One problem per distinct address in each page, and one per expected page
@@ -65,9 +152,7 @@ export function emailProblems(
     .filter((path) => !(path in files))
     .map((path) => `${path}: missing from the build`);
   const shown = pages.flatMap((path) => {
-    const found = new Set(
-      [...(files[path] ?? '').matchAll(SHOWN)].map((m) => m[0]),
-    );
+    const found = new Set(shownAddresses(files[path] ?? ''));
     return [...found].map((address) => `${path}: shows ${address}`);
   });
   return [...missing, ...shown];

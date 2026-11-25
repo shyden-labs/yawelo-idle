@@ -53,16 +53,16 @@ const VERSION = 'v1';
 const encoder = new TextEncoder();
 
 export function toBase64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
+  return btoa(String.fromCodePoint(...bytes))
     .replaceAll('+', '-')
     .replaceAll('/', '_')
-    .replace(/=+$/, '');
+    .replace(/={1,2}$/, '');
 }
 
 /** Throws on anything that is not base64. */
 export function fromBase64url(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value.replaceAll('-', '+').replaceAll('_', '/'));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return Uint8Array.from(binary, (char) => char.codePointAt(0) as number);
 }
 
 export async function mintPass(
@@ -178,7 +178,7 @@ export async function verifyPass(
 /** A control character, a space, DEL or a backslash. */
 function hasUnsafeChar(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
+    const code = value.codePointAt(index) as number;
     if (code <= 0x20 || code === 0x7f || code === 0x5c) return true;
   }
   return false;

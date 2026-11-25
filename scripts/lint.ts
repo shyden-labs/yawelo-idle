@@ -59,9 +59,9 @@ export function main(run: (args: string[]) => LintRun = runEslint): number {
     const result = run(args);
     if (result.status !== 0) {
       failed += 1;
-      console.error(
-        `lint: eslint ${args.join(' ')} failed (${result.error?.message ?? `status ${String(result.status)}, signal ${String(result.signal)}`})`,
-      );
+      const exit = `status ${String(result.status)}, signal ${String(result.signal)}`;
+      const reason = result.error?.message ?? exit;
+      console.error(`lint: eslint ${args.join(' ')} failed (${reason})`);
     }
   }
   return failed === 0 ? 0 : 1;
