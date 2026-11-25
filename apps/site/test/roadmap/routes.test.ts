@@ -194,27 +194,31 @@ describe('/hooks/github', () => {
     expect(await statusOfHeadersOnly(OVER_A_MIB)).toBe('413');
   });
 
-  it('refuses an undeclared body over 1 MiB with 413 before checking its signature', async () => {
+  // A body that never ends: the Worker must stop reading at the cap and
+  // answer, not read on until the body is whole (#1107).
+  it('refuses an undeclared body with 413 once it passes 1 MiB, reading no further', async () => {
     const chunk = new TextEncoder().encode('x'.repeat(64 * 1024));
-    let sent = 0;
-    const body = new ReadableStream<Uint8Array>({
+    const endless = new ReadableStream<Uint8Array>({
       pull(controller) {
-        if (sent >= OVER_A_MIB) {
-          controller.close();
-          return;
-        }
         controller.enqueue(chunk);
-        sent += chunk.byteLength;
       },
     });
-    const response = await call('/hooks/github', {
+    const answer = call('/hooks/github', {
       method: 'POST',
-      body,
+      body: endless,
       duplex: 'half',
       headers: HOOK_HEADERS,
+    }).then((response) => String(response.status));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<string>((resolve) => {
+      timer = setTimeout(() => {
+        resolve('no answer in 10 s while the body kept coming');
+      }, 10_000);
     });
-    expect(response.status).toBe(413);
-  });
+    const outcome = await Promise.race([answer, late]);
+    clearTimeout(timer);
+    expect(outcome).toBe('413');
+  }, 20_000);
 
   it('refuses any method but POST, naming POST', async () => {
     const response = await call('/hooks/github');
