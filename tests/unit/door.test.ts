@@ -439,6 +439,27 @@ describe('a dev door checks the DEV pass (#1078 AC1)', () => {
   });
 });
 
+describe('a dev door refuses a DEV pass key set it cannot use (#1078 AC1)', () => {
+  it.each([
+    ['an empty set', '{}'],
+    ['a list', JSON.stringify(['x'])],
+    ['an empty key', JSON.stringify({ k1: '' })],
+  ])(
+    'answers 500 naming DEV_PASS_KEYS for %s, reaching no origin',
+    async (_, keys) => {
+      const { fetch } = origin();
+      const response = await pass(
+        new Request(`https://${SITE_DEV}/`),
+        { ...ENV, DEV_PASS_KEYS: keys },
+        fetch,
+      );
+      expect(response.status).toBe(500);
+      expect(await response.text()).toBe('door not configured: DEV_PASS_KEYS');
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe('the test door checks no pass (#1078 AC2)', () => {
   it('forwards a request with no pass, even with no DEV pass keys set', async () => {
     const { fetch, sent } = origin();
