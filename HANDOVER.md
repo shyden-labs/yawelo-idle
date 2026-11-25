@@ -1,18 +1,21 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-25, session `yawelo-idle-14`. Branch `handover/2026-10-17-d`. develop at a3f32322. Worktrees: `yawelo-idle-1103` (PR #1105, head 767f9439, pushed, CI running), `yawelo-idle-1074` (PR #1088, head 4d75a136, CI red), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached at a3f32322). No Colima, simulator or USB claim. Real devices unavailable (Shyden via repo-template, 2026-11-25).
+**Written:** 2026-11-25, session `yawelo-idle-7a`. Branch `handover/2026-10-17-d`. develop at 263eac45 (#1106's PR 1109 merged). Worktrees: `yawelo-idle-1107` (draft PR 1110, head 4e5310d0, pushed), `yawelo-idle-1103` (PR #1105, head 1088e994), `yawelo-idle-1074` (PR #1088, head 4d75a136, red), `yawelo-idle-1098` (Dependabot PR 1098, head 8fecd91b), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts` (detached). No Colima, simulator or USB claim. Devices available again (Shyden via repo-template-56, 2026-11-25).
 
 ## Now
 
-- **#1107 (P0)** cause measured (on #1107): the Worker answers 413 from Content-Length and closes; a client still uploading reads ECONNRESET. Scratch PR 1108 shut, branch deleted. **Draft PR 1110** (`yawelo-idle-1107`, branch `1107-hook-413-reset`): commit 1 (76a55192, pushed) = new tests + Worker size checks removed (red-first mutation; CI must show "refuses a declared body over 1 MiB..." and "...undeclared..." failing by name). **Commit 2 prepared, uncommitted**: Worker restored from HEAD~1, undeclared test now an endless stream with a 10 s limit (must be red on CI: Worker reads the whole body). **Commit 3 after that red**: Worker reads the hook body capped (stop at 1 MiB + 1, cancel, 413), like `apps/door/worker/dev-pass/form.ts`. The security review flagged the unbounded read; this is its fix.
-- **PR #1105 (#1103)** head 1088e994: green except `sonar-coverage` (the #1107 race). After #1107 merges: update-branch, CI, merge.
-- **PR #1109 (#1106)**: 20 Sonar smells; unit 15,042 green locally; CI running. Then read Sonar on PR 1109 (fix any new), merge, tick #1106's lines from Sonar's develop read.
-- **#784**: old key `cfat...c5dc` deleted (recorded on #784). Next: the next develop deploy passes without it.
+- **#1107 (P0), PR 1110.** Commit 1 read red on CI by name (both new tests + the contract test). Commit 2 (4e5310d0, pushed): endless undeclared body, Worker size checks restored; must be red by name: "refuses an undeclared body with 413 once it passes 1 MiB, reading no further". **Uncommitted in the worktree:** a test that `Content-Length: abc` gets 400 (security review: a non-number length must not read as small). Push it alone after commit 2's red; if it is green, the HTTP layer refuses it (evidence for the finding); if red, code follows. Then commit 3: capped streaming read (stop at 1 MiB + 1, cancel, 413), like `apps/door/worker/dev-pass/form.ts`.
+- **#1106**: PR 1109 merged (Sonar on the PR: 0 issues, 0 hotspots). Last AC: Sonar's develop analysis of 263eac45 shows 0 open; was still at a3f32322 (21 open) when last read.
+- **PR 1098 (Dependabot)**: red only on THIRD-PARTY-NOTICES (swagger-ui-dist 5.35.1); notices regenerated and pushed (unit 15,041/15,041 locally). Read CI, merge.
+- **PR #1088**: coverage 93.9% < 94% because Worker files count 0% in Node coverage; #1103 (PR #1105) fixes that. board-orphans red was #1093 (now Todo). After #1105: update from develop.
+- **#1078 raised P1→P0** (blocks #1076, P0; rule #578; board-next refused otherwise). Library merged (#1084). Door wiring waits on the sign-in Worker: `dev-signin.shyden.co.uk` does not resolve (2026-11-25). Asked `shyden-co-uk-9f` for its status, public key and host-map entries. Do not switch doors on before it is live (it would lock DEV).
+- **#860**: unblocked. Asked `shydesk-cd` for hosts, embed path, CSP sources, allowed origins, ticket address. The main site sends no CSP today (#424 AC2 covers it).
 
 ## Resume steps
 
-1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`.
-2. PR 1110: read commit 1's CI (both new tests red by name), commit + push commit 2, read its red, write commit 3, unit, push, green; record AC2/AC3 on #1107; mark ready; merge.
-3. PR #1105: update from develop, green, merge. Then #1088 (`yawelo-idle-1074`).
-4. PR #1109: green + Sonar read, merge.
-5. **Then ShyDesk's blockers before #784** (Shyden, 2026-11-25, AskUserQuestion; #1076 raised to P0): #860 (blocks shydesk#237), #1076 (blocks shydesk#262), #1072 (blocks shydesk#78), then #784. board-next would pick #784 first by number: this order overrides it. Tell `shydesk-a9` (SendMessage) as each one lands.
+1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`; read replies from shydesk-cd and shyden-co-uk-9f.
+2. PR 1110: read commit 2's red; push the Content-Length test; read; commit 3, unit, push, green; record on #1107; ready; merge.
+3. PR #1105: update from develop, green, merge. Then #1088.
+4. PR 1098: green, merge; remove `yawelo-idle-1098`.
+5. #1106: read Sonar develop (0 open) and close with evidence.
+6. Then ShyDesk's order: #860, #1076 (needs #1078), #1072 (blocked by #425, #426), then #784.
