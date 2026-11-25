@@ -285,6 +285,8 @@ describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from 
       ORIGIN_DOMAIN: '${{ secrets.DOOR_ORIGIN_DOMAIN }}',
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
       TEST_DOOR_SECRET: '${{ secrets.TEST_DOOR_SECRET }}',
+      // Public keys, so a variable (#1078); the door gets them in its file.
+      DEV_PASS_KEYS: '${{ vars.DEV_PASS_KEYS }}',
     });
     // The script names the file's path itself (SonarCloud S8707 on #943):
     // a failed write stops the step, and the path goes to the deploy.
