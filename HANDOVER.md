@@ -1,27 +1,38 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 07:35 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 8f17aa11 (#1116 merged). **No devices available** (relayed by repo-template): park device steps. Worktrees: `yawelo-idle-1074` (PR #1088), `yawelo-idle-1107` (PR #1119, head c92cd0ca), `yawelo-idle-1115` (PR #1117), `yawelo-idle-160` (draft PR 986), `yawelo-idle-dev-scripts`. No Colima, simulator or USB claim. Session notes: `.superpowers/sdd/1072/data-inventory.md`, `.superpowers/sdd/1078/step1-plan.md` (git-ignored).
+**Written:** 2026-11-26 13:40 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 8597aac6 (#1119 merged). **No devices available** (relayed by repo-template): park device steps. No Colima, simulator or USB claim. Session notes (git-ignored): `.superpowers/sdd/1072/data-inventory.md` (incl. ShyDesk's facts; source `shydesk docs/pse-registration.md`), `.superpowers/sdd/1078/step1-plan.md`. Scratch helper: `$SCRATCH/run-when-quiet.zsh <worktree> <label>` waits for 1-min load < 16 (30 min ceiling), runs unit, pushes on green. The laptop's load reached 95 with 3 GB swap today, which timed out unit tests; #1123 covers the no-email one.
 
-## New rule (Shyden, 2026-11-26)
+## Shyden's decisions today (2026-11-26)
 
-"CI caches every download, and still takes a newer version", global, in `~/.claude/CLAUDE.md` + `reference-engineering-standards.md`. repo-template carries it as **repo-template#224** (that session: PR today, will message the number and the merge). Yawelo's sweep is **#1118** (3 pts, P2, Todo, blocked by repo-template#224 via GitHub link): Node in 6 container jobs (~4.5 s each), Sonar scanner + JRE + plugins (~8 s). Copy #224's steps when its PR opens. The container image pull (~16 s) cannot be cached.
+- Rule: CI caches every download and still takes newer versions; **a job holding a secret or write permission restores nothing** (security exception from repo-template#224). Global rule + reference updated; repo-template#224 merged.
+- Roadmap webhook: **the dev door lets `POST /hooks/github` through without a pass** (comment on #1078).
+- Privacy: **#635, #423, #343 raised to P0**; #423 linked as #1072's blocker (read back).
 
-## Now
+## Open PRs (worktree, ticket)
 
-- **#1107 reopened** (comment 7178733731): `private-contract.test.ts` still sent an over-1-MiB body over the harness socket; it broke #1117's sonar-coverage (run 45723745139, `UND_ERR_SOCKET`). Fix on `fix/1107-contract-413-in-process`: `apps/site/worker/hook-contract.test.ts` judges the Worker's own 413 in-process (red on 413→400 mutation), the networked test removed. Unit 15,095, root + site tsc clean. **PR #1119** open, CI running; #1107 In Progress.
-- **PR #1117** (#1115): red only from that flake. After the #1107 fix merges, merge develop into it (never re-run the failed job).
-- **PR #1088** (#1074): develop merged again (head b9e5f038, unit 15,101), CI running. Merge when green on the new head. Then #1103's AC2 evidence from it, close #1103.
-- **#1106 (Todo):** PR #1116 merged as 8f17aa11. Close once Sonar develop reads 0 (read 1, `body.ts`, while 8f17aa11's analysis was still running).
-- **#1072 (P0):** no policy text exists; question for Shyden on raising #423/#635/#343. Pairing cleanup AC added to #169 (comment 7178795020).
-- **#1078 (P0):** step 1 waits on #1117 (same workflow file); plan corrected in the notes file (CI must send the door secret + `x-yawelo-door` itself: the site Worker shows the holding page only to door requests). Webhook route decision parked for Shyden.
-- **#784 AC4 gap** (comment 7178887452): the sync Worker never calls `refusal()`, so it would answer without the door secret after go-live.
-- **ShyDesk's support-form data facts** received (in the #1072 notes); ShyDesk waits on the final privacy URLs (#78).
+| PR | Ticket | State at writing |
+|---|---|---|
+| #1122 | #1120 (P0 security: 8 secret-holding jobs restored npm cache) | CI running on the develop merge + widened `actions/setup-*` match |
+| #1117 | #1115 (deploy-dev Edge: named stall, **no cache**) | develop merged in, unit + push queued |
+| #1124 | #1118 (Node cache in 4 no-secret container jobs, `/__t`) | develop merged in, unit + push queued |
+| #1125 | #1121 (DEV-pass files from repo-template#221) | CI running |
+| (pending) | #1074 AC5 page test, `site/1074-failed-read-page-test` | unit + push + PR queued |
+| #986 (draft) | #160 | untouched |
+
+## Tickets
+
+- Closed today: #1103 (evidence 7184244576), #1106 (Sonar develop 0).
+- **#1107 (Todo):** fix merged as 8597aac6 (PR #1119). Close once develop's own `sonar-coverage` passes on it.
+- **#1074 (In Progress once its PR opens):** ACs evidenced (comment 7184566520) except AC5's page half; the new test was watched red on a planted failure line.
+- **#1123 (P0, new):** no-email linear-time test fails on a busy machine (158 ms vs 100 ms).
+- **#1072 (P0):** blocked by #423 → #635, #343. #343 is Shyden's newsletter-provider pick.
+- **#1078 (P0):** step 1 (CI sends door secret + `x-yawelo-door` to workers.dev addresses) after #1117 merges; webhook decision recorded.
+- **#784:** AC4 gap: the sync Worker never calls `refusal()` (comment 7178887452).
+- #169: pairing-row cleanup AC added.
 
 ## Resume steps
 
 1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts`.
-2. `pr-verdict.sh` for #1119 and #1088; merge each green on its head (`--match-head-commit` from a file); clean worktree + branches and set the ticket's status in the same step.
-3. Merge develop into #1117; merge when green; read the next deploy-dev's Edge install times; close #1115.
-4. Sonar develop at 0 → close #1106. #1088 evidence → close #1103. #1107 closes after its PR's CI and a clean sonar-coverage on develop.
-5. #1078 step 1; #1118 once repo-template#224's PR exists.
-6. Ask Shyden (AskUserQuestion): webhook route (#1078); raising #423/#635/#343 (#1072).
+2. For each open PR: `pr-verdict.sh`; merge green, up-to-date heads (`--match-head-commit` from a file) in order #1122, #1117, #1124, #1125, then the #1074 test PR; after each merge, merge develop into the next and re-run (use `run-when-quiet.zsh`). Clean each worktree + branches and set the ticket's status in the same step.
+3. After merges: #1107 close on develop sonar-coverage; #1115 close after reading the next deploy-dev's Edge install log; #1118 close after a run logs "Found in cache" for Node; #1120 close after the changed workflows' next runs log no restore (prod ones when Shyden next approves); #1074 close after its test PR.
+4. #1123, then #1078 step 1, then #784's sync `refusal()`.
