@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | #1127 | #1123 | `../yawelo-idle-1123` 944493fe PUSHED (unit 15,146/15,146). CI running: pr-verdict, merge on green (whichever of #1127/#1140 merges first puts the other BEHIND). |
 | #1140 | #1078 step 2 | ab76fb4c PUSHED (unit 15,150/15,150, by last session's surviving run). CI: `~/.claude/scripts/pr-verdict.sh 1140`; merge on green, clean `../yawelo-idle-1078s` + branches, read develop deploy-dev verify-roadmap + verify-holding. |
-| (none) | #1078 step 3 | `../yawelo-idle-1078g` 9dede843 (fixture fix committed: desktop-targets DEV gains `DEV_DOOR_SECRET`; 47/47). NOT pushed: full unit at 00:45 (load ~30) had 1 timeout, golden-log slice 347 replay 1151 ms (recorded on #971, the slow-test ticket). Needs a clean full run at low load: `zsh $S/unit-and-push.sh 1078g`. Then PR (Refs #1078), merge on green, read deploy-dev's smoke job. The earlier 4 over-1 s tests did not recur at load ~12. |
+| (none) | #1078 step 3 | `../yawelo-idle-1078g` 9dede843 (fixture fix committed: desktop-targets DEV gains `DEV_DOOR_SECRET`; 47/47). NOT pushed: full unit at ~00:39 (load ~30) had 1 timeout, golden-log slice 347 replay 1151 ms (recorded on #971, the slow-test ticket). Needs a clean full run at low load: `zsh $S/unit-and-push.sh 1078g`. Then PR (Refs #1078), merge on green, read deploy-dev's smoke job. The earlier 4 over-1 s tests did not recur at load ~12. |
 | #1137 | #1136 | `../yawelo-idle-1136` 72359d69 BEHIND: merge develop, unit, push, merge on green. |
 | #986 (draft) | #160 | untouched |
 
