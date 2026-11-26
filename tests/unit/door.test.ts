@@ -474,3 +474,115 @@ describe('the test door checks no pass (#1078 AC2)', () => {
     expect(sent().headers.get(DOOR_SECRET_HEADER)).toBe('test-secret');
   });
 });
+
+const SHYDESK_DEV = 'shydesk.shydesk-non-prod.workers.dev';
+
+/** A POST to the site door's embed route, from its own pages, with `cookie`. */
+const embedRequest = (host: string, cookie?: string): Request =>
+  new Request(`https://${host}/__devpass/embed?for=${SHYDESK_DEV}`, {
+    method: 'POST',
+    headers: {
+      origin: `https://${host}`,
+      ...(cookie === undefined ? {} : { cookie }),
+    },
+  });
+
+describe('the site’s dev door swaps a visitor’s pass for ShyDesk’s embed pass (#1078 AC1, shydesk#302)', () => {
+  it('asks the sign-in for an embed pass with the visitor’s pass and hands back its answer, reaching no origin', async () => {
+    const visitor = await passFor(SITE_DEV);
+    const fetch = vi.fn<Fetch>(() =>
+      Promise.resolve(new Response('{"pass":"embed"}', { status: 200 })),
+    );
+    const response = await pass(
+      embedRequest(SITE_DEV, `${PASS_COOKIE}=${visitor}`),
+      ENV,
+      fetch,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('{"pass":"embed"}');
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const asked = fetch.mock.calls[0]?.[0];
+    expect(asked?.url).toBe(`${SIGNIN_ORIGIN}/embed`);
+    expect(asked?.method).toBe('POST');
+    expect(
+      Object.fromEntries(new URLSearchParams(await asked?.text())),
+    ).toEqual({
+      pass: visitor,
+      for: SHYDESK_DEV,
+    });
+  });
+
+  it('refuses a visitor with no pass cookie, 401, asking nothing', async () => {
+    const { fetch } = origin();
+    const response = await pass(embedRequest(SITE_DEV), ENV, fetch);
+    expect(response.status).toBe(401);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(DEV_DOORS.filter((host) => host !== SITE_DEV))(
+    'has no embed route at %s, 404, asking nothing',
+    async (host) => {
+      const { fetch } = origin();
+      const response = await pass(
+        embedRequest(host, `${PASS_COOKIE}=${await passFor(host)}`),
+        ENV,
+        fetch,
+      );
+      expect(response.status).toBe(404);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+});
+
+/** A request to `path` at `host` with no DEV pass. */
+const unsigned = (host: string, path: string, method: string): Request =>
+  new Request(`https://${host}${path}`, {
+    method,
+    ...(method === 'POST' ? { body: '{}' } : {}),
+  });
+
+describe('the site’s dev door lets GitHub’s roadmap webhook through with no pass (#1078, Shyden 2026-11-26)', () => {
+  it('forwards a POST to /hooks/github with no pass, with the dev secret and its body', async () => {
+    const { fetch, sent } = origin();
+    const response = await pass(
+      unsigned(SITE_DEV, '/hooks/github', 'POST'),
+      ENV,
+      fetch,
+    );
+    expect(response.status).toBe(200);
+    expect(new URL(sent().url).pathname).toBe('/hooks/github');
+    expect(sent().method).toBe('POST');
+    expect(await sent().text()).toBe('{}');
+    expect(sent().headers.get(DOOR_SECRET_HEADER)).toBe('dev-secret');
+  });
+
+  it.each([
+    ['a GET to /hooks/github', '/hooks/github', 'GET'],
+    ['a POST to /hooks/github/', '/hooks/github/', 'POST'],
+    ['a POST to /hooks/github/x', '/hooks/github/x', 'POST'],
+    ['a POST to /hooks/githubx', '/hooks/githubx', 'POST'],
+    ['a POST to /', '/', 'POST'],
+  ])(
+    'refuses %s with no pass, 401, reaching no origin',
+    async (_, path, method) => {
+      const { fetch } = origin();
+      const response = await pass(unsigned(SITE_DEV, path, method), ENV, fetch);
+      expect(response.status).toBe(401);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(DEV_DOORS.filter((host) => host !== SITE_DEV))(
+    'refuses a POST to /hooks/github with no pass at %s, 401, reaching no origin',
+    async (host) => {
+      const { fetch } = origin();
+      const response = await pass(
+        unsigned(host, '/hooks/github', 'POST'),
+        ENV,
+        fetch,
+      );
+      expect(response.status).toBe(401);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+});
