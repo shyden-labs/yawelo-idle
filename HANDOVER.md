@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 21:18 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at f9b23473. No Colima, simulator or USB claim held.
+**Written:** 2026-11-26 22:00 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at a2dc515c (#1138 merged). No Colima, simulator or USB claim held.
 
 ## Devices
 
@@ -8,16 +8,19 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 
 - #992 (real Android) and #993 (real iPhone), both P0: blocked by playwright-devices#54 (linked 2026-11-26, read back) and #7.
 - #997–#1000 (iPad, iPhone Duo, Android tablet, foldable): wait on #992/#993 → #7/#38.
-- playwright-devices' answer (21:09): #54 first. One iPhone bug is left (a file-input tap after typing opens nothing). ETA for PR #59 merged: tonight if the fix is small, else tomorrow, low confidence. Then the release cut and npm publish are Shyden's. #7: no ETA. It will message when each lands. Don't touch the phones before then.
+- playwright-devices (21:50): #54 merged in its develop (PR #59, 3c7df0e); release cut + npm publish are Shyden's; it sends the version when published. #7: no ETA (fail-fast PR #64 in review).
+- Earlier (21:09): #54 first. One iPhone bug is left (a file-input tap after typing opens nothing). ETA for PR #59 merged: tonight if the fix is small, else tomorrow, low confidence. Then the release cut and npm publish are Shyden's. #7: no ETA. It will message when each lands. Don't touch the phones before then.
 
 ## Open PRs
 
 | PR            | Ticket       | State                                                                                                                                                                                                                                                                   |
 | ------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| #1138         | #1078 step 1 | develop merged, unit 15,145/15,145, pushed e78d43b7; CI running at 21:16 (board-orphans green). Merge when green                                                                                                                                                       |
+| #1138         | #1078 step 1 | MERGED a2dc515c 21:45; worktree + branches removed. deploy-dev run 45841850222 (verify reads the origins directly): read its verify job |
+| (no PR yet)   | #1078 step 2 | `../yawelo-idle-1078s` branch `smoke/1078-smoke-reaches-origins`, a5786245 (type fix + no npm cache in verify-holding, #1120 rule). First unit run 1 red (cache rule), re-run queued; push + PR on rc=0 |
+| (no PR yet)   | #1078 step 3 | `../yawelo-idle-1078g` branch `smoke/1078-game-smoke-origin` off develop: red tests written in tests/unit/web-smoke-harness.test.ts (uncommitted); next `tests/web/stand-in.ts` (standInHeaders + context.route), config requires DEV_DOOR_SECRET, deploy-dev smoke env |
 | #1137 (draft) | #1136        | one-offs reverted (tree = f7270689) + develop merged, local 72359d69 **not pushed**. Two unit runs red on timing only (7 at load 48; 4 as load rose 12→90; both on #971). Re-run unit by hand when load is low, push on green, mark ready |
-| #1126         | #1074 AC5    | green on 4223390c, BEHIND                                                                                                                                                                                                                                               |
-| #1127         | #1123        | 4b54dc36, BEHIND, board-orphans red (old #1136 status slip, re-runs on develop merge)                                                                                                                                                                                  |
+| #1126         | #1074 AC5    | develop merged c410b14d, unit 15,146/15,146, pushing                                                                                                                                                                                                                                               |
+| #1127         | #1123        | develop merged 7a823f70, unit 15,145/15,145, pushing                                                                                                                                                                                  |
 | #986 (draft)  | #160         | untouched                                                                                                                                                                                                                                                               |
 
 `$SCRATCH` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/3efc3e75-e1d2-44de-8a14-a6cb5c4216b6/scratchpad` (lost on reboot: then re-run unit by hand). Strict: each merge puts the others behind; merge one, merge develop into the next, unit, push, CI, repeat.
@@ -30,7 +33,12 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 
 ## Resume steps
 
+Local runs started 21:52-21:58 (logs in this session's scratchpad `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/286b72bd-1c51-4f44-900d-14a51f1da3aa/scratchpad`) are DEAD after `/clear`: step 2 unit re-run (`unit-1078s-2.log`), step 3 red run (`red3.log`), #1136 unit (`unit-1136.log`), pushes of 1074b/1123. If a log lacks its final `Tests` line, re-run it.
+
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts`.
-2. If the unit logs are lost or not rc=0, re-run unit in `../yawelo-idle-1078` and `../yawelo-idle-1136` (under test-lock), then push each.
-3. #1138: on green CI, merge (`--match-head-commit` from a file), then read develop's deploy-dev verify job; continue #1078 plan `.superpowers/sdd/1078/step1-plan.md`. Then #1126, #1127, #1137 in turn; clean each worktree and branch at merge.
-4. Device work only after playwright-devices messages that #54 has been released.
+2. Pushes: compare `git ls-remote` of site/1074-failed-read-page-test with local c410b14d (`../yawelo-idle-1074b`) and test/1123-no-email-growth with 7a823f70 (`../yawelo-idle-1123`); if missing, `git push` in each (unit already 15,146/15,145 green). Merge #1126 then #1127 on green (`--match-head-commit` from a file), one at a time, develop into the next between.
+3. Step 1 proven: deploy-dev run 45841850222 success, verify line on #1078.
+4. Step 2 (`../yawelo-idle-1078s`, a5786245): unit suite (background, test-lock) + typecheck; on rc=0 push, PR into develop "Refs #1078", merge on green.
+5. Step 3 (`../yawelo-idle-1078g`, uncommitted red tests in tests/unit/web-smoke-harness.test.ts): read them red, then write `tests/web/stand-in.ts` (`standInHeaders(url, target, door)` exact-origin match + a `context.route` helper used by shell.spec.ts when WEB_SMOKE_URL is set), config refusal without DEV_DOOR_SECRET, deploy-dev smoke env (site workers.dev + DEV_DOOR_SECRET). Plan: `.superpowers/sdd/1078/step1-plan.md`.
+6. #1137: unit in `../yawelo-idle-1136` (72359d69) at low load; push on green, mark ready.
+7. Device work only after playwright-devices sends the npm version of #54 (its fix merged 21:50; publish is Shyden's).
