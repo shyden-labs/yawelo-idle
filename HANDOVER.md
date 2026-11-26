@@ -12,9 +12,8 @@
 | --- | --- | --- |
 | #1141 | #1078 step 3 | CLOSED by Shyden's ruling "Real door later" (2026-11-27): CI's #813 no-stand-ins guard refused the door stand-in. Worktree + branches removed. The game smoke gets a CI machine pass through the real front door in AC1's PR (comment on #1078). Old notes: | `../yawelo-idle-1078g`: develop merged → ea9ad24c, unit 15,156/15,156, PUSHED. CI running; merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
 | #1142 | #1078 AC1 | MERGED 234597a1; CI pass PROVEN on deploy-dev 45903249623 (comment 7204868122). deploy-door waits for Shyden; after his approval: read the door live (pass check, embed, webhook), message shydesk-c8, then AC3 (drop the origins' dev password, separate PR). |
-| #1144 | #1115 AC3 | 8e1f3299 PUSHED (unit 15,170). CI running; after #1143 merges it is BEHIND: merge develop, unit, push, CI, merge. Then #1139. |
+| #1144 | #1115 AC3 | green, then BEHIND after #1143 merged (6e4649e2); develop merged → ff982c67; unit (when quiet) + push + CI watch running. Merge on green, then #1139 (merge develop, unit, push, PR). |
 | (none) | #1139 | `../yawelo-idle-1139` `ci/1139-browsers-edge-limit` aa4ebd0c (test red 2 by name, then 12/12; 440 s / 8 min from 146 s). After #1143 and #1144 merge: merge develop, unit, push, PR (Refs #1139). |
-| #1143 | #1104 AC3 | 17c144dc PUSHED (unit 15,175). CI running; merge on green. |
 | (none) | #1123 (reopened) | `../yawelo-idle-1123b` `test/1123-growth-wider-gap` d0a3c98c: growth reads timed by process.cpuUsage (vitest pool forks: per-file process). Red vs planted quadratic: 4 failed (16.8/18.9/15.9/16.9); restored, 29/29. Unit at load 115: growth tests passed, 1 unrelated timeout (#971); re-run when quiet in progress. Then PR (Refs #1123); close only after a full unit passes at load ≥180 (AC3). |
 | #986 (draft) | #160 | untouched |
 
@@ -36,6 +35,8 @@
 `yawelo-idle-ci` is shyden.co.uk's former `shyden-site CI` token (Shyden renamed+rotated it at 01:53 WIB); shyden.co.uk's CI broke and it makes a new token. Yawelo keeps `yawelo-idle-ci`; touch no token we didn't create (#1078 comment 7204823933).
 
 ## Done this session
+
+- #1104 AC3 merged (PR 1143, 6e4649e2): live socket reopens. AC1/AC2 open.
 
 - Ticket 1136 shut by hand: PR 1137 merged 3606fd50; AC3 one-off proved a newer Edge installs over an older cached one.
 - #1078 CI pass proven on develop (deploy-dev 45903249623).
