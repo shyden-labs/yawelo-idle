@@ -266,17 +266,6 @@ jobs:
       # minutes, so a stall names the download it was on. No `--with-deps`
       # (#1136): in run 45770365466 it fetched 34.2 MB of Ubuntu lists and
       # installed nothing, the image already holding every package.
-      # ONE-OFF (#1136 AC3), reverted before merge: the cache now holds an
-      # older Edge, so the install must still fetch the newest from Microsoft.
-      - name: 'ONE-OFF #1136 AC3: put an older Edge in the cache folder'
-        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        shell: bash
-        run: |
-          echo "before:"; ls /root/edge-debs
-          find /root/edge-debs -name 'microsoft-edge-stable_*.deb' -delete
-          curl -fsS --max-time 120 -o /root/edge-debs/microsoft-edge-stable_158.0.4370.33-1_amd64.deb \
-            https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/microsoft-edge-stable_158.0.4370.33-1_amd64.deb
-          echo "planted:"; ls /root/edge-debs
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
@@ -297,16 +286,6 @@ jobs:
           test -n "$version"
           find /root/edge-debs -name 'microsoft-edge-stable_*.deb' ! -name "microsoft-edge-stable_${version}_*" -delete
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: 'ONE-OFF #1136 AC3: the newest Edge was fetched, the older dropped'
-        if: ${{ steps.classify.outputs.scope != 'docs-only' }}
-        shell: bash
-        run: |
-          installed=$(dpkg-query -W -f='${Version}' microsoft-edge-stable)
-          candidate=$(apt-cache policy microsoft-edge-stable | awk '/Candidate:/ {print $2}')
-          echo "installed=$installed candidate=$candidate"; ls /root/edge-debs
-          test "$installed" = "$candidate"
-          test "$installed" != "158.0.4370.33-1"
-          ! ls /root/edge-debs | grep -q 158.0.4370.33
       - name: Save the Edge download for later runs
         if: ${{ steps.classify.outputs.scope != 'docs-only' && steps.edge-cache.outputs.cache-matched-key != format('msedge-apt-{0}', steps.edge.outputs.version) }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
