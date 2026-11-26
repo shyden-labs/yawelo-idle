@@ -254,12 +254,6 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          # ONE-OFF (#1136 AC2 proof, reverted before merge): the Ubuntu mirrors unreachable.
-          # IPv4 and IPv6: run 45781396005 blocked IPv4 only and still reached security.ubuntu.com.
-          for h in azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com; do printf '0.0.0.0 %s\n:: %s\n' "$h" "$h" >> /etc/hosts; done
-          for h in azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com; do getent ahosts "$h"; done
-          # Run 45782947861 still fetched from security.ubuntu.com: apt's DNS SRV lookup skips /etc/hosts (hypothesis under test).
-          echo 'Acquire::EnableSrvRecords "false";' > /etc/apt/apt.conf.d/98-no-srv
           status=0
           timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
