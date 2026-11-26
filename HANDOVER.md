@@ -10,7 +10,7 @@
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1141 | #1078 step 3 | `../yawelo-idle-1078g`: develop merged → ea9ad24c; full unit + push started 01:04 via `zsh $S/unit-and-push.sh 1078g` (DEAD on /clear: if `git ls-remote origin smoke/1078-game-smoke-origin` ≠ ea9ad24c, re-run). Then CI, merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
+| #1141 | #1078 step 3 | `../yawelo-idle-1078g`: develop merged → ea9ad24c, unit 15,156/15,156, PUSHED. CI running; merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
 | #1137 | #1136 | `../yawelo-idle-1136` 72359d69 BEHIND: merge develop, unit, push, merge on green. |
 | #986 (draft) | #160 | untouched |
 
