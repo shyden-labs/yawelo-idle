@@ -9,8 +9,8 @@
  *   meant for, so nothing reaches GitHub and the fake judges what GitHub would.
  * - `Roadmap.now()` reads a clock a test sets (`setClock`), kept in the
  *   object's own storage so an eviction cannot reset it; unset, it is the
- *   real clock.
- * - A fetch or a cron event finishes once its `waitUntil` work has settled.
+ *   real clock. `settled()` waits for a read a visit started (#1074).
+ * - A fetch finishes once its `waitUntil` work has settled.
  * - `verifySignature` is callable over RPC, so its tests run it where it
  *   runs: `crypto.subtle.timingSafeEqual` is workerd's, not Node's.
  */
@@ -36,10 +36,25 @@ globalThis.fetch = async (input, init) => {
 };
 
 const CLOCK = 'test-clock';
+const VERSION = 'test-version';
 
 export class Roadmap extends SiteRoadmap {
   override now(): number {
     return this.ctx.storage.kv.get<number>(CLOCK) ?? super.now();
+  }
+
+  /** Resolves once the read a visit started, if any, has ended (#1074). */
+  async settled(): Promise<void> {
+    await this.refreshing;
+  }
+
+  override version(): string {
+    return this.ctx.storage.kv.get<string>(VERSION) ?? super.version();
+  }
+
+  /** Makes this object run as Worker version `id`, as a deploy would (#1074). */
+  setVersion(id: string): void {
+    this.ctx.storage.kv.put(VERSION, id);
   }
 
   /** Moves this object's clock to `at` (ms since the epoch). */
@@ -87,12 +102,6 @@ export default class TestSite extends WorkerEntrypoint<SiteEnv> {
     );
     await work.settled();
     return response;
-  }
-
-  override async scheduled(controller: ScheduledController): Promise<void> {
-    const work = tracking(this.ctx);
-    site.scheduled(controller, this.env, work.ctx);
-    await work.settled();
   }
 
   verifySignature(

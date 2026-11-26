@@ -48,6 +48,11 @@ export interface FakeConfig {
   pages: unknown[] | null;
   /** Answer GraphQL with this HTTP status instead of the page. */
   graphqlStatus: number;
+  /**
+   * Hold each GraphQL answer this long first (#1074), so a test can visit
+   * while a read is still under way.
+   */
+  graphqlDelayMs: number;
   /** Answer GraphQL 200 with this `errors` body instead of the page. */
   graphqlErrors: { message: string }[] | null;
   /** Say every page has a next one, as a broken paginator would. */

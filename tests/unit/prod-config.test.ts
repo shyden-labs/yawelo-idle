@@ -65,7 +65,6 @@ describe('the production holding page Worker (#621 AC2)', () => {
     expect(CODE_FIELDS.filter((field) => holds(dev[field]))).toEqual([
       'main',
       'durable_objects',
-      'triggers',
       'services',
       'vars',
     ]);

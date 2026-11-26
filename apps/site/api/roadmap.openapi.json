@@ -46,7 +46,7 @@
       "get": {
         "operationId": "openRoadmapLive",
         "summary": "A WebSocket that sends each new snapshot",
-        "description": "Upgrades to a WebSocket. Once open, the server sends the latest snapshot at once (when the board has been read), then each new snapshot as it is read. Every message is one text frame holding a Snapshot as JSON; the server reads nothing the client sends. \"Try it out\" here sends a plain request, which is refused with 426: open the socket from a WebSocket client.",
+        "description": "Upgrades to a WebSocket. Once open, the server sends the latest snapshot at once (when the board has been read), then each new snapshot as it is read, and the snapshot again whenever its `stale` or `readFailed` changes (#1074). Every message is one text frame holding a Snapshot as JSON; the server reads nothing the client sends. \"Try it out\" here sends a plain request, which is refused with 426: open the socket from a WebSocket client.",
         "parameters": [
           {
             "name": "Upgrade",
@@ -117,8 +117,23 @@
       "Snapshot": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["version", "readAt", "items", "progress"],
+        "required": [
+          "version",
+          "readAt",
+          "items",
+          "progress",
+          "stale",
+          "readFailed"
+        ],
         "properties": {
+          "stale": {
+            "type": "boolean",
+            "description": "True while a fresh read of the board is under way because the last good read is over 10 minutes old (#1074): the page shows it is updating, never this board as current. A message with `stale` false follows when the read ends."
+          },
+          "readFailed": {
+            "type": "boolean",
+            "description": "True when the last read failed (#1074): the page says it could not update, never this board as current."
+          },
           "version": {
             "type": "integer",
             "minimum": 1,
