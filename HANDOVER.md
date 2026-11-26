@@ -18,6 +18,10 @@
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
 
+## ShyDesk waits on #1078 AC1
+
+shydesk-c8 holds shyden-labs/shydesk#302 until Yawelo's dev door serves `POST /__devpass/embed?for=shydesk.shydesk-non-prod.workers.dev` (repo-template door, `signin` set). Told ETA 28 Nov WIB, low confidence. Message shydesk-c8 when it is on dev or the ETA moves.
+
 ## Done this session
 
 - #1074 CLOSED: AC5 page test ran in CI (VoyageMap 27 → 28 tests), develop deploy 45847400283 green.
