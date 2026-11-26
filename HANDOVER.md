@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 23:27 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at 27b7e80a (#1126 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, in hand).
+**Written:** 2026-11-27 01:05 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at 75906185 (#1127 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, in hand).
 
 ## Devices
 
@@ -10,31 +10,30 @@
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1127 | #1123 | `../yawelo-idle-1123` green on 944493fe, then BEHIND after #1140; develop merged → cc6067db, unit 15,150/15,150, PUSHED. CI running; merge on green (`--match-head-commit` from a file). |
-| #1140 | #1078 step 2 | MERGED bc2c8ae4 ~00:47 WIB (CI green on ab76fb4c); worktree + branches removed. Read develop deploy-dev run 45871133201's verify-roadmap + verify-holding jobs, post on #1078. |
-| #1141 | #1078 step 3 | PUSHED 4948170d, unit 15,156/15,156, PR opened; CI running. Merge on green, clean worktree + branches, read deploy-dev's smoke job. History: | `../yawelo-idle-1078g` 9dede843 (fixture fix committed: desktop-targets DEV gains `DEV_DOOR_SECRET`; 47/47). NOT pushed: full unit at ~00:39 (load ~30) had 1 timeout, golden-log slice 347 replay 1151 ms (recorded on #971, the slow-test ticket). develop merged → 4948170d; clean full run at load ~4.5 started via `$S/unit-and-push.sh 1078g` (DEAD on /clear: if remote branch is empty, re-run). Then PR (Refs #1078), merge on green, read deploy-dev's smoke job. The earlier 4 over-1 s tests did not recur at load ~12. |
+| #1141 | #1078 step 3 | `../yawelo-idle-1078g`: develop merged → ea9ad24c; full unit + push started 01:04 via `zsh $S/unit-and-push.sh 1078g` (DEAD on /clear: if `git ls-remote origin smoke/1078-game-smoke-origin` ≠ ea9ad24c, re-run). Then CI, merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
 | #1137 | #1136 | `../yawelo-idle-1136` 72359d69 BEHIND: merge develop, unit, push, merge on green. |
 | #986 (draft) | #160 | untouched |
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
 
-## ShyDesk waits on #1078 AC1
+## #1078 AC1 next (after #1141): wire the DEV-pass door
 
-shydesk-c8 holds shyden-labs/shydesk#302 until Yawelo's dev door serves `POST /__devpass/embed?for=shydesk.shydesk-non-prod.workers.dev` (repo-template door, `signin` set). Told ETA 28 Nov WIB, low confidence. Message shydesk-c8 when it is on dev or the ETA moves.
+- shydesk-c8 holds shyden-labs/shydesk#302 until Yawelo's door on dev.yaweloidle.com serves `POST /__devpass/embed?for=shydesk.shydesk-non-prod.workers.dev` (repo-template door, `signin` set). Told ETA 28 Nov WIB, low confidence. Message it when on dev or the ETA moves.
+- Only dev.yaweloidle.com must load ShyDesk (tests/site/support.spec.ts in site-smoke uses `HOLDING_DOOR`). The workers.dev host need not.
+- shyden-co-uk-c0: the sign-in swaps a machine pass for an embed pass, but the door's embed route reads only the `__Host-devpass` cookie. CI's site-smoke must set the machine pass as that cookie (Playwright `addCookies`, host-only). Comment 7200057006 on #1078.
 
 ## Done this session
 
-- #1074 CLOSED: AC5 page test ran in CI (VoyageMap 27 → 28 tests), develop deploy 45847400283 green.
-- #1078 step 1 proven on develop (comment 7197569832).
+- Closed #1074 (AC5 page test ran in CI, 27 → 28) and #1123 (all ACs evidenced, merged 75906185).
+- #1078 steps 1 and 2 proven on develop (deploy-dev 45841850222, 45871133201; comments on #1078).
 - #1120 AC4: deploy-dev trusted jobs restore nothing (comment 7197649899); still needs dependabot-daily, deploy-door, deploy-test, deploy-prod, rollback-prod next runs.
 
 ## Tickets awaiting a read to close
 
-- #1115: AC3 needs ≥5 deploy-dev install-time reads. #1118: Node "Found in cache" seen in build-and-test/coverage on 45847400283; check its remaining ACs. #1123: after #1127. #1136: AC3 plan in `.superpowers/sdd/1136/plan.md`. #1139 (P3).
+- #1115: AC3 needs ≥5 deploy-dev install-time reads. #1118: check its remaining ACs. #1136: AC3 plan in `.superpowers/sdd/1136/plan.md`. #1139 (P3).
 - #1072 (P0) blocked by #423 → #635, #343 (Shyden's newsletter-provider pick).
 
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. If `$S/unit-1123.log` lacks a final `Tests` line or `git ls-remote origin test/1123-no-email-growth` ≠ 944493fe, re-run `zsh $S/unit-and-push.sh 1123`.
-3. Work down the PR table above, one at a time.
+2. #1141 per the table, then #1137, then #1078 AC1.
