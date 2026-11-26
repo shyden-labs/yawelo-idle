@@ -8,6 +8,7 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 
 - #992 (real Android) and #993 (real iPhone), both P0: blocked by playwright-devices#54 (linked 2026-11-26, read back) and #7.
 - #997–#1000 (iPad, iPhone Duo, Android tablet, foldable): wait on #992/#993 → #7/#38.
+- 22:17: `@shyden-labs/playwright-devices` 0.2.0 on npm with #54's real-phone routes (proven from npm on iPhone Air + both OnePlus). #992/#993 still wait on #7 (emulators): every device run covers every device. Told playwright-devices; it messages when #7 lands. USB phones: playwright-devices, then shyden-co-uk-c0 queued.
 - playwright-devices (21:50): #54 merged in its develop (PR #59, 3c7df0e); release cut + npm publish are Shyden's; it sends the version when published. #7: no ETA (fail-fast PR #64 in review).
 - Earlier (21:09): #54 first. One iPhone bug is left (a file-input tap after typing opens nothing). ETA for PR #59 merged: tonight if the fix is small, else tomorrow, low confidence. Then the release cut and npm publish are Shyden's. #7: no ETA. It will message when each lands. Don't touch the phones before then.
 
