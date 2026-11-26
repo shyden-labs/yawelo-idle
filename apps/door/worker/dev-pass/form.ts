@@ -1,6 +1,5 @@
-// Copied unchanged from shyden-labs/repo-template develop 8837f073 (docs/dev-pass.md; the chunked-body cap, shyden-labs/repo-template#216) for
-// shyden-labs/yawelo-idle#1078, apart from import paths without `.ts` (and, in door.ts, one `String()` for this repo's lint),
-// and here the body typed as bytes: the Workers runtime types it ReadableStream<any>, which this repo's lint refuses.
+// Copied from shyden-labs/repo-template develop 6f010763 (docs/dev-pass.md; typed for Workers, shyden-labs/repo-template#221) for
+// shyden-labs/yawelo-idle#1121, apart from import paths without `.ts`, this repo's formatting, and in door.ts one `String()` for this repo's lint.
 // Reading a small urlencoded form at a public door (shyden-labs/repo-template#207):
 // no multipart parsing, and a body over 4 KiB is never decoded. A body of no
 // declared length is counted as it streams in and cancelled once it passes the
@@ -22,29 +21,41 @@ export async function readForm(
   if (Number(request.headers.get('content-length')) > MAX_FORM_BYTES)
     return 413;
   const bytes =
-    request.body === null
-      ? new Uint8Array(0)
-      : await readUpToCap(request.body as ReadableStream<Uint8Array>);
+    request.body === null ? new Uint8Array(0) : await readUpToCap(request.body);
   if (bytes === 413) return 413;
   return new URLSearchParams(new TextDecoder().decode(bytes));
 }
 
 /** The stream's bytes, or 413 with the stream cancelled as soon as they pass `MAX_FORM_BYTES`. */
 async function readUpToCap(
-  body: ReadableStream<Uint8Array>,
+  body: ReadableStream<unknown>,
 ): Promise<Uint8Array | 413> {
-  const reader = body.getReader();
   const bytes = new Uint8Array(MAX_FORM_BYTES);
-  // One read at a time, so nothing is pulled past the chunk that passes the cap.
-  const readFrom = async (length: number): Promise<Uint8Array | 413> => {
-    const chunk = await reader.read();
-    if (chunk.done) return bytes.subarray(0, length);
-    if (length + chunk.value.byteLength > MAX_FORM_BYTES) {
-      await reader.cancel();
-      return 413;
-    }
-    bytes.set(chunk.value, length);
-    return readFrom(length + chunk.value.byteLength);
-  };
-  return readFrom(0);
+  const length = await readChunks(body.getReader(), bytes, 0);
+  return length === null ? 413 : bytes.subarray(0, length);
+}
+
+/**
+ * Reads one chunk at a time into `bytes` from `length` on, and returns the total, or null (the
+ * stream cancelled) once the next chunk would pass the cap. One read per call, never awaited in a
+ * loop (SonarCloud S9382); a `for await` was tried and pulls one chunk ahead, past the one-chunk bound.
+ */
+async function readChunks(
+  reader: ReadableStreamDefaultReader<unknown>,
+  bytes: Uint8Array,
+  length: number,
+): Promise<number | null> {
+  const chunk = await reader.read();
+  if (chunk.done) return length;
+  // A Worker types the body as a stream of any (shyden-labs/repo-template#221); the Fetch standard sends bytes.
+  if (!(chunk.value instanceof Uint8Array)) {
+    await reader.cancel();
+    throw new TypeError('a form body chunk is not bytes');
+  }
+  if (length + chunk.value.byteLength > MAX_FORM_BYTES) {
+    await reader.cancel();
+    return null;
+  }
+  bytes.set(chunk.value, length);
+  return readChunks(reader, bytes, length + chunk.value.byteLength);
 }
