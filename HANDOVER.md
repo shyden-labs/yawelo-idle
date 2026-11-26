@@ -19,7 +19,7 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 | (no PR yet)   | #1078 step 2 | `../yawelo-idle-1078s` branch `smoke/1078-smoke-reaches-origins`, a5786245 (type fix + no npm cache in verify-holding, #1120 rule). unit 15,149/15,149 + static green; PR #1140 open on a5786245, CI verdict pending; merge on green |
 | (no PR yet)   | #1078 step 3 | `../yawelo-idle-1078g` branch `smoke/1078-game-smoke-origin`, commit 50508b3d (stand-in routed to the site origin only; red 3 by name, mutation caught, typecheck+lint clean). Unit 22:13 RED on timing only: 4 timeouts (1 s limit) in unrelated tests at load 307 (#971); re-run at low load, push + PR on rc=0 |
 | #1137         | #1136        | 72359d69 pushed (unit 15,140/15,140), marked ready 22:15 WIB; CI running; merge on green |
-| #1126         | #1074 AC5    | develop merged c410b14d, unit 15,146/15,146, PUSHED, CI running                                                                                                                                                                                                                                               |
+| #1126         | #1074 AC5    | MERGED 27b7e80a 22:16 WIB; worktree + branches removed. #1127, #1137, #1140 now BEHIND: merge develop into each, unit, push, one at a time |
 | #1127         | #1123        | develop merged 7a823f70, unit 15,145/15,145, PUSHED, CI running                                                                                                                                                                                  |
 | #986 (draft)  | #160         | untouched                                                                                                                                                                                                                                                               |
 
@@ -27,7 +27,7 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 
 ## Tickets awaiting a read to close
 
-- #1115: next deploy-dev's Edge install log. #1118: a run logging "Found in cache" for Node. #1120: changed workflows' next runs log no restore. #1074: after #1126. #1123: after #1127 (ACs evidenced).
+- #1115: next deploy-dev's Edge install log. #1118: a run logging "Found in cache" for Node. #1120: changed workflows' next runs log no restore. #1074: #1126 merged 27b7e80a: read its deploy-dev run on develop, then check every AC before closing. #1123: after #1127 (ACs evidenced).
 - #1136: mirror outage proven (comment 7194360822). AC3 (a newer Edge over an older cached one) planned in `.superpowers/sdd/1136/plan.md` (one-off with an older deb in the cache, then revert). #1139 (P3): cold Edge install ~135 s against its 165 s limit.
 - #1072 (P0) blocked by #423 → #635, #343 (Shyden's newsletter-provider pick).
 
