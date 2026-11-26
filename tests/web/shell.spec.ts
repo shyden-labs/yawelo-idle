@@ -1,5 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { standInFor } from '../../scripts/door-stand-in';
+import { standInForTheDoor } from './stand-in';
 
 /**
  * The built game shell in each engine (#123 AC3, AC5). Every collector here
@@ -48,6 +50,15 @@ interface Event {
 test("the shell: no console or page errors, no axe violations, its Content Security Policy refusing what it should, and Cloudflare's real beacon running (#123, #451, #819)", async ({
   page,
 }) => {
+  // Against dev, the site Worker's own address stands in for its door
+  // (#1078); a local run serves the game alone, with no door.
+  const target = process.env['WEB_SMOKE_URL'];
+  if (target !== undefined)
+    await standInForTheDoor(
+      page.context(),
+      target,
+      standInFor('yawelo-idle-site-dev', process.env['DEV_DOOR_SECRET'] ?? ''),
+    );
   const events: Event[] = [];
   page.on('console', (message) => {
     events.push({

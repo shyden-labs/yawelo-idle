@@ -59,6 +59,12 @@ export function webSmokeConfig(
     throw new Error(
       'WEB_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not: dev answers every request with its password gate',
     );
+  // The spec stands in for the site's door with it (tests/web/stand-in.ts,
+  // #1078): the smoke reaches the site Worker's own address, never a door.
+  if (env['DEV_DOOR_SECRET'] === undefined || env['DEV_DOOR_SECRET'] === '')
+    throw new Error(
+      'WEB_SMOKE_URL is set but DEV_DOOR_SECRET is not: the smoke stands in for the site’s door with it',
+    );
   return defineConfig({
     ...shared,
     use: {

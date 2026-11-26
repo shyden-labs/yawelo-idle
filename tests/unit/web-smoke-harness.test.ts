@@ -7,6 +7,9 @@ import { desktopProjects } from '@shyden-labs/playwright-devices/desktop';
 import { runOf } from './workflow-steps';
 import { DESKTOP_BROWSERS } from '../desktop-targets';
 import { expectEdgeInstalledBefore } from './edge-install';
+import { standInFor } from '../../scripts/door-stand-in';
+import { DEV_MEDIA } from '../../apps/site/src/media';
+import { standInHeaders } from '../web/stand-in';
 
 /**
  * The web smoke suite stays wired (#123 AC3), locally and against dev (#123
@@ -47,11 +50,14 @@ const deployDev = parse(
 /** The suite as `npm run test:web` runs it: no dev URL in the environment. */
 const local = () => webSmokeConfig({});
 /** The suite as deploy-dev runs it against dev. */
-const DEV_URL = 'https://dev.yaweloidle.com/';
+// The site Worker's own address, never a door (#1078, #784 AC1b).
+const DEV_URL =
+  'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/';
 const dev = () =>
   webSmokeConfig({
     WEB_SMOKE_URL: DEV_URL,
     DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+    DEV_DOOR_SECRET: 'the door secret',
   });
 
 const needsOf = (job: Job | undefined): string[] =>
@@ -126,6 +132,15 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     );
   });
 
+  it('refuses a dev address without the door secret it stands in for the door with (#1078)', () => {
+    expect(() =>
+      webSmokeConfig({
+        WEB_SMOKE_URL: DEV_URL,
+        DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+      }),
+    ).toThrow(/WEB_SMOKE_URL is set but DEV_DOOR_SECRET is not/);
+  });
+
   it('runs on every desktop browser (#883, #1003), retrying nothing', () => {
     expect(dev().projects).toEqual(desktopProjects(DESKTOP_BROWSERS));
     expect(dev().retries).toBe(0);
@@ -157,6 +172,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     expect(smoke[0]?.env).toEqual({
       WEB_SMOKE_URL: DEV_URL,
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
     });
     expectEdgeInstalledBefore(job, 'npm run test:web:dev');
   });
@@ -331,5 +347,32 @@ describe('the site suite against dev (#827)', () => {
     const ciPins = Object.values(ci.jobs).flatMap(pinned);
     expect(ciPins.length).toBeGreaterThan(0);
     expect(pinned(deployDev.jobs['site-smoke'])).toEqual([ciPins[0]]);
+  });
+});
+
+describe('the dev smoke standing in for the site’s door, on its own origin only (#1078)', () => {
+  const door = standInFor('yawelo-idle-site-dev', 'the door secret');
+
+  it('adds the stand-in to a request for the site Worker’s own origin', () => {
+    expect(standInHeaders(`${DEV_URL}play/`, DEV_URL, door)).toEqual(door);
+    expect(standInHeaders(DEV_URL, DEV_URL, door)).toEqual(door);
+  });
+
+  it.each([
+    [
+      'Cloudflare’s beacon',
+      'https://static.cloudflareinsights.com/beacon.min.js',
+    ],
+    ['the media host', `${DEV_MEDIA.origin}/yawelo-idle-promo.mp4`],
+    [
+      'a look-alike host',
+      'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev.evil.example/',
+    ],
+    [
+      'the same host over plain HTTP',
+      'http://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/',
+    ],
+  ])('adds nothing for %s', (_name, url) => {
+    expect(standInHeaders(url, DEV_URL, door)).toEqual({});
   });
 });
