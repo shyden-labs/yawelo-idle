@@ -18,6 +18,7 @@ const DEV = {
   WEB_SMOKE_URL: 'https://dev.yaweloidle.com/',
   SITE_SMOKE_URL: 'https://dev.shyden.co.uk/',
   DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+  DEV_DOOR_SECRET: 'the door secret',
 };
 
 const SPEC = 'docs/superpowers/specs/2026-10-01-yawelo-idle-design.md';
