@@ -254,6 +254,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          # ONE-OFF (#1136 AC2 proof, reverted before merge): the Ubuntu mirrors unreachable.
+          printf '0.0.0.0 %s\n' azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com >> /etc/hosts
+          getent hosts azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com
           status=0
           timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
