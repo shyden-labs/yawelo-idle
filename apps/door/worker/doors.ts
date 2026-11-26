@@ -29,6 +29,18 @@ export interface Door {
   readonly worker: string;
   /** Whose door secret the request carries. */
   readonly environment: Environment;
+  /**
+   * Its pages embed another product's piece (ShyDesk's support form,
+   * shyden-labs/repo-template#209): the door swaps a visitor's DEV pass for
+   * that product's embed pass through the sign-in (#1078, shydesk#302).
+   */
+  readonly embeds?: true;
+  /**
+   * Exact paths whose POST goes on with no DEV pass, the origin checking the
+   * caller itself: GitHub's roadmap webhook, signed with its HMAC (Shyden,
+   * 2026-11-26, #1078).
+   */
+  readonly openPost?: readonly string[];
 }
 
 /**
@@ -39,7 +51,12 @@ export interface Door {
 export const DOORS: ReadonlyMap<string, Door> = new Map([
   [
     'dev.yaweloidle.com',
-    { worker: 'yawelo-idle-site-dev', environment: 'dev' },
+    {
+      worker: 'yawelo-idle-site-dev',
+      environment: 'dev',
+      embeds: true,
+      openPost: ['/hooks/github'],
+    },
   ],
   [
     'dev-api.yaweloidle.com',
