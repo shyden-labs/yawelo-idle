@@ -139,7 +139,10 @@ describe('where an address starts and ends (#1106: the same matches as the old p
 // load 32 and 3 GB swapped): the fastest of five reads at 10,000 and at
 // 40,000 characters, on the same machine in the same test. Four times the
 // text takes about four times as long when the scan is linear and about
-// sixteen when it is quadratic, and a busy machine slows both sizes alike.
+// sixteen when it is quadratic. Each read is timed by this process's own CPU
+// time, not the wall clock: at load 180 every one of five wall-clock reads of
+// the long page was stretched by other processes (ratios 11.3, 12.7 and
+// 96.3, #1123), while CPU time counts only the scan's own work.
 const SHORT = 10_000;
 const LONG = 40_000;
 const READS = 5;
@@ -147,9 +150,10 @@ const MAX_GROWTH = 10;
 const fastest = (text: string): number =>
   Math.min(
     ...Array.from({ length: READS }, () => {
-      const start = performance.now();
+      const start = process.cpuUsage();
       shownIn(text);
-      return performance.now() - start;
+      const used = process.cpuUsage(start);
+      return (used.user + used.system) / 1000;
     }),
   );
 const growth = (page: (n: number) => string): number =>
