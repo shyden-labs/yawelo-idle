@@ -66,7 +66,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       - run: npm ci
       # Before anything uses the token, prove it reaches the dev-only "Shyden
       # Labs Dev" account and nothing else (#395): Cloudflare cannot narrow a
@@ -214,11 +213,14 @@ jobs:
           node-version: ${{ steps.node.outputs.version }}
       - name: Verify dev is password-gated, serves this commit, shows the holding page, and D1 answers
         env:
-          # The dev hostnames, through the front door (#784, #1013).
-          DEV_WEB_URL: https://dev.yaweloidle.com/
-          DEV_SYNC_URL: https://dev-api.yaweloidle.com
-          # The site Worker's own address, where the site being built stays
-          # while the front door shows the holding page (#673).
+          # The origins' own addresses, never a door (#1078, #784 AC1b): once
+          # the doors check the DEV pass, no CI request could pass them. The
+          # door secret lets verify-dev stand in for the door, so the site
+          # Worker shows its door's holding page (scripts/door-stand-in.ts).
+          DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
+          DEV_SYNC_URL: https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          # The same address with no door: the site being built (#673).
           DEV_SITE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           # The game's own address, which must serve nothing (#332).
           DEV_GAME_URL: https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev/
@@ -298,18 +300,29 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       # Root's git refuses a workspace the runner's user checked out ("not in
       # a git directory"), and npm ci's prepare runs git (PR #1054).
       - name: Mark the workspace safe for root's git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
-      # Playwright's image lacks Edge, so each run downloads it (Shyden,
-      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
-      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
+      # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
+      # fresh every run: this job holds the dev password, so it restores
+      # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
+      # 20 passing installs in deploy-dev's 10 runs to 2026-11-26 took
+      # 18–55 s, and run 45668410232's smoke stalled at 180 s (#1115), so 3
+      # times the slowest is 165 s (#476). The inner 165 s fires before the
+      # step's 3 minutes, so a stall names the download it was on.
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
-        run: npx --no playwright install --with-deps msedge
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
       - name: Smoke the game on dev (every supported target, behind the dev password)
         id: suite
         # A first limit since Edge joined (#1003), until its first runs are
@@ -363,18 +376,29 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       # Root's git refuses a workspace the runner's user checked out ("not in
       # a git directory"), and npm ci's prepare runs git (PR #1054).
       - name: Mark the workspace safe for root's git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
-      # Playwright's image lacks Edge, so each run downloads it (Shyden,
-      # 2026-11-20, #1003). The same install measured in CI on PR #1054:
-      # 25, 26 and 56 s, so 3 times the slowest is 168 s (#476).
+      # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
+      # fresh every run: this job holds the dev password, so it restores
+      # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
+      # 20 passing installs in deploy-dev's 10 runs to 2026-11-26 took
+      # 18–55 s, and run 45668410232's smoke stalled at 180 s (#1115), so 3
+      # times the slowest is 165 s (#476). The inner 165 s fires before the
+      # step's 3 minutes, so a stall names the download it was on.
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
-        run: npx --no playwright install --with-deps msedge
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
         # A first limit, until its first run is measured (#476): then at
