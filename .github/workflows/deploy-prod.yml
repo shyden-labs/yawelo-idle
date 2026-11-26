@@ -56,7 +56,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       - run: npm ci
       # The production token must reach the production account (Yawelo's own,
       # which holds the yaweloidle.com zone, #1013) and nothing else.

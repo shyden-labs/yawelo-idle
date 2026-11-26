@@ -56,11 +56,12 @@ const skipsOnDocs = (condition?: string): boolean =>
     condition.endsWith(' }}') &&
     !condition.includes('||'));
 
-/** Every step, in order: today's order with the classifier after Node. */
+/** Every step, in order: today's order with the classifier after Node, and Node's cache just before it (#1118). */
 const ORDER = [
   'The default branch is develop',
   'actions/checkout',
   'Read the exact Node version (docker/node/Dockerfile)',
+  'actions/cache',
   'actions/setup-node',
   "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
@@ -89,6 +90,7 @@ const DOCS_ONLY = [
   'The default branch is develop',
   'actions/checkout',
   'Read the exact Node version (docker/node/Dockerfile)',
+  'actions/cache',
   'actions/setup-node',
   "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
@@ -166,9 +168,10 @@ describe('the browsers job’s steps (#1003)', () => {
 
   it('classifies after Node and before install, and the checkout fetches two levels', () => {
     const ids = browsers().map(idOf);
-    expect(ids.slice(0, 6)).toEqual([
+    expect(ids.slice(0, 7)).toEqual([
       'actions/checkout',
       'Read the exact Node version (docker/node/Dockerfile)',
+      'actions/cache',
       'actions/setup-node',
       "Mark the workspace safe for root's git",
       'Classify the change as docs-only or full (#360)',
