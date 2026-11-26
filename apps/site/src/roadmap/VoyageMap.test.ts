@@ -9,6 +9,7 @@ import { expectedSeason } from './season';
 import { estimates } from './summary';
 import VoyageMap from './VoyageMap.svelte';
 import { updatedLine } from './updated';
+import { REOPEN_FIRST_MS, REOPEN_MAX_MS, reopenDelay } from './reopen';
 import { fill } from './voyage';
 
 /**
@@ -134,7 +135,17 @@ class FakeSocket extends EventTarget {
     FakeSocket.opened.push(this);
   }
   close(): void {
-    // The stand-in holds no connection.
+    // As a browser's socket does, closing it fires its close event.
+    this.drop();
+  }
+  /** The connection drops, as the server or the network ends it. */
+  drop(): void {
+    this.dispatchEvent(new Event('close'));
+    flushSync();
+  }
+  /** The connection opens. */
+  open(): void {
+    this.dispatchEvent(new Event('open'));
   }
   push(body: PublicSnapshot): void {
     this.dispatchEvent(
@@ -479,5 +490,82 @@ describe('the voyage map page (#1068)', () => {
     const root = view('en');
     await settle();
     expect(root.querySelector('[data-island-names-note]')).toBeNull();
+  });
+});
+
+describe('a dropped live socket is reopened (#1104 AC3)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('waits twice as long after each failed try, from 1 s, never over 60 s', () => {
+    expect(REOPEN_FIRST_MS).toBe(1_000);
+    expect(REOPEN_MAX_MS).toBe(60_000);
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 20].map(reopenDelay)).toEqual([
+      1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000, 60_000,
+    ]);
+  });
+
+  it('reopens a dropped socket after the first delay, not before, and draws a newer snapshot from it', async () => {
+    serve(snapshot());
+    const root = view();
+    await settle();
+    vi.useFakeTimers();
+    FakeSocket.opened[0]?.drop();
+    vi.advanceTimersByTime(REOPEN_FIRST_MS - 1);
+    expect(FakeSocket.opened).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(FakeSocket.opened).toHaveLength(2);
+    expect(FakeSocket.opened[1]?.url).toBe(FakeSocket.opened[0]?.url);
+    FakeSocket.opened[1]?.push(
+      snapshot({
+        version: 2,
+        items: board(3),
+        readAt: '2026-11-22T05:00:00.000Z',
+      }),
+    );
+    expect(root.querySelector('[data-updated]')?.textContent).toBe(
+      updatedLine('2026-11-22T05:00:00.000Z', en.lastUpdated, 'en'),
+    );
+  });
+
+  it('waits longer after each try that drops before it opens', async () => {
+    serve(snapshot());
+    view();
+    await settle();
+    vi.useFakeTimers();
+    FakeSocket.opened[0]?.drop();
+    vi.advanceTimersByTime(reopenDelay(0));
+    FakeSocket.opened[1]?.drop();
+    vi.advanceTimersByTime(reopenDelay(1) - 1);
+    expect(FakeSocket.opened).toHaveLength(2);
+    vi.advanceTimersByTime(1);
+    expect(FakeSocket.opened).toHaveLength(3);
+  });
+
+  it('starts again from the first delay once a socket has opened', async () => {
+    serve(snapshot());
+    view();
+    await settle();
+    vi.useFakeTimers();
+    FakeSocket.opened[0]?.drop();
+    vi.advanceTimersByTime(reopenDelay(0));
+    FakeSocket.opened[1]?.drop();
+    vi.advanceTimersByTime(reopenDelay(1));
+    FakeSocket.opened[2]?.open();
+    FakeSocket.opened[2]?.drop();
+    vi.advanceTimersByTime(REOPEN_FIRST_MS);
+    expect(FakeSocket.opened).toHaveLength(4);
+  });
+
+  it('opens nothing more once the page has gone', async () => {
+    serve(snapshot());
+    view();
+    await settle();
+    vi.useFakeTimers();
+    if (mounted !== undefined) void unmount(mounted);
+    mounted = undefined;
+    vi.advanceTimersByTime(REOPEN_MAX_MS * 2);
+    expect(FakeSocket.opened).toHaveLength(1);
   });
 });
