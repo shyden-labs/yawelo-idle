@@ -11,6 +11,14 @@ export const SAFE_WORKSPACE =
 /** The one command that installs Edge, the browser Playwright's image lacks. */
 export const EDGE_INSTALL = 'npx --no playwright install --with-deps msedge';
 
+/**
+ * The browsers job's form (#1136): no `--with-deps`. In run 45770365466 that
+ * flag's `apt-get update` fetched 34.2 MB of Ubuntu lists and then installed
+ * nothing, every package being "already the newest version" in Playwright's
+ * image, so a mirror outage could fail the job for no package at all.
+ */
+export const EDGE_INSTALL_NO_DEPS = 'npx --no playwright install msedge';
+
 interface Step {
   run?: unknown;
   'timeout-minutes'?: unknown;
@@ -33,6 +41,7 @@ interface Job {
 export function expectEdgeInstalledBefore(
   job: Job | undefined,
   suite: string,
+  command: string = EDGE_INSTALL,
 ): void {
   expect(job?.container?.options, 'the job runs as root').toBeUndefined();
   // Firefox refuses to start as root in a home another user owns (PR #1054's
@@ -46,7 +55,7 @@ export function expectEdgeInstalledBefore(
   expect(installs, 'one step installs a browser').toHaveLength(1);
   const install = installs[0] ?? -1;
   expect(
-    runs[install]?.split('\n').filter((line) => line.includes(EDGE_INSTALL)),
+    runs[install]?.split('\n').filter((line) => line.includes(command)),
     'and it runs the Edge install once',
   ).toHaveLength(1);
   const safe = runs.indexOf(SAFE_WORKSPACE);

@@ -5,7 +5,10 @@ import config from '../../playwright.engines.config';
 import { desktopProjects } from '@shyden-labs/playwright-devices/desktop';
 import { runOf } from './workflow-steps';
 import { DESKTOP_BROWSERS } from '../desktop-targets';
-import { expectEdgeInstalledBefore } from './edge-install';
+import {
+  EDGE_INSTALL_NO_DEPS,
+  expectEdgeInstalledBefore,
+} from './edge-install';
 
 /**
  * The cross-engine check stays wired (#26 AC10). A Playwright project dropped
@@ -45,7 +48,11 @@ describe('the cross-engine harness', () => {
       steps.filter((s) => runOf(s) === 'npm run test:engines'),
       'test:engines step',
     ).toHaveLength(1);
-    expectEdgeInstalledBefore(job, 'npm run test:engines');
+    expectEdgeInstalledBefore(
+      job,
+      'npm run test:engines',
+      EDGE_INSTALL_NO_DEPS,
+    );
   });
 
   it('leaves build-and-test, which runs as the runner’s user and installs nothing', () => {
