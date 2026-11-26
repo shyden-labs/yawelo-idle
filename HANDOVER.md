@@ -15,6 +15,7 @@
 | #1142 | #1078 AC1 | `../yawelo-idle-1078d` 5fa5b213 PUSHED (unit 15,170). CI running; merge on green; then read the first develop deploy-dev's mint step + smoke/site-smoke (proof of the token), post on #1078. deploy-door waits for Shyden; after: read the door live, message shydesk-c8, then AC3 (drop origin password, separate PR). |
 | (none) | #1115 AC3 | `../yawelo-idle-1115` branch `ci/1115-edge-limit` (npm ci done): tests/unit/edge-install-trusted.test.ts changed to 370 s / 7 min (measured 16–123 s, comment 7201478677), NOT committed; red run queued (`$S/red-1115.log`). After red: deploy-dev.yml both Edge steps 165→370, timeout-minutes 3→7, comment; unit, push, PR. |
 | (none) | #1139 | After #1137 merges (same ci.yml step): browsers Edge limit 440 s / 8 min from measured 146 s (comment 7203350866), test first. |
+| (none) | #1104 AC3 | `../yawelo-idle-1104` `site/1104-socket-reopens`: 5cb8755b red tests (4 failed), 9903c726 reopen code (reopen.ts 1 s doubling to 60 s; 33/33; mutation caught). Unit + push running after 1115's in one background run. Then PR (Refs #1104; AC1 snapshot-in-HTML route + AC2 no failure text still open, AC2's removed copy to be shown to Shyden). |
 | #986 (draft) | #160 | untouched |
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
