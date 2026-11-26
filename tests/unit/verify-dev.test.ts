@@ -1011,6 +1011,17 @@ describe('verifyDev', () => {
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
       ]);
+      // At the site Worker's own address, standing in for its door (#1078):
+      // once the origins require the door, nothing else would be let in.
+      const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+      expect(
+        seenDoors.filter((seen) => seen.startsWith('web:/api/roadmap')),
+      ).toEqual([
+        front('/api/roadmap.json'),
+        front(ROADMAP),
+        front(ROADMAP),
+        front(ROADMAP),
+      ]);
       expect(problems).toEqual([]);
     });
 
