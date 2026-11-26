@@ -57,6 +57,8 @@ warm.close();
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const OLD = '1f660b30f75d081ae6559d175e5c0c3e26acb84c';
 const PASSWORD = 'pä:ss';
+/** The dev door secret CI holds to stand in for the door (#1078). */
+const DOOR_SECRET = 'door-sëcret';
 const ROBOTS = '# blocked\nUser-agent: *\nDisallow: /\n';
 const page = (sha: string) =>
   `<!doctype html><html><head><meta name="yawelo-idle-commit" content="${sha}" /></head></html>`;
@@ -760,6 +762,8 @@ describe('verifyDev', () => {
   let webStale = 0;
   let healthStale = 0;
   const seenAuthorization: string[] = [];
+  /** Each request's door name, or '-' without the right secret (#1078). */
+  const seenDoors: string[] = [];
   /** What /api/roadmap/health answers to an authorised request (#341). */
   let roadmap: Record<string, unknown> = {};
   /** Records answered first, one per look, before `roadmap` (#708). */
@@ -779,8 +783,21 @@ describe('verifyDev', () => {
         : {};
       const authorization = req.headers.authorization ?? '';
       seenAuthorization.push(authorization);
+      // The origins believe a door's name only alongside its secret, as
+      // apps/door/worker/origin.ts doorOf does (#1078).
+      const door =
+        req.headers['x-yawelo-door-secret'] === DOOR_SECRET
+          ? String(req.headers['x-yawelo-door'] ?? '-')
+          : '-';
+      seenDoors.push(`${role}:${req.url ?? ''} ${door}`);
       const authorised = authorization === basicAuthorization(PASSWORD);
       if (req.url === '/health') {
+        // The sync Worker, behind its door (origin.ts behindDoor).
+        if (door !== 'dev-api.yaweloidle.com') {
+          res.writeHead(403, { 'content-type': 'text/plain', ...tag });
+          res.end('behind the door');
+          return;
+        }
         healthStale += 1;
         const commit = healthStale <= staleLooks ? OLD : served;
         res.writeHead(200, { 'content-type': 'application/json', ...tag });
@@ -872,7 +889,14 @@ describe('verifyDev', () => {
         res.end(noScript ? page(commit) : shell(commit));
       else if (role === 'site')
         res.end(siteServesHolding ? holding(commit) : site(commit));
-      else res.end(plantSite ? site(commit) : holding(commit));
+      // The site Worker shows the holding page at its door only; at its own
+      // address it shows the site being built.
+      else
+        res.end(
+          plantSite || door !== 'dev.yaweloidle.com'
+            ? site(commit)
+            : holding(commit),
+        );
     };
 
   const listen = async (handler: Server): Promise<string> => {
@@ -901,6 +925,7 @@ describe('verifyDev', () => {
     gameUrl: `${base}/retired-game/`,
     sha: SHA,
     password: PASSWORD,
+    doorSecret: DOOR_SECRET,
   });
 
   const reset = () => {
@@ -932,6 +957,7 @@ describe('verifyDev', () => {
     webStale = 0;
     healthStale = 0;
     seenAuthorization.length = 0;
+    seenDoors.length = 0;
     roadmap = {
       lastEventAt: null,
       lastCheckAt: new Date().toISOString(),
@@ -984,6 +1010,17 @@ describe('verifyDev', () => {
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
+      ]);
+      // At the site Worker's own address, standing in for its door (#1078):
+      // once the origins require the door, nothing else would be let in.
+      const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+      expect(
+        seenDoors.filter((seen) => seen.startsWith('web:/api/roadmap')),
+      ).toEqual([
+        front('/api/roadmap.json'),
+        front(ROADMAP),
+        front(ROADMAP),
+        front(ROADMAP),
       ]);
       expect(problems).toEqual([]);
     });
@@ -1106,6 +1143,24 @@ describe('verifyDev', () => {
       '',
       '',
       '',
+    ]);
+    // CI stands in for the door at the origins' own addresses (#1078): the
+    // front door's looks name dev.yaweloidle.com, sync's dev-api, and the
+    // site being built and the retired game address carry no door at all.
+    const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+    expect(seenDoors).toEqual([
+      front('/'),
+      front('/'),
+      front('/'),
+      'web:/health dev-api.yaweloidle.com',
+      ...SITE_PAGES.map(front),
+      ...PREVIEW_PAGES.map((path) => `site:${path} -`),
+      front('/robots.txt'),
+      front(STYLESHEET),
+      front(SCRIPT),
+      front('/play/'),
+      'site:/ -',
+      'web:/retired-game/ -',
     ]);
     expect(problems).toEqual([]);
   });
@@ -1423,6 +1478,8 @@ describe('verifyDev', () => {
     ];
     const credential = basicAuthorization(PASSWORD).slice(6);
     const showingPassword = reported.filter((p) => p.includes(PASSWORD));
+    const showingDoorSecret = reported.filter((p) => p.includes(DOOR_SECRET));
+    expect(showingDoorSecret).toEqual([]);
     const showingCredential = reported.filter((p) => p.includes(credential));
     expect(showingPassword).toEqual([]);
     expect(showingCredential).toEqual([]);

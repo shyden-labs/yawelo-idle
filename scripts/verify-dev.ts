@@ -41,6 +41,7 @@
  */
 
 import { CONTENT_SECURITY_POLICY } from '../apps/web/worker/policy.ts';
+import { standInFor } from './door-stand-in.ts';
 
 export interface Probe {
   status: number;
@@ -59,6 +60,19 @@ export interface Target {
   sha: string;
   password: string;
 }
+
+/**
+ * What verifyDev reaches (#1078): the front door's and sync's origins at their
+ * own workers.dev addresses, with the door secret CI stands in for the door
+ * with, never through a door.
+ */
+export interface DevTarget extends Target {
+  doorSecret: string;
+}
+
+/** The Workers whose doors CI stands in for, by name in the dev account. */
+const FRONT_WORKER = 'yawelo-idle-site-dev';
+const SYNC_WORKER = 'yawelo-idle-sync-dev';
 
 export const NO_INDEX = 'noindex, nofollow, noarchive';
 
@@ -594,7 +608,7 @@ export function roadmapProblems(
  * fails at once. At the last look it fails naming the last check it saw.
  */
 export async function verifyRoadmap(
-  target: Pick<Target, 'webUrl' | 'password'>,
+  target: Pick<DevTarget, 'webUrl' | 'password' | 'doorSecret'>,
   deployedAtMs: number,
   { polls, pollMs }: Wait,
 ): Promise<string[]> {
@@ -607,7 +621,11 @@ export async function verifyRoadmap(
       `polls must be a whole number of at least 1, got ${String(polls)}`,
     );
   const url = new URL('/api/roadmap/health', target.webUrl).href;
-  const headers = { Authorization: basicAuthorization(target.password) };
+  // At the site Worker's own address, standing in for its door (#1078).
+  const headers = {
+    Authorization: basicAuthorization(target.password),
+    ...standInFor(FRONT_WORKER, target.doorSecret),
+  };
   // The visit only starts a read; its answer is not judged. A visit that
   // fails outright shows up below as a health record with no check after
   // the deploy, named at the last look.
@@ -750,7 +768,7 @@ type Standing =
   | { kind: 'failed'; problem: string };
 
 export async function verifyDev(
-  target: Target,
+  target: DevTarget,
   { polls, pollMs }: Wait,
 ): Promise<string[]> {
   if (!Number.isInteger(polls) || polls < 1)
@@ -762,6 +780,8 @@ export async function verifyDev(
   const right = { Authorization: basicAuthorization(target.password) };
   // Appending to the real password guarantees a different one.
   const wrong = { Authorization: basicAuthorization(`${target.password}x`) };
+  const front = standInFor(FRONT_WORKER, target.doorSecret);
+  const syncDoor = standInFor(SYNC_WORKER, target.doorSecret);
 
   /** Hosts that have answered in this run: a later failed request from one is a failure, not a wait. */
   const answered = new Set<Host>();
@@ -797,23 +817,27 @@ export async function verifyDev(
   let waiting: string[] = [];
   for (let poll = 1; poll <= polls; poll += 1) {
     const gate = [
-      await look('web', 'web without credentials', target.webUrl, {}, (p) =>
+      await look('web', 'web without credentials', target.webUrl, front, (p) =>
         gateProblems('web without credentials', p),
       ),
       await look(
         'web',
         'web with a wrong password',
         target.webUrl,
-        wrong,
+        { ...front, ...wrong },
         (p) => gateProblems('web with a wrong password', p),
       ),
     ];
     if (gate.some(({ answer }) => answer !== null && leaked(answer)))
       return gate.flatMap((outcome) => outcome.problems);
-    const web = await look('web', 'web', target.webUrl, right, (p) =>
-      holdingProblems(p, target.sha),
+    const web = await look(
+      'web',
+      'web',
+      target.webUrl,
+      { ...front, ...right },
+      (p) => holdingProblems(p, target.sha),
     );
-    const sync = await look('sync', 'sync', healthUrl, {}, (p) =>
+    const sync = await look('sync', 'sync', healthUrl, syncDoor, (p) =>
       healthProblems(p, target.sha),
     );
     const hosts = [
@@ -837,7 +861,7 @@ export async function verifyDev(
       // Every other page judged waits for the commit too (#581): a Workers
       // version rolls out per request, so /roadmap served the previous commit
       // 2 s after the home page served this one (deploy-dev run 38333791614).
-      const pages = await lookAtPages(look, target, right);
+      const pages = await lookAtPages(look, target, right, front);
       const standings = pages.map((page) =>
         standing(
           page,
@@ -857,7 +881,7 @@ export async function verifyDev(
           'web',
           'robots.txt',
           robotsUrl,
-          {},
+          front,
           robotsProblems,
         );
         return [
@@ -866,7 +890,7 @@ export async function verifyDev(
           web,
           sync,
           ...pages,
-          ...(await lookAtTheRest(look, target, right, web, pages)),
+          ...(await lookAtTheRest(look, target, right, front, web, pages)),
         ].flatMap((outcome) => outcome.problems);
       }
     }
@@ -903,6 +927,7 @@ async function lookAtPages(
   look: Look,
   target: Target,
   right: Record<string, string>,
+  front: Record<string, string>,
 ): Promise<PageLook[]> {
   const outcomes: PageLook[] = [];
   for (const path of SITE_PAGES) {
@@ -911,7 +936,7 @@ async function lookAtPages(
       'web',
       label,
       new URL(path, target.webUrl).href,
-      right,
+      { ...front, ...right },
       (p) =>
         path === GAME_SHELL
           ? gameShellProblems(p, target.sha, label)
@@ -946,10 +971,12 @@ async function lookAtTheRest(
   look: Look,
   target: Target,
   right: Record<string, string>,
+  front: Record<string, string>,
   home: Outcome,
   pages: readonly PageLook[],
 ): Promise<Outcome[]> {
   const at = (path: string) => new URL(path, target.webUrl).href;
+  const authorised = { ...front, ...right };
   const outcomes: Outcome[] = [];
   const stylesheet = stylesheetOf(home.answer?.body ?? '');
   const shell =
@@ -959,15 +986,19 @@ async function lookAtTheRest(
   outcomes.push(
     stylesheet === undefined
       ? { problems: ['web: no stylesheet in the page'], answer: null }
-      : await look('web', `web ${stylesheet}`, at(stylesheet), right, (p) =>
-          stylesheetProblems(`web ${stylesheet}`, p),
+      : await look(
+          'web',
+          `web ${stylesheet}`,
+          at(stylesheet),
+          authorised,
+          (p) => stylesheetProblems(`web ${stylesheet}`, p),
         ),
     script === undefined
       ? { problems: ['web /play/: no game script in the page'], answer: null }
-      : await look('web', `web ${script}`, at(script), right, (p) =>
+      : await look('web', `web ${script}`, at(script), authorised, (p) =>
           scriptProblems(`web ${script}`, p),
         ),
-    await look('web', 'game without credentials', at('/play/'), {}, (p) =>
+    await look('web', 'game without credentials', at('/play/'), front, (p) =>
       gateProblems('game without credentials', p),
     ),
     await look('site', 'site without credentials', target.siteUrl, {}, (p) =>
@@ -995,6 +1026,7 @@ if (import.meta.main) {
       gameUrl: required('DEV_GAME_URL'),
       sha: required('EXPECTED_SHA'),
       password: required('DEV_BASIC_AUTH_PASSWORD'),
+      doorSecret: required('DEV_DOOR_SECRET'),
     },
     { polls: 36, pollMs: 5_000 },
   );

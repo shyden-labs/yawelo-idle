@@ -13,25 +13,17 @@
 
 import { handleDevDoor } from './dev-pass/door';
 import type { PublicKeys } from './dev-pass/pass';
-import { DOORS, type Environment } from './doors';
+// The headers live beside the door map, which has no imports, so scripts
+// that stand in for a door load them under Node's own loader (#1078).
+import {
+  DOOR_CLIENT_HEADER,
+  DOOR_HOST_HEADER,
+  DOOR_SECRET_HEADER,
+  DOORS,
+  type Environment,
+} from './doors';
 
-/** The header carrying the door secret; any value a caller sent is replaced. */
-export const DOOR_SECRET_HEADER = 'x-yawelo-door-secret';
-
-/**
- * The header naming the door a request came through, so an origin can answer
- * by door (the dev site shows the holding page at its door). Trusted by an
- * origin only alongside a valid secret; any value a caller sent is replaced.
- */
-export const DOOR_HOST_HEADER = 'x-yawelo-door';
-
-/**
- * The header carrying the caller's address as Cloudflare gave it to the door
- * (#164 AC2): past the door, an origin's own `CF-Connecting-IP` is
- * Cloudflare's Worker address, the same for everyone. Trusted by an origin
- * only alongside a valid secret; any value a caller sent is replaced.
- */
-export const DOOR_CLIENT_HEADER = 'x-yawelo-client';
+export { DOOR_CLIENT_HEADER, DOOR_HOST_HEADER, DOOR_SECRET_HEADER };
 
 export { DOORS, type Door, type Environment } from './doors';
 

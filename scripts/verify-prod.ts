@@ -30,6 +30,7 @@ import {
   PROMO,
   type MediaHost,
 } from '../apps/site/src/media.ts';
+import { standInFor } from './door-stand-in.ts';
 import { headerRules, ruleFor } from './headers-file.ts';
 import {
   judge,
@@ -355,11 +356,12 @@ async function waitForCommit(
   origin: string,
   sha: string,
   wait: Wait,
+  door: Record<string, string>,
 ): Promise<string | undefined> {
   let last = 'no answer yet';
   for (let look = 1; look <= wait.polls; look += 1) {
     try {
-      const answer = await probe(`${origin}/`);
+      const answer = await probe(`${origin}/`, door);
       const commit = reportedCommit(answer.body);
       if (answer.status === 200 && commit === sha) return undefined;
       last = `status ${String(answer.status)}, commit ${commit ?? 'none'}`;
@@ -380,16 +382,17 @@ export async function verifyProd(
   wait: Wait,
   indexable = true,
   media: MediaHost = PROD_MEDIA,
+  door: Record<string, string> = {},
 ): Promise<string[]> {
   const built = (file: string): string =>
     readFileSync(new URL(file, dist), 'utf8');
   const rules = ruleFor(headerRules(built('_headers')), '/*');
-  const waited = await waitForCommit(origin, sha, wait);
+  const waited = await waitForCommit(origin, sha, wait, door);
   if (waited !== undefined) return [waited];
   const problems: string[] = [];
   const look = async (path: string): Promise<Probe | string> => {
     try {
-      return await probe(`${origin}${path}`);
+      return await probe(`${origin}${path}`, door);
     } catch (error) {
       return `${path}: request failed: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -462,6 +465,20 @@ function required(name: string): string {
   return value;
 }
 
+/**
+ * What a dev-copy run sends the holding page's origin in place of its door
+ * (#1078): CI reaches the dev copy at its own workers.dev address, standing in
+ * for its door with the dev door secret. TEST's copy has no door secret, and
+ * gets nothing.
+ */
+export function holdingStandIn(
+  env: Readonly<Record<string, string | undefined>>,
+): Record<string, string> {
+  const secret = env['DEV_DOOR_SECRET'];
+  if (secret === undefined || secret === '') return {};
+  return standInFor('yawelo-idle-holding-dev', secret);
+}
+
 /** Which copy of the holding page a run checked. */
 export type Checked = 'production' | 'dev copy';
 
@@ -522,6 +539,7 @@ if (import.meta.main) {
     { polls: 60, pollMs: 10_000 },
     !dev,
     dev ? DEV_MEDIA : PROD_MEDIA,
+    dev ? holdingStandIn(process.env) : {},
   );
   process.exitCode = printVerdict(dev, problems, console);
 }
