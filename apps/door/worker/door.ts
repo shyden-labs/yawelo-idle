@@ -73,7 +73,10 @@ function parseKeys(json: string | undefined): PublicKeys | undefined {
  * 404 for a host that is no door, 500 naming a value the deploy left unset.
  * A dev door first checks the DEV pass (#1078, repo-template#207): with no
  * valid pass for this door the request goes no further, and the origin never
- * sees a pass. The test door checks none. The origin's answer comes back as
+ * sees a pass. The test door checks none. A door's `openPost` paths take a
+ * POST with no pass (the origin checks its caller), and a door whose pages
+ * `embeds` another product's piece swaps the visitor's pass for its embed
+ * pass through the sign-in. The origin's answer comes back as
  * it is, so a WebSocket upgrade (the live roadmap,
  * apps/site/worker/roadmap.ts) passes through, and a redirect is the
  * caller's to follow.
@@ -106,6 +109,11 @@ export async function pass(
     return fetch(new Request(forwarded, { headers, redirect: 'manual' }));
   };
   if (door.environment === 'test') return forward(request);
+  if (
+    request.method === 'POST' &&
+    door.openPost?.includes(new URL(request.url).pathname) === true
+  )
+    return forward(request);
 
   const keys = parseKeys(env.DEV_PASS_KEYS);
   if (keys === undefined)
@@ -118,6 +126,7 @@ export async function pass(
       secretHeader: DOOR_SECRET_HEADER,
       secret: env[secretName],
       now: Math.floor(Date.now() / 1000),
+      ...(door.embeds === true ? { signin: fetch } : {}),
     },
     forward,
   );

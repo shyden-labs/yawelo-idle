@@ -324,6 +324,32 @@ jobs:
             echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
           fi
           exit "$status"
+      # The site's dev door checks a DEV pass (#1078 AC1): a machine pass from
+      # the shared sign-in, asked with Yawelo's own Cloudflare Access service
+      # token (yawelo-idle-ci). Masked at once, and handed to the suite only
+      # through the job's environment file; the suite sends it as a
+      # host-only cookie on the door (tests/dev-pass-cookie.ts).
+      - name: Get a DEV pass for the site’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
       - name: Smoke the game on dev (every supported target, behind the dev password)
         id: suite
         # A first limit since Edge joined (#1003), until its first runs are
@@ -400,6 +426,32 @@ jobs:
             echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
           fi
           exit "$status"
+      # The site's dev door checks a DEV pass (#1078 AC1): a machine pass from
+      # the shared sign-in, asked with Yawelo's own Cloudflare Access service
+      # token (yawelo-idle-ci). Masked at once, and handed to the suite only
+      # through the job's environment file; the suite sends it as a
+      # host-only cookie on the door (tests/dev-pass-cookie.ts).
+      - name: Get a DEV pass for the site’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
         # A first limit, until its first run is measured (#476): then at
