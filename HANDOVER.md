@@ -10,9 +10,9 @@
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1127 | #1123 | `../yawelo-idle-1123` green on 944493fe, then BEHIND after #1140; develop merged → cc6067db; unit + push started ~00:48 via `$S/unit-and-push.sh 1123` (DEAD on /clear: if remote ≠ cc6067db, re-run). Then CI, merge on green. |
+| #1127 | #1123 | `../yawelo-idle-1123` green on 944493fe, then BEHIND after #1140; develop merged → cc6067db, unit 15,150/15,150, PUSHED. CI running; merge on green (`--match-head-commit` from a file). |
 | #1140 | #1078 step 2 | MERGED bc2c8ae4 ~00:47 WIB (CI green on ab76fb4c); worktree + branches removed. Read develop deploy-dev run 45871133201's verify-roadmap + verify-holding jobs, post on #1078. |
-| (none) | #1078 step 3 | `../yawelo-idle-1078g` 9dede843 (fixture fix committed: desktop-targets DEV gains `DEV_DOOR_SECRET`; 47/47). NOT pushed: full unit at ~00:39 (load ~30) had 1 timeout, golden-log slice 347 replay 1151 ms (recorded on #971, the slow-test ticket). Needs a clean full run at low load: `zsh $S/unit-and-push.sh 1078g`. Then PR (Refs #1078), merge on green, read deploy-dev's smoke job. The earlier 4 over-1 s tests did not recur at load ~12. |
+| (none) | #1078 step 3 | `../yawelo-idle-1078g` 9dede843 (fixture fix committed: desktop-targets DEV gains `DEV_DOOR_SECRET`; 47/47). NOT pushed: full unit at ~00:39 (load ~30) had 1 timeout, golden-log slice 347 replay 1151 ms (recorded on #971, the slow-test ticket). develop merged → 4948170d; clean full run at load ~4.5 started via `$S/unit-and-push.sh 1078g` (DEAD on /clear: if remote branch is empty, re-run). Then PR (Refs #1078), merge on green, read deploy-dev's smoke job. The earlier 4 over-1 s tests did not recur at load ~12. |
 | #1137 | #1136 | `../yawelo-idle-1136` 72359d69 BEHIND: merge develop, unit, push, merge on green. |
 | #986 (draft) | #160 | untouched |
 
