@@ -9,7 +9,8 @@ import { parse } from 'yaml';
  * key is only a name: any job in the same cache scope can write any key, and
  * a dependency's install script can reach the cache token, so a restored
  * file could run beside the job's credential. Such a job downloads fresh:
- * no `actions/cache` step and no `setup-node` `cache:`.
+ * no `actions/cache` step and no `cache:` on any `actions/setup-*` step
+ * (shyden-labs/repo-template#227 found the same gap in the template).
  *
  * Every job in every workflow is judged, so a new job is covered the day it
  * is added.
@@ -67,10 +68,7 @@ describe('a job holding a secret, an environment or a write permission (#1120)',
       const restores = (job.steps ?? []).flatMap((step) => {
         const uses = step.uses ?? '';
         if (uses.startsWith('actions/cache')) return [uses];
-        if (
-          uses.startsWith('actions/setup-node') &&
-          step.with?.['cache'] !== undefined
-        )
+        if (/^actions\/setup-/.test(uses) && step.with?.['cache'] !== undefined)
           return [`${uses} cache: ${JSON.stringify(step.with['cache'])}`];
         return [];
       });
