@@ -31,6 +31,10 @@
 - Approve deploy-door (production environment) once AC1 merges into develop.
 - Sign up a second free Buttondown account for the dev test list (#343, his pick).
 
+## Token incident (2026-11-27)
+
+`yawelo-idle-ci` is shyden.co.uk's former `shyden-site CI` token (Shyden renamed+rotated it at 01:53 WIB); shyden.co.uk's CI broke and it makes a new token. Yawelo keeps `yawelo-idle-ci`; touch no token we didn't create (#1078 comment 7204823933).
+
 ## Done this session
 
 - Closed #1074 (AC5 page test ran in CI, 27 → 28) and #1123 (all ACs evidenced, merged 75906185).
