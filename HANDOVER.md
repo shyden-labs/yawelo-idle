@@ -14,7 +14,7 @@
 | #1142 | #1078 AC1 | MERGED 234597a1; CI pass PROVEN on deploy-dev 45903249623 (comment 7204868122). deploy-door waits for Shyden; after his approval: read the door live (pass check, embed, webhook), message shydesk-c8, then AC3 (drop the origins' dev password, separate PR). |
 | #1144 | #1115 AC3 | 660ce10b PUSHED (unit 15,150 at load 15). CI running; merge on green; then read next deploy-dev Edge steps under 370 s. |
 | (none) | #1139 | `../yawelo-idle-1139` `ci/1139-browsers-edge-limit` aa4ebd0c (test red 2 by name, then 12/12; 440 s / 8 min from 146 s). After #1143 and #1144 merge: merge develop, unit, push, PR (Refs #1139). |
-| #1143 | #1104 AC3 | green on 4bf9df25 then BEHIND after the 1136 merge; develop merged → 17c144dc; unit + push + CI watch running (DEAD on /clear). Merge on green, then #1144 (merge develop, unit, push, CI, merge), then #1139. |
+| #1143 | #1104 AC3 | develop merged → 17c144dc, NOT pushed: unit at load 180 had 3 timeouts (#971) + 2 #1123 growth failures (one ratio 96.29: the short read near the 0.01 ms floor?). Re-run `zsh $S/unit-and-push.sh 1104` when load < ~30, then CI, merge; then #1144 (develop already merged → 8e1f3299), then #1139. |
 | #986 (draft) | #160 | untouched |
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
