@@ -134,29 +134,42 @@ describe('where an address starts and ends (#1106: the same matches as the old p
 
 // Each page below took the old backtracking pattern 0.9 to 9.6 s at 40,000
 // characters (measured 2026-11-25): its time grew with the square of the
-// length (Sonar S8786).
+// length (Sonar S8786). The test measures growth, not elapsed time against a
+// constant (#1123: a fixed 100 ms limit failed at 158 ms on a laptop with
+// load 32 and 3 GB swapped): the fastest of five reads at 10,000 and at
+// 40,000 characters, on the same machine in the same test. Four times the
+// text takes about four times as long when the scan is linear and about
+// sixteen when it is quadratic, and a busy machine slows both sizes alike.
+const SHORT = 10_000;
 const LONG = 40_000;
-const checkedQuickly = (text: string): number => {
-  const start = performance.now();
-  shownIn(text);
-  return performance.now() - start;
-};
+const READS = 5;
+const MAX_GROWTH = 10;
+const fastest = (text: string): number =>
+  Math.min(
+    ...Array.from({ length: READS }, () => {
+      const start = performance.now();
+      shownIn(text);
+      return performance.now() - start;
+    }),
+  );
+const growth = (page: (n: number) => string): number =>
+  fastest(page(LONG)) / Math.max(fastest(page(SHORT)), 0.01);
 
-describe('a long page is checked in time that grows with its length (#1106)', () => {
-  it('reads 40,000 letters with no @ in under 100 ms', () => {
-    expect(checkedQuickly('a'.repeat(LONG))).toBeLessThan(100);
+describe('a long page is checked in time that grows with its length (#1106, #1123)', () => {
+  it('reads letters with no @ in time that grows linearly', () => {
+    expect(growth((n) => 'a'.repeat(n))).toBeLessThan(MAX_GROWTH);
   });
 
-  it('reads an @ followed by 40,000 one-letter labels in under 100 ms', () => {
-    expect(checkedQuickly(`x@${'a.'.repeat(LONG)}`)).toBeLessThan(100);
+  it('reads an @ followed by one-letter labels in time that grows linearly', () => {
+    expect(growth((n) => `x@${'a.'.repeat(n)}`)).toBeLessThan(MAX_GROWTH);
   });
 
-  it('reads an @ followed by 40,000 full stops in under 100 ms', () => {
-    expect(checkedQuickly(`x@a${'.'.repeat(LONG)}`)).toBeLessThan(100);
+  it('reads an @ followed by full stops in time that grows linearly', () => {
+    expect(growth((n) => `x@a${'.'.repeat(n)}`)).toBeLessThan(MAX_GROWTH);
   });
 
-  it('reads an @ followed by 40,000 labels ending in a digit in under 100 ms', () => {
-    expect(checkedQuickly(`x@a${'b.1'.repeat(LONG)}`)).toBeLessThan(100);
+  it('reads an @ followed by labels ending in a digit in time that grows linearly', () => {
+    expect(growth((n) => `x@a${'b.1'.repeat(n)}`)).toBeLessThan(MAX_GROWTH);
   });
 });
 
