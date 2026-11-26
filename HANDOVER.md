@@ -10,9 +10,9 @@
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1127 | #1123 | `../yawelo-idle-1123` merged develop → 944493fe; unit + push running at 23:25 via `$S/unit-and-push.sh 1123` (DEAD on /clear: re-run it). Then pr-verdict, merge on green. |
-| #1140 | #1078 step 2 | `../yawelo-idle-1078s` ab76fb4c (develop merged, not pushed; remote a5786245 BEHIND). After #1127: merge develop, `unit-and-push.sh 1078s`, merge on green, read develop deploy-dev verify-roadmap + verify-holding. |
-| (none) | #1078 step 3 | `../yawelo-idle-1078g` b4ca1642, never pushed. Last unit (on 50508b3d, load ~8.7) had 4 tests over the 1 s limit (`desktop-targets` workflow scan, `site-copy` ×2, `shop-agreement` slice 381): re-run at low load; if they repeat, file a ticket. Then push, PR (Refs #1078), merge on green, read deploy-dev's smoke job. |
+| #1127 | #1123 | `../yawelo-idle-1123` 944493fe PUSHED (unit 15,146/15,146). CI running: pr-verdict, merge on green (whichever of #1127/#1140 merges first puts the other BEHIND). |
+| #1140 | #1078 step 2 | ab76fb4c PUSHED (unit 15,150/15,150, by last session's surviving run). CI: `~/.claude/scripts/pr-verdict.sh 1140`; merge on green, clean `../yawelo-idle-1078s` + branches, read develop deploy-dev verify-roadmap + verify-holding. |
+| (none) | #1078 step 3 | `../yawelo-idle-1078g` 9dede843 (fixture fix committed: desktop-targets DEV gains `DEV_DOOR_SECRET`; 47/47). Full unit + push started 00:40 via `$S/unit-and-push.sh 1078g` (DEAD on /clear: if `$S/unit-1078g.log` lacks rc=0 / remote is empty, re-run). Then PR (Refs #1078), merge on green, read deploy-dev's smoke job. The earlier 4 over-1 s tests did not recur at load ~12. |
 | #1137 | #1136 | `../yawelo-idle-1136` 72359d69 BEHIND: merge develop, unit, push, merge on green. |
 | #986 (draft) | #160 | untouched |
 
