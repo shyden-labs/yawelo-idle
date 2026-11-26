@@ -42,7 +42,6 @@ const SCRIPT = [
   '")',
   'echo "::add-mask::$pass"',
   'echo "DEV_PASS=$pass" >> "$GITHUB_ENV"',
-  '',
 ].join('\n');
 
 describe.each([
