@@ -27,9 +27,11 @@
     "ROADMAP_REPO": "shyden-labs/yawelo-idle",
     "DOOR_REQUIRED": "false",
   },
+  // The Worker version, so a deploy's first visit reads the board with the
+  // new code (#1074).
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "durable_objects": {
     "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Roadmap"] }],
-  "triggers": { "crons": ["*/10 * * * *"] },
 }

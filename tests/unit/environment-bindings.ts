@@ -134,6 +134,8 @@ const KNOWN_KEYS = new Set([
   'services',
   'triggers',
   'vars',
+  // The Worker's own version id (#1074): it reaches no other Worker or store.
+  'version_metadata',
   'workers_dev',
 ]);
 

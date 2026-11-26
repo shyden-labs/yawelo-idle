@@ -8,6 +8,7 @@ import { FEATURES } from './features';
 import { expectedSeason } from './season';
 import { estimates } from './summary';
 import VoyageMap from './VoyageMap.svelte';
+import { updatedLine } from './updated';
 import { fill } from './voyage';
 
 /**
@@ -409,6 +410,18 @@ describe('the voyage map page (#1068)', () => {
     );
     expect(islands(root)[1]?.getAttribute('aria-label')).toBe(
       `The engine, ${fill(en.underWay, { percent: 75 })}`,
+    );
+    expect(root.querySelector('[data-updated]')?.textContent).toBe(
+      updatedLine('2026-11-22T05:00:00.000Z', en.lastUpdated, 'en'),
+    );
+  });
+
+  it('says when the board it shows was last updated (#1074)', async () => {
+    serve(snapshot());
+    const root = view();
+    await settle();
+    expect(root.querySelector('[data-updated]')?.textContent).toBe(
+      updatedLine('2026-11-22T04:00:00.000Z', en.lastUpdated, 'en'),
     );
   });
 

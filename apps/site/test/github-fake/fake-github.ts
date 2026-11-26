@@ -43,6 +43,7 @@ const defaults = (): FakeConfig => ({
   tokenRepositories: [FAKE_REPO_NAME],
   pages: null,
   graphqlStatus: 200,
+  graphqlDelayMs: 0,
   graphqlErrors: null,
   endlessPages: false,
   totalCount: null,
@@ -345,6 +346,10 @@ export function fakeGitHub(
         });
       if (record.query === 'board' && body.variables?.id !== FAKE_BOARD_ID)
         return json({ data: { node: null } });
+      if (config.graphqlDelayMs > 0)
+        await new Promise((resolve) =>
+          setTimeout(resolve, config.graphqlDelayMs),
+        );
       if (config.graphqlStatus !== 200)
         return json({ message: 'Server Error' }, config.graphqlStatus);
       if (config.graphqlErrors !== null)

@@ -7,7 +7,7 @@
  * the dev front door the holding page's dev copy, through the HOLDING
  * service binding, so dev shows what production shows (#673); on this
  * Worker's own address the site's own prerendered pages, the site being
- * built. The cron reads the board every 10 minutes.
+ * built. A visit reads the board once the last read is 10 minutes old (#1074).
  *
  * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
  * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
@@ -145,8 +145,5 @@ export default {
         env.ASSETS,
       );
     });
-  },
-  scheduled(_controller, env, ctx): void {
-    ctx.waitUntil(roadmap(env).check());
   },
 } satisfies ExportedHandler<SiteEnv>;
