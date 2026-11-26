@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 13:54 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 8597aac6 (#1119 merged). **No devices available** (relayed by repo-template): park device steps. No Colima, simulator or USB claim. **No local job running.** Session notes (git-ignored): `.superpowers/sdd/1072/data-inventory.md` (incl. ShyDesk's facts; source `shydesk docs/pse-registration.md`), `.superpowers/sdd/1078/step1-plan.md`. Scratch helper: `$SCRATCH/run-when-quiet.zsh <worktree> <label>` waits for 1-min load < 16 (30 min ceiling), runs unit, pushes on green. The laptop's load reached 95 with 3 GB swap today, which timed out unit tests; #1123 covers the no-email one.
+**Written:** 2026-11-26 14:38 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 8597aac6 (#1119 merged). **No devices available** (relayed by repo-template): park device steps. No Colima, simulator or USB claim. **No local job running.** Session notes (git-ignored): `.superpowers/sdd/1072/data-inventory.md` (incl. ShyDesk's facts; source `shydesk docs/pse-registration.md`), `.superpowers/sdd/1078/step1-plan.md`. Scratch helper: `$SCRATCH/run-when-quiet.zsh <worktree> <label>` waits for 1-min load < 16 (30 min ceiling), runs unit, pushes on green. The laptop's load reached 95 with 3 GB swap today, which timed out unit tests; #1123 covers the no-email one.
 
 ## Shyden's decisions today (2026-11-26)
 
@@ -32,6 +32,7 @@ Every merge puts the others behind develop (strict hook): merge one, merge devel
 - **#1078 (P0):** step 1 (CI sends door secret + `x-yawelo-door` to workers.dev addresses) after #1117 merges; webhook decision recorded.
 - #784: my "sync never calls `refusal()`" comment was WRONG (it uses `behindDoor`); corrected in place (7178887452).
 - #169: pairing-row cleanup AC added.
+- **#1136 (P2, new):** a warm Edge cache still fetches 27.5 MB of apt lists from the Ubuntu mirror (measured by ShyTalk PR #376); a mirror outage still fails the install.
 
 ## Resume steps
 
