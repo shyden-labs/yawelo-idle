@@ -255,8 +255,9 @@ jobs:
         run: |
           set -o pipefail
           # ONE-OFF (#1136 AC2 proof, reverted before merge): the Ubuntu mirrors unreachable.
-          printf '0.0.0.0 %s\n' azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com >> /etc/hosts
-          getent hosts azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com
+          # IPv4 and IPv6: run 45781396005 blocked IPv4 only and still reached security.ubuntu.com.
+          for h in azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com; do printf '0.0.0.0 %s\n:: %s\n' "$h" "$h" >> /etc/hosts; done
+          for h in azure.archive.ubuntu.com security.ubuntu.com archive.ubuntu.com; do getent ahosts "$h"; done
           status=0
           timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
