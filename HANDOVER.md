@@ -12,9 +12,9 @@
 | --- | --- | --- |
 | #1141 | #1078 step 3 | CLOSED by Shyden's ruling "Real door later" (2026-11-27): CI's #813 no-stand-ins guard refused the door stand-in. Worktree + branches removed. The game smoke gets a CI machine pass through the real front door in AC1's PR (comment on #1078). Old notes: | `../yawelo-idle-1078g`: develop merged → ea9ad24c, unit 15,156/15,156, PUSHED. CI running; merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
 | #1142 | #1078 AC1 | MERGED 234597a1; CI pass PROVEN on deploy-dev 45903249623 (comment 7204868122). deploy-door waits for Shyden; after his approval: read the door live (pass check, embed, webhook), message shydesk-c8, then AC3 (drop the origins' dev password, separate PR). |
-| #1144 | #1115 AC3 | 660ce10b PUSHED (unit 15,150 at load 15). CI running; merge on green; then read next deploy-dev Edge steps under 370 s. |
+| #1144 | #1115 AC3 | 8e1f3299 PUSHED (unit 15,170). CI running; after #1143 merges it is BEHIND: merge develop, unit, push, CI, merge. Then #1139. |
 | (none) | #1139 | `../yawelo-idle-1139` `ci/1139-browsers-edge-limit` aa4ebd0c (test red 2 by name, then 12/12; 440 s / 8 min from 146 s). After #1143 and #1144 merge: merge develop, unit, push, PR (Refs #1139). |
-| #1143 | #1104 AC3 | develop merged → 17c144dc, NOT pushed: unit at load 180 had 3 timeouts (#971) + 2 #1123 growth failures (one ratio 96.29: the short read near the 0.01 ms floor?). Re-run `zsh $S/unit-and-push.sh 1104` when load < ~30, then CI, merge; then #1144 (develop already merged → 8e1f3299), then #1139. |
+| #1143 | #1104 AC3 | 17c144dc PUSHED (unit 15,175). CI running; merge on green. |
 | #986 (draft) | #160 | untouched |
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
