@@ -309,19 +309,21 @@ jobs:
       # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
       # fresh every run: this job holds the dev password, so it restores
       # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
-      # 20 passing installs in deploy-dev's 10 runs to 2026-11-26 took
-      # 18–55 s, and run 45668410232's smoke stalled at 180 s (#1115), so 3
-      # times the slowest is 165 s (#476). The inner 165 s fires before the
-      # step's 3 minutes, so a stall names the download it was on.
+      # Downloaded fresh, so Microsoft's download speed sets its time: 16
+      # passing installs in deploy-dev's 8 successful develop runs to
+      # 2026-11-27 took 16–123 s (run 45779937070's site-smoke fetched 221 MB
+      # at 2.2 MB/s), so 3 times the slowest is 369 s (#476, #1115 AC3). The
+      # inner 370 s fires before the step's 7 minutes, so a stall names the
+      # download it was on.
       - name: Install Edge (Playwright's image lacks it)
-        timeout-minutes: 3
+        timeout-minutes: 7
         shell: bash
         run: |
           set -o pipefail
           status=0
-          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          timeout --kill-after=5 370 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
-            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+            echo "::error::Edge install stalled at 370 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
           fi
           exit "$status"
       - name: Smoke the game on dev (every supported target, behind the dev password)
@@ -385,19 +387,21 @@ jobs:
       # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
       # fresh every run: this job holds the dev password, so it restores
       # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
-      # 20 passing installs in deploy-dev's 10 runs to 2026-11-26 took
-      # 18–55 s, and run 45668410232's smoke stalled at 180 s (#1115), so 3
-      # times the slowest is 165 s (#476). The inner 165 s fires before the
-      # step's 3 minutes, so a stall names the download it was on.
+      # Downloaded fresh, so Microsoft's download speed sets its time: 16
+      # passing installs in deploy-dev's 8 successful develop runs to
+      # 2026-11-27 took 16–123 s (run 45779937070's site-smoke fetched 221 MB
+      # at 2.2 MB/s), so 3 times the slowest is 369 s (#476, #1115 AC3). The
+      # inner 370 s fires before the step's 7 minutes, so a stall names the
+      # download it was on.
       - name: Install Edge (Playwright's image lacks it)
-        timeout-minutes: 3
+        timeout-minutes: 7
         shell: bash
         run: |
           set -o pipefail
           status=0
-          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          timeout --kill-after=5 370 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
-            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+            echo "::error::Edge install stalled at 370 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
           fi
           exit "$status"
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
