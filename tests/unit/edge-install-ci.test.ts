@@ -40,6 +40,12 @@ const SAVE = 'Save the Edge download for later runs';
 const NOT_DOCS = "steps.classify.outputs.scope != 'docs-only'";
 const SHA = '55cc8345863c7cc4c66a329aec7e433d2d1c52a9';
 const CACHE_SHA = `${SHA} # v6.1.0`;
+// apt's lists ride in the same entry as the downloads (#1136): Playwright's
+// image ships none, so Edge's own `apt-get update` would fetch them, and with
+// the Ubuntu mirrors down a warm run keeps the lists it restored.
+const CACHED = '/root/edge-debs\n/var/lib/apt/lists\n';
+// A new prefix: the old `msedge-debs-` entry matched the installed version, so
+// it would never be saved again with the lists in it.
 
 describe('the Edge install in the browsers job (#1092)', () => {
   it('runs keep, restore, install, version and save in that order, before the first suite', () => {
@@ -68,9 +74,9 @@ describe('the Edge install in the browsers job (#1092)', () => {
     const s = step(RESTORE);
     expect(s.id).toBe('edge-cache');
     expect(s.uses).toBe(`actions/cache/restore@${SHA}`);
-    expect(s.with?.path).toBe('/root/edge-debs');
-    expect(s.with?.key).toBe('msedge-debs-${{ github.run_id }}');
-    expect(s.with?.['restore-keys']).toBe('msedge-debs-');
+    expect(s.with?.path).toBe(CACHED);
+    expect(s.with?.key).toBe('msedge-apt-${{ github.run_id }}');
+    expect(s.with?.['restore-keys']).toBe('msedge-apt-');
   });
 
   it('pins the install command and its limits: 165 s inside, 3 minutes for the step', () => {
@@ -80,7 +86,7 @@ describe('the Edge install in the browsers job (#1092)', () => {
     const run = runOf(s);
     expect(run).toContain('set -o pipefail');
     expect(run).toContain(
-      'timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log"',
+      'timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log"',
     );
   });
 
@@ -109,10 +115,10 @@ describe('the Edge install in the browsers job (#1092)', () => {
   it('saves only when the restored download is not this version', () => {
     const s = step(SAVE);
     expect(s.uses).toBe(`actions/cache/save@${SHA}`);
-    expect(s.with?.path).toBe('/root/edge-debs');
-    expect(s.with?.key).toBe('msedge-debs-${{ steps.edge.outputs.version }}');
+    expect(s.with?.path).toBe(CACHED);
+    expect(s.with?.key).toBe('msedge-apt-${{ steps.edge.outputs.version }}');
     expect(s.if).toBe(
-      `\${{ ${NOT_DOCS} && steps.edge-cache.outputs.cache-matched-key != format('msedge-debs-{0}', steps.edge.outputs.version) }}`,
+      `\${{ ${NOT_DOCS} && steps.edge-cache.outputs.cache-matched-key != format('msedge-apt-{0}', steps.edge.outputs.version) }}`,
     );
   });
 
