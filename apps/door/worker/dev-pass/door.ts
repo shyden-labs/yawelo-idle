@@ -1,5 +1,5 @@
-// Copied unchanged from shyden-labs/repo-template develop 4e8fcf7 (docs/dev-pass.md) for
-// shyden-labs/yawelo-idle#1078, apart from import paths without `.ts` (and, in door.ts, one `String()` for this repo's lint).
+// Copied from shyden-labs/repo-template develop 6f010763 (docs/dev-pass.md; typed for Workers, shyden-labs/repo-template#221) for
+// shyden-labs/yawelo-idle#1121, apart from import paths without `.ts`, this repo's formatting, and in door.ts one `String()` for this repo's lint.
 // Each product's `dev.` door (shyden-labs/repo-template#207, spec §4): nothing from
 // the DEV origin reaches anyone without a valid DEV pass, and the origin never sees
 // a pass. The product's door Worker builds `env` and passes its own `forward`
@@ -129,43 +129,6 @@ function wantsPage(request: Request): boolean {
   );
 }
 
-/** A CORS preflight from an embedding page, when this door allows any. */
-function isPreflight(request: Request, env: DoorEnv): boolean {
-  return (
-    request.method === 'OPTIONS' &&
-    env.embedOrigins !== undefined &&
-    request.headers.has('access-control-request-method')
-  );
-}
-
-/** The preflight's answer: allowed for a listed origin, refused otherwise. */
-function preflight(embedOrigin: string | undefined): Response {
-  if (embedOrigin === undefined) return reply(403);
-  return reply(204, {
-    ...cors(embedOrigin),
-    'access-control-allow-headers': 'X-Dev-Pass, Content-Type',
-    'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
-    'access-control-max-age': '600',
-  });
-}
-
-/** No valid pass: 401 for an embed or a non-page, else off to sign in. */
-function turnedAway(
-  request: Request,
-  url: URL,
-  host: string,
-  embedOrigin: string | undefined,
-): Response {
-  if (embedOrigin !== undefined) return reply(401, cors(embedOrigin));
-  if (!wantsPage(request)) return reply(401);
-  const signin = new URL('/pass', SIGNIN_ORIGIN);
-  signin.search = new URLSearchParams({
-    for: host,
-    back: url.pathname + url.search,
-  }).toString();
-  return reply(302, { location: signin.toString() });
-}
-
 export async function handleDevDoor(
   request: Request,
   env: DoorEnv,
@@ -189,7 +152,13 @@ export async function handleDevDoor(
     origin !== null && env.embedOrigins?.includes(origin) === true
       ? origin
       : undefined;
-  if (isPreflight(request, env)) return preflight(embedOrigin);
+  if (
+    request.method === 'OPTIONS' &&
+    env.embedOrigins !== undefined &&
+    request.headers.has('access-control-request-method')
+  ) {
+    return preflight(embedOrigin);
+  }
 
   const pass =
     request.headers.get(PASS_HEADER) ??
@@ -199,15 +168,53 @@ export async function handleDevDoor(
     keys: env.keys,
     now: env.now,
   });
-  if (!check.ok) return turnedAway(request, url, env.host, embedOrigin);
+  if (!check.ok) return refuse(request, url, env, embedOrigin);
+  return forwardWithPass(request, env, check.sub, embedOrigin, forward);
+}
 
+/** A cross-site preflight: allowed for a listed embed origin, refused for any other. */
+function preflight(embedOrigin: string | undefined): Response {
+  if (embedOrigin === undefined) return reply(403);
+  return reply(204, {
+    ...cors(embedOrigin),
+    'access-control-allow-headers': 'X-Dev-Pass, Content-Type',
+    'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
+    'access-control-max-age': '600',
+  });
+}
+
+/** No valid pass: 401 for an embed or a non-page request, else a redirect to sign in and come back. */
+function refuse(
+  request: Request,
+  url: URL,
+  env: DoorEnv,
+  embedOrigin: string | undefined,
+): Response {
+  if (embedOrigin !== undefined) return reply(401, cors(embedOrigin));
+  if (!wantsPage(request)) return reply(401);
+  const signin = new URL('/pass', SIGNIN_ORIGIN);
+  signin.search = new URLSearchParams({
+    for: env.host,
+    back: url.pathname + url.search,
+  }).toString();
+  return reply(302, { location: signin.toString() });
+}
+
+/** The request forwarded without its pass, carrying the door's secret and the signed-in subject. */
+async function forwardWithPass(
+  request: Request,
+  env: DoorEnv,
+  sub: string,
+  embedOrigin: string | undefined,
+  forward: (request: Request) => Promise<Response>,
+): Promise<Response> {
   const headers = new Headers(request.headers);
   headers.delete(PASS_HEADER);
   const cookie = withoutPassCookie(headers.get('cookie'));
   if (cookie === undefined) headers.delete('cookie');
   else headers.set('cookie', cookie);
   headers.set(env.secretHeader, env.secret);
-  headers.set(SUB_HEADER, check.sub);
+  headers.set(SUB_HEADER, sub);
   const response = await forward(new Request(request, { headers }));
   if (embedOrigin === undefined) return response;
   const answer = new Response(response.body, response);
