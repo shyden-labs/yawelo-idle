@@ -51,4 +51,4 @@
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. #1137 (merge develop, unit, push, merge on green), then #1078 AC1: wire the DEV-pass door, CI machine pass as `__Host-devpass` cookie for site-smoke AND the game smoke through dev.yaweloidle.com (no door stand-in in browser tests, #813).
+2. Work the PR table top to bottom: #1143 → #1144 → #1139, one merge at a time. Then #1104 AC1 (measure the snapshot-in-HTML route's cost on dev first) and #1123 (measure the growth ratio's spread under heavy load first). #1078's door deploy waits for Shyden.
