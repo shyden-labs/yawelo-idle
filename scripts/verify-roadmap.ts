@@ -24,6 +24,7 @@ if (import.meta.main) {
     {
       webUrl: required('DEV_WEB_URL'),
       password: required('DEV_BASIC_AUTH_PASSWORD'),
+      doorSecret: required('DEV_DOOR_SECRET'),
     },
     Date.parse(required('DEPLOYED_AT')),
     WAIT,

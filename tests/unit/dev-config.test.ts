@@ -198,12 +198,23 @@ describe('the dev Workers’ deploy configs', () => {
     expect(workflow.jobs['verify']?.environment).toEqual(dev);
   });
 
-  it('verifies the holding page’s dev copy at its dev hostname (#768)', () => {
+  it('verifies the holding page’s dev copy at its own address, standing in for its door, in the dev environment (#768, #1078)', () => {
     const verify = jobSteps('verify-holding').find(
       (step) => runOf(step) === 'node scripts/verify-prod.ts --dev-copy',
     );
-    expect(verify?.env).toMatchObject({
-      DEV_HOLDING_URL: `https://${devHost('yawelo-idle-holding-dev')}`,
+    const holding = byName('yawelo-idle-holding-dev').name;
+    expect(verify?.env).toStrictEqual({
+      DEV_HOLDING_URL: `https://${holding}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`,
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
+      EXPECTED_SHA: '${{ github.sha }}',
+    });
+    // The dev environment holds DEV_DOOR_SECRET.
+    const workflow = parse(
+      readFileSync(join(ROOT, '.github/workflows/deploy-dev.yml'), 'utf8'),
+    ) as { jobs: Record<string, { environment?: unknown }> };
+    expect(workflow.jobs['verify-holding']?.environment).toEqual({
+      name: 'dev',
+      url: `https://${devHost('yawelo-idle-site-dev')}`,
     });
   });
 
@@ -540,10 +551,12 @@ describe('the roadmap, judged once the deployed code has checked the board (#708
     expect(job?.['timeout-minutes']).toBe(15);
   });
 
-  it('hands the check the deploy time, the front door and the password', () => {
+  it('hands the check the deploy time, the site Worker’s own address, the door secret and the password (#1078)', () => {
+    const site = byName('yawelo-idle-site-dev').name;
     expect(roadmapStep()?.env).toStrictEqual({
-      DEV_WEB_URL: 'https://dev.yaweloidle.com/',
+      DEV_WEB_URL: `https://${site}.${DEV_WORKERS_SUBDOMAIN}.workers.dev/`,
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
       DEPLOYED_AT: '${{ needs.deploy.outputs.deployed-at }}',
     });
   });

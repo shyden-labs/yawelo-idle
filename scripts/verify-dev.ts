@@ -608,7 +608,7 @@ export function roadmapProblems(
  * fails at once. At the last look it fails naming the last check it saw.
  */
 export async function verifyRoadmap(
-  target: Pick<Target, 'webUrl' | 'password'>,
+  target: Pick<DevTarget, 'webUrl' | 'password' | 'doorSecret'>,
   deployedAtMs: number,
   { polls, pollMs }: Wait,
 ): Promise<string[]> {
@@ -621,7 +621,11 @@ export async function verifyRoadmap(
       `polls must be a whole number of at least 1, got ${String(polls)}`,
     );
   const url = new URL('/api/roadmap/health', target.webUrl).href;
-  const headers = { Authorization: basicAuthorization(target.password) };
+  // At the site Worker's own address, standing in for its door (#1078).
+  const headers = {
+    Authorization: basicAuthorization(target.password),
+    ...standInFor(FRONT_WORKER, target.doorSecret),
+  };
   // The visit only starts a read; its answer is not judged. A visit that
   // fails outright shows up below as a health record with no check after
   // the deploy, named at the last look.
