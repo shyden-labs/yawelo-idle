@@ -149,18 +149,27 @@ describe('the dev Workers’ deploy configs', () => {
     ]);
   });
 
-  it('verifies dev at its dev hostnames, and the game’s own address in the dev account (#429, #332)', () => {
+  it('verifies dev at the origins’ own addresses in the dev account, standing in for the door with its secret (#429, #332, #1078)', () => {
     const verify = verifySteps().find(
       (step) => runOf(step) === 'node scripts/verify-dev.ts',
     );
-    const game = `https://${byName('yawelo-idle-web-dev').name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
-    const site = `https://${byName('yawelo-idle-site-dev').name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
+    const own = (worker: string) =>
+      `https://${byName(worker).name}.${DEV_WORKERS_SUBDOMAIN}.workers.dev`;
+    // CI never goes through a door (#784 AC1b): once the doors check the
+    // DEV pass, no CI request could pass them.
     expect(verify?.env).toMatchObject({
-      DEV_WEB_URL: `https://${devHost('yawelo-idle-site-dev')}/`,
-      DEV_SITE_URL: `${site}/`,
-      DEV_SYNC_URL: `https://${devHost('yawelo-idle-sync-dev')}`,
-      DEV_GAME_URL: `${game}/`,
+      DEV_WEB_URL: `${own('yawelo-idle-site-dev')}/`,
+      DEV_SITE_URL: `${own('yawelo-idle-site-dev')}/`,
+      DEV_SYNC_URL: own('yawelo-idle-sync-dev'),
+      DEV_GAME_URL: `${own('yawelo-idle-web-dev')}/`,
+      DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
     });
+    expect(
+      Object.values(verify?.env ?? {}).filter((value) =>
+        [...DOORS.keys()].some((host) => String(value).includes(host)),
+      ),
+      'no door address',
+    ).toEqual([]);
   });
 
   it('checks the dev hostnames against the real Workers straight after verify-dev, with the login and the webhook secret (#816)', () => {
