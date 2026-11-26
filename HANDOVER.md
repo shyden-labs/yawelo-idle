@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 21:10 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at f9b23473. No Colima, simulator or USB claim held.
+**Written:** 2026-11-26 21:18 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at f9b23473. No Colima, simulator or USB claim held.
 
 ## Devices
 
@@ -14,8 +14,8 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 
 | PR            | Ticket       | State                                                                                                                                                                                                                                                                   |
 | ------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| #1138         | #1078 step 1 | was green on 4450a1e1, BEHIND; develop merged in locally (e78d43b7, **not pushed**); unit running (`$SCRATCH/unit-1078.log`): push on rc=0, then merge when CI is green                                                                                                 |
-| #1137 (draft) | #1136        | one-offs reverted (tree = f7270689) + develop merged, local 72359d69 **not pushed**; unit queued (`unit-1136.log`). Push on rc=0, mark ready. Outage proof posted (comment 7194360822)                                                                                 |
+| #1138         | #1078 step 1 | develop merged, unit 15,145/15,145, pushed e78d43b7; CI running at 21:16 (board-orphans green). Merge when green                                                                                                                                                       |
+| #1137 (draft) | #1136        | one-offs reverted (tree = f7270689) + develop merged, local 72359d69 **not pushed**. First unit run: 7 timing failures at load 48 (posted on #971). Re-run waits for 1-min load < 16 in background: **DIES on /clear**; re-run unit by hand, push on green, mark ready |
 | #1126         | #1074 AC5    | green on 4223390c, BEHIND                                                                                                                                                                                                                                               |
 | #1127         | #1123        | 4b54dc36, BEHIND, board-orphans red (old #1136 status slip, re-runs on develop merge)                                                                                                                                                                                  |
 | #986 (draft)  | #160         | untouched                                                                                                                                                                                                                                                               |
@@ -25,7 +25,7 @@ The real phones are connected (Shyden, via repo-template, 21:06 WIB), but **play
 ## Tickets awaiting a read to close
 
 - #1115: next deploy-dev's Edge install log. #1118: a run logging "Found in cache" for Node. #1120: changed workflows' next runs log no restore. #1074: after #1126. #1123: after #1127 (ACs evidenced).
-- #1136: AC3 (a newer Edge over an older cached one) still to plan (`.superpowers/sdd/1136/plan.md`). #1139 (P3): cold Edge install ~135 s against its 165 s limit.
+- #1136: mirror outage proven (comment 7194360822). AC3 (a newer Edge over an older cached one) planned in `.superpowers/sdd/1136/plan.md` (one-off with an older deb in the cache, then revert). #1139 (P3): cold Edge install ~135 s against its 165 s limit.
 - #1072 (P0) blocked by #423 → #635, #343 (Shyden's newsletter-provider pick).
 
 ## Resume steps
