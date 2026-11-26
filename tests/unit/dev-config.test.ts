@@ -60,7 +60,7 @@ describe('the dev Workers’ deploy configs', () => {
     });
   });
 
-  it('reads the roadmap from the one board, into a SQLite Durable Object, every 10 minutes (#341)', () => {
+  it('reads the roadmap from the one board, into a SQLite Durable Object, on visit, with no schedule (#341, #1074)', () => {
     const site = byName('yawelo-idle-site-dev');
     expect(site.vars).toMatchObject({
       ROADMAP_BOARD_ID: 'PVT_kwDOEOcG584BlRWb',
@@ -73,7 +73,7 @@ describe('the dev Workers’ deploy configs', () => {
     expect(site.migrations).toEqual([
       { tag: 'v1', new_sqlite_classes: ['Roadmap'] },
     ]);
-    expect(site.triggers).toEqual({ crons: ['*/10 * * * *'] });
+    expect(site.triggers).toEqual({});
   });
 
   it('reads the board as the read-only App yawelo-idle-roadmap, by its id (#341 AC8)', () => {
