@@ -19,6 +19,7 @@
   import Shape from './Shape.svelte';
   import { stages, type Stage } from './stages';
   import { estimates } from './summary';
+  import { updatedLine } from './updated';
   import { fill, islandName } from './voyage';
 
   interface Props {
@@ -175,6 +176,9 @@
     {#if words.islandNamesNote !== null}
       <p data-island-names-note>{words.islandNamesNote}</p>
     {/if}
+    <p data-updated>
+      {updatedLine(snapshot.readAt, words.lastUpdated, locale)}
+    </p>
   {/if}
 </section>
 

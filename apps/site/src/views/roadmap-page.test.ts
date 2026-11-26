@@ -37,6 +37,7 @@ describe('the roadmap page’s imports (#827)', () => {
       './Shape.svelte',
       './stages',
       './summary',
+      './updated',
       './voyage',
     ]);
   });
