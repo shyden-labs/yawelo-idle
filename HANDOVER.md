@@ -14,7 +14,7 @@
 | #1142 | #1078 AC1 | MERGED 234597a1; CI pass PROVEN on deploy-dev 45903249623 (comment 7204868122). deploy-door waits for Shyden; after his approval: read the door live (pass check, embed, webhook), message shydesk-c8, then AC3 (drop the origins' dev password, separate PR). |
 | #1144 | #1115 AC3 | green, then BEHIND after #1143 merged (6e4649e2); develop merged → ff982c67; unit (when quiet) + push + CI watch running. Merge on green, then #1139 (merge develop, unit, push, PR). |
 | (none) | #1139 | `../yawelo-idle-1139` `ci/1139-browsers-edge-limit` aa4ebd0c (test red 2 by name, then 12/12; 440 s / 8 min from 146 s). After #1143 and #1144 merge: merge develop, unit, push, PR (Refs #1139). |
-| (none) | #1123 (reopened) | `../yawelo-idle-1123b` `test/1123-growth-wider-gap` d0a3c98c: growth reads timed by process.cpuUsage (vitest pool forks: per-file process). Red vs planted quadratic: 4 failed (16.8/18.9/15.9/16.9); restored, 29/29. Unit at load 115: growth tests passed, 1 unrelated timeout (#971); re-run when quiet in progress. Then PR (Refs #1123); close only after a full unit passes at load ≥180 (AC3). |
+| #1145 | #1123 (reopened) | d0a3c98c PUSHED (unit 15,150), PR opened; behind develop: update after #1144 (merge develop, unit, push, CI, merge). Keep #1123 open until a full unit passes at load ≥180. |
 | #986 (draft) | #160 | untouched |
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
