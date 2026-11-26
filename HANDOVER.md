@@ -10,7 +10,7 @@
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1141 | #1078 step 3 | `../yawelo-idle-1078g`: develop merged → ea9ad24c, unit 15,156/15,156, PUSHED. CI running; merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
+| #1141 | #1078 step 3 | CLOSED by Shyden's ruling "Real door later" (2026-11-27): CI's #813 no-stand-ins guard refused the door stand-in. Worktree + branches removed. The game smoke gets a CI machine pass through the real front door in AC1's PR (comment on #1078). Old notes: | `../yawelo-idle-1078g`: develop merged → ea9ad24c, unit 15,156/15,156, PUSHED. CI running; merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
 | #1137 | #1136 | `../yawelo-idle-1136` 72359d69 BEHIND: merge develop, unit, push, merge on green. |
 | #986 (draft) | #160 | untouched |
 
@@ -36,4 +36,4 @@
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. #1141 per the table, then #1137, then #1078 AC1.
+2. #1137 (merge develop, unit, push, merge on green), then #1078 AC1: wire the DEV-pass door, CI machine pass as `__Host-devpass` cookie for site-smoke AND the game smoke through dev.yaweloidle.com (no door stand-in in browser tests, #813).
