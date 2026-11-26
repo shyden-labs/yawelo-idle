@@ -425,6 +425,32 @@ describe('the voyage map page (#1068)', () => {
     );
   });
 
+  // The Worker marks a board whose refresh failed (`readFailed`, #1074 AC5);
+  // Shyden, 2026-11-23: "just show what we have and when it was last
+  // updated". The page draws that board as any other, with no failure words.
+  it('shows a board whose refresh failed like any other, never saying the read failed (#1074)', async () => {
+    serve({ ...snapshot(), stale: false, readFailed: true } as PublicSnapshot);
+    const root = view();
+    await settle();
+    const [socket] = FakeSocket.opened;
+    socket?.push({
+      ...snapshot({ version: 2, readAt: '2026-11-22T05:00:00.000Z' }),
+      stale: false,
+      readFailed: true,
+    } as PublicSnapshot);
+    expect({
+      islands: islands(root).length,
+      updated: root.querySelector('[data-updated]')?.textContent,
+      failed: root.textContent.includes(COPY.en.voyage.failed),
+      loading: root.textContent.includes(COPY.en.voyage.loading),
+    }).toEqual({
+      islands: 9,
+      updated: updatedLine('2026-11-22T05:00:00.000Z', en.lastUpdated, 'en'),
+      failed: false,
+      loading: false,
+    });
+  });
+
   it('keeps what it drew when the live socket brings a snapshot no newer', async () => {
     serve(snapshot());
     const root = view();
