@@ -213,11 +213,14 @@ jobs:
           node-version: ${{ steps.node.outputs.version }}
       - name: Verify dev is password-gated, serves this commit, shows the holding page, and D1 answers
         env:
-          # The dev hostnames, through the front door (#784, #1013).
-          DEV_WEB_URL: https://dev.yaweloidle.com/
-          DEV_SYNC_URL: https://dev-api.yaweloidle.com
-          # The site Worker's own address, where the site being built stays
-          # while the front door shows the holding page (#673).
+          # The origins' own addresses, never a door (#1078, #784 AC1b): once
+          # the doors check the DEV pass, no CI request could pass them. The
+          # door secret lets verify-dev stand in for the door, so the site
+          # Worker shows its door's holding page (scripts/door-stand-in.ts).
+          DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
+          DEV_SYNC_URL: https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          # The same address with no door: the site being built (#673).
           DEV_SITE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           # The game's own address, which must serve nothing (#332).
           DEV_GAME_URL: https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev/
