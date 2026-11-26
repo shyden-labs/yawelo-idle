@@ -5,9 +5,9 @@
 # front door shows the holding page, #673), all in the non-PROD account
 # (#784). The front door Worker (apps/door, deployed by deploy-door.yml)
 # serves them at dev.yaweloidle.com, dev-api.yaweloidle.com and
-# dev-holding.yaweloidle.com (#1013); a verify then reads them back at those
-# names and reads the site being built at the site Worker's workers.dev
-# address.
+# dev-holding.yaweloidle.com (#1013). The checks read them back at the
+# Workers' own workers.dev addresses, standing in for the door with the door
+# secret (#1078): CI never goes through a door (#784 AC1b).
 #
 # Every Cloudflare secret is a `dev` ENVIRONMENT secret, and `dev` admits only
 # the develop branch, so a fork PR or any other branch cannot reach them
@@ -264,8 +264,9 @@ jobs:
       - name: Verify the roadmap as the deployed code checked it (waits up to 12 minutes for its first check)
         timeout-minutes: 13
         env:
-          DEV_WEB_URL: https://dev.yaweloidle.com/
+          DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           DEPLOYED_AT: ${{ needs.deploy.outputs.deployed-at }}
         run: node scripts/verify-roadmap.ts
 
@@ -423,12 +424,17 @@ jobs:
 
   # The holding page's dev copy (#621 AC8), checked from outside against
   # what this commit builds: noindex on every response, crawlers blocked. It
-  # needs no secret, so it names no environment.
+  # reads the copy at its own workers.dev address, standing in for its door
+  # with the door secret (#1078), so it runs in the dev environment.
   verify-holding:
     needs: deploy
     runs-on: ubuntu-26.04
     # verify-prod waits at most 60 looks, 10 s apart, then judges once.
     timeout-minutes: 15
+    # The dev environment holds DEV_DOOR_SECRET, the door's stand-in (#1078).
+    environment:
+      name: dev
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -443,7 +449,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
+          # No cache: this job holds the door secret (#1120).
       - run: npm ci
       - name: Build the holding page this commit deployed
         env:
@@ -453,7 +459,8 @@ jobs:
         run: node scripts/holding-dev.ts
       - name: Verify the holding page's dev copy serves this commit, noindex, crawlers blocked
         env:
-          DEV_HOLDING_URL: https://dev-holding.yaweloidle.com
+          DEV_HOLDING_URL: https://yawelo-idle-holding-dev.yawelo-idle-non-prod.workers.dev
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/verify-prod.ts --dev-copy
 
