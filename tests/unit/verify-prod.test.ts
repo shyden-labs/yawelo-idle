@@ -1,11 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { standInFor } from '../../scripts/door-stand-in';
 import type { Probe } from '../../scripts/verify-dev';
 import {
   DEV_MEDIA,
   PROD_MEDIA,
+  PROMO,
   type MediaHost,
 } from '../../apps/site/src/media';
 import {
+  holdingStandIn,
   mediaJudgement,
   mediaProblems,
   notFoundJudgement,
@@ -21,6 +28,7 @@ import {
   robotsProblems,
   printVerdict,
   verdictLines,
+  verifyProd,
   type MediaProbe,
   type MediaSource,
 } from '../../scripts/verify-prod';
@@ -540,5 +548,76 @@ describe('printVerdict (#715): from the --dev-copy flag, prints the lines and gi
     expect(printVerdict(false, ['/ answered 500'], console)).toBe(1);
     expect(console.err).toEqual(['✗ production: / answered 500']);
     expect(console.out).toEqual([]);
+  });
+});
+
+describe('the holding page’s dev copy, reached at its own address standing in for its door (#1078)', () => {
+  const ORIGIN = 'https://holding-origin.example';
+  const SECRET = 'door-secret';
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('stands in for the holding page’s dev door when DEV_DOOR_SECRET is set', () => {
+    expect(holdingStandIn({ DEV_DOOR_SECRET: SECRET })).toEqual(
+      standInFor('yawelo-idle-holding-dev', SECRET),
+    );
+  });
+
+  it('sends nothing for TEST’s copy, which has no door secret', () => {
+    expect(holdingStandIn({})).toEqual({});
+    expect(holdingStandIn({ DEV_DOOR_SECRET: '' })).toEqual({});
+  });
+
+  it('sends the stand-in on every look at the origin and never to the media host', async () => {
+    const dist = mkdtempSync(join(tmpdir(), 'verify-prod-door-'));
+    mkdirSync(join(dist, 'id'));
+    for (const file of [
+      'index.html',
+      'id/index.html',
+      '404.html',
+      'id/404.html',
+    ])
+      writeFileSync(join(dist, file), BUILT);
+    writeFileSync(join(dist, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+    writeFileSync(
+      join(dist, '_headers'),
+      '/*\n  X-Content-Type-Options: nosniff\n',
+    );
+    const seen: { url: string; headers: Record<string, string> }[] = [];
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      seen.push({
+        url,
+        headers: { ...(init.headers as Record<string, string>) },
+      });
+      return Promise.resolve(new Response(BUILT, { status: 200 }));
+    });
+    const door = standInFor('yawelo-idle-holding-dev', SECRET);
+    await verifyProd(
+      ORIGIN,
+      SHA,
+      pathToFileURL(`${dist}/`),
+      { polls: 1, pollMs: 0 },
+      false,
+      DEV_MEDIA,
+      door,
+    );
+    const atOrigin = seen.filter(({ url }) => url.startsWith(ORIGIN));
+    expect(atOrigin.map(({ url }) => url.slice(ORIGIN.length))).toEqual([
+      '/',
+      '/',
+      '/id/',
+      '/no-such-page',
+      '/id/no-such-page',
+      '/robots.txt',
+    ]);
+    expect(atOrigin.map(({ headers }) => headers)).toEqual(
+      atOrigin.map(() => door),
+    );
+    const atMedia = seen.filter(({ url }) => url.startsWith(DEV_MEDIA.origin));
+    expect(atMedia).toHaveLength(PROMO.length * 3);
+    expect(
+      atMedia.filter(({ headers }) => Object.values(headers).includes(SECRET)),
+    ).toEqual([]);
   });
 });
