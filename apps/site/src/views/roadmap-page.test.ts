@@ -33,6 +33,7 @@ describe('the roadmap page’s imports (#827)', () => {
       './features',
       './layout',
       './live',
+      './reopen',
       './season',
       './Shape.svelte',
       './stages',
