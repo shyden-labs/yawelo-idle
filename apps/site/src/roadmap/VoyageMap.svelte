@@ -15,6 +15,7 @@
   import { FEATURES, type Milestone } from './features';
   import { ISLANDS, ship } from './layout';
   import { liveUrl, newer } from './live';
+  import { reopenDelay } from './reopen';
   import { expectedSeason } from './season';
   import Shape from './Shape.svelte';
   import { stages, type Stage } from './stages';
@@ -49,12 +50,30 @@
   });
 
   $effect(() => {
-    const socket = new WebSocket(liveUrl(location.href));
-    socket.addEventListener('message', (event: MessageEvent<string>) => {
-      show(JSON.parse(event.data) as PublicSnapshot);
-    });
+    let socket: WebSocket | undefined;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let gone = false;
+    const connect = (): void => {
+      const opened = new WebSocket(liveUrl(location.href));
+      socket = opened;
+      opened.addEventListener('open', () => {
+        attempt = 0;
+      });
+      opened.addEventListener('message', (event: MessageEvent<string>) => {
+        show(JSON.parse(event.data) as PublicSnapshot);
+      });
+      opened.addEventListener('close', () => {
+        if (gone) return;
+        timer = setTimeout(connect, reopenDelay(attempt));
+        attempt += 1;
+      });
+    };
+    connect();
     return () => {
-      socket.close();
+      gone = true;
+      clearTimeout(timer);
+      socket?.close();
     };
   });
 
