@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-26 13:52 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 8597aac6 (#1119 merged). **No devices available** (relayed by repo-template): park device steps. No Colima, simulator or USB claim. Session notes (git-ignored): `.superpowers/sdd/1072/data-inventory.md` (incl. ShyDesk's facts; source `shydesk docs/pse-registration.md`), `.superpowers/sdd/1078/step1-plan.md`. Scratch helper: `$SCRATCH/run-when-quiet.zsh <worktree> <label>` waits for 1-min load < 16 (30 min ceiling), runs unit, pushes on green. The laptop's load reached 95 with 3 GB swap today, which timed out unit tests; #1123 covers the no-email one.
+**Written:** 2026-11-26 13:54 WIB, session `yawelo-idle-a9`. Branch `handover/2026-10-17-d`. develop at 8597aac6 (#1119 merged). **No devices available** (relayed by repo-template): park device steps. No Colima, simulator or USB claim. **No local job running.** Session notes (git-ignored): `.superpowers/sdd/1072/data-inventory.md` (incl. ShyDesk's facts; source `shydesk docs/pse-registration.md`), `.superpowers/sdd/1078/step1-plan.md`. Scratch helper: `$SCRATCH/run-when-quiet.zsh <worktree> <label>` waits for 1-min load < 16 (30 min ceiling), runs unit, pushes on green. The laptop's load reached 95 with 3 GB swap today, which timed out unit tests; #1123 covers the no-email one.
 
 ## Shyden's decisions today (2026-11-26)
 
@@ -17,7 +17,7 @@
 | #1124 | #1118 (Node cache in 4 no-secret container jobs, `/__t`) | on 8597aac6, unit 15,115, CI running |
 | #1125 | #1121 (DEV-pass files from repo-template#221) | on 8597aac6, unit 15,104, CI running |
 | #1126 | #1074 AC5 page test | on 326146c5 (needs develop merged in before merge), CI running |
-| (opening) | #1123 growth test, `test/1123-no-email-growth` | unit 15,103; red on the old regex (growth 14.8–16.8 vs 10). AC3 (passes under load) NOT proven: load was ~7 |
+| #1127 | #1123 growth test, `test/1123-no-email-growth` (on 8597aac6) | unit 15,103; red on the old regex (growth 14.8–16.8 vs 10). AC3 (passes under load) NOT proven: load was ~7 |
 | #986 (draft) | #160 | untouched |
 
 Every merge puts the others behind develop (strict hook): merge one, merge develop into the next, `run-when-quiet.zsh`, wait for CI, repeat.
