@@ -12,21 +12,15 @@ export const MAX_HOOK_BYTES = 1_048_576;
 export async function readUpToCap(
   stream: ReadableStream<Uint8Array>,
 ): Promise<ArrayBuffer | 413> {
-  const reader = stream.getReader();
   const bytes = new Uint8Array(MAX_HOOK_BYTES);
   let length = 0;
-  // One read at a time, so nothing is pulled past the chunk that passes the cap.
-  for (
-    let chunk = await reader.read();
-    !chunk.done;
-    chunk = await reader.read()
-  ) {
-    if (length + chunk.value.byteLength > MAX_HOOK_BYTES) {
-      await reader.cancel();
-      return 413;
-    }
-    bytes.set(chunk.value, length);
-    length += chunk.value.byteLength;
+  // `for await` reads one chunk at a time, so nothing is pulled past the chunk
+  // that passes the cap, and leaving the loop early cancels the stream (the
+  // stream's async iterator; SonarCloud S9382 allows `for await`).
+  for await (const chunk of stream) {
+    if (length + chunk.byteLength > MAX_HOOK_BYTES) return 413;
+    bytes.set(chunk, length);
+    length += chunk.byteLength;
   }
   return bytes.slice(0, length).buffer;
 }
