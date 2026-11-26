@@ -15,7 +15,7 @@
 | #1144 | #1115 AC3 | 8e1f3299 PUSHED (unit 15,170). CI running; after #1143 merges it is BEHIND: merge develop, unit, push, CI, merge. Then #1139. |
 | (none) | #1139 | `../yawelo-idle-1139` `ci/1139-browsers-edge-limit` aa4ebd0c (test red 2 by name, then 12/12; 440 s / 8 min from 146 s). After #1143 and #1144 merge: merge develop, unit, push, PR (Refs #1139). |
 | #1143 | #1104 AC3 | 17c144dc PUSHED (unit 15,175). CI running; merge on green. |
-| (none) | #1123 (reopened) | `../yawelo-idle-1123b` `test/1123-growth-wider-gap`: no-email growth reads timed by process.cpuUsage (uncommitted test change); red run against the planted quadratic regex in progress (the same background call restores scripts/no-email.ts from `$S/no-email.keep`: check `grep -c PLANTED scripts/no-email.ts` is 0). Spread at load 11 measured (comment 7205236708). Then green, unit, push, PR, and prove at load ≥180. |
+| (none) | #1123 (reopened) | `../yawelo-idle-1123b` `test/1123-growth-wider-gap` d0a3c98c: growth reads timed by process.cpuUsage (vitest pool forks: per-file process). Red vs planted quadratic: 4 failed (16.8/18.9/15.9/16.9); restored, 29/29. Unit + push running. Then PR (Refs #1123); close only after a full unit passes at load ≥180 (AC3). |
 | #986 (draft) | #160 | untouched |
 
 `$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
