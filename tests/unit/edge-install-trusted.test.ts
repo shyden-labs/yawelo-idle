@@ -10,8 +10,11 @@ import { runOf } from './workflow-steps';
  * scope can write, so a restored file could run beside the secret
  * (repo-template#224's security review, 2026-11-26; global rule "CI caches
  * every download": a job holding a secret or write permission restores
- * nothing). Run 45668410232's smoke stalled at 180 s; 20 passing installs in
- * the 10 runs before it took 18–55 s, so 3 times the slowest is 165 s (#476).
+ * nothing). Downloaded fresh, its time follows Microsoft's download speed:
+ * 16 passing installs in deploy-dev's 8 successful develop runs to
+ * 2026-11-27 took 16–123 s (run 45779937070's site-smoke fetched 221 MB at
+ * 2.2 MB/s), so 3 times the slowest is 369 s: 370 s inside a 7-minute step
+ * (#476, #1115 AC3).
  */
 
 interface Step {
@@ -40,13 +43,13 @@ describe.each(['smoke', 'site-smoke'])(
       );
     });
 
-    it('pins the install command and its limits: 165 s inside, 3 minutes for the step', () => {
-      expect(install['timeout-minutes']).toBe(3);
+    it('pins the install command and its limits: 370 s inside, 7 minutes for the step', () => {
+      expect(install['timeout-minutes']).toBe(7);
       expect(install.shell).toBe('bash');
       const run = runOf(install);
       expect(run).toContain('set -o pipefail');
       expect(run).toContain(
-        'timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log"',
+        'timeout --kill-after=5 370 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log"',
       );
     });
 
@@ -54,7 +57,7 @@ describe.each(['smoke', 'site-smoke'])(
       const run = runOf(install);
       expect(run).toContain('if [ "$status" = 124 ]; then');
       expect(run).toContain(
-        'echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E \'^Get:\' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"',
+        'echo "::error::Edge install stalled at 370 s; its last download was: $(grep -E \'^Get:\' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"',
       );
       expect(run).toContain('exit "$status"');
     });

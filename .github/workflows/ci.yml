@@ -253,12 +253,19 @@ jobs:
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: /root/edge-debs
-          key: msedge-debs-${{ github.run_id }}
-          restore-keys: msedge-debs-
+          # apt's lists ride along (#1136): Playwright's image ships none, so
+          # Edge's own `apt-get update` would fetch them, and with the Ubuntu
+          # mirrors down a warm run keeps the lists it restored.
+          path: |
+            /root/edge-debs
+            /var/lib/apt/lists
+          key: msedge-apt-${{ github.run_id }}
+          restore-keys: msedge-apt-
       # Uncached, 40 runs to 2026-11-23 took 19–54 s (#1092), so 3 times the
       # slowest is 162 s (#476). The inner 165 s fires before the step's 3
-      # minutes, so a stall names the download it was on.
+      # minutes, so a stall names the download it was on. No `--with-deps`
+      # (#1136): in run 45770365466 it fetched 34.2 MB of Ubuntu lists and
+      # installed nothing, the image already holding every package.
       - name: Install Edge (Playwright's image lacks it)
         timeout-minutes: 3
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
@@ -266,7 +273,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          timeout --kill-after=5 165 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
             echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
           fi
@@ -280,11 +287,13 @@ jobs:
           find /root/edge-debs -name 'microsoft-edge-stable_*.deb' ! -name "microsoft-edge-stable_${version}_*" -delete
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Save the Edge download for later runs
-        if: ${{ steps.classify.outputs.scope != 'docs-only' && steps.edge-cache.outputs.cache-matched-key != format('msedge-debs-{0}', steps.edge.outputs.version) }}
+        if: ${{ steps.classify.outputs.scope != 'docs-only' && steps.edge-cache.outputs.cache-matched-key != format('msedge-apt-{0}', steps.edge.outputs.version) }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: /root/edge-debs
-          key: msedge-debs-${{ steps.edge.outputs.version }}
+          path: |
+            /root/edge-debs
+            /var/lib/apt/lists
+          key: msedge-apt-${{ steps.edge.outputs.version }}
       # Each suite: one measured limit, at least 3 times its slowest run
       # (#476), and none inside it. On PR #1054 with Edge: engines 27 and 32 s
       # (96 s), web smoke 9 and 11 s (33 s).

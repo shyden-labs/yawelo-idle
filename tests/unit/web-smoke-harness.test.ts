@@ -52,7 +52,30 @@ const dev = () =>
   webSmokeConfig({
     WEB_SMOKE_URL: DEV_URL,
     DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+    DEV_PASS: 'the machine pass',
   });
+
+/**
+ * The DEV pass as the door reads it on a page and on its embed route: the
+ * `__Host-devpass` cookie, host-only on the door (#1078 AC1, shyden.co.uk's
+ * reading of the door, 2026-11-27). Never a header: Playwright would send an
+ * extra header to every host a page reaches, outside services included.
+ */
+const passCookie = (domain: string) => ({
+  cookies: [
+    {
+      name: '__Host-devpass',
+      value: 'the machine pass',
+      domain,
+      path: '/',
+      expires: -1,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+    },
+  ],
+  origins: [],
+});
 
 const needsOf = (job: Job | undefined): string[] =>
   job?.needs === undefined
@@ -124,6 +147,20 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     expect(() => webSmokeConfig({ WEB_SMOKE_URL: DEV_URL })).toThrow(
       /WEB_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not/,
     );
+  });
+
+  it('carries the DEV pass as a cookie on the door it tests, and in no header (#1078 AC1)', () => {
+    expect(dev().use?.storageState).toEqual(passCookie('dev.yaweloidle.com'));
+    expect(dev().use?.extraHTTPHeaders).toBeUndefined();
+  });
+
+  it('refuses a dev address without a DEV pass (#1078 AC1)', () => {
+    expect(() =>
+      webSmokeConfig({
+        WEB_SMOKE_URL: DEV_URL,
+        DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+      }),
+    ).toThrow(/WEB_SMOKE_URL is set but DEV_PASS is not/);
   });
 
   it('runs on every desktop browser (#883, #1003), retrying nothing', () => {
@@ -227,9 +264,24 @@ const site = () =>
   siteSmokeConfig({
     SITE_SMOKE_URL: SITE_URL,
     DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+    DEV_PASS: 'the machine pass',
   });
 
 describe('the site suite against dev (#827)', () => {
+  it('carries the DEV pass as a cookie on the site’s dev door, where the support pages load ShyDesk, and in no header (#1078 AC1)', () => {
+    expect(site().use?.storageState).toEqual(passCookie('dev.yaweloidle.com'));
+    expect(site().use?.extraHTTPHeaders).toBeUndefined();
+  });
+
+  it('refuses a dev address without a DEV pass (#1078 AC1)', () => {
+    expect(() =>
+      siteSmokeConfig({
+        SITE_SMOKE_URL: SITE_URL,
+        DEV_BASIC_AUTH_PASSWORD: 'the dev password',
+      }),
+    ).toThrow(/SITE_SMOKE_URL is set but DEV_PASS is not/);
+  });
+
   it('targets the address it is given and answers its password challenge', () => {
     expect(site().use?.baseURL).toBe(SITE_URL);
     expect(site().use?.httpCredentials).toEqual({
