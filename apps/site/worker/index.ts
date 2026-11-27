@@ -38,6 +38,7 @@ import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
 import { declaredOverCap, readUpToCap } from './body';
 import { isSupportPath, serveSupport } from './support';
+import { carryBoard } from './carry';
 import privateSpec from '../api/private.openapi.json';
 
 export { Roadmap } from './roadmap';
@@ -143,7 +144,7 @@ export default {
         workerEqual,
         env.HOLDING,
         env.ASSETS,
-      );
+      ).then((page) => carryBoard(path, page, () => roadmap(env).snapshot()));
     });
   },
 } satisfies ExportedHandler<SiteEnv>;

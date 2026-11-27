@@ -15,11 +15,12 @@ const importsOf = (path: string): string[] =>
   ].map((match) => match[1] ?? '');
 
 describe('the roadmap page’s imports (#827)', () => {
-  it('are the base layout, the voyage map, the copy and the locale type', () => {
+  it('are the base layout, the voyage map, the copy, the carried board’s id (#1104) and the locale type', () => {
     expect(importsOf('./Roadmap.astro')).toEqual([
       '../layouts/Base.astro',
       '../roadmap/VoyageMap.svelte',
       '../copy',
+      '../roadmap/carried',
       '../i18n',
     ]);
   });
@@ -33,6 +34,7 @@ describe('the roadmap page’s imports (#827)', () => {
       './features',
       './layout',
       './live',
+      './carried',
       './reopen',
       './season',
       './Shape.svelte',

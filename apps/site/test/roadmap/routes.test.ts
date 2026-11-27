@@ -283,3 +283,54 @@ describe('/api/roadmap*', () => {
     response.webSocket?.close(1000, 'done');
   });
 });
+
+/**
+ * The roadmap pages carry the held board (#1104 AC1): the site Worker writes
+ * the Roadmap object's snapshot into the page's HTML at request time, so the
+ * map draws at once with no loading line. The route and its measured cost are
+ * on the ticket (comment 7217629209).
+ */
+describe('the roadmap pages carry the held snapshot (#1104)', () => {
+  const CARRIED =
+    /<script type="application\/json" id="roadmap-snapshot">([\s\S]*?)<\/script>/;
+
+  it.each(['/roadmap', '/id/roadmap'])(
+    '%s carries the snapshot /api/roadmap.json serves, safe inside its script, and its no-script line says the map needs JavaScript',
+    async (path) => {
+      const served = (await (
+        await call('/api/roadmap.json', { headers: AUTH })
+      ).json()) as { version: number; items: unknown };
+      const page = await call(path, { headers: AUTH });
+      const html = await page.text();
+      const carried = CARRIED.exec(html)?.[1];
+      const parsed =
+        carried === undefined
+          ? undefined
+          : (JSON.parse(carried) as { version: number; items: unknown });
+      expect({
+        status: page.status,
+        cache: page.headers.get('Cache-Control'),
+        version: parsed?.version,
+        items: parsed?.items,
+        // A `<` in a title would end the script early: each is written <.
+        rawAngles: carried?.includes('<'),
+        noScript:
+          /<noscript>[\s\S]*The map needs JavaScript to show\.[\s\S]*<\/noscript>/.test(
+            html,
+          ),
+        oldLines: [
+          'Reading the board…',
+          'The roadmap could not be read just now.',
+        ].filter((line) => html.includes(line)),
+      }).toEqual({
+        status: 200,
+        cache: 'no-store',
+        version: served.version,
+        items: served.items,
+        rawAngles: false,
+        noScript: true,
+        oldLines: [],
+      });
+    },
+  );
+});
