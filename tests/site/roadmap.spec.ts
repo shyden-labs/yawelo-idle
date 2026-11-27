@@ -167,12 +167,28 @@ test('the keyboard: Tab reaches the first island, Enter opens it, Space closes i
   await expect.soft(page.locator('[data-island-panel]')).toHaveCount(0);
 });
 
-test('keeps the snapshot drawn when the live socket is refused (#829, #1068)', async ({
+test('draws the board the page carries with the live socket refused and the JSON never fetched, saying nothing of loading or failing (#829, #1068, #1104 AC1, AC2)', async ({
   page,
 }) => {
   await page.routeWebSocket(/\/api\/roadmap\/live$/, (socket) => {
     void socket.close();
   });
+  // The page draws from its own HTML (#1104): a fetch of the JSON is refused.
+  // page.request (snapshotOf) is not routed, so the expected board is read.
+  let fetched = 0;
+  await page.route(/\/api\/roadmap\.json$/, (route) => {
+    fetched += 1;
+    return route.abort();
+  });
   const { drawn } = await openMap(page);
-  await expect(islandButtons(page)).toHaveCount(drawn.length);
+  await expect.soft(islandButtons(page)).toHaveCount(drawn.length);
+  await expect.soft(page.locator('[data-updated]')).toBeVisible();
+  await expect.soft(page.getByRole('alert')).toHaveCount(0);
+  await expect
+    .soft(page.locator('body'))
+    .not.toContainText('Reading the board…');
+  await expect
+    .soft(page.locator('body'))
+    .not.toContainText('The roadmap could not be read just now.');
+  expect.soft(fetched, 'fetches of /api/roadmap.json').toBe(0);
 });
