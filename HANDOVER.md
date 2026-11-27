@@ -1,28 +1,24 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-28 02:07 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at 9bcaabd6 (#1145 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, waits on Shyden's deploy-door approval).
+**Written:** 2026-11-28 02:50 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at da0925ea (#1147 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, waits on Shyden's deploy-door approval).
 
 ## Open PRs (strict: merge one, merge develop into the next, unit, push, CI, repeat)
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1147 | #1139 | `../yawelo-idle-1139` ceae000b (develop merged, unit 15,175/15,175), PUSHED, CI running. Merge on green (`--match-head-commit` from a file), clean worktree + branches, close #1139 once the next ci.yml browsers Edge install is read within 440 s. |
-| #1146 (draft) | #1104 AC1+AC2 | `../yawelo-idle-1104` `feat/1104-snapshot-in-html` d1034f25 = tests only. Unit red read on CI by name (36 failed incl. every new test; job 1 build-and-test). |
-| #1148 (draft, scratch) | #1104 | `../yawelo-idle-1104red` `scratch/1104-red-ci` 13e3b2ae: only the harness (apps/site/test/roadmap/routes.test.ts) + site e2e (tests/site/roadmap.spec.ts) tests on develop's code. Read on #1148's build-and-test "Worker tests" step: the 2 `carry the held snapshot` cases red by name. Read deploy-dev run 46054395810 (dispatched on the scratch branch) site-smoke: the `draws the board the page carries…` journey red. Then close #1148, delete branch + worktree, comment both reds on #1104. |
+| #1146 (draft) | #1104 AC1+AC2 | `../yawelo-idle-1104` `feat/1104-snapshot-in-html`, pushed 5e214b3e (tests; unit red read on CI, 36 failed incl. every new test). UNCOMMITTED in the worktree, unit-green locally (47/47 in the 3 files): copy.ts `needsScript` (loading/failed gone), VoyageMap.svelte reads `#roadmap-snapshot` in an effect (no fetch), new `src/roadmap/carried.ts` (`CARRIED_ID`, `carriedText`, test red first + mutation-checked). Still to write AFTER the two CI reds below: Roadmap.astro (`<script is:inline type="application/json" id="roadmap-snapshot"></script>`, noscript shows `needsScript`) and the Worker HTMLRewriter for `/roadmap`, `/id/roadmap` (+ trailing slash) with `carriedText`, `no-store`. Then merge develop, unit, push, CI, measure TTFB and drawn-board time on dev before/after, un-draft, merge. |
+| PR 1148 (draft, scratch) | #1104 | `../yawelo-idle-1104red` `scratch/1104-red-ci` cba22e10: Worker harness test only. Read the build-and-test "Worker tests" step: both `carry the held snapshot` cases red by name. Then shut PR 1148, delete branch + worktree. |
+| (scratch) | #1104 | `../yawelo-idle-1104e2e` `scratch/1104-red-e2e` cc86bf1c: site journey only; deploy-dev run 46057742165 dispatched on it. Read site-smoke: the `draws the board the page carries…` journey red (it counts page requests for `/api/roadmap.json`; #813 forbids `page.route`). Then delete branch + worktree; comment both reds on #1104. Dev then runs this scratch until the next develop push redeploys develop. |
 | #986 (draft) | #160 | untouched |
 
-## #1104 code (after both reds are read)
-
-Route + measured cost: #1104 comment 7217629209. In `../yawelo-idle-1104`:
-1. `Roadmap.astro`: `<script is:inline type="application/json" id="roadmap-snapshot"></script>` (empty) before the map; `<noscript>` shows `copy.voyage.needsScript`.
-2. `copy.ts`: drop `loading` and `failed` from `VoyageCopy`/`VOYAGE_PLACEHOLDER`; add `needsScript: 'The map needs JavaScript to show.'` (Shyden 2026-11-27, "Say JS is needed"; English placeholder on both pages, no translation now).
-3. `VoyageMap.svelte`: drop the fetch effect, `failed` and the loading/alert lines; read `#roadmap-snapshot` text once on init (try JSON.parse, ignore errors) into `show()`.
-4. Worker (`apps/site/worker/index.ts`): for GET `/roadmap`, `/id/roadmap` (and trailing slash), fetch the asset, `HTMLRewriter` sets `script#roadmap-snapshot` inner content (html: true) to `JSON.stringify(snapshot).replaceAll('<', '\\u003c')`, `Cache-Control: no-store`. A pure helper for the escaping with a unit test.
-5. Unit, push, CI green, measure page TTFB and drawn-board time on dev before and after (promised on the ticket), un-draft, merge.
+#1147 merged da0925ea (#1139 stays open until a ci.yml browsers Edge install on a branch with da0925ea is read within 440 s).
 
 ## Devices
 
-#992/#993 (P0) now blocked by playwright-devices#68 as well as #7 (comments on both, 2026-11-27): 0.2.0 has real phones but refuses `keyboard.press` (fixed in playwright-devices#67, merged, **unpublished: waits on Shyden approving that repo's `npm` environment**) and a phones-imported spec throws on desktop until #68 (in progress). playwright-devices-25 messages when #67/#68 are on npm. iPhone needs Shyden's passcode; the OPPO is 98% full (its dialog breaks Android runs; shyden.co.uk#1272).
+#1149 (P0, filed 2026-11-28) blocks #992/#993: every Yawelo device run removes what it put on a phone, never Chrome/Safari data or Shyden's own (global rule 2026-11-28); free space before/after. Phones cleaned by repo-template-71 at ~02:35 WIB (baseline on #1149). Yawelo has no device code yet.
+
+
+#992/#993 (P0) now blocked by playwright-devices#68 as well as #7 (comments on both, 2026-11-27): 0.2.0 has real phones but refuses `keyboard.press` (fixed in playwright-devices#67, merged, **unpublished: waits on Shyden approving that repo's `npm` environment**) and a phones-imported spec throws on desktop until #68 (in progress). playwright-devices-25 messages when #67/#68 are on npm. iPhone needs Shyden's passcode; phones cleaned 2026-11-28 by repo-template-71 (OPPO mostly holds Shyden's own data).
 
 ## Parked for Shyden
 
@@ -40,5 +36,4 @@ Route + measured cost: #1104 comment 7217629209. In `../yawelo-idle-1104`:
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. #1147: read CI by step, merge, clean up.
-3. #1148 + deploy-dev 46054395810: read the reds, close and clean up, then write #1104's code (above).
+2. Read the two scratch reds (table), clean them up, then finish #1104's code.
