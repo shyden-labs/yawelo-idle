@@ -1,56 +1,44 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-27 01:05 WIB, session `yawelo-idle-5b`. Branch `handover/2026-10-17-d`. develop at 75906185 (#1127 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, in hand).
-
-## Devices
-
-#992/#993 (P0) wait on playwright-devices#7 (emulators; ETA ~7 Dec, low confidence): every device run covers every device. playwright-devices messages when #7 is on npm or the ETA moves. #997–#1000 wait on #992/#993. Don't touch the phones.
+**Written:** 2026-11-28 02:07 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at 9bcaabd6 (#1145 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, waits on Shyden's deploy-door approval).
 
 ## Open PRs (strict: merge one, merge develop into the next, unit, push, CI, repeat)
 
 | PR | Ticket | State |
 | --- | --- | --- |
-| #1141 | #1078 step 3 | CLOSED by Shyden's ruling "Real door later" (2026-11-27): CI's #813 no-stand-ins guard refused the door stand-in. Worktree + branches removed. The game smoke gets a CI machine pass through the real front door in AC1's PR (comment on #1078). Old notes: | `../yawelo-idle-1078g`: develop merged → ea9ad24c, unit 15,156/15,156, PUSHED. CI running; merge on green (`--match-head-commit` from a file), clean worktree + branches, read develop deploy-dev's smoke job, post on #1078. Unit timeouts at high load are #971. |
-| #1142 | #1078 AC1 | MERGED 234597a1; CI pass PROVEN on deploy-dev 45903249623 (comment 7204868122). deploy-door waits for Shyden; after his approval: read the door live (pass check, embed, webhook), message shydesk-c8, then AC3 (drop the origins' dev password, separate PR). |
-| #1144 | ticket 1115 AC3 | MERGED (CI green on ff982c67); worktree removed. Read the next develop deploy-dev Edge steps (under 370 s); shut the ticket by hand once every AC is evidenced. Next: #1145 then #1139 (merge develop, unit, push, CI, merge, one at a time). |
-| (none) | #1139 | `../yawelo-idle-1139` `ci/1139-browsers-edge-limit` aa4ebd0c (test red 2 by name, then 12/12; 440 s / 8 min from 146 s). After #1143 and #1144 merge: merge develop, unit, push, PR (Refs #1139). |
-| #1145 | #1123 (reopened) | d0a3c98c PUSHED (unit 15,150), PR opened; behind develop: update after #1144 (merge develop, unit, push, CI, merge). Keep #1123 open until a full unit passes at load ≥180. |
+| #1147 | #1139 | `../yawelo-idle-1139` ceae000b (develop merged, unit 15,175/15,175), PUSHED, CI running. Merge on green (`--match-head-commit` from a file), clean worktree + branches, close #1139 once the next ci.yml browsers Edge install is read within 440 s. |
+| #1146 (draft) | #1104 AC1+AC2 | `../yawelo-idle-1104` `feat/1104-snapshot-in-html` d1034f25 = tests only. Unit red read on CI by name (36 failed incl. every new test; job 1 build-and-test). |
+| #1148 (draft, scratch) | #1104 | `../yawelo-idle-1104red` `scratch/1104-red-ci` 13e3b2ae: only the harness (apps/site/test/roadmap/routes.test.ts) + site e2e (tests/site/roadmap.spec.ts) tests on develop's code. Read on #1148's build-and-test "Worker tests" step: the 2 `carry the held snapshot` cases red by name. Read deploy-dev run 46054395810 (dispatched on the scratch branch) site-smoke: the `draws the board the page carries…` journey red. Then close #1148, delete branch + worktree, comment both reds on #1104. |
 | #986 (draft) | #160 | untouched |
 
-`$S` = `/private/tmp/claude-501/-Users-shyden-Developer-Repos-yawelo-idle/2d13e26f-1c1d-49df-86af-e3a45baedf18/scratchpad` (lost on reboot).
+## #1104 code (after both reds are read)
 
-## #1078 AC1 next (after #1141): wire the DEV-pass door
+Route + measured cost: #1104 comment 7217629209. In `../yawelo-idle-1104`:
+1. `Roadmap.astro`: `<script is:inline type="application/json" id="roadmap-snapshot"></script>` (empty) before the map; `<noscript>` shows `copy.voyage.needsScript`.
+2. `copy.ts`: drop `loading` and `failed` from `VoyageCopy`/`VOYAGE_PLACEHOLDER`; add `needsScript: 'The map needs JavaScript to show.'` (Shyden 2026-11-27, "Say JS is needed"; English placeholder on both pages, no translation now).
+3. `VoyageMap.svelte`: drop the fetch effect, `failed` and the loading/alert lines; read `#roadmap-snapshot` text once on init (try JSON.parse, ignore errors) into `show()`.
+4. Worker (`apps/site/worker/index.ts`): for GET `/roadmap`, `/id/roadmap` (and trailing slash), fetch the asset, `HTMLRewriter` sets `script#roadmap-snapshot` inner content (html: true) to `JSON.stringify(snapshot).replaceAll('<', '\\u003c')`, `Cache-Control: no-store`. A pure helper for the escaping with a unit test.
+5. Unit, push, CI green, measure page TTFB and drawn-board time on dev before and after (promised on the ticket), un-draft, merge.
 
-- shydesk-c8 holds shyden-labs/shydesk#302 until Yawelo's door on dev.yaweloidle.com serves `POST /__devpass/embed?for=shydesk.shydesk-non-prod.workers.dev` (repo-template door, `signin` set). Told ETA ~29 Nov WIB, low confidence (door deploy waits for Shyden, AFK; told 2026-11-27). Message it when on dev or the ETA moves.
-- Only dev.yaweloidle.com must load ShyDesk (tests/site/support.spec.ts in site-smoke uses `HOLDING_DOOR`). The workers.dev host need not.
-- shyden-co-uk-c0: the sign-in swaps a machine pass for an embed pass, but the door's embed route reads only the `__Host-devpass` cookie. CI's site-smoke must set the machine pass as that cookie (Playwright `addCookies`, host-only). Comment 7200057006 on #1078.
+## Devices
 
-## Parked for Shyden (AFK from 2026-11-27 ~02:00 WIB for over a day)
+#992/#993 (P0) now blocked by playwright-devices#68 as well as #7 (comments on both, 2026-11-27): 0.2.0 has real phones but refuses `keyboard.press` (fixed in playwright-devices#67, merged, **unpublished: waits on Shyden approving that repo's `npm` environment**) and a phones-imported spec throws on desktop until #68 (in progress). playwright-devices-25 messages when #67/#68 are on npm. iPhone needs Shyden's passcode; the OPPO is 98% full (its dialog breaks Android runs; shyden.co.uk#1272).
 
-- Approve deploy-door (production environment) once AC1 merges into develop.
-- Sign up a second free Buttondown account for the dev test list (#343, his pick).
+## Parked for Shyden
 
-## Token incident (2026-11-27)
-
-`yawelo-idle-ci` is shyden.co.uk's former `shyden-site CI` token (Shyden renamed+rotated it at 01:53 WIB); shyden.co.uk's CI broke and it makes a new token. Yawelo keeps `yawelo-idle-ci`; touch no token we didn't create (#1078 comment 7204823933).
+- Approve deploy-door (production environment) for #1078; then read the door live, message shydesk, then AC3.
+- Approve playwright-devices' `npm` publish (unblocks #67 for #992/#993).
+- Second free Buttondown account for the dev test list (#343).
 
 ## Done this session
 
-- #1104 AC3 merged (PR 1143, 6e4649e2): live socket reopens. AC1/AC2 open.
-
-- Ticket 1136 shut by hand: PR 1137 merged 3606fd50; AC3 one-off proved a newer Edge installs over an older cached one.
-- #1078 CI pass proven on develop (deploy-dev 45903249623).
-
-- Closed #1074 (AC5 page test ran in CI, 27 → 28) and #1123 (all ACs evidenced, merged 75906185).
-- #1078 steps 1 and 2 proven on develop (deploy-dev 45841850222, 45871133201; comments on #1078).
-- #1120 AC4: deploy-dev trusted jobs restore nothing (comment 7197649899); still needs dependabot-daily, deploy-door, deploy-test, deploy-prod, rollback-prod next runs.
-
-## Tickets awaiting a read to close
-
-- #1115: AC3 needs ≥5 deploy-dev install-time reads. #1118: check its remaining ACs. #1136: AC3 plan in `.superpowers/sdd/1136/plan.md`. #1139 (P3).
-- #1072 (P0) blocked by #423 → #635, #343 (Shyden's newsletter-provider pick).
+- #1145 merged 9bcaabd6 (#1123's CPU-time growth check). #1123 stays open until a full unit passes at load ≥180.
+- #1115 closed: AC2 stall message proven on both step bodies (comment 7217511929); DoD read on run 45911910968 (25 s, 22 s).
+- #971: 8 load timeouts at load ~70, swap 5 GB, recorded (comment 7217548726).
+- #1104 AC1 route measured and written (comment 7217629209); tests written and red.
 
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. Work the PR table top to bottom: #1143 → #1144 → #1139, one merge at a time. Then #1104 AC1 (measure the snapshot-in-HTML route's cost on dev first) and #1123 (measure the growth ratio's spread under heavy load first). #1078's door deploy waits for Shyden.
+2. #1147: read CI by step, merge, clean up.
+3. #1148 + deploy-dev 46054395810: read the reds, close and clean up, then write #1104's code (above).
