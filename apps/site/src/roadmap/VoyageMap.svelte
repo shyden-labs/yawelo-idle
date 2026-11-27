@@ -4,9 +4,10 @@
    * the nine build stages as islands, the ship on the leg into the first
    * unfinished one, one progress bar, and the expected season with its note.
    * Drawn from the board the site Worker writes into the page (#1104), then
-   * kept current over the Worker's live socket (#829, kept as it was). Islands are real buttons over the
-   * picture, which is hidden from screen readers; pressing one opens its
-   * panel with what that stage brings. Only plain words are rendered.
+   * kept current over the Worker's live socket (#829, kept as it was).
+   * Islands are real buttons over the picture, which is hidden from screen
+   * readers; pressing one opens its panel with what that stage brings. Only
+   * plain words are rendered.
    */
   import type { PublicSnapshot } from '@yawelo-idle/progress';
   import { COPY } from '../copy';
