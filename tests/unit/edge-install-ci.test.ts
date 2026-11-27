@@ -79,14 +79,17 @@ describe('the Edge install in the browsers job (#1092)', () => {
     expect(s.with?.['restore-keys']).toBe('msedge-apt-');
   });
 
-  it('pins the install command and its limits: 165 s inside, 3 minutes for the step', () => {
+  // 23 installs in ci.yml's last 30 successful runs to 2026-11-27 took
+  // 16–42 s warm and 146 s cold (run 45778515231, a new cache prefix), so 3
+  // times the slowest is 438 s (#476, #1139).
+  it('pins the install command and its limits: 440 s inside, 8 minutes for the step', () => {
     const s = step(INSTALL);
-    expect(s['timeout-minutes']).toBe(3);
+    expect(s['timeout-minutes']).toBe(8);
     expect(s.shell).toBe('bash');
     const run = runOf(s);
     expect(run).toContain('set -o pipefail');
     expect(run).toContain(
-      'timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log"',
+      'timeout --kill-after=5 440 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log"',
     );
   });
 
@@ -94,7 +97,7 @@ describe('the Edge install in the browsers job (#1092)', () => {
     const run = runOf(step(INSTALL));
     expect(run).toContain('if [ "$status" = 124 ]; then');
     expect(run).toContain(
-      'echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E \'^Get:\' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"',
+      'echo "::error::Edge install stalled at 440 s; its last download was: $(grep -E \'^Get:\' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"',
     );
     expect(run).toContain('exit "$status"');
   });

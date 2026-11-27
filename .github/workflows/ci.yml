@@ -261,21 +261,23 @@ jobs:
             /var/lib/apt/lists
           key: msedge-apt-${{ github.run_id }}
           restore-keys: msedge-apt-
-      # Uncached, 40 runs to 2026-11-23 took 19–54 s (#1092), so 3 times the
-      # slowest is 162 s (#476). The inner 165 s fires before the step's 3
-      # minutes, so a stall names the download it was on. No `--with-deps`
+      # 23 installs in the last 30 successful runs to 2026-11-27 took 16–42 s
+      # warm and 146 s cold (run 45778515231, a new cache prefix fetching
+      # 221 MB), so 3 times the slowest is 438 s (#476, #1139). The inner
+      # 440 s fires before the step's 8 minutes, so a stall names the
+      # download it was on. No `--with-deps`
       # (#1136): in run 45770365466 it fetched 34.2 MB of Ubuntu lists and
       # installed nothing, the image already holding every package.
       - name: Install Edge (Playwright's image lacks it)
-        timeout-minutes: 3
+        timeout-minutes: 8
         if: ${{ steps.classify.outputs.scope != 'docs-only' }}
         shell: bash
         run: |
           set -o pipefail
           status=0
-          timeout --kill-after=5 165 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          timeout --kill-after=5 440 npx --no playwright install msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
           if [ "$status" = 124 ]; then
-            echo "::error::Edge install stalled at 165 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+            echo "::error::Edge install stalled at 440 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
           fi
           exit "$status"
       - name: Read the installed Edge version and drop older downloads
