@@ -30,8 +30,8 @@ export interface VoyageCopy {
    * page's language (#830); null where nothing is in another language.
    */
   englishNote: string | null;
-  loading: string;
-  failed: string;
+  /** For a visitor without JavaScript (#1104; Shyden, 2026-11-27). */
+  needsScript: string;
   islandsLabel: string;
   status: {
     done: string;
@@ -84,8 +84,7 @@ const VOYAGE_PLACEHOLDER: VoyageCopy = {
   launch: COPY_EN.roadmap.launch.text,
   howToRead: COPY_EN.roadmap.howToRead.text,
   englishNote: null,
-  loading: 'Reading the board…',
-  failed: 'The roadmap could not be read just now.',
+  needsScript: 'The map needs JavaScript to show.',
   islandsLabel: 'The voyage to launch',
   status: {
     done: 'Done',

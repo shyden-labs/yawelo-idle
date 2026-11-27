@@ -3,8 +3,8 @@
    * The roadmap as one voyage map (#1068, Shyden's design, round 6 map 3):
    * the nine build stages as islands, the ship on the leg into the first
    * unfinished one, one progress bar, and the expected season with its note.
-   * Read from /api/roadmap.json on load, then kept current over the Worker's
-   * live socket (#829, kept as it was). Islands are real buttons over the
+   * Drawn from the board the site Worker writes into the page (#1104), then
+   * kept current over the Worker's live socket (#829, kept as it was). Islands are real buttons over the
    * picture, which is hidden from screen readers; pressing one opens its
    * panel with what that stage brings. Only plain words are rendered.
    */
@@ -15,6 +15,7 @@
   import { FEATURES, type Milestone } from './features';
   import { ISLANDS, ship } from './layout';
   import { liveUrl, newer } from './live';
+  import { CARRIED_ID } from './carried';
   import { reopenDelay } from './reopen';
   import { expectedSeason } from './season';
   import Shape from './Shape.svelte';
@@ -31,22 +32,24 @@
   const words = $derived(copy.map);
 
   let snapshot = $state<PublicSnapshot | null>(null);
-  let failed = $state(false);
   let open = $state<number | null>(null);
 
   const show = (next: PublicSnapshot): void => {
     if (newer(snapshot, next)) snapshot = next;
   };
 
+  // The board the site Worker wrote into the page (#1104 AC1), drawn as
+  // soon as the map hydrates (the build renders the page with none). None,
+  // or none readable, leaves the map empty and silent until the live socket
+  // brings one (AC2: no loading or failure line).
   $effect(() => {
-    fetch('/api/roadmap.json', { headers: { Accept: 'application/json' } })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(String(response.status));
-        show((await response.json()) as PublicSnapshot);
-      })
-      .catch(() => {
-        failed = true;
-      });
+    const carried = document.getElementById(CARRIED_ID)?.textContent;
+    if (!carried) return;
+    try {
+      show(JSON.parse(carried) as PublicSnapshot);
+    } catch {
+      // Unreadable: the socket's board is drawn when it comes.
+    }
   });
 
   $effect(() => {
@@ -125,14 +128,8 @@
   }}
 />
 
-<section class="voyage" aria-busy={snapshot === null && !failed}>
-  {#if snapshot === null}
-    {#if failed}
-      <p role="alert">{copy.voyage.failed}</p>
-    {:else}
-      <p>{copy.voyage.loading}</p>
-    {/if}
-  {:else}
+<section class="voyage">
+  {#if snapshot !== null}
     {@const m = model(snapshot)}
     {@const shown = m.spots.find((spot) => spot.stage.milestone === open)}
     <div class="sea" data-voyage role="group" aria-label={words.label}>

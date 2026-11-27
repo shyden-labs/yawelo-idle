@@ -7,6 +7,7 @@
 import Base from '../layouts/Base.astro';
 import VoyageMap from '../roadmap/VoyageMap.svelte';
 import { COPY } from '../copy';
+import { CARRIED_ID } from '../roadmap/carried';
 import type { Locale } from '../i18n';
 
 interface Props {
@@ -27,8 +28,10 @@ const copyLang = 'en';
   {copy.voyage.englishNote !== null && (
     <p lang={locale}>{copy.voyage.englishNote}</p>
   )}
+  <!-- The held board, written in by the site Worker at request time (#1104). -->
+  <script is:inline type="application/json" id={CARRIED_ID}></script>
   <VoyageMap client:load locale={locale} />
   <noscript>
-    <p lang={copyLang}>{copy.voyage.failed}</p>
+    <p lang={copyLang}>{copy.voyage.needsScript}</p>
   </noscript>
 </Base>
