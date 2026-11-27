@@ -88,11 +88,24 @@ const snapshot = (
 const fetchStub = vi.fn<typeof fetch>();
 let mounted: ReturnType<typeof mount> | undefined;
 
-const serve = (body: PublicSnapshot): void => {
-  fetchStub.mockResolvedValue(
-    new Response(JSON.stringify(body), { status: 200 }),
-  );
+/**
+ * The page as the site Worker sends it (#1104 AC1): the held snapshot written
+ * into the roadmap page's HTML, in the element the map reads on mount.
+ */
+const carry = (text: string): void => {
+  const element = document.createElement('script');
+  element.type = 'application/json';
+  element.id = 'roadmap-snapshot';
+  element.textContent = text;
+  document.body.append(element);
 };
+const serve = (body: PublicSnapshot): void => {
+  carry(JSON.stringify(body));
+};
+
+/** The lines the page showed before #1104, which no visitor may see now. */
+const LOADING_LINE = 'Reading the board…';
+const FAILED_LINE = 'The roadmap could not be read just now.';
 
 const view = (locale: Locale = 'en'): HTMLElement => {
   const target = document.createElement('div');
@@ -192,27 +205,64 @@ afterEach(() => {
 const en = COPY.en.map;
 
 describe('the voyage map page (#1068)', () => {
-  it('asks for the roadmap snapshot as JSON', () => {
+  it('draws the board the page carries at once, and asks the network for nothing (#1104 AC1)', () => {
     serve(snapshot());
-    view();
-    expect(fetchStub.mock.calls).toEqual([
-      ['/api/roadmap.json', { headers: { Accept: 'application/json' } }],
-    ]);
+    const root = view();
+    expect({
+      islands: islands(root).length,
+      updated: root.querySelector('[data-updated]')?.textContent,
+      fetched: fetchStub.mock.calls.length,
+    }).toEqual({
+      islands: 9,
+      updated: updatedLine('2026-11-22T04:00:00.000Z', en.lastUpdated, 'en'),
+      fetched: 0,
+    });
   });
 
-  it('says it is reading the board until the snapshot comes, with no islands yet', () => {
-    fetchStub.mockReturnValue(new Promise<Response>(() => undefined));
+  it('with no board in the page, shows no islands and no loading or failure line (#1104 AC2)', () => {
     const root = view();
-    expect(root.textContent).toContain(COPY.en.voyage.loading);
-    expect(islands(root)).toEqual([]);
+    expect({
+      islands: islands(root).length,
+      loading: root.textContent.includes(LOADING_LINE),
+      failed: root.textContent.includes(FAILED_LINE),
+      alerts: root.querySelectorAll('[role="alert"]').length,
+    }).toEqual({ islands: 0, loading: false, failed: false, alerts: 0 });
   });
 
-  it('says so when the snapshot cannot be read', async () => {
-    fetchStub.mockResolvedValue(new Response('{}', { status: 503 }));
+  it('draws the first board the live socket brings when the page carried none (#1104 AC1)', () => {
     const root = view();
-    await settle();
-    expect(root.textContent).toContain(COPY.en.voyage.failed);
-    expect(islands(root)).toEqual([]);
+    FakeSocket.opened[0]?.push(snapshot());
+    expect(islands(root)).toHaveLength(9);
+  });
+
+  it('shows nothing and says nothing when the carried board is not readable, then draws the socket’s (#1104 AC2)', () => {
+    carry('{not json');
+    const root = view();
+    const before = {
+      islands: islands(root).length,
+      text: root.textContent.includes(FAILED_LINE),
+      alerts: root.querySelectorAll('[role="alert"]').length,
+    };
+    FakeSocket.opened[0]?.push(snapshot());
+    expect({ before, after: islands(root).length }).toEqual({
+      before: { islands: 0, text: false, alerts: 0 },
+      after: 9,
+    });
+  });
+
+  it('keeps the carried board and its last-updated line as they were when the live socket drops (#1104 AC2)', () => {
+    serve(snapshot());
+    const root = view();
+    FakeSocket.opened[0]?.drop();
+    expect({
+      islands: islands(root).length,
+      updated: root.querySelector('[data-updated]')?.textContent,
+      alerts: root.querySelectorAll('[role="alert"]').length,
+    }).toEqual({
+      islands: 9,
+      updated: updatedLine('2026-11-22T04:00:00.000Z', en.lastUpdated, 'en'),
+      alerts: 0,
+    });
   });
 
   it('draws nine island buttons in milestone order, each named with its state', async () => {
@@ -452,8 +502,8 @@ describe('the voyage map page (#1068)', () => {
     expect({
       islands: islands(root).length,
       updated: root.querySelector('[data-updated]')?.textContent,
-      failed: root.textContent.includes(COPY.en.voyage.failed),
-      loading: root.textContent.includes(COPY.en.voyage.loading),
+      failed: root.textContent.includes(FAILED_LINE),
+      loading: root.textContent.includes(LOADING_LINE),
     }).toEqual({
       islands: 9,
       updated: updatedLine('2026-11-22T05:00:00.000Z', en.lastUpdated, 'en'),

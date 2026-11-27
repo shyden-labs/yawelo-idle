@@ -57,3 +57,29 @@ describe('the roadmap page’s text in Indonesian (#830)', () => {
     expect(COPY.id.voyage.englishNote).toBeNull();
   });
 });
+
+/**
+ * The map's words when it cannot draw (#1104 AC2): no loading or failure line
+ * reaches visitors, and a visitor without JavaScript is told the map needs it
+ * (Shyden, 2026-11-27: "Say JS is needed", the line as he saw it). Like the
+ * map's other labels, an English placeholder on both pages for now.
+ */
+describe('the voyage map says nothing of loading or failing (#1104)', () => {
+  const voyage = (locale: 'en' | 'id'): Record<string, unknown> =>
+    COPY[locale].voyage as unknown as Record<string, unknown>;
+
+  it.each(['en', 'id'] as const)(
+    'has no loading or failure line on the %s page, and says the map needs JavaScript',
+    (locale) => {
+      expect({
+        loading: voyage(locale)['loading'],
+        failed: voyage(locale)['failed'],
+        needsScript: voyage(locale)['needsScript'],
+      }).toEqual({
+        loading: undefined,
+        failed: undefined,
+        needsScript: 'The map needs JavaScript to show.',
+      });
+    },
+  );
+});
