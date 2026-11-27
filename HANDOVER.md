@@ -1,6 +1,6 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-28 03:30 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at da0925ea (#1147 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, waits on Shyden's deploy-door approval).
+**Written:** 2026-11-28 03:37 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at ce06f086 (#1146 merged). No Colima, simulator or USB claim held. board-next: #1078 (P0, waits on Shyden's deploy-door approval).
 
 ## Open PRs (strict: merge one, merge develop into the next, unit, push, CI, repeat)
 
@@ -28,10 +28,11 @@
 - #1145 merged 9bcaabd6 (#1123's CPU-time growth check). #1123 stays open until a full unit passes at load ≥180.
 - #1115 closed: AC2 stall message proven on both step bodies (comment 7217511929); DoD read on run 45911910968 (25 s, 22 s).
 - #971: 8 load timeouts at load ~70, swap 5 GB, recorded (comment 7217548726).
-- #1104 AC1 route measured and written (comment 7217629209); tests written and red.
+- #1104 shut: PR #1146 merged ce06f086; develop deploy-dev 46062979196 green, new journey passing on all 4 browsers (comment 7227658276).
+- #1147 merged da0925ea (#1139 open until the next ci.yml Edge install is read).
+- #1149 filed (P0), blocks #992/#993.
 
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. Read deploy-dev 46062979196 (`gh run view 46062979196 --json jobs`; the local waiter is DEAD after `/clear`), then shut ticket 1104.
-3. Then board-next. Tell Shyden: `.superpowers/road-to-launch.v56.html` (a 25 Nov local page copy) was deleted by mistake on 2026-11-28.
+2. board-next (it names #1078, which waits on Shyden's deploy-door approval); take the next ticket that waits on nobody. Tell Shyden: `.superpowers/road-to-launch.v56.html` (a 25 Nov local page copy) was deleted by mistake on 2026-11-28.
