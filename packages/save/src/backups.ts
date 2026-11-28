@@ -73,8 +73,11 @@ const KEPT = 1 + BACKUPS;
  * Code-unit order, never locale order: the counter is fixed-width digits, so
  * this is write order on every device whatever its language.
  */
-const byCodeUnit = (a: string, b: string): number =>
-  a < b ? -1 : a > b ? 1 : 0;
+const byCodeUnit = (a: string, b: string): number => {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+};
 
 /** The copy keys held, oldest first. */
 async function copyKeys(storage: BackupStorage): Promise<string[]> {
@@ -143,9 +146,11 @@ export function saveBackups(
     // fail; the next write prunes again.
     try {
       const keys = await copyKeys(storage);
-      for (const old of keys.slice(0, Math.max(0, keys.length - KEPT))) {
-        await storage.delete(old);
-      }
+      await Promise.all(
+        keys
+          .slice(0, Math.max(0, keys.length - KEPT))
+          .map((old) => storage.delete(old)),
+      );
     } catch {
       // Kept: an extra backup is never lost progress.
     }
