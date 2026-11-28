@@ -507,14 +507,13 @@ jobs:
           ")
           echo "::add-mask::$pass"
           echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
-      - name: Drive the roadmap page on dev (every supported target, behind the dev password)
+      - name: Drive the roadmap page on dev (every supported target, through the site's dev door)
         id: suite
         # A first limit, until its first run is measured (#476): then at
         # least 3 times its slowest run.
         timeout-minutes: 3
         env:
-          SITE_SMOKE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          SITE_SMOKE_URL: https://dev.yaweloidle.com/
         run: npm run test:site:dev
       # Each failing test's screenshot and page snapshot (#864), only when
       # the suite itself failed: a step before it failing leaves nothing to

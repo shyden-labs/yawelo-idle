@@ -240,12 +240,12 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
   });
 });
 
-const SITE_URL =
-  'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/';
+// The site's dev door (#1078 AC3): the site Worker's own address requires
+// the door, which only the door itself can send.
+const SITE_URL = 'https://dev.yaweloidle.com/';
 const site = () =>
   siteSmokeConfig({
     SITE_SMOKE_URL: SITE_URL,
-    DEV_BASIC_AUTH_PASSWORD: 'the dev password',
     DEV_PASS: 'the machine pass',
   });
 
@@ -259,17 +259,13 @@ describe('the site suite against dev (#827)', () => {
     expect(() =>
       siteSmokeConfig({
         SITE_SMOKE_URL: SITE_URL,
-        DEV_BASIC_AUTH_PASSWORD: 'the dev password',
       }),
     ).toThrow(/SITE_SMOKE_URL is set but DEV_PASS is not/);
   });
 
-  it('targets the address it is given and answers its password challenge', () => {
+  it('targets the address it is given and sends no password: the door is the only gate (#1078 AC3)', () => {
     expect(site().use?.baseURL).toBe(SITE_URL);
-    expect(site().use?.httpCredentials).toEqual({
-      username: 'site-smoke',
-      password: 'the dev password',
-    });
+    expect(site().use?.httpCredentials).toBeUndefined();
     expect(site().webServer).toBeUndefined();
   });
 
@@ -279,12 +275,6 @@ describe('the site suite against dev (#827)', () => {
 
   it('refuses to run with no address: it runs against dev only', () => {
     expect(() => siteSmokeConfig({})).toThrow(/SITE_SMOKE_URL is not set/);
-  });
-
-  it('refuses a dev address without the dev password', () => {
-    expect(() => siteSmokeConfig({ SITE_SMOKE_URL: SITE_URL })).toThrow(
-      /SITE_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not/,
-    );
   });
 
   it('runs on every desktop browser (#883, #1003), retrying nothing', () => {
@@ -302,7 +292,7 @@ describe('the site suite against dev (#827)', () => {
     );
   });
 
-  it('runs once in deploy-dev, after verify and the roadmap’s first read, in CI’s Playwright image, with the dev password', () => {
+  it('runs once in deploy-dev, after verify and the roadmap’s first read, in CI’s Playwright image, at the site’s dev door', () => {
     const running = jobsRunning('npm run test:site:dev');
     expect(running.map(([name]) => name)).toEqual(['site-smoke']);
     const job = deployDev.jobs['site-smoke'];
@@ -314,10 +304,7 @@ describe('the site suite against dev (#827)', () => {
     const steps = job?.steps ?? [];
     const suite = steps.filter((s) => runOf(s) === 'npm run test:site:dev');
     expect(suite).toHaveLength(1);
-    expect(suite[0]?.env).toEqual({
-      SITE_SMOKE_URL: SITE_URL,
-      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
-    });
+    expect(suite[0]?.env).toEqual({ SITE_SMOKE_URL: SITE_URL });
     expectEdgeInstalledBefore(job, 'npm run test:site:dev');
   });
 
@@ -325,10 +312,9 @@ describe('the site suite against dev (#827)', () => {
     expect(site().use?.screenshot).toBe('only-on-failure');
   });
 
-  // A trace records each request's headers, the dev password's
-  // Authorization among them, and test-results is uploaded to a public
-  // repository's run (#864).
-  it('records no trace and no video, which would carry the dev password', () => {
+  // A trace records each request's headers, the DEV pass cookie among
+  // them, and test-results is uploaded to a public repository's run (#864).
+  it('records no trace and no video, which would carry the DEV pass', () => {
     expect(site().use?.trace).toBe('off');
     expect(site().use?.video).toBe('off');
   });
