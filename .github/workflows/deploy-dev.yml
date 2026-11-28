@@ -149,11 +149,21 @@ jobs:
       # Named from the repository root: from its subfolder, npx runs wrangler
       # at apps/site, which reads the dev site's config instead (run
       # 38889757344 redeployed the dev site here).
+      # Its door secret, uploaded with the version itself (#1078 AC3): the
+      # Worker refuses any request its door did not send.
+      - name: Write the holding page's dev copy's secrets file (the dev door secret)
+        id: holding-secrets
+        env:
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+        run: |
+          path="$(node scripts/holding-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
       - name: Deploy the holding page's dev copy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
+          SECRETS_FILE: ${{ steps.holding-secrets.outputs.path }}
+        run: npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc --secrets-file "$SECRETS_FILE"
       - name: Build the site, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
