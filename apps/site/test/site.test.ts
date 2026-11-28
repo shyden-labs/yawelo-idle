@@ -19,7 +19,7 @@ import {
 import { DOOR_HOST_HEADER, DOOR_SECRET_HEADER } from '../../door/worker/door';
 import {
   EXEMPT_PATHS,
-  HOLDING_DOOR,
+  SITE_DOOR,
   PRIVATE_PATHS,
   ROADMAP_PATHS,
 } from '../worker/routes';
@@ -56,19 +56,9 @@ const server = createTestHarness({
     {
       configPath: './wrangler.jsonc',
       secrets: { DEV_PASSWORD: PASSWORD, DOOR_SECRET },
-      bindingOverrides: { HOLDING: 'holding-copy' },
     },
     // The real game Worker, the service wrangler.jsonc's GAME binding names.
     { configPath: '../web/wrangler.jsonc' },
-    // The holding page's build, served as assets only, as its dev copy is
-    // (apps/site/holding-dev/wrangler.jsonc, #673).
-    {
-      config: {
-        name: 'holding-copy',
-        compatibility_date: '2026-10-20',
-        assets: { directory: './dist-holding', not_found_handling: '404-page' },
-      },
-    },
   ],
 });
 
@@ -376,7 +366,7 @@ describe('legal pages are English and Indonesian (#928)', () => {
 const front = (path: string, headers: Record<string, string> = {}) =>
   get(`${DEV}${path}`, {
     [DOOR_SECRET_HEADER]: DOOR_SECRET,
-    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+    [DOOR_HOST_HEADER]: SITE_DOOR,
     ...headers,
   });
 
@@ -446,7 +436,7 @@ describe('through the dev site’s door, the site being built (#784, #1078)', ()
   const through = (secret: string) => ({
     ...authorised,
     [DOOR_SECRET_HEADER]: secret,
-    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+    [DOOR_HOST_HEADER]: SITE_DOOR,
   });
 
   it('shows the site being built at the workers.dev address with the door secret', async () => {
@@ -653,7 +643,7 @@ describe('the private API docs, dev only (#589)', () => {
 /**
  * The support pages (#860): ShyDesk's piece, loaded from ShyDesk's own dev
  * host (relayed by shydesk-b1, 2026-11-22), on the site being built and
- * through the dev front door, which shows the holding page everywhere else
+ * through the dev front door (#860; it shows the site being built everywhere since #1078)
  * (Shyden, 2026-11-22: "let /support through the doors").
  */
 describe('the support pages (#860)', () => {

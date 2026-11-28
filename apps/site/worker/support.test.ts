@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   isSupportPath,
-  passesTheDoor,
   preferredLocale,
   SHYDESK_SENTINEL,
   serveSupport,
@@ -39,22 +38,6 @@ describe('isSupportPath (#860)', () => {
   ])('does not name %s', (path) => {
     expect(isSupportPath(path)).toBe(false);
   });
-});
-
-describe('passesTheDoor (#860)', () => {
-  it.each(['/support', '/id/support/ticket', '/_site/Base.abc123.css'])(
-    'lets %s through to the full site',
-    (path) => {
-      expect(passesTheDoor(path)).toBe(true);
-    },
-  );
-
-  it.each(['/', '/_astro/Holding.abc.css', '/roadmap', '/_sitex/a.css'])(
-    'keeps %s on the holding page',
-    (path) => {
-      expect(passesTheDoor(path)).toBe(false);
-    },
-  );
 });
 
 describe('supportPolicy (#860 AC6)', () => {
