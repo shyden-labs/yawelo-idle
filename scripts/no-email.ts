@@ -62,10 +62,46 @@ const isStop = (c: string | undefined): boolean =>
 const isAsciiLetter = (c: string | undefined): boolean =>
   c !== undefined && /^[a-z]$/i.test(c);
 
+/**
+ * The page being scanned, counting every character read (#1123): the test
+ * judges the scan by this count, which is the same on every machine, where
+ * its time is not.
+ */
+class Page {
+  reads = 0;
+
+  readonly text: string;
+
+  constructor(text: string) {
+    this.text = text;
+  }
+
+  get length(): number {
+    return this.text.length;
+  }
+
+  at(i: number): string | undefined {
+    this.reads++;
+    return this.text[i];
+  }
+
+  codePointAt(i: number): number | undefined {
+    this.reads++;
+    return this.text.codePointAt(i);
+  }
+
+  /** The last full stop at or before `from`, counting each character passed. */
+  lastStop(from: number): number {
+    const found = this.text.lastIndexOf('.', from);
+    this.reads += from - found;
+    return found;
+  }
+}
+
 /** Whether `mailto:` starts at `i`, ASCII letters in either case. */
-function mailtoAt(text: string, i: number): boolean {
+function mailtoAt(page: Page, i: number): boolean {
   for (let k = 0; k < MAILTO.length; k++) {
-    const c = text.codePointAt(i + k);
+    const c = page.codePointAt(i + k);
     const want = MAILTO.codePointAt(k) ?? 0;
     const upper = want >= 97 && want <= 122 ? want - 32 : want;
     if (c !== want && c !== upper) return false;
@@ -74,9 +110,9 @@ function mailtoAt(text: string, i: number): boolean {
 }
 
 /** The end of the run of address characters starting at `from`. */
-function runEnd(text: string, from: number): number {
+function runEnd(page: Page, from: number): number {
   let i = from;
-  while (i < text.length && !isStop(text[i])) i++;
+  while (i < page.length && !isStop(page.at(i))) i++;
   return i;
 }
 
@@ -85,15 +121,15 @@ function runEnd(text: string, from: number): number {
  * full stop (past its first character) that two or more letters follow, or
  * -1 when there is none.
  */
-function domainEnd(text: string, start: number): number {
-  if (isStop(text[start])) return -1;
-  const end = runEnd(text, start + 1);
-  let dot = text.lastIndexOf('.', end - 1);
+function domainEnd(page: Page, start: number): number {
+  if (isStop(page.at(start))) return -1;
+  const end = runEnd(page, start + 1);
+  let dot = page.lastStop(end - 1);
   while (dot > start) {
     let k = dot + 1;
-    while (k < end && isAsciiLetter(text[k])) k++;
+    while (k < end && isAsciiLetter(page.at(k))) k++;
     if (k - dot > 2) return k;
-    dot = text.lastIndexOf('.', dot - 1);
+    dot = page.lastStop(dot - 1);
   }
   return -1;
 }
@@ -104,30 +140,27 @@ function domainEnd(text: string, start: number): number {
  * later in the same run, as its domain would be the same; only a `mailto:`
  * inside it can still match.
  */
-function scanRun(
-  text: string,
-  pos: number,
-): { address?: string; next: number } {
-  const at = runEnd(text, pos);
-  const end = text[at] === '@' ? domainEnd(text, at + 1) : -1;
-  if (end !== -1) return { address: text.slice(pos, end), next: end };
+function scanRun(page: Page, pos: number): { address?: string; next: number } {
+  const at = runEnd(page, pos);
+  const end = page.at(at) === '@' ? domainEnd(page, at + 1) : -1;
+  if (end !== -1) return { address: page.text.slice(pos, end), next: end };
   let next = pos + 1;
-  while (next < at && !mailtoAt(text, next)) next++;
+  while (next < at && !mailtoAt(page, next)) next++;
   return { next };
 }
 
-/** Every address and `mailto:` in `text`, in order, as written. */
-export function shownAddresses(text: string): string[] {
+/** Every address and `mailto:` on `page`, in order, as written. */
+function scan(page: Page): string[] {
   const found: string[] = [];
   let pos = 0;
-  while (pos < text.length) {
-    if (mailtoAt(text, pos)) {
-      found.push(text.slice(pos, pos + MAILTO.length));
+  while (pos < page.length) {
+    if (mailtoAt(page, pos)) {
+      found.push(page.text.slice(pos, pos + MAILTO.length));
       pos += MAILTO.length;
-    } else if (isStop(text[pos])) {
+    } else if (isStop(page.at(pos))) {
       pos++;
     } else {
-      const { address, next } = scanRun(text, pos);
+      const { address, next } = scanRun(page, pos);
       if (address !== undefined) found.push(address);
       pos = next;
     }
@@ -135,9 +168,16 @@ export function shownAddresses(text: string): string[] {
   return found;
 }
 
+/** Every address and `mailto:` in `text`, in order, as written. */
+export function shownAddresses(text: string): string[] {
+  return scan(new Page(text));
+}
+
 /** How many characters reading `text` takes: the scan's work, by count. */
-export function readsToScan(_text: string): number {
-  throw new Error('readsToScan: not written yet (#1123)');
+export function readsToScan(text: string): number {
+  const page = new Page(text);
+  scan(page);
+  return page.reads;
 }
 
 /**

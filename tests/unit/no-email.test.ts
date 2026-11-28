@@ -146,7 +146,7 @@ describe('where an address starts and ends (#1106: the same matches as the old p
 // fixed number of times; the old pattern read each one about as many times
 // as the page is long.
 const LENGTH = 40_000;
-const MAX_READS_PER_CHARACTER = 32;
+const MAX_READS_PER_CHARACTER = 8;
 const perCharacter = (text: string): number => readsToScan(text) / text.length;
 
 describe('a long page is read a fixed number of times per character (#1106, #1123)', () => {
