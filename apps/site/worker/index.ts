@@ -7,7 +7,7 @@
  * the dev front door the holding page's dev copy, through the HOLDING
  * service binding, so dev shows what production shows (#673); on this
  * Worker's own address the site's own prerendered pages, the site being
- * built. The cron reads the board every 10 minutes.
+ * built. A visit reads the board once the last read is 10 minutes old (#1074).
  *
  * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
  * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
@@ -36,6 +36,9 @@ import {
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
+import { declaredOverCap, readUpToCap } from './body';
+import { isSupportPath, serveSupport } from './support';
+import { carryBoard } from './carry';
 import privateSpec from '../api/private.openapi.json';
 
 export { Roadmap } from './roadmap';
@@ -47,9 +50,6 @@ interface SiteEnv extends RoadmapEnv {
   /** This environment's door secret (#784), which every door request carries. */
   readonly DOOR_SECRET?: string;
 }
-
-/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
-const MAX_HOOK_BYTES = 1_048_576;
 
 const roadmap = (env: SiteEnv) => env.ROADMAP.getByName('board');
 
@@ -64,11 +64,14 @@ async function hook(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return new Response(null, { status: 405, headers: { Allow: 'POST' } });
-  const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > MAX_HOOK_BYTES) return new Response(null, { status: 413 });
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_HOOK_BYTES)
+  // A declared length is refused before reading.
+  if (declaredOverCap(request.headers))
     return new Response(null, { status: 413 });
+  const body =
+    request.body === null
+      ? new ArrayBuffer(0)
+      : await readUpToCap(request.body as ReadableStream<Uint8Array>);
+  if (body === 413) return new Response(null, { status: 413 });
   const signature = request.headers.get('X-Hub-Signature-256');
   if (!(await verifySignature(env.ROADMAP_WEBHOOK_SECRET, body, signature)))
     return new Response(null, { status: 401 });
@@ -130,6 +133,8 @@ export default {
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
+      if (isSupportPath(path))
+        return serveSupport(allowed, env.ASSETS, env.SHYDESK_HOST);
       // The holding page on the dev front door or through the dev site's
       // door (#673, #784), the door believed only with this Worker's door
       // secret, compared in constant time; else the site being built.
@@ -139,10 +144,7 @@ export default {
         workerEqual,
         env.HOLDING,
         env.ASSETS,
-      );
+      ).then((page) => carryBoard(path, page, () => roadmap(env).snapshot()));
     });
-  },
-  scheduled(_controller, env, ctx): void {
-    ctx.waitUntil(roadmap(env).check());
   },
 } satisfies ExportedHandler<SiteEnv>;

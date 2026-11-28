@@ -17,7 +17,11 @@ import { commitStamp } from './commit-stamp.ts';
 export default defineConfig({
   site: SITE,
   output: 'static',
-  build: { format: 'preserve' },
+  // The full site's own files live under /_site/, so the holding door can let
+  // them through to the support pages (#860) apart from the holding page's
+  // /_astro/; nothing is inlined, so the support pages' policy needs no hash.
+  build: { format: 'preserve', assets: '_site', inlineStylesheets: 'never' },
+  vite: { build: { assetsInlineLimit: 0 } },
   integrations: [svelte(), commitStamp(process.env['YAWELO_IDLE_COMMIT'])],
   i18n: {
     locales: ['en', 'id'],

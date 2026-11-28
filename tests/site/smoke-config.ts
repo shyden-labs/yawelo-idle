@@ -1,9 +1,7 @@
 import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
-import {
-  ASSERTION_COUNTS_REPORTER,
-  BROWSER_TARGETS,
-  TARGET_TOTALS_REPORTER,
-} from '../browser-targets';
+import { desktopSuite } from '../desktop-targets';
+import { HOLDING_DOOR } from '../../apps/site/worker/routes';
+import { devPassState } from '../dev-pass-cookie';
 
 /**
  * The site's browser suite (#827): the roadmap page as deployed on dev, the
@@ -31,6 +29,11 @@ export function siteSmokeConfig(
     throw new Error(
       'SITE_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not: dev answers every request with its password gate',
     );
+  const devPass = env['DEV_PASS'];
+  if (devPass === undefined)
+    throw new Error(
+      'SITE_SMOKE_URL is set but DEV_PASS is not: the support pages load through the site’s dev door, which lets no request through without one (#1078)',
+    );
   const shared: PlaywrightTestConfig = {
     testDir: 'tests/site',
     workers: 1,
@@ -38,13 +41,13 @@ export function siteSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: [['list'], [TARGET_TOTALS_REPORTER], [ASSERTION_COUNTS_REPORTER]],
-    projects: BROWSER_TARGETS,
+    ...desktopSuite('site'),
   };
   return defineConfig({
     ...shared,
     use: {
       baseURL: target,
+      storageState: devPassState(HOLDING_DOOR, devPass),
       httpCredentials: { username: USERNAME, password },
       // A failing test leaves a screenshot beside Playwright's page snapshot
       // in test-results, which deploy-dev uploads (#864). Never a trace or a

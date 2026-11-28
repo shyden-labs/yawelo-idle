@@ -17,7 +17,7 @@
  * Nothing is retried; each problem is named, with no header printed.
  */
 import { createHmac } from 'node:crypto';
-import { DOORS } from '../apps/door/worker/door.ts';
+import { DOORS } from '../apps/door/worker/doors.ts';
 
 /** The dev door that reaches `worker`. */
 function devHost(worker: string): string {

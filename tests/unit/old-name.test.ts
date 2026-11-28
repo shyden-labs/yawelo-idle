@@ -208,6 +208,8 @@ describe('readText over binary media (#621)', () => {
     ['poster.jpg', 'Latin-1', latin1],
     ['promo.mp4', 'UTF-16LE', utf16le],
     ['promo.webm', 'UTF-16BE', utf16be],
+    // The tab icon's /favicon.ico fallback (#1055 AC2).
+    ['favicon.ico', 'Latin-1', latin1],
   ] as const)(
     'finds the old name in %s written as %s',
     (path, _encoding, encode) => {

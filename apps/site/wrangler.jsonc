@@ -39,10 +39,14 @@
   ],
   // The live roadmap (#341): the one board it reads, as the read-only App
   // yawelo-idle-roadmap; its snapshot lives in the Roadmap Durable Object
-  // (SQLite storage, the only kind on the Free plan, spec §10 R1), and the
-  // cron re-reads the whole board every 10 minutes to catch a missed webhook.
+  // (SQLite storage, the only kind on the Free plan, spec §10 R1), and a
+  // visit re-reads the whole board once the last read is 10 minutes old, which
+  // catches a missed webhook (#1074; there is no cron).
   // The App key and webhook secret are Worker secrets from the deploy.
   "vars": {
+    // ShyDesk's dev host (#860, relayed by shydesk-b1 2026-11-22); it moves
+    // with shyden-labs/shydesk#262 (#1076).
+    "SHYDESK_HOST": "https://shydesk.shydesk-non-prod.workers.dev",
     "ROADMAP_APP_ID": "5294556",
     "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
     "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
@@ -51,9 +55,11 @@
     // then sets "true" with DOOR_SECRET, and any other value requires the door.
     "DOOR_REQUIRED": "false",
   },
+  // The Worker version, so a deploy's first visit reads the board with the
+  // new code (#1074).
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "durable_objects": {
     "bindings": [{ "name": "ROADMAP", "class_name": "Roadmap" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Roadmap"] }],
-  "triggers": { "crons": ["*/10 * * * *"] },
 }

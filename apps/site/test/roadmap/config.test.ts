@@ -43,3 +43,12 @@ it('runs the tested Worker before any asset, as the deployed one does', () => {
     run_worker_first: true,
   });
 });
+
+/**
+ * The roadmap reads on visit, not on a timer (Shyden, 2026-11-22, #1074): no
+ * schedule costs anything while nobody visits. The tested config is held
+ * equal to this one above, so it has none either.
+ */
+it('runs nothing on a schedule (#1074)', () => {
+  expect(config('wrangler.jsonc')).not.toHaveProperty('triggers');
+});

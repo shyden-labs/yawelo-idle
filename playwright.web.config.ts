@@ -1,9 +1,6 @@
 import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
-import {
-  BROWSER_TARGETS,
-  TARGET_TOTALS_REPORTER,
-  ASSERTION_COUNTS_REPORTER,
-} from './tests/browser-targets';
+import { desktopSuite } from './tests/desktop-targets';
+import { devPassState } from './tests/dev-pass-cookie';
 
 /**
  * The web app's smoke suite (#123 AC3): the BUILT game, loaded in each
@@ -43,8 +40,7 @@ export function webSmokeConfig(
     timeout: 0,
     forbidOnly: true,
     retries: 0,
-    reporter: [['list'], [TARGET_TOTALS_REPORTER], [ASSERTION_COUNTS_REPORTER]],
-    projects: BROWSER_TARGETS,
+    ...desktopSuite('web'),
   };
   const target = env['WEB_SMOKE_URL'];
   if (target === undefined) {
@@ -64,10 +60,16 @@ export function webSmokeConfig(
     throw new Error(
       'WEB_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not: dev answers every request with its password gate',
     );
+  const devPass = env['DEV_PASS'];
+  if (devPass === undefined)
+    throw new Error(
+      'WEB_SMOKE_URL is set but DEV_PASS is not: the dev door lets no request through without one (#1078)',
+    );
   return defineConfig({
     ...shared,
     use: {
       baseURL: target,
+      storageState: devPassState(new URL(target).hostname, devPass),
       httpCredentials: {
         username: USERNAME,
         password,

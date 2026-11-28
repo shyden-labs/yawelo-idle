@@ -41,6 +41,7 @@
  */
 
 import { CONTENT_SECURITY_POLICY } from '../apps/web/worker/policy.ts';
+import { standInFor } from './door-stand-in.ts';
 
 export interface Probe {
   status: number;
@@ -59,6 +60,19 @@ export interface Target {
   sha: string;
   password: string;
 }
+
+/**
+ * What verifyDev reaches (#1078): the front door's and sync's origins at their
+ * own workers.dev addresses, with the door secret CI stands in for the door
+ * with, never through a door.
+ */
+export interface DevTarget extends Target {
+  doorSecret: string;
+}
+
+/** The Workers whose doors CI stands in for, by name in the dev account. */
+const FRONT_WORKER = 'yawelo-idle-site-dev';
+const SYNC_WORKER = 'yawelo-idle-sync-dev';
 
 export const NO_INDEX = 'noindex, nofollow, noarchive';
 
@@ -457,7 +471,7 @@ export function healthJudgement(probe: Probe, sha: string): Judgement {
   ]);
 }
 
-/** Two of the roadmap's 10-minute checks (website spec §5.2 item 6). */
+/** How old the last check may be once verify has visited the roadmap (#1074). */
 const ROADMAP_CHECK_MAX_AGE_MS = 20 * 60_000;
 
 /** The roadmap check that the record was made after the deploy (#708). */
@@ -490,8 +504,8 @@ interface RoadmapHealth {
  * The live roadmap's health (#341): the board has been read, no missed webhook
  * is outstanding (drift stays until a webhook is seen delivering a change
  * again, operator decision 2026-10-06), reads are not still failing at a
- * check after the one that failed (#693), and the 10-minute check ran within
- * two intervals. Only a record whose last check came at or after
+ * check after the one that failed (#693), and a check ran within 20 minutes
+ * (verify visits first, so one should have, #1074). Only a record whose last check came at or after
  * `deployedAtMs` is judged: an earlier one is the previous code's (#708).
  */
 export function roadmapJudgement(
@@ -549,7 +563,7 @@ export function roadmapJudgement(
           ? undefined
           : // The times the judgement rests on, so the next drift is measured
             // from verify's own output, not inferred (#689).
-            `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift ${stamped(body.lastDriftAt)}, last event ${stamped(body.lastEventAt)}, last check ${stamped(body.lastCheckAt)})`,
+            `roadmap: drift ${shown(body.drift)} since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift ${stamped(body.lastDriftAt)}, last event ${stamped(body.lastEventAt)}, last check ${stamped(body.lastCheckAt)})`,
     },
     {
       name: 'reads',
@@ -569,7 +583,7 @@ export function roadmapJudgement(
         const at = Date.parse(String(body.lastCheckAt));
         return Number.isFinite(at) && nowMs - at <= ROADMAP_CHECK_MAX_AGE_MS
           ? undefined
-          : `roadmap: last check ${shown(body.lastCheckAt)}, more than 20 minutes ago: the cron is not running`;
+          : `roadmap: last check ${shown(body.lastCheckAt)}, more than 20 minutes ago, though verify visited the roadmap first`;
       },
     },
     noIndexCheck('roadmap', probe),
@@ -584,15 +598,17 @@ export function roadmapProblems(
 }
 
 /**
- * The live roadmap's health as the deployed code reports it (#708): waits
- * for the site's first 10-minute check at or after `deployedAtMs`, looking
+ * The live roadmap's health as the deployed code reports it (#708): visits
+ * `/api/roadmap.json` once, since a visit is what makes the deployed code read
+ * the board (#1074; there is no cron), then waits for the site's first check
+ * at or after `deployedAtMs`, looking
  * `polls` times `pollMs` apart, then judges that record once. A record the
  * previous code made is waited past, never judged; anything else (a failed
  * request, a wrong status, a record from after the deploy with a problem)
  * fails at once. At the last look it fails naming the last check it saw.
  */
 export async function verifyRoadmap(
-  target: Pick<Target, 'webUrl' | 'password'>,
+  target: Pick<DevTarget, 'webUrl' | 'password' | 'doorSecret'>,
   deployedAtMs: number,
   { polls, pollMs }: Wait,
 ): Promise<string[]> {
@@ -605,7 +621,17 @@ export async function verifyRoadmap(
       `polls must be a whole number of at least 1, got ${String(polls)}`,
     );
   const url = new URL('/api/roadmap/health', target.webUrl).href;
-  const headers = { Authorization: basicAuthorization(target.password) };
+  // At the site Worker's own address, standing in for its door (#1078).
+  const headers = {
+    Authorization: basicAuthorization(target.password),
+    ...standInFor(FRONT_WORKER, target.doorSecret),
+  };
+  // The visit only starts a read; its answer is not judged. A visit that
+  // fails outright shows up below as a health record with no check after
+  // the deploy, named at the last look.
+  await fetch(new URL('/api/roadmap.json', target.webUrl), { headers })
+    .then((response) => response.arrayBuffer())
+    .catch(() => undefined);
   let previous: readonly string[] = [];
   for (let poll = 1; poll <= polls; poll += 1) {
     // The judgement the probe got, or none when the request failed outright.
@@ -653,6 +679,25 @@ export interface Outcome {
 }
 
 /**
+ * Why a request failed, in words. Node's fetch throws `fetch failed` and keeps
+ * the real reason (a DNS miss, a reset, a TLS refusal) in `cause`, so the cause
+ * is named too (#1101).
+ */
+export function failureReason(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const { cause } = error;
+  if (cause === undefined) return error.message;
+  if (!(cause instanceof Error)) {
+    const text = typeof cause === 'string' ? cause : JSON.stringify(cause);
+    return `${error.message} (${text})`;
+  }
+  const code = (cause as { code?: unknown }).code;
+  const named =
+    typeof code === 'string' ? `${code}: ${cause.message}` : cause.message;
+  return `${error.message} (${named})`;
+}
+
+/**
  * Probes `url` and judges the answer. A request that fails outright (a dropped
  * connection, DNS not yet resolving a new hostname) is reported, never thrown,
  * so the report names it.
@@ -667,9 +712,8 @@ export async function check(
   try {
     answer = await probe(url, headers);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
     return {
-      problems: [`${label}: request to ${url} failed: ${reason}`],
+      problems: [`${label}: request to ${url} failed: ${failureReason(error)}`],
       answer: null,
     };
   }
@@ -724,7 +768,7 @@ type Standing =
   | { kind: 'failed'; problem: string };
 
 export async function verifyDev(
-  target: Target,
+  target: DevTarget,
   { polls, pollMs }: Wait,
 ): Promise<string[]> {
   if (!Number.isInteger(polls) || polls < 1)
@@ -736,6 +780,8 @@ export async function verifyDev(
   const right = { Authorization: basicAuthorization(target.password) };
   // Appending to the real password guarantees a different one.
   const wrong = { Authorization: basicAuthorization(`${target.password}x`) };
+  const front = standInFor(FRONT_WORKER, target.doorSecret);
+  const syncDoor = standInFor(SYNC_WORKER, target.doorSecret);
 
   /** Hosts that have answered in this run: a later failed request from one is a failure, not a wait. */
   const answered = new Set<Host>();
@@ -771,23 +817,27 @@ export async function verifyDev(
   let waiting: string[] = [];
   for (let poll = 1; poll <= polls; poll += 1) {
     const gate = [
-      await look('web', 'web without credentials', target.webUrl, {}, (p) =>
+      await look('web', 'web without credentials', target.webUrl, front, (p) =>
         gateProblems('web without credentials', p),
       ),
       await look(
         'web',
         'web with a wrong password',
         target.webUrl,
-        wrong,
+        { ...front, ...wrong },
         (p) => gateProblems('web with a wrong password', p),
       ),
     ];
     if (gate.some(({ answer }) => answer !== null && leaked(answer)))
       return gate.flatMap((outcome) => outcome.problems);
-    const web = await look('web', 'web', target.webUrl, right, (p) =>
-      holdingProblems(p, target.sha),
+    const web = await look(
+      'web',
+      'web',
+      target.webUrl,
+      { ...front, ...right },
+      (p) => holdingProblems(p, target.sha),
     );
-    const sync = await look('sync', 'sync', healthUrl, {}, (p) =>
+    const sync = await look('sync', 'sync', healthUrl, syncDoor, (p) =>
       healthProblems(p, target.sha),
     );
     const hosts = [
@@ -811,7 +861,7 @@ export async function verifyDev(
       // Every other page judged waits for the commit too (#581): a Workers
       // version rolls out per request, so /roadmap served the previous commit
       // 2 s after the home page served this one (deploy-dev run 38333791614).
-      const pages = await lookAtPages(look, target, right);
+      const pages = await lookAtPages(look, target, right, front);
       const standings = pages.map((page) =>
         standing(
           page,
@@ -831,7 +881,7 @@ export async function verifyDev(
           'web',
           'robots.txt',
           robotsUrl,
-          {},
+          front,
           robotsProblems,
         );
         return [
@@ -840,7 +890,7 @@ export async function verifyDev(
           web,
           sync,
           ...pages,
-          ...(await lookAtTheRest(look, target, right, web, pages)),
+          ...(await lookAtTheRest(look, target, right, front, web, pages)),
         ].flatMap((outcome) => outcome.problems);
       }
     }
@@ -877,6 +927,7 @@ async function lookAtPages(
   look: Look,
   target: Target,
   right: Record<string, string>,
+  front: Record<string, string>,
 ): Promise<PageLook[]> {
   const outcomes: PageLook[] = [];
   for (const path of SITE_PAGES) {
@@ -885,7 +936,7 @@ async function lookAtPages(
       'web',
       label,
       new URL(path, target.webUrl).href,
-      right,
+      { ...front, ...right },
       (p) =>
         path === GAME_SHELL
           ? gameShellProblems(p, target.sha, label)
@@ -920,10 +971,12 @@ async function lookAtTheRest(
   look: Look,
   target: Target,
   right: Record<string, string>,
+  front: Record<string, string>,
   home: Outcome,
   pages: readonly PageLook[],
 ): Promise<Outcome[]> {
   const at = (path: string) => new URL(path, target.webUrl).href;
+  const authorised = { ...front, ...right };
   const outcomes: Outcome[] = [];
   const stylesheet = stylesheetOf(home.answer?.body ?? '');
   const shell =
@@ -933,15 +986,19 @@ async function lookAtTheRest(
   outcomes.push(
     stylesheet === undefined
       ? { problems: ['web: no stylesheet in the page'], answer: null }
-      : await look('web', `web ${stylesheet}`, at(stylesheet), right, (p) =>
-          stylesheetProblems(`web ${stylesheet}`, p),
+      : await look(
+          'web',
+          `web ${stylesheet}`,
+          at(stylesheet),
+          authorised,
+          (p) => stylesheetProblems(`web ${stylesheet}`, p),
         ),
     script === undefined
       ? { problems: ['web /play/: no game script in the page'], answer: null }
-      : await look('web', `web ${script}`, at(script), right, (p) =>
+      : await look('web', `web ${script}`, at(script), authorised, (p) =>
           scriptProblems(`web ${script}`, p),
         ),
-    await look('web', 'game without credentials', at('/play/'), {}, (p) =>
+    await look('web', 'game without credentials', at('/play/'), front, (p) =>
       gateProblems('game without credentials', p),
     ),
     await look('site', 'site without credentials', target.siteUrl, {}, (p) =>
@@ -969,6 +1026,7 @@ if (import.meta.main) {
       gameUrl: required('DEV_GAME_URL'),
       sha: required('EXPECTED_SHA'),
       password: required('DEV_BASIC_AUTH_PASSWORD'),
+      doorSecret: required('DEV_DOOR_SECRET'),
     },
     { polls: 36, pollMs: 5_000 },
   );

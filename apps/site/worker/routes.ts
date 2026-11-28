@@ -7,6 +7,7 @@
 import { isProdHost, PROD_HOSTNAME } from '@yawelo-idle/lockdown';
 import { DOORS } from '../../door/worker/door';
 import { doorOf, type Equal } from '../../door/worker/origin';
+import { passesTheDoor } from './support';
 
 /** Where GitHub's org webhooks deliver (#341). */
 export const HOOK_PATH = '/hooks/github';
@@ -68,6 +69,9 @@ export async function pagesFor(
   secret: string | undefined,
   equal: Equal,
 ): Promise<'holding' | 'site'> {
+  // The support pages and the full site's own files go through the holding
+  // door to the site (Shyden, 2026-11-22, #860).
+  if (passesTheDoor(new URL(request.url).pathname)) return 'site';
   const door = await doorOf(request, secret, equal);
   return showsHolding(door) ? 'holding' : 'site';
 }

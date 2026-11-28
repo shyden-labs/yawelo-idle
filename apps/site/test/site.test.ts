@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 import {
   BLOCKING_ROBOTS_TXT,
   challengeResponse,
@@ -24,6 +24,7 @@ import {
   ROADMAP_PATHS,
 } from '../worker/routes';
 import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy';
+import { supportPolicy } from '../worker/support';
 
 /**
  * The dev site Worker, served by wrangler's test harness from the real
@@ -112,9 +113,13 @@ const PAGES: [Locale, Page][] = [
   ['en', 'home'],
   ['en', 'roadmap'],
   ['en', 'privacy'],
+  ['en', 'support'],
+  ['en', 'supportTicket'],
   ['id', 'home'],
   ['id', 'roadmap'],
   ['id', 'privacy'],
+  ['id', 'support'],
+  ['id', 'supportTicket'],
 ];
 
 /** A page's title: a legal page's comes from `LEGAL`, apart from the general copy. */
@@ -314,16 +319,17 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
 });
 
 describe('the roadmap page’s own text, in its language (#830)', () => {
-  /** The Indonesian page's note that the board's own text stays English. */
-  const NOTE =
+  /**
+   * The old Indonesian note that ticket titles and island summaries stayed
+   * English. The voyage map (#1068) shows no ticket titles and its summaries
+   * are Indonesian, so neither page shows it (#830, 2026-11-24).
+   */
+  const OLD_NOTE =
     'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.';
 
-  it.each([
-    ['en', false],
-    ['id', true],
-  ] as const)(
-    'the %s roadmap says what it shows, what launch means and how to read it (note shown: %s)',
-    async (locale, noted) => {
+  it.each(['en', 'id'] as const)(
+    'the %s roadmap says what it shows, what launch means and how to read it, with no ticket-titles note',
+    async (locale) => {
       const html = await (
         await get(`${DEV}${pagePath(locale, 'roadmap')}`, authorised)
       ).text();
@@ -332,8 +338,8 @@ describe('the roadmap page’s own text, in its language (#830)', () => {
         html.includes(`<p lang="${locale}">${intro}</p>`),
         html.includes(`<p lang="${locale}">${launch}</p>`),
         html.includes(`<p lang="${locale}">${howToRead}</p>`),
-        html.includes(`<p lang="${locale}">${NOTE}</p>`),
-      ]).toEqual([true, true, true, noted]);
+        html.includes(OLD_NOTE),
+      ]).toEqual([true, true, true, false]);
     },
   );
 });
@@ -650,5 +656,108 @@ describe('the private API docs, dev only (#589)', () => {
         .map((f) => `${root}${f}`),
     );
     expect(linking).toEqual([]);
+  });
+});
+
+/**
+ * The support pages (#860): ShyDesk's piece, loaded from ShyDesk's own dev
+ * host (relayed by shydesk-b1, 2026-11-22), on the site being built and
+ * through the dev front door, which shows the holding page everywhere else
+ * (Shyden, 2026-11-22: "let /support through the doors").
+ */
+describe('the support pages (#860)', () => {
+  const SHYDESK_DEV = 'https://shydesk.shydesk-non-prod.workers.dev';
+  const SUPPORT: [Locale, Page, 'contact' | 'ticket'][] = [
+    ['en', 'support', 'contact'],
+    ['en', 'supportTicket', 'ticket'],
+    ['id', 'support', 'contact'],
+    ['id', 'supportTicket', 'ticket'],
+  ];
+
+  it.each(SUPPORT)(
+    '%s %s embeds ShyDesk’s %s view from ShyDesk’s dev host, with its own words, through the front door',
+    async (locale, page, view) => {
+      const response = await front(pagePath(locale, page), authorised);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Security-Policy')).toBe(
+        supportPolicy(SHYDESK_DEV),
+      );
+      const html = await response.text();
+      expect(html).not.toContain(' data-coming-soon>');
+      expect(html).toContain(
+        `<script src="${SHYDESK_DEV}/embed.js" defer></script>`,
+      );
+      expect(html).toContain(
+        `<shydesk-support product="yawelo-idle" view="${view}" lang="${locale}"`,
+      );
+      expect(html).toContain(
+        `<h1>${COPY[locale].titles[page as 'support']}</h1>`,
+      );
+      const intro =
+        view === 'contact'
+          ? COPY[locale].support.intro
+          : COPY[locale].support.ticketIntro;
+      expect(html).toContain(`<p data-support-intro>${intro}</p>`);
+      expect(html).toContain(
+        `<p data-support-failed hidden>${COPY[locale].support.failed}</p>`,
+      );
+    },
+  );
+
+  it('serves the stylesheet the support page links through the front door, as CSS', async () => {
+    const html = await (await front('/support', authorised)).text();
+    const link = /<link rel="stylesheet" href="(\/_site\/[^"]+\.css)">/;
+    expect(html, 'a stylesheet under /_site/').toMatch(link);
+    const href = link.exec(html)?.[1];
+    const response = await front(String(href), authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
+  });
+
+  it('serves the script the support page runs through the front door, as JavaScript', async () => {
+    const html = await (await front('/support', authorised)).text();
+    const script =
+      /<script type="module" src="(\/_site\/[^"]+\.js)"><\/script>/;
+    expect(html, 'a module script under /_site/').toMatch(script);
+    const src = script.exec(html)?.[1];
+    const response = await front(String(src), authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(
+      /^(text|application)\/javascript\b/,
+    );
+  });
+
+  it('sends a browser preferring Indonesian from the ticket address to the Indonesian ticket page', async () => {
+    const response = await front('/support/ticket', {
+      ...authorised,
+      'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
+      'Sec-Fetch-Site': 'cross-site',
+    });
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe('/id/support/ticket');
+  });
+
+  it('keeps the English ticket page for a reader who switched to it on the site', async () => {
+    const response = await front('/support/ticket', {
+      ...authorised,
+      'Accept-Language': 'id-ID,id;q=0.9',
+      'Sec-Fetch-Site': 'same-origin',
+    });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('view="ticket" lang="en"');
+  });
+
+  it.each([DEV, PROD])(
+    'forwards nothing at %s/support-api/embed.js (AC3)',
+    async (origin) => {
+      const response = await get(`${origin}/support-api/embed.js`, authorised);
+      expect(response.status).toBe(404);
+      expect(response.headers.get('Content-Type')).toMatch(/^text\/html\b/);
+    },
+  );
+
+  it('forwards nothing at /support-api/embed.js through the front door (AC3)', async () => {
+    const response = await front('/support-api/embed.js', authorised);
+    expect(response.status).toBe(404);
   });
 });

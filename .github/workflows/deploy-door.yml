@@ -51,7 +51,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       # No install scripts: the deploy needs wrangler's files, not the
       # workspace's generated types.
       - run: npm ci --ignore-scripts
@@ -69,6 +68,8 @@ jobs:
           ORIGIN_DOMAIN: ${{ secrets.DOOR_ORIGIN_DOMAIN }}
           DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           TEST_DOOR_SECRET: ${{ secrets.TEST_DOOR_SECRET }}
+          # The DEV pass public keys (#1078): public, so a variable.
+          DEV_PASS_KEYS: ${{ vars.DEV_PASS_KEYS }}
         run: |
           path="$(node scripts/door-secrets.ts)"
           echo "path=$path" >> "$GITHUB_OUTPUT"

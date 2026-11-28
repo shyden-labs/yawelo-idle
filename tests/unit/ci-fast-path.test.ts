@@ -46,11 +46,22 @@ const idOf = (step: Step) => step.name ?? step.uses?.split('@')[0] ?? '?';
 
 const SKIP = "steps.classify.outputs.scope != 'docs-only'";
 
-/** Every step, in order: today's order with the classifier after Node. */
+/**
+ * A step's condition skips it on docs-only: the skip alone, or the skip with
+ * more added by `&&` (the Edge cache's save, #1092). An `||` could run it there.
+ */
+const skipsOnDocs = (condition?: string): boolean =>
+  condition === `\${{ ${SKIP} }}` ||
+  (condition?.startsWith(`\${{ ${SKIP} && `) === true &&
+    condition.endsWith(' }}') &&
+    !condition.includes('||'));
+
+/** Every step, in order: today's order with the classifier after Node, and Node's cache just before it (#1118). */
 const ORDER = [
   'The default branch is develop',
   'actions/checkout',
   'Read the exact Node version (docker/node/Dockerfile)',
+  'actions/cache',
   'actions/setup-node',
   "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
@@ -67,12 +78,11 @@ const ORDER = [
   'Pacing bots (under 2 minutes)',
   'Upload the pacing report',
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)',
-  'Cross-engine determinism (Node, Chromium, Firefox, WebKit)',
-  'Web smoke (the built game in a local Worker, on every supported target)',
   'Build (a warning fails it)',
   'Build the holding page',
   'Make its dev copy',
   'No built page loads from a free shared domain',
+  'No built page shows an email address',
 ];
 
 /** The steps a docs-only change runs (AC2). */
@@ -80,6 +90,7 @@ const DOCS_ONLY = [
   'The default branch is develop',
   'actions/checkout',
   'Read the exact Node version (docker/node/Dockerfile)',
+  'actions/cache',
   'actions/setup-node',
   "Print Node's ICU and CLDR versions (#942)",
   'Classify the change as docs-only or full (#360)',
@@ -103,12 +114,11 @@ const SKIPPED: Record<string, string> = {
   // (#353).
   'Upload the pacing report': `\${{ !cancelled() && ${SKIP} && (steps.pacing.outcome == 'success' || steps.pacing.outcome == 'failure') }}`,
   'Worker tests (sync in workerd + local D1, site and game through the asset router, the roadmap in workerd)': `\${{ ${SKIP} }}`,
-  'Cross-engine determinism (Node, Chromium, Firefox, WebKit)': `\${{ ${SKIP} }}`,
-  'Web smoke (the built game in a local Worker, on every supported target)': `\${{ ${SKIP} }}`,
   'Build (a warning fails it)': `\${{ ${SKIP} }}`,
   'Build the holding page': `\${{ ${SKIP} }}`,
   'Make its dev copy': `\${{ ${SKIP} }}`,
   'No built page loads from a free shared domain': `\${{ ${SKIP} }}`,
+  'No built page shows an email address': `\${{ ${SKIP} }}`,
 };
 
 describe('build-and-test’s steps (#360 AC2)', () => {
@@ -150,6 +160,51 @@ describe('build-and-test’s steps (#360 AC2)', () => {
     );
     expect(readers.map(idOf)).toEqual(Object.keys(SKIPPED));
     expect(all.map(idOf)).toEqual(ORDER);
+  });
+});
+
+describe('the browsers job’s steps (#1003)', () => {
+  const browsers = (): Step[] => read('ci.yml').jobs['browsers']?.steps ?? [];
+
+  it('classifies after Node and before install, and the checkout fetches two levels', () => {
+    const ids = browsers().map(idOf);
+    expect(ids.slice(0, 7)).toEqual([
+      'actions/checkout',
+      'Read the exact Node version (docker/node/Dockerfile)',
+      'actions/cache',
+      'actions/setup-node',
+      "Mark the workspace safe for root's git",
+      'Classify the change as docs-only or full (#360)',
+      'Install (a warning fails it)',
+    ]);
+    expect(browsers()[0]?.with?.['fetch-depth']).toBe(2);
+  });
+
+  it('on docs-only, runs no suite: every step after the classifier carries the skip, whole', () => {
+    const after = browsers().slice(
+      browsers().findIndex((s) => s.id === 'classify') + 1,
+    );
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.filter((s) => !skipsOnDocs(s.if)).map(idOf)).toEqual([]);
+  });
+
+  it.each([
+    ['an || after the skip', `\${{ ${SKIP} || always() }}`],
+    ['the skip not first', `\${{ always() && ${SKIP} }}`],
+    ['an || after an &&', `\${{ ${SKIP} && x || y }}`],
+    ['no condition', undefined],
+  ])(
+    'refuses a condition that could run a step on docs-only: %s',
+    (_label, condition) => {
+      expect(skipsOnDocs(condition)).toBe(false);
+    },
+  );
+
+  it('accepts the skip alone and the skip with more added by &&', () => {
+    expect(skipsOnDocs(`\${{ ${SKIP} }}`)).toBe(true);
+    expect(skipsOnDocs(`\${{ ${SKIP} && steps.x.outputs.y != 'z' }}`)).toBe(
+      true,
+    );
   });
 });
 

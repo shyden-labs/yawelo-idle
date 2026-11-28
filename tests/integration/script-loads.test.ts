@@ -46,17 +46,22 @@ const SCRIPTS = [
   'scripts/google-read-back.ts',
   'scripts/holding-dev.ts',
   'scripts/licence-check.ts',
+  'scripts/lint.ts',
   'scripts/npm-audit.ts',
+  'scripts/one-suite-check.ts',
   'scripts/prod-version.ts',
   'scripts/release-cut.ts',
   'scripts/sonar-verdict.ts',
   'scripts/sync-secrets.ts',
   'scripts/third-party-notices.ts',
   'scripts/token-reach.ts',
+  'scripts/verify-api.ts',
   'scripts/verify-dev-hosts.ts',
   'scripts/verify-dev.ts',
   'scripts/verify-prod.ts',
   'scripts/verify-roadmap.ts',
+  'scripts/worker-coverage-build.ts',
+  'scripts/worker-coverage-report.ts',
 ] as const;
 
 describe('the scripts load under Node’s own loader (#391)', () => {

@@ -3,7 +3,7 @@
 # The poster and the video come from media.yaweloidle.com (#713, #1013), whose zone
 # rule sets their Cross-Origin-Resource-Policy: cross-origin.
 /*
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()

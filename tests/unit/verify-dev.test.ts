@@ -9,6 +9,7 @@ import type { AddressInfo } from 'node:net';
 import {
   NO_INDEX,
   basicAuthorization,
+  failureReason,
   gateJudgement,
   gameShellJudgement,
   gameShellProblems,
@@ -56,6 +57,8 @@ warm.close();
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const OLD = '1f660b30f75d081ae6559d175e5c0c3e26acb84c';
 const PASSWORD = 'pä:ss';
+/** The dev door secret CI holds to stand in for the door (#1078). */
+const DOOR_SECRET = 'door-sëcret';
 const ROBOTS = '# blocked\nUser-agent: *\nDisallow: /\n';
 const page = (sha: string) =>
   `<!doctype html><html><head><meta name="yawelo-idle-commit" content="${sha}" /></head></html>`;
@@ -193,6 +196,51 @@ describe('stylesheetProblems (#673)', () => {
       checked: ['status'],
       problems: [`${label}: status 404 with the password, expected 200`],
     });
+  });
+});
+
+/**
+ * Node's fetch throws `TypeError: fetch failed` and keeps the real reason (a
+ * DNS miss, a reset, a TLS refusal) in `cause` (#1101: a dev deploy failed
+ * naming only "fetch failed").
+ */
+describe('failureReason (#1101)', () => {
+  it("names the cause's code and message", () => {
+    const cause = Object.assign(new Error('read ECONNRESET'), {
+      code: 'ECONNRESET',
+    });
+    expect(failureReason(new TypeError('fetch failed', { cause }))).toBe(
+      'fetch failed (ECONNRESET: read ECONNRESET)',
+    );
+  });
+
+  it('names a cause with no code by its message', () => {
+    const cause = new Error('other side closed');
+    expect(failureReason(new TypeError('fetch failed', { cause }))).toBe(
+      'fetch failed (other side closed)',
+    );
+  });
+
+  it('names a cause that is not an Error as text', () => {
+    expect(
+      failureReason(new TypeError('fetch failed', { cause: 'socket hang up' })),
+    ).toBe('fetch failed (socket hang up)');
+  });
+
+  it('names a cause that is a plain object by its JSON, not [object Object]', () => {
+    expect(
+      failureReason(
+        new TypeError('fetch failed', { cause: { code: 'UND_ERR_SOCKET' } }),
+      ),
+    ).toBe('fetch failed ({"code":"UND_ERR_SOCKET"})');
+  });
+
+  it('reads as the message alone when there is no cause', () => {
+    expect(failureReason(new Error('fetch failed'))).toBe('fetch failed');
+  });
+
+  it('reads a thrown value that is not an Error as text', () => {
+    expect(failureReason('aborted')).toBe('aborted');
   });
 });
 
@@ -496,7 +544,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
+      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -510,7 +558,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
+      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -572,7 +620,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago: the cron is not running',
+      'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago, though verify visited the roadmap first',
     ]);
   });
 
@@ -589,7 +637,7 @@ describe('roadmapProblems (#341)', () => {
     expect(
       roadmapProblems(health({ lastCheckAt: null }), NOW, DEPLOYED),
     ).toEqual([
-      'roadmap: last check null, more than 20 minutes ago: the cron is not running',
+      'roadmap: last check null, more than 20 minutes ago, though verify visited the roadmap first',
     ]);
   });
 
@@ -633,7 +681,7 @@ describe('roadmapProblems (#341)', () => {
     ).toEqual({
       checked: ALL_ROADMAP_CHECKS,
       problems: [
-        'roadmap: last check soon, more than 20 minutes ago: the cron is not running',
+        'roadmap: last check soon, more than 20 minutes ago, though verify visited the roadmap first',
       ],
     });
   });
@@ -714,6 +762,8 @@ describe('verifyDev', () => {
   let webStale = 0;
   let healthStale = 0;
   const seenAuthorization: string[] = [];
+  /** Each request's door name, or '-' without the right secret (#1078). */
+  const seenDoors: string[] = [];
   /** What /api/roadmap/health answers to an authorised request (#341). */
   let roadmap: Record<string, unknown> = {};
   /** Records answered first, one per look, before `roadmap` (#708). */
@@ -733,8 +783,21 @@ describe('verifyDev', () => {
         : {};
       const authorization = req.headers.authorization ?? '';
       seenAuthorization.push(authorization);
+      // The origins believe a door's name only alongside its secret, as
+      // apps/door/worker/origin.ts doorOf does (#1078).
+      const door =
+        req.headers['x-yawelo-door-secret'] === DOOR_SECRET
+          ? String(req.headers['x-yawelo-door'] ?? '-')
+          : '-';
+      seenDoors.push(`${role}:${req.url ?? ''} ${door}`);
       const authorised = authorization === basicAuthorization(PASSWORD);
       if (req.url === '/health') {
+        // The sync Worker, behind its door (origin.ts behindDoor).
+        if (door !== 'dev-api.yaweloidle.com') {
+          res.writeHead(403, { 'content-type': 'text/plain', ...tag });
+          res.end('behind the door');
+          return;
+        }
         healthStale += 1;
         const commit = healthStale <= staleLooks ? OLD : served;
         res.writeHead(200, { 'content-type': 'application/json', ...tag });
@@ -826,7 +889,14 @@ describe('verifyDev', () => {
         res.end(noScript ? page(commit) : shell(commit));
       else if (role === 'site')
         res.end(siteServesHolding ? holding(commit) : site(commit));
-      else res.end(plantSite ? site(commit) : holding(commit));
+      // The site Worker shows the holding page at its door only; at its own
+      // address it shows the site being built.
+      else
+        res.end(
+          plantSite || door !== 'dev.yaweloidle.com'
+            ? site(commit)
+            : holding(commit),
+        );
     };
 
   const listen = async (handler: Server): Promise<string> => {
@@ -855,6 +925,7 @@ describe('verifyDev', () => {
     gameUrl: `${base}/retired-game/`,
     sha: SHA,
     password: PASSWORD,
+    doorSecret: DOOR_SECRET,
   });
 
   const reset = () => {
@@ -886,6 +957,7 @@ describe('verifyDev', () => {
     webStale = 0;
     healthStale = 0;
     seenAuthorization.length = 0;
+    seenDoors.length = 0;
     roadmap = {
       lastEventAt: null,
       lastCheckAt: new Date().toISOString(),
@@ -910,7 +982,7 @@ describe('verifyDev', () => {
     const replaced = (at: number) =>
       `roadmap: last check ${before(at)} was made before the deploy at ${new Date(at).toISOString()}, by the code that deploy replaced`;
 
-    it('waits past checks the old code made, then judges the first one after the deploy, with the password', async () => {
+    it('visits once, then waits past checks the old code made and judges the first one after the deploy, with the password', async () => {
       reset();
       const at = deployed();
       roadmapLooks = [
@@ -925,10 +997,30 @@ describe('verifyDev', () => {
       // test before they were checked (measured on #332).
       const looked = looks();
       expect(looked).toBe(3);
+      // One visit first, so the deployed code reads the board (#1074): with
+      // no cron, nothing else would make a check after the deploy.
+      expect(seenUrls.filter((url) => url.startsWith('/api/roadmap'))).toEqual([
+        '/api/roadmap.json',
+        ROADMAP,
+        ROADMAP,
+        ROADMAP,
+      ]);
       expect(seenAuthorization).toEqual([
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
+        basicAuthorization(PASSWORD),
+      ]);
+      // At the site Worker's own address, standing in for its door (#1078):
+      // once the origins require the door, nothing else would be let in.
+      const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+      expect(
+        seenDoors.filter((seen) => seen.startsWith('web:/api/roadmap')),
+      ).toEqual([
+        front('/api/roadmap.json'),
+        front(ROADMAP),
+        front(ROADMAP),
+        front(ROADMAP),
       ]);
       expect(problems).toEqual([]);
     });
@@ -957,7 +1049,7 @@ describe('verifyDev', () => {
       expect(
         await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
       ).toEqual([
-        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
+        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
       ]);
       expect(looks()).toBe(1);
     });
@@ -988,7 +1080,11 @@ describe('verifyDev', () => {
       expect(
         await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
       ).toEqual([
-        `roadmap: request to ${new URL(ROADMAP, base).href} failed: fetch failed`,
+        expect.stringMatching(
+          new RegExp(
+            `^roadmap: request to ${new URL(ROADMAP, base).href.replaceAll('.', '\\.')} failed: fetch failed \\(.+\\)$`,
+          ),
+        ),
       ]);
       expect(looks()).toBe(1);
     });
@@ -1047,6 +1143,24 @@ describe('verifyDev', () => {
       '',
       '',
       '',
+    ]);
+    // CI stands in for the door at the origins' own addresses (#1078): the
+    // front door's looks name dev.yaweloidle.com, sync's dev-api, and the
+    // site being built and the retired game address carry no door at all.
+    const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+    expect(seenDoors).toEqual([
+      front('/'),
+      front('/'),
+      front('/'),
+      'web:/health dev-api.yaweloidle.com',
+      ...SITE_PAGES.map(front),
+      ...PREVIEW_PAGES.map((path) => `site:${path} -`),
+      front('/robots.txt'),
+      front(STYLESHEET),
+      front(SCRIPT),
+      front('/play/'),
+      'site:/ -',
+      'web:/retired-game/ -',
     ]);
     expect(problems).toEqual([]);
   });
@@ -1364,6 +1478,8 @@ describe('verifyDev', () => {
     ];
     const credential = basicAuthorization(PASSWORD).slice(6);
     const showingPassword = reported.filter((p) => p.includes(PASSWORD));
+    const showingDoorSecret = reported.filter((p) => p.includes(DOOR_SECRET));
+    expect(showingDoorSecret).toEqual([]);
     const showingCredential = reported.filter((p) => p.includes(credential));
     expect(showingPassword).toEqual([]);
     expect(showingCredential).toEqual([]);

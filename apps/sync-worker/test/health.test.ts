@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'jsonc-parser';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 
 /**
  * The dev sync Worker, served by wrangler's test harness from the real

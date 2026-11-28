@@ -4,6 +4,7 @@
  * token's SHA-256 and compares hashes in constant time. Web APIs only, so the
  * unit suite runs it in Node and the Worker runs it in workerd.
  */
+import { signupsOpen } from './signups';
 import { z } from 'zod';
 import { readBody } from './validate';
 
@@ -112,6 +113,8 @@ export interface RegisterDeps {
   readonly uuid: () => string;
   readonly now: () => number;
   readonly random?: RandomSource;
+  /** The environment's `SIGNUPS` (#1079): only "open" lets a new device in. */
+  readonly signups: string | undefined;
 }
 
 const json = (
@@ -136,6 +139,7 @@ export async function registerDevice(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
+  if (!signupsOpen(deps.signups)) return json({ error: 'signups_closed' }, 503);
   const body = await readBody(
     request,
     registrationBody,

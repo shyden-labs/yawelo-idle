@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BoardItem } from '@yawelo-idle/progress';
 import {
   account,
+  clearSeen,
   eventWitness,
   numberOf,
   readStamps,
@@ -348,6 +349,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -364,6 +366,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -380,6 +383,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [1],
       owed: [],
       behind: false,
@@ -408,6 +412,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [owed(issueWitness)],
       behind: true,
@@ -424,6 +429,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -476,6 +482,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -492,6 +499,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [678],
+      seen: [678],
       unexplained: [],
       owed: [],
       behind: false,
@@ -508,6 +516,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [owed(goneIssue)],
       behind: true,
@@ -545,6 +554,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [owed(issueWitness)],
       behind: true,
@@ -562,6 +572,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [],
       behind: true,
@@ -581,6 +592,7 @@ describe('account', () => {
     });
     expect(result).toEqual({
       explained: [],
+      seen: [],
       unexplained: [],
       owed: [young],
       behind: true,
@@ -599,5 +611,58 @@ describe('account', () => {
     });
     expect(result.owed).toEqual([young]);
     expect(result.unseen).toBe(0);
+  });
+
+  // #1066: the read that shows a witness can come after the read that found
+  // its change, so the accounting names the card even when it is unchanged.
+  it('names the cards seen witnesses show in number order', () => {
+    const result = account({
+      ...base,
+      items: base.previous,
+      stamps: stampsOf([
+        ['PVTI_678', 678, T0],
+        ['PVTI_1', 1, T0],
+      ]),
+      owed: [owed(itemWitness), owed({ ...itemWitness, id: 'PVTI_1' })],
+    });
+    expect(result.seen).toEqual([1, 678]);
+  });
+
+  it('names the card a seen witness shows on a read with no change', () => {
+    const result = account({
+      ...base,
+      items: base.previous,
+      stamps: stampsOf([['PVTI_678', 678, T0]]),
+      owed: [owed(itemWitness)],
+    });
+    expect(result.seen).toEqual([678]);
+    expect(result.explained).toEqual([]);
+  });
+});
+
+// #1066: a card a read's witness names is no longer pending, as when its
+// webhook arrives late, but only within the grace; older stays for drift.
+describe('clearSeen', () => {
+  const GRACE = 120_000;
+  const NOW = Date.parse('2026-11-22T09:00:00Z');
+
+  it('clears a seen card pending less than the grace', () => {
+    expect(clearSeen({ '9': NOW - 1 }, [9], NOW, GRACE)).toEqual({});
+  });
+
+  it('clears a seen card pending exactly the grace', () => {
+    expect(clearSeen({ '9': NOW - GRACE }, [9], NOW, GRACE)).toEqual({});
+  });
+
+  it('keeps a seen card pending longer than the grace', () => {
+    expect(clearSeen({ '9': NOW - GRACE - 1 }, [9], NOW, GRACE)).toEqual({
+      '9': NOW - GRACE - 1,
+    });
+  });
+
+  it('keeps a pending card no witness named', () => {
+    expect(clearSeen({ '4': NOW - 1 }, [9], NOW, GRACE)).toEqual({
+      '4': NOW - 1,
+    });
   });
 });
