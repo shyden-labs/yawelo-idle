@@ -1,12 +1,12 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-28 15:36 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at 62fd7bcb (#1156). main at e9345241. No Colima, simulator or USB claim held. board-next: #1078 (P0).
+**Written:** 2026-11-28 18:39 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at 62fd7bcb (#1156). main at e9345241. No Colima, simulator or USB claim held. board-next: #1078 (P0).
 
 ## In flight
 
 | Item | State |
 | --- | --- |
-| **#1157** (#1078 AC3 part b, draft) | Branch `1078-door-required`, worktree `../yawelo-idle-1078b` (own `npm ci`). Pushed head 6774f9b8 = tests only for the CI-only suites (site, roadmap, door-in-front harnesses) + unit-proven script changes; its build-and-test run 46126426171 is where the new Worker-suite tests are read **red by name** (the first push, b1441d87, stopped at integration: `script-loads` lacked `holding-secrets.ts`, fixed in cc313997). Local, **not pushed**: 4 code commits to 8978e54a (site Worker `markWebRequest`, specs 401→403 `DoorRequired`, roadmap-test config `DOOR_REQUIRED` "true", lockdown password gate deleted, comments). Plan + mapping: `.superpowers/sdd/1078/plan.md`. |
+| **#1157** (#1078 AC3 part b, draft) | Branch `1078-door-required`, worktree `../yawelo-idle-1078b`. **Pushed head 6b339cc5** (4 code commits + sync harness test fix); its CI is running (`~/.claude/scripts/pr-verdict.sh 1157`, the waiter in this session dies on /clear). Previous run 46126426171 read red by name: 105 site/roadmap names as planned, plus 38 sync Worker harness tests from one unplanned gap (8d38326d made the sync Worker require its door, its tests sent no secret), fixed by 6b339cc5. Names on #1078 (comment 7238688931). Laptop unit at 6b339cc5: 15134/15135, the one failure the #1123 timing flake (10.73 vs 10), recorded on #1123 (comment 7238716158). |
 | #986 (draft) | #160, untouched. |
 
 ## Done this session
@@ -17,8 +17,8 @@
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. Read run 46126426171 (`gh run view 46126426171 --log-failed`): the new site/roadmap/door-in-front tests must fail by name (password-gated code still in place). Record the names on #1078.
-3. In `../yawelo-idle-1078b`: run the unit suite, push the 4 code commits, read every check green on the head SHA by step, mark #1157 ready, squash-merge (`--match-head-commit` from a file).
+2. (Done: red names recorded on #1078.)
+3. `~/.claude/scripts/pr-verdict.sh 1157` (head 6b339cc5); if red, read the failures by name; read every check green on the head SHA by step, mark #1157 ready, squash-merge (`--match-head-commit` from a file).
 4. Read develop's deploy-dev by step name: verify ("Verify dev is behind its door, …"), verify-roadmap, site-smoke (now at dev.yaweloidle.com with the DEV pass).
 5. Then (Shyden): check the site Worker holds no leftover `DEV_PASSWORD` secret, then delete `DEV_BASIC_AUTH_PASSWORD` from the dev environment. Then #1078 AC5 (Safari/Firefox/Edge sign-in).
 
