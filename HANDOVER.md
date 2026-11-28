@@ -1,47 +1,44 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-28 11:20 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at cce9d2ed (#1153). main at e9345241 (release #1150, door live). No Colima, simulator or USB claim held. board-next: #1078 (P0): AC3 next.
+**Written:** 2026-11-28 11:57 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at aaa60371 (#1154). main at e9345241. No Colima, simulator or USB claim held. board-next was #1078 (P0); #1155 (P0) filed today.
 
-## Open PRs (strict: merge one, merge develop into the next, unit, push, CI, repeat)
+## In flight
 
-| PR           | Ticket | State                                                                                                                                                                                                                                                                |
-| ------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| (merged)     | #1104  | PR #1146 merged ce06f086; worktree and branches removed. After figures on #1104 (comment 7227399651). Read develop's deploy-dev 46062979196 site-smoke, then shut ticket 1104 by hand (AC3 was PR 1143; AC4: voyage words are English placeholders, no translation). |
-| #986 (draft) | #160   | untouched                                                                                                                                                                                                                                                            |
+| Item | State |
+| --- | --- |
+| **#1156** (#1155, P0) | Branch `1155-dev-hosts-pass`, worktree `../yawelo-idle-1155`, head 1a8ac651. build-and-test run 46109478847 was running at close (the local watcher is DEAD after `/clear`: re-read with `gh pr checks 1156`). Next: every check green on the head SHA (by step), squash-merge, then read the develop deploy-dev step "Verify the dev hostnames reach the real Workers unchanged" green, shut #1155 by hand, remove the worktree and branches. |
+| **#1154** merged aaa60371 | dev.yaweloidle.com shows the site being built. Its develop deploy-dev run 46109795900 was running at close (watcher DEAD). Expect "Verify dev is password-gated…" (verify-dev) **green** and verify-dev-hosts **red** until #1156 lands (#1155). Read both by step name. Worktree and branches removed. |
+| **#1078 AC3 part (b)** | Branch `1078-door-required`, worktree `../yawelo-idle-1078b` (own `npm ci`), head 2a62ed99 (develop merged in), **not pushed**. Unit-green so far: DOOR_REQUIRED "true" ×3, holding-secrets, lockdown `markWebRequest`, dev-secrets with no password, web suite with no password. Next steps are in `.superpowers/sdd/1078/plan.md` ("(b) state"). Do not push until the site harness tests have been rewritten, since many fail on this branch as it stands. |
+| #986 (draft) | #160, untouched. |
 
-#1147 merged da0925ea (#1139 stays open until a ci.yml browsers Edge install on a branch with da0925ea is read within 440 s).
+## Facts measured today
+
+- The dev origins were **not** door-required: the site's workers.dev answered 401 Basic, holding-dev and holding-test answered 200 with no door secret (#1078 comment 7233947045, #784 comment 7234052648). Earlier handover wording that they were was wrong.
+- **Ruling (Shyden): "Built site on dev"**: dev.yaweloidle.com shows the site being built, and dev-holding keeps the coming-soon page.
+- Every develop deploy-dev has been red since release #1150 (run 46105526525): this is #1155.
 
 ## Devices
 
-#1149 (P0, filed 2026-11-28) blocks #992/#993: every Yawelo device run removes what it put on a phone, never Chrome/Safari data or Shyden's own (global rule 2026-11-28); free space before/after. Phones cleaned by repo-template-71 at ~02:35 WIB (baseline on #1149). Yawelo has no device code yet.
-
-#992/#993 (P0) now blocked by playwright-devices#68 as well as #7 (comments on both, 2026-11-27): 0.2.0 has real phones but refuses `keyboard.press` (fixed in playwright-devices#67, merged, **unpublished: waits on Shyden approving that repo's `npm` environment**) and a phones-imported spec throws on desktop until #68 (in progress). playwright-devices-25 messages when #67/#68 are on npm. The OPPO is test-only (its used space was test leftovers, not Shyden's data; earlier wording was a guess): factory-reset 2026-11-28 ~09:40 WIB, adb 3b402284 authorised. The iPhone was factory-reset 2026-11-28 and set up with no passcode; both phones released. Yawelo has never run on either phone (no device code), so it left nothing on them.
-
-## Next: #1078 AC3 (remove the dev password gate)
-
-Chrome sign-in proven to reach the door (comment 7233815274), but the site Worker still answers 401 Basic (`apps/site/worker/index.ts:131` `gateWebRequest(request, env.DEV_PASSWORD, …)`), so browsers fail. The origin already requires the door secret (`refusal()`, `apps/door/worker/origin.ts`). Reach listed on that comment: site Worker, deploy-dev.yml (DEV_BASIC_AUTH_PASSWORD at 170/228/235/268/362/466), scripts/dev-secrets.ts, door-in-front test, apps/site/test roadmap harness + tests, tests/unit/dev-config + dev-secrets. TDD; CI-only tests red on a scratch ref first. After it is live: drive Chrome again (Shyden's Cloudflare login is already consented in his Chrome), and Shyden signs in himself in Safari, Firefox, Edge (agent never types his Cloudflare login).
+#1149 (P0) blocks #992/#993, and those also wait on playwright-devices#68 (0.2.2; playwright-devices-25 messages when it's on npm). Phones factory-reset 2026-11-28, baseline free space on #1149. Yawelo has no device code yet.
 
 ## Parked for Shyden
 
 - Safari/Firefox/Edge sign-in once AC3 is live (#1078 AC5).
-- Buttondown: second free account for the dev list (#343); he said yes 09:3x WIB. Next: ask for its API key as dev env secret, naming the live account as untouched.
-- #1152 AC4: read the next release's deploy-prod run (one approval; site verify, door deploy, door verify steps by name), then close.
+- Buttondown (#343): once the second free account exists, its API key goes in as a dev environment secret. The live `yawelo` account's keys stay untouched.
+- After part (b) deploys: delete `DEV_BASIC_AUTH_PASSWORD` from the dev environment (check that the site Worker holds no leftover DEV_PASSWORD secret first).
+- #1152 AC4: read the next release's deploy-prod run, then close.
 
 ## Done this session
 
-- #1145 merged 9bcaabd6 (#1123's CPU-time growth check). #1123 stays open until a full unit passes at load ≥180.
-- #1115 closed: AC2 stall message proven on both step bodies (comment 7217511929); DoD read on run 45911910968 (25 s, 22 s).
-- #971: 8 load timeouts at load ~70, swap 5 GB, recorded (comment 7217548726).
-- #1104 shut: PR #1146 merged ce06f086; develop deploy-dev 46062979196 green, new journey passing on all 4 browsers (comment 7227658276).
-- #1147 merged da0925ea (#1139 open until the next ci.yml Edge install is read).
-- #1149 filed (P0), blocks #992/#993; scope comment 7232717912 (site data for Yawelo's own origins removed too). Phones reset by Shyden 2026-11-28: iPhone 487,400,194,048 B free, OPPO 475,717,992 KB free (repo-template-71's reading); baseline for #1149.
-- Release #1150 merged e9345241; deploy-prod 46102806468 + deploy-door 46102842543 success; door read live (comment 7233277007).
-- #1152 filed (P2, 3 pts; #1151 closed as filed outside file-story); PR #1153 merged cce9d2ed: deploy-door.yml gone, deploy-prod's one job deploys site → verify → door → scripts/verify-door.ts. Worktree and branches removed.
-- Progress page v58 published 11:15 WIB (version 178).
-- playwright-devices 0.2.1 (#67) on npm; #68 → 0.2.2 later today, playwright-devices-25 messages.
-- Release PR #1150 was cut at ce06f086. `yawelo-idle-dev-scripts` needed `npm ci` (stale node_modules failed pre-push lint on scripts/worker-coverage.ts).
+- #1154 merged aaa60371 (red read first: run 46107656297, exactly the 3 new site tests failed). Sonar 0 issues, 0 hotspots.
+- #1155 filed (P0, 2 pts) and fixed in PR #1156 (tests red first; unit 15185/15185).
+- #1139 closed (Edge install 13.2 s under 440 s, a cached install; comment 7234128408).
+- Progress page v59 published (version 179).
+- Memory: no node_modules symlinks between worktrees (it broke pre-push lint).
 
 ## Resume steps
 
 1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. #1078 AC3 (section above). Tell Shyden: `.superpowers/road-to-launch.v56.html` (a 25 Nov local page copy) was deleted by mistake on 2026-11-28.
+2. `gh pr checks 1156`: when green, merge (`--match-head-commit` from a file), read develop's deploy-dev by step name, shut #1155.
+3. Read deploy-dev 46109795900 by step name (verify-dev green expected).
+4. #1078 part (b), following the plan file.
