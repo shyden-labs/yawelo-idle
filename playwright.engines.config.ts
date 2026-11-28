@@ -7,6 +7,9 @@ import { desktopSuite } from './tests/desktop-targets';
  * seconds of CPU per engine and the web app's own e2e suite will want the
  * machine.
  */
+/** The engines page server's port: clear of the web smoke's wrangler dev. */
+const PAGE_PORT = 8793;
+
 export default defineConfig({
   testDir: 'tests/engines',
   workers: 1,
@@ -15,4 +18,11 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   ...desktopSuite('engines'),
+  // The page the save specs open, served for real (tests/engines/page-server.ts).
+  use: { baseURL: `http://127.0.0.1:${String(PAGE_PORT)}` },
+  webServer: {
+    command: `node tests/engines/page-server.ts ${String(PAGE_PORT)}`,
+    url: `http://127.0.0.1:${String(PAGE_PORT)}/`,
+    reuseExistingServer: false,
+  },
 });

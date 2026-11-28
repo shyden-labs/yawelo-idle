@@ -11,6 +11,11 @@ export const en = {
   'shell.next': '{roadmap} or {launchList}.',
   'shell.followRoadmap': 'Follow the roadmap',
   'shell.joinLaunchList': 'join the launch list',
+  'save.restored':
+    'Your latest save was damaged, so the backup saved {when} was loaded.',
+  'save.allDamaged': 'Your save and all its backups are damaged.',
+  'save.startNew': 'Start a new game',
+  'save.keepAndClose': 'Keep the damaged save and close',
 } as const;
 
 export type UiKey = keyof typeof en;
@@ -22,6 +27,11 @@ export const id: Record<UiKey, string> = {
   'shell.next': '{roadmap} atau {launchList}.',
   'shell.followRoadmap': 'Ikuti peta jalan',
   'shell.joinLaunchList': 'bergabung dengan daftar peluncuran',
+  'save.restored':
+    'Data simpanan terakhir Anda rusak, jadi cadangan yang disimpan {when} telah dimuat.',
+  'save.allDamaged': 'Data simpanan Anda dan semua cadangannya rusak.',
+  'save.startNew': 'Mulai permainan baru',
+  'save.keepAndClose': 'Pertahankan data simpanan yang rusak dan tutup',
 };
 
 export const catalogues: Readonly<Record<UiLocale, Record<UiKey, string>>> = {

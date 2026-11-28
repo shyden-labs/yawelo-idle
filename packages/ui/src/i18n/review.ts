@@ -6,24 +6,30 @@ import type { UiKey } from './catalogue';
  * evidence rule: two sources, a Google back-translation, and a label audit
  * for text of three words or fewer. The English is the source text.
  */
-const AT = '2026-11-14T06:25:00Z';
+/** A maker of blocks Claude checked at `at` for `ticket`, each recorded in docs/translations/. */
+const checkedOn =
+  (at: string, ticket: string) =>
+  (
+    sources: readonly string[],
+    backTranslation: string,
+    labelAudit: string | null,
+    notes: string,
+  ): Review => ({
+    status: 'claude-checked',
+    reviewer: 'claude',
+    reviewedAt: at,
+    notes,
+    sources: [...sources],
+    backTranslation,
+    labelAudit,
+    history: [{ at, by: 'claude', change: `Drafted and checked (${ticket}).` }],
+  });
 
-/** A block Claude checked on 2026-11-14 (docs/translations/2026-11-14-ui-catalogue-id.md). */
-const checked = (
-  sources: readonly string[],
-  backTranslation: string,
-  labelAudit: string | null,
-  notes: string,
-): Review => ({
-  status: 'claude-checked',
-  reviewer: 'claude',
-  reviewedAt: AT,
-  notes,
-  sources: [...sources],
-  backTranslation,
-  labelAudit,
-  history: [{ at: AT, by: 'claude', change: 'Drafted and checked (#104).' }],
-});
+/** The shell's lines (docs/translations/2026-11-14-ui-catalogue-id.md). */
+const checked = checkedOn('2026-11-14T06:25:00Z', '#104');
+
+/** The save notice's lines (docs/translations/2026-11-17-save-notice-id.md). */
+const checkedSave = checkedOn('2026-11-16T23:18:37Z', '#160');
 
 export const review: Readonly<Record<UiKey, Review>> = {
   'game.name': checked(
@@ -60,5 +66,35 @@ export const review: Readonly<Record<UiKey, Review>> = {
     'join the launch list',
     null,
     'Lower case: it follows “atau” mid-sentence. “Daftar peluncuran” is the site’s shipped term for the launch list.',
+  ),
+  'save.restored': checkedSave(
+    [
+      'kbbi:simpanan',
+      'kbbi:rusak',
+      'kbbi:cadangan',
+      'kbbi:muat',
+      'wiktionary:cadangan',
+    ],
+    'Your last save data was corrupted, so the saved backup {when} was loaded.',
+    null,
+    'KBBI: simpanan “barang yang disimpan”; rusak “sudah tidak sempurna”; cadangan “barang yang disediakan untuk keperluan kelak”; dimuat, passive of memuat. {when} is Intl.RelativeTimeFormat’s “5 menit yang lalu”.',
+  ),
+  'save.allDamaged': checkedSave(
+    ['kbbi:simpanan', 'kbbi:rusak', 'kbbi:cadangan', 'wiktionary:rusak'],
+    'Your saved data and all backups are damaged.',
+    null,
+    'Shown when every copy fails its check; the player then chooses, nothing is reset.',
+  ),
+  'save.startNew': checkedSave(
+    ['kbbi:mulai', 'kbbi:permainan', 'wiktionary:permainan'],
+    'Start a new game',
+    'A button label: read back exactly as “Start a new game”. “Mulai” is the usual imperative on a start button; “permainan” is the KBBI noun for a game.',
+    'KBBI: mulai “awal; permulaan”; permainan “sesuatu yang digunakan untuk bermain”.',
+  ),
+  'save.keepAndClose': checkedSave(
+    ['kbbi:pertahankan', 'kbbi:tutup', 'kbbi:rusak', 'wiktionary:tutup'],
+    'Retain corrupted save data and close it',
+    null,
+    'Google read “tutup” as “close it”; the button closes the game, keeping the damaged save untouched.',
   ),
 };

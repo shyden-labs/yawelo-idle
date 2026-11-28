@@ -1,0 +1,13 @@
+{
+  // The cross-engine specs: their callbacks and bundles run in the page
+  // (save-backups-page.ts builds the web platform from the page's globals,
+  // #160), so this project sees the DOM, as tests/web's does. The root
+  // project excludes them, so no Node script or guard typechecks against it.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["*.ts"],
+  "exclude": []
+}

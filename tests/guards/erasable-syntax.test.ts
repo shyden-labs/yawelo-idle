@@ -48,6 +48,7 @@ const TSCONFIGS = [
   'packages/save/tsconfig.json',
   'packages/ui/test/tsconfig.json',
   'packages/ui/tsconfig.json',
+  'tests/engines/tsconfig.json',
   'tests/site/tsconfig.json',
   'tests/web/tsconfig.json',
   'tsconfig.json',

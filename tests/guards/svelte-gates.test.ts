@@ -34,6 +34,7 @@ import { committableFiles } from '../unit/tracked-files';
 const COMPONENTS = [
   'apps/site/src/roadmap/Shape.svelte',
   'apps/site/src/roadmap/VoyageMap.svelte',
+  'packages/ui/src/SaveNotice.svelte',
   'packages/ui/src/Shell.svelte',
   'packages/ui/test/fixtures/Counter.svelte',
 ] as const;
