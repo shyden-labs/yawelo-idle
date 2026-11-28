@@ -1,6 +1,6 @@
 import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
 import { desktopSuite } from '../desktop-targets';
-import { HOLDING_DOOR } from '../../apps/site/worker/routes';
+import { SITE_DOOR } from '../../apps/site/worker/routes';
 import { devPassState } from '../dev-pass-cookie';
 
 /**
@@ -47,7 +47,7 @@ export function siteSmokeConfig(
     ...shared,
     use: {
       baseURL: target,
-      storageState: devPassState(HOLDING_DOOR, devPass),
+      storageState: devPassState(SITE_DOOR, devPass),
       httpCredentials: { username: USERNAME, password },
       // A failing test leaves a screenshot beside Playwright's page snapshot
       // in test-results, which deploy-dev uploads (#864). Never a trace or a

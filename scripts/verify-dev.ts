@@ -9,11 +9,11 @@
  *    both without credentials and with a wrong password.
  * 2. Its robots.txt blocks every crawler, without credentials.
  * 3. With the password, the page carries `yawelo-idle-commit` = the expected SHA
- *    and the noindex header, and is the holding page production shows
- *    (#673): its mark, and the stylesheet it links served as CSS.
+ *    and the noindex header, and is the site being built (Shyden,
+ *    2026-11-28, #1078): its mark.
  * 4. The sync API's /health reports ok, that SHA and db "ok", with the
  *    noindex header (the API is not password-gated, by operator decision).
- * 5. The front door's other pages (`SITE_PAGES`: the Indonesian holding page
+ * 5. The front door's other pages (`SITE_PAGES`: the Indonesian page
  *    and the game at /play/, forwarded by service binding) each carry that
  *    SHA and noindex with the password, the game refuses a caller without
  *    it, and the script the game shell loads is served as JavaScript (#332).
@@ -50,7 +50,7 @@ export interface Probe {
 }
 
 export interface Target {
-  /** The dev front door, which shows the holding page (#673). */
+  /** The dev front door, which shows the site being built (#1078). */
   webUrl: string;
   /** The site Worker's own address, which shows the site being built (#673). */
   siteUrl: string;
@@ -90,21 +90,8 @@ export const SITE_PAGES: readonly string[] = ['/id/', GAME_SHELL];
 /** The site being built's pages, at the site Worker's own address (#673). */
 export const PREVIEW_PAGES: readonly string[] = ['/', '/id/', '/roadmap'];
 
-/** The holding page's mark, an attribute Holding.astro writes (#673). */
-const HOLDING_MARK = /<[a-z][^>]*\sdata-coming-soon[\s>=]/;
-
 /** The site being built's mark, an attribute Base.astro writes (#673). */
 const SITE_MARK = /<[a-z][^>]*\sdata-dev-strip[\s>=]/;
-
-/** The stylesheet a page links, whatever the order of the tag's attributes (#673). */
-export function stylesheetOf(body: string): string | undefined {
-  for (const [tag] of body.matchAll(/<link\b[^>]*>/gi)) {
-    if (!/\srel="stylesheet"/i.test(tag)) continue;
-    const href = /\shref="([^"]+)"/i.exec(tag)?.[1];
-    if (href !== undefined) return href;
-  }
-  return undefined;
-}
 
 /** Any sign that a response carries the app rather than a challenge. */
 const APP_MARKUP = /<(?:!doctype|html|meta|script)\b/i;
@@ -271,33 +258,7 @@ const markCheck = (
       : `${label}: not ${what}: no ${attribute} mark`,
 });
 
-/** A front door page: the holding page production shows (#673). */
-export function holdingJudgement(
-  probe: Probe,
-  sha: string,
-  label = 'web',
-): Judgement {
-  return judge([
-    ...webChecks(probe, sha, label),
-    markCheck(
-      label,
-      probe,
-      HOLDING_MARK,
-      'the holding page',
-      'data-coming-soon',
-    ),
-  ]);
-}
-
-export function holdingProblems(
-  probe: Probe,
-  sha: string,
-  label = 'web',
-): string[] {
-  return [...holdingJudgement(probe, sha, label).problems];
-}
-
-/** A page at the site Worker's own address: the site being built (#673). */
+/** A page of the site being built, on the front door and at the site Worker's own address (#673, #1078). */
 export function siteJudgement(
   probe: Probe,
   sha: string,
@@ -321,34 +282,6 @@ export function siteProblems(
   label: string,
 ): string[] {
   return [...siteJudgement(probe, sha, label).problems];
-}
-
-/** The holding page's stylesheet, read with the password (#673). */
-export function stylesheetJudgement(label: string, probe: Probe): Judgement {
-  return judge([
-    {
-      name: 'status',
-      gate: true,
-      problem: () =>
-        probe.status === 200
-          ? undefined
-          : `${label}: status ${String(probe.status)} with the password, expected 200`,
-    },
-    {
-      name: 'content type',
-      problem: () => {
-        const type = probe.headers.get('content-type');
-        return /^text\/css\b/.test(type ?? '')
-          ? undefined
-          : `${label}: Content-Type is ${JSON.stringify(type)}, expected text/css`;
-      },
-    },
-    noIndexCheck(label, probe),
-  ]);
-}
-
-export function stylesheetProblems(label: string, probe: Probe): string[] {
-  return [...stylesheetJudgement(label, probe).problems];
 }
 
 /** The game Worker's policy on a response it served (#123). */
@@ -835,7 +768,7 @@ export async function verifyDev(
       'web',
       target.webUrl,
       { ...front, ...right },
-      (p) => holdingProblems(p, target.sha),
+      (p) => siteProblems(p, target.sha, 'web'),
     );
     const sync = await look('sync', 'sync', healthUrl, syncDoor, (p) =>
       healthProblems(p, target.sha),
@@ -890,7 +823,7 @@ export async function verifyDev(
           web,
           sync,
           ...pages,
-          ...(await lookAtTheRest(look, target, right, front, web, pages)),
+          ...(await lookAtTheRest(look, target, right, front, pages)),
         ].flatMap((outcome) => outcome.problems);
       }
     }
@@ -940,7 +873,7 @@ async function lookAtPages(
       (p) =>
         path === GAME_SHELL
           ? gameShellProblems(p, target.sha, label)
-          : holdingProblems(p, target.sha, label),
+          : siteProblems(p, target.sha, label),
     );
     outcomes.push({ ...outcome, label });
   }
@@ -960,8 +893,7 @@ async function lookAtPages(
 
 /**
  * The rest of checks 3, 5, 6 and 7, once every page serves the expected
- * commit: the holding page's stylesheet (named by the front door's home page,
- * `home`, #673), the game's script (named by the shell among `pages`), the
+ * commit: the game's script (named by the shell among `pages`), the
  * gate in front of the game and of the site Worker's own address, and the
  * game's retired address. The live roadmap's health (#341) is judged by
  * `verifyRoadmap`, in its own job, once the deployed code has checked the
@@ -972,27 +904,16 @@ async function lookAtTheRest(
   target: Target,
   right: Record<string, string>,
   front: Record<string, string>,
-  home: Outcome,
   pages: readonly PageLook[],
 ): Promise<Outcome[]> {
   const at = (path: string) => new URL(path, target.webUrl).href;
   const authorised = { ...front, ...right };
   const outcomes: Outcome[] = [];
-  const stylesheet = stylesheetOf(home.answer?.body ?? '');
   const shell =
     pages.find(({ label }) => label === `web ${GAME_SHELL}`)?.answer?.body ??
     '';
   const script = GAME_SCRIPT.exec(shell)?.[1];
   outcomes.push(
-    stylesheet === undefined
-      ? { problems: ['web: no stylesheet in the page'], answer: null }
-      : await look(
-          'web',
-          `web ${stylesheet}`,
-          at(stylesheet),
-          authorised,
-          (p) => stylesheetProblems(`web ${stylesheet}`, p),
-        ),
     script === undefined
       ? { problems: ['web /play/: no game script in the page'], answer: null }
       : await look('web', `web ${script}`, at(script), authorised, (p) =>
@@ -1035,6 +956,6 @@ if (import.meta.main) {
     process.exit(1);
   }
   console.log(
-    '✓ dev is password-gated, blocks crawlers, serves the expected commit on every page and the game, shows the holding page on the front door and the site being built at its own address, keeps the game behind the site, and D1 answers',
+    '✓ dev is password-gated, blocks crawlers, serves the expected commit on every page and the game, shows the site being built on the front door and at its own address, keeps the game behind the site, and D1 answers',
   );
 }
