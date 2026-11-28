@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { press } from '../press';
+import { foreignTo } from './beacon';
 
 /**
  * The roadmap API docs on dev (#588): Swagger UI, served from the site's own
@@ -19,9 +20,7 @@ test('the docs load from the site’s own origin, list both public operations, a
   ).toBeVisible();
   const origin = new URL(page.url()).origin;
   expect.soft(requested.length).toBeGreaterThan(0);
-  expect
-    .soft(requested.filter((url) => new URL(url).origin !== origin))
-    .toEqual([]);
+  expect.soft(foreignTo(origin, requested)).toEqual([]);
 
   await expect
     .soft(page.locator('.opblock-summary-path'))
