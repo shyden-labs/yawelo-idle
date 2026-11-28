@@ -1,11 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from '../../../tests/support/create-covered-harness';
-import {
-  BLOCKING_ROBOTS_TXT,
-  challengeResponse,
-  NO_INDEX,
-} from '@yawelo-idle/lockdown';
+import { BLOCKING_ROBOTS_TXT, NO_INDEX } from '@yawelo-idle/lockdown';
 import { COPY, LEGAL } from '../src/copy';
 import {
   isLegal,
@@ -44,25 +40,32 @@ import { supportPolicy } from '../worker/support';
  */
 const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const PROD = SITE;
-const PASSWORD = 'test-only-password';
 const DOOR_SECRET = 'test-only-door-secret';
-
-const authorised = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
-const wrong = { Authorization: `Basic ${btoa('tester:not-it')}` };
 
 const server = createTestHarness({
   root: new URL('..', import.meta.url).pathname,
   workers: [
     {
       configPath: './wrangler.jsonc',
-      secrets: { DEV_PASSWORD: PASSWORD, DOOR_SECRET },
+      secrets: { DOOR_SECRET },
     },
     // The real game Worker, the service wrangler.jsonc's GAME binding names.
     { configPath: '../web/wrangler.jsonc' },
   ],
 });
 
+/**
+ * A request as the door sends it: the dev origin requires its door (#1078),
+ * and the door adds the door secret to every request it passes on, so this
+ * stands in for the door. `bare` is a request that skipped the door.
+ */
 const get = (url: string, headers: Record<string, string> = {}) =>
+  server.fetch(url, {
+    headers: { [DOOR_SECRET_HEADER]: DOOR_SECRET, ...headers },
+    redirect: 'manual',
+  });
+
+const bare = (url: string, headers: Record<string, string> = {}) =>
   server.fetch(url, { headers, redirect: 'manual' });
 
 beforeAll(async () => {
@@ -116,58 +119,70 @@ const PAGES: [Locale, Page][] = [
 const titleOf = (locale: Locale, page: Page): string =>
   isLegal(page) ? LEGAL[locale][page].title : COPY[locale].titles[page];
 
-describe('the dev site Worker gate, through the asset router', () => {
-  it('serves the home page with the password, noindex added', async () => {
-    const response = await get(`${DEV}/`, authorised);
+describe('the dev site Worker requires its door, through the asset router (#1078)', () => {
+  it('serves the home page with the door secret, noindex added, no password asked', async () => {
+    const response = await get(`${DEV}/`);
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
+    expect(response.headers.get('WWW-Authenticate')).toBeNull();
     expect(await response.text()).toContain('<meta name="yawelo-idle-commit"');
   });
 
   it.each([
-    ['without credentials', {}],
-    ['with a wrong password', wrong],
+    ['without the door secret', {}],
+    [
+      'with a wrong door secret',
+      { [DOOR_SECRET_HEADER]: 'not-the-door-secret' },
+    ],
   ])(
     'refuses a real built page %s and sends none of its bytes',
     async (_case, headers) => {
-      const page = await (await get(`${DEV}/roadmap`, authorised)).text();
+      const page = await (await get(`${DEV}/roadmap`)).text();
       expect(page).toContain(COPY.en.voyage.intro);
-      const response = await get(`${DEV}/roadmap`, headers);
-      expect(response.status).toBe(401);
-      expect(response.headers.get('WWW-Authenticate')).toBe(
-        'Basic realm="Yawelo Idle Non-Prod"',
-      );
-      expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
-      expect(await response.text()).toBe(await challengeResponse().text());
+      const response = await bare(`${DEV}/roadmap`, headers);
+      expect(response.status).toBe(403);
+      expect(response.headers.get('WWW-Authenticate')).toBeNull();
+      expect(await response.text()).toBe('forbidden');
     },
   );
 
-  it.each(['/', '/id/', '/index.html', '/privacy', '/no/such/page'])(
-    'refuses the page %s without credentials',
-    async (path) => {
-      const response = await get(`${DEV}${path}`);
-      expect(response.status).toBe(401);
-      expect(await response.text()).toBe(await challengeResponse().text());
-    },
-  );
+  it.each([
+    '/',
+    '/id/',
+    '/index.html',
+    '/privacy',
+    '/no/such/page',
+    '/robots.txt',
+  ])('refuses %s without the door secret', async (path) => {
+    const response = await bare(`${DEV}${path}`);
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe('forbidden');
+  });
 
   it.each(['/play', '/play/', '/play/assets/index.js'])(
-    'refuses the game path %s without credentials and never forwards it',
+    'refuses the game path %s without the door secret and never forwards it',
     async (path) => {
-      const response = await get(`${DEV}${path}`);
-      expect(response.status).toBe(401);
+      const response = await bare(`${DEV}${path}`);
+      expect(response.status).toBe(403);
       expect(fromGame(response)).toBe(false);
     },
   );
 
-  it('serves blocking robots.txt without credentials', async () => {
+  it('ignores a password sent without the door secret', async () => {
+    const response = await bare(`${DEV}/`, {
+      Authorization: `Basic ${btoa('tester:any-password')}`,
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it('serves blocking robots.txt with the door secret', async () => {
     const response = await get(`${DEV}/robots.txt`);
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
   });
 
   it('passes the production host through untouched', async () => {
-    const page = await (await get(`${DEV}/roadmap`, authorised)).text();
+    const page = await (await get(`${DEV}/roadmap`)).text();
     const response = await get(`${PROD}/roadmap`);
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Robots-Tag')).toBeNull();
@@ -175,9 +190,9 @@ describe('the dev site Worker gate, through the asset router', () => {
   });
 });
 
-describe('the paths exempt from the gate (#341 signs them instead)', () => {
+describe('the webhook path, which the door passes on unchecked (#341 signs it)', () => {
   it.each(EXEMPT_PATHS)(
-    '%s reaches its handler without credentials, which takes POST only',
+    '%s reaches its handler with the door secret, which takes POST only',
     async (path) => {
       const response = await get(`${DEV}${path}`);
       expect(response.status).toBe(405);
@@ -186,11 +201,11 @@ describe('the paths exempt from the gate (#341 signs them instead)', () => {
     },
   );
 
-  it.each(['/hooks/github/', '/hooks/github/x', '/hooks/githubx', '/hooks'])(
-    'gates %s, which only looks like an exempt path',
+  it.each([...EXEMPT_PATHS, '/hooks/github/', '/hooks/github/x', '/hooks'])(
+    'refuses %s without the door secret, like every other path',
     async (path) => {
-      const response = await get(`${DEV}${path}`);
-      expect(response.status).toBe(401);
+      const response = await bare(`${DEV}${path}`);
+      expect(response.status).toBe(403);
     },
   );
 });
@@ -199,42 +214,42 @@ describe('the game, forwarded through the GAME binding after the gate', () => {
   // The real game shows what reached it: the file for the path, its shell
   // for a client route, and the query kept in its own redirect.
   it('forwards /play, where the game redirects to /play/ keeping the query', async () => {
-    const response = await get(`${DEV}/play?x=1`, authorised);
+    const response = await get(`${DEV}/play?x=1`);
     expect(response.status).toBe(307);
     expect(response.headers.get('Location')).toBe('/play/?x=1');
     expect(fromGame(response)).toBe(true);
   });
 
   it('forwards /play/, answered with the game shell', async () => {
-    const response = await get(`${DEV}/play/?x=1`, authorised);
+    const response = await get(`${DEV}/play/?x=1`);
     expect(response.status).toBe(200);
     expect(fromGame(response)).toBe(true);
     expect(await response.text()).toBe(GAME_SHELL);
   });
 
   it('forwards the game script by its path, answered with that file', async () => {
-    const response = await get(`${DEV}${GAME_SCRIPT_PATH}?x=1`, authorised);
+    const response = await get(`${DEV}${GAME_SCRIPT_PATH}?x=1`);
     expect(response.status).toBe(200);
     expect(fromGame(response)).toBe(true);
     expect(await response.text()).toBe(GAME_SCRIPT);
   });
 
   it('forwards a client route, answered with the game shell', async () => {
-    const response = await get(`${DEV}/play/a/client/route?x=1`, authorised);
+    const response = await get(`${DEV}/play/a/client/route?x=1`);
     expect(response.status).toBe(200);
     expect(fromGame(response)).toBe(true);
     expect(await response.text()).toBe(GAME_SHELL);
   });
 
   it('adds noindex to what the game answers on dev', async () => {
-    const response = await get(`${DEV}/play/`, authorised);
+    const response = await get(`${DEV}/play/`);
     expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
   });
 
   it.each(['/playground', '/plays', '/id/play/'])(
     'keeps %s on the site, which only looks like a game path',
     async (path) => {
-      const response = await get(`${DEV}${path}`, authorised);
+      const response = await get(`${DEV}${path}`);
       expect(response.status).toBe(404);
       expect(fromGame(response)).toBe(false);
     },
@@ -243,7 +258,7 @@ describe('the game, forwarded through the GAME binding after the gate', () => {
 
 describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
   it.each(PAGES)('%s %s is served at its own path', async (locale, page) => {
-    const response = await get(`${DEV}${pagePath(locale, page)}`, authorised);
+    const response = await get(`${DEV}${pagePath(locale, page)}`);
     expect(response.status).toBe(200);
     const html = await response.text();
     expect(html).toContain(`<html lang="${locale}"`);
@@ -253,9 +268,7 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
   it.each(PAGES)(
     '%s %s carries the development strip in its language',
     async (locale, page) => {
-      const html = await (
-        await get(`${DEV}${pagePath(locale, page)}`, authorised)
-      ).text();
+      const html = await (await get(`${DEV}${pagePath(locale, page)}`)).text();
       expect(html).toContain(
         `<p class="dev-strip" data-dev-strip>${COPY[locale].devStrip}</p>`,
       );
@@ -266,9 +279,7 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
     '%s %s switches language to the same page',
     async (locale, page) => {
       const other = otherLocale(locale);
-      const html = await (
-        await get(`${DEV}${pagePath(locale, page)}`, authorised)
-      ).text();
+      const html = await (await get(`${DEV}${pagePath(locale, page)}`)).text();
       expect(html).toContain(
         `<a href="${pagePath(other, page)}" hreflang="${other}" lang="${other}" data-language-switch>`,
       );
@@ -278,9 +289,7 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
   it.each(PAGES)(
     '%s %s lists every language as an hreflang alternate',
     async (locale, page) => {
-      const html = await (
-        await get(`${DEV}${pagePath(locale, page)}`, authorised)
-      ).text();
+      const html = await (await get(`${DEV}${pagePath(locale, page)}`)).text();
       const links = [...html.matchAll(/<link rel="alternate"[^>]*>/g)].map(
         ([link]) => link,
       );
@@ -298,7 +307,7 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
   ] as const)(
     'answers an unknown %s path %s with that language’s 404 page',
     async (locale, path) => {
-      const response = await get(`${DEV}${path}`, authorised);
+      const response = await get(`${DEV}${path}`);
       expect(response.status).toBe(404);
       const html = await response.text();
       expect(html).toContain(`<html lang="${locale}"`);
@@ -321,7 +330,7 @@ describe('the roadmap page’s own text, in its language (#830)', () => {
     'the %s roadmap says what it shows, what launch means and how to read it, with no ticket-titles note',
     async (locale) => {
       const html = await (
-        await get(`${DEV}${pagePath(locale, 'roadmap')}`, authorised)
+        await get(`${DEV}${pagePath(locale, 'roadmap')}`)
       ).text();
       const { intro, launch, howToRead } = COPY[locale].voyage;
       expect([
@@ -342,9 +351,7 @@ describe('legal pages are English and Indonesian (#928)', () => {
   )(
     'the %s %s page says which text governs, in its own language',
     async (locale, page) => {
-      const html = await (
-        await get(`${DEV}${pagePath(locale, page)}`, authorised)
-      ).text();
+      const html = await (await get(`${DEV}${pagePath(locale, page)}`)).text();
       expect(html).toContain(
         `<p data-governing-language>${LEGAL[locale][page].governs}</p>`,
       );
@@ -372,9 +379,9 @@ const front = (path: string, headers: Record<string, string> = {}) =>
 
 describe('the dev front door shows the site being built (#1078)', () => {
   it.each(['/', '/id/'])(
-    'shows the site being built at %s with the password, noindex added',
+    'shows the site being built at %s, noindex added',
     async (path) => {
-      const response = await front(path, authorised);
+      const response = await front(path);
       expect(response.status).toBe(200);
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
       const html = await response.text();
@@ -383,37 +390,28 @@ describe('the dev front door shows the site being built (#1078)', () => {
     },
   );
 
-  it.each(['/', '/id/', '/no/such/page'])(
-    'refuses %s on the front door without credentials',
-    async (path) => {
-      const response = await front(path);
-      expect(response.status).toBe(401);
-      expect(await response.text()).toBe(await challengeResponse().text());
-    },
-  );
-
-  it('serves blocking robots.txt on the front door without credentials', async () => {
+  it('serves blocking robots.txt on the front door', async () => {
     const response = await front('/robots.txt');
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
   });
 
   it('forwards the game on the front door', async () => {
-    const response = await front('/play/', authorised);
+    const response = await front('/play/');
     expect(response.status).toBe(200);
     expect(fromGame(response)).toBe(true);
     expect(await response.text()).toBe(GAME_SHELL);
   });
 
   it('answers the roadmap’s health on the front door, not a page', async () => {
-    const response = await front(ROADMAP_PATHS.health, authorised);
+    const response = await front(ROADMAP_PATHS.health);
     expect(response.headers.get('Content-Type')).toMatch(
       /^application\/json\b/,
     );
   });
 
   it.each(EXEMPT_PATHS)(
-    'takes %s on the front door without credentials, POST only',
+    'takes %s on the front door, POST only',
     async (path) => {
       const response = await front(path);
       expect(response.status).toBe(405);
@@ -422,7 +420,7 @@ describe('the dev front door shows the site being built (#1078)', () => {
   );
 
   it('keeps the site being built at the Worker’s own address', async () => {
-    const html = await (await get(`${DEV}/`, authorised)).text();
+    const html = await (await get(`${DEV}/`)).text();
     expect(html).toContain(' data-dev-strip>');
   });
 });
@@ -434,7 +432,6 @@ describe('the dev front door shows the site being built (#1078)', () => {
  */
 describe('through the dev site’s door, the site being built (#784, #1078)', () => {
   const through = (secret: string) => ({
-    ...authorised,
     [DOOR_SECRET_HEADER]: secret,
     [DOOR_HOST_HEADER]: SITE_DOOR,
   });
@@ -447,10 +444,10 @@ describe('through the dev site’s door, the site being built (#784, #1078)', ()
     expect(html).not.toContain(' data-coming-soon>');
   });
 
-  it('keeps the site being built when the door secret is wrong', async () => {
+  it('refuses a wrong door secret, whatever door it names', async () => {
     const response = await get(`${DEV}/`, through('not-the-door-secret'));
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain(' data-dev-strip>');
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe('forbidden');
   });
 });
 
@@ -480,19 +477,17 @@ describe('the roadmap API docs (#588)', () => {
     ),
   ];
 
-  it('serves the page on the production host without a password', async () => {
+  it('serves the page on the production host', async () => {
     expect(await docsPage(PROD)).toContain('Yawelo Idle roadmap API');
   });
 
-  it('keeps the page behind the password on dev', async () => {
-    const response = await get(`${DEV}${DOCS}`);
-    expect(response.status).toBe(401);
+  it('keeps the page behind the door on dev', async () => {
+    const response = await bare(`${DEV}${DOCS}`);
+    expect(response.status).toBe(403);
   });
 
-  it('serves the page on dev with the password', async () => {
-    expect(await docsPage(DEV, authorised)).toContain(
-      'Yawelo Idle roadmap API',
-    );
+  it('serves the page on dev through the door', async () => {
+    expect(await docsPage(DEV)).toContain('Yawelo Idle roadmap API');
   });
 
   it('loads every file from the site’s own origin, never a CDN', async () => {
@@ -543,7 +538,7 @@ describe('the private API docs, dev only (#589)', () => {
   ];
 
   const docsPage = async (): Promise<string> => {
-    const response = await get(`${DEV}${DOCS}`, authorised);
+    const response = await get(`${DEV}${DOCS}`);
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toMatch(/^text\/html/);
     return response.text();
@@ -570,28 +565,27 @@ describe('the private API docs, dev only (#589)', () => {
     expect(response.status).toBe(404);
   });
 
-  it('keeps the page behind the password on dev', async () => {
-    expect((await get(`${DEV}${DOCS}`)).status).toBe(401);
+  it('keeps the page behind the door on dev', async () => {
+    expect((await bare(`${DEV}${DOCS}`)).status).toBe(403);
   });
 
-  it('keeps the spec behind the password on dev', async () => {
-    expect((await get(`${DEV}${SPEC_PATH}`)).status).toBe(401);
+  it('keeps the spec behind the door on dev', async () => {
+    expect((await bare(`${DEV}${SPEC_PATH}`)).status).toBe(403);
   });
 
-  it('keeps the page behind the password on the dev front door', async () => {
-    expect((await front(DOCS)).status).toBe(401);
+  it('refuses a wrong door secret on dev', async () => {
+    const response = await get(`${DEV}${DOCS}`, {
+      [DOOR_SECRET_HEADER]: 'not-the-door-secret',
+    });
+    expect(response.status).toBe(403);
   });
 
-  it('refuses a wrong password on dev', async () => {
-    expect((await get(`${DEV}${DOCS}`, wrong)).status).toBe(401);
-  });
-
-  it('serves the page on dev with the password', async () => {
+  it('serves the page on dev through the door', async () => {
     expect(await docsPage()).toContain('Yawelo Idle private operations API');
   });
 
-  it('serves the hand-written spec on dev with the password', async () => {
-    const response = await get(`${DEV}${SPEC_PATH}`, authorised);
+  it('serves the hand-written spec on dev through the door', async () => {
+    const response = await get(`${DEV}${SPEC_PATH}`);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.json()).toEqual(PRIVATE_SPEC);
@@ -658,7 +652,7 @@ describe('the support pages (#860)', () => {
   it.each(SUPPORT)(
     '%s %s embeds ShyDesk’s %s view from ShyDesk’s dev host, with its own words, through the front door',
     async (locale, page, view) => {
-      const response = await front(pagePath(locale, page), authorised);
+      const response = await front(pagePath(locale, page));
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Security-Policy')).toBe(
         supportPolicy(SHYDESK_DEV),
@@ -686,22 +680,22 @@ describe('the support pages (#860)', () => {
   );
 
   it('serves the stylesheet the support page links through the front door, as CSS', async () => {
-    const html = await (await front('/support', authorised)).text();
+    const html = await (await front('/support')).text();
     const link = /<link rel="stylesheet" href="(\/_site\/[^"]+\.css)">/;
     expect(html, 'a stylesheet under /_site/').toMatch(link);
     const href = link.exec(html)?.[1];
-    const response = await front(String(href), authorised);
+    const response = await front(String(href));
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
   });
 
   it('serves the script the support page runs through the front door, as JavaScript', async () => {
-    const html = await (await front('/support', authorised)).text();
+    const html = await (await front('/support')).text();
     const script =
       /<script type="module" src="(\/_site\/[^"]+\.js)"><\/script>/;
     expect(html, 'a module script under /_site/').toMatch(script);
     const src = script.exec(html)?.[1];
-    const response = await front(String(src), authorised);
+    const response = await front(String(src));
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toMatch(
       /^(text|application)\/javascript\b/,
@@ -710,7 +704,6 @@ describe('the support pages (#860)', () => {
 
   it('sends a browser preferring Indonesian from the ticket address to the Indonesian ticket page', async () => {
     const response = await front('/support/ticket', {
-      ...authorised,
       'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
       'Sec-Fetch-Site': 'cross-site',
     });
@@ -720,7 +713,6 @@ describe('the support pages (#860)', () => {
 
   it('keeps the English ticket page for a reader who switched to it on the site', async () => {
     const response = await front('/support/ticket', {
-      ...authorised,
       'Accept-Language': 'id-ID,id;q=0.9',
       'Sec-Fetch-Site': 'same-origin',
     });
@@ -731,14 +723,14 @@ describe('the support pages (#860)', () => {
   it.each([DEV, PROD])(
     'forwards nothing at %s/support-api/embed.js (AC3)',
     async (origin) => {
-      const response = await get(`${origin}/support-api/embed.js`, authorised);
+      const response = await get(`${origin}/support-api/embed.js`);
       expect(response.status).toBe(404);
       expect(response.headers.get('Content-Type')).toMatch(/^text\/html\b/);
     },
   );
 
   it('forwards nothing at /support-api/embed.js through the front door (AC3)', async () => {
-    const response = await front('/support-api/embed.js', authorised);
+    const response = await front('/support-api/embed.js');
     expect(response.status).toBe(404);
   });
 });

@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, expect, it } from 'vitest';
-import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
+import { throughDoor, roadmapWorld, type RoadmapWorld } from './harness';
 
 /**
  * A deploy whose `ROADMAP_APP_KEY` secret never arrived (#341): the App id is
@@ -28,7 +28,7 @@ it('names the missing App key in the health, the board never read', async () => 
   await world.resetFake();
   const response = await world.server.fetch(
     'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap/health',
-    { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
+    throughDoor(),
   );
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({
