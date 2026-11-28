@@ -58,6 +58,7 @@ const SCRIPTS = [
   'scripts/verify-api.ts',
   'scripts/verify-dev-hosts.ts',
   'scripts/verify-dev.ts',
+  'scripts/verify-door.ts',
   'scripts/verify-prod.ts',
   'scripts/verify-roadmap.ts',
   'scripts/worker-coverage-build.ts',

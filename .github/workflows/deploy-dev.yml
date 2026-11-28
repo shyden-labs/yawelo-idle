@@ -3,7 +3,7 @@
 # migrations, then the sync Worker, then the game, the holding page's dev copy
 # and the site Worker (the password gate in front, spec D9, #39, #332; its
 # front door shows the holding page, #673), all in the non-PROD account
-# (#784). The front door Worker (apps/door, deployed by deploy-door.yml)
+# (#784). The front door Worker (apps/door, deployed by deploy-prod.yml with each release, #1152)
 # serves them at dev.yaweloidle.com, dev-api.yaweloidle.com and
 # dev-holding.yaweloidle.com (#1013). The checks read them back at the
 # Workers' own workers.dev addresses, standing in for the door with the door
