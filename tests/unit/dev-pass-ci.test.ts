@@ -72,3 +72,52 @@ describe.each([
     });
   },
 );
+
+/** The same request for `host`'s door, its pass kept as `name` (#1155). */
+const scriptFor = (host: string, name: string): string =>
+  SCRIPT.replace('for=dev.yaweloidle.com', `for=${host}`).replace(
+    'echo "DEV_PASS=$pass"',
+    `echo "${name}=$pass"`,
+  );
+
+/**
+ * deploy-dev's verify job reads both doors (scripts/verify-dev-hosts.ts), so
+ * it gets a pass for each, the same way (#1155: deploy-dev run 46105526525,
+ * both doors answered 401 to a request with no pass).
+ */
+describe.each([
+  [
+    'Get a DEV pass for the site’s dev door',
+    'dev.yaweloidle.com',
+    'DEV_PASS_SITE',
+  ],
+  [
+    'Get a DEV pass for the API’s dev door',
+    'dev-api.yaweloidle.com',
+    'DEV_PASS_API',
+  ],
+])('deploy-dev job verify: %s (#1155)', (name, host, variable) => {
+  const steps = workflow.jobs['verify']?.steps ?? [];
+  const mint = steps.find((s) => s.name === name);
+
+  it(`asks the sign-in for a machine pass to ${host} with the service token, masks it, and keeps it as ${variable}`, () => {
+    expect(mint?.shell).toBe('bash');
+    expect(runOf(mint ?? {})).toBe(scriptFor(host, variable));
+    expect(mint?.env).toEqual({
+      CF_ACCESS_CLIENT_ID: '${{ secrets.CF_ACCESS_CLIENT_ID }}',
+      CF_ACCESS_CLIENT_SECRET: '${{ secrets.CF_ACCESS_CLIENT_SECRET }}',
+    });
+    expect(mint?.['timeout-minutes']).toBe(1);
+  });
+
+  it('gets it before the door check, and after verify-dev, which needs none', () => {
+    const at = (match: (s: Step) => boolean) => steps.findIndex(match);
+    const minted = at((s) => s.name === name);
+    expect(minted).toBeGreaterThan(
+      at((s) => runOf(s) === 'node scripts/verify-dev.ts'),
+    );
+    expect(minted).toBeLessThan(
+      at((s) => runOf(s) === 'node scripts/verify-dev-hosts.ts'),
+    );
+  });
+});
