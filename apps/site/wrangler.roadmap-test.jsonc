@@ -14,10 +14,7 @@
     "run_worker_first": true,
     "not_found_handling": "404-page",
   },
-  "services": [
-    { "binding": "GAME", "service": "yawelo-idle-web-dev" },
-    { "binding": "HOLDING", "service": "yawelo-idle-holding-dev" },
-  ],
+  "services": [{ "binding": "GAME", "service": "yawelo-idle-web-dev" }],
   "vars": {
     // ShyDesk's dev host (#860), as wrangler.jsonc sets it.
     "SHYDESK_HOST": "https://shydesk.shydesk-non-prod.workers.dev",

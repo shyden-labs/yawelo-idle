@@ -16,8 +16,6 @@ import {
   gateProblems,
   healthJudgement,
   healthProblems,
-  holdingJudgement,
-  holdingProblems,
   leaked,
   PREVIEW_PAGES,
   roadmapJudgement,
@@ -32,9 +30,6 @@ import {
   SITE_PAGES,
   siteJudgement,
   siteProblems,
-  stylesheetJudgement,
-  stylesheetOf,
-  stylesheetProblems,
   verifyDev,
   webJudgement,
   webProblems,
@@ -79,7 +74,6 @@ const shell = (sha: string) =>
 const noindex = { 'x-robots-tag': NO_INDEX };
 const policy = { 'content-security-policy': CONTENT_SECURITY_POLICY };
 const STYLESHEET = '/_astro/Holding.Bd-ZPiSZ.css';
-const CSS = 'text/css; charset=utf-8';
 /** The holding page as its build writes it (Holding.astro, #673). */
 const holding = (sha: string) =>
   page(sha)
@@ -98,37 +92,6 @@ const site = (sha: string) =>
     '<body><p class="dev-strip" data-dev-strip>In development</p></body></html>',
   );
 
-describe('holdingProblems (#673)', () => {
-  it('accepts the holding page with its commit, noindex and mark', () => {
-    const judged = holdingJudgement(probe(200, holding(SHA), noindex), SHA);
-    expect(judged.problems).toEqual([]);
-  });
-
-  it('fails the site being built served in its place', () => {
-    expect(holdingProblems(probe(200, site(SHA), noindex), SHA)).toEqual([
-      'web: not the holding page: no data-coming-soon mark',
-    ]);
-  });
-
-  it('fails a page that names the mark only in its text', () => {
-    const text = page(SHA).replace(
-      '</html>',
-      '<body><p>data-coming-soon</p></body></html>',
-    );
-    expect(holdingProblems(probe(200, text, noindex), SHA)).toEqual([
-      'web: not the holding page: no data-coming-soon mark',
-    ]);
-  });
-
-  it('fails a non-200 and judges nothing after it', () => {
-    const judged = holdingJudgement(probe(404, holding(SHA), noindex), SHA);
-    expect(judged).toEqual({
-      checked: ['status'],
-      problems: ['web: status 404 with the password, expected 200'],
-    });
-  });
-});
-
 describe('siteProblems (#673)', () => {
   it('accepts the site being built with its commit, noindex and mark', () => {
     const judged = siteJudgement(probe(200, site(SHA), noindex), SHA, 'site /');
@@ -142,68 +105,6 @@ describe('siteProblems (#673)', () => {
   });
 });
 
-describe('stylesheetOf (#673)', () => {
-  it('names the stylesheet the page links', () => {
-    expect(stylesheetOf(holding(SHA))).toBe(STYLESHEET);
-  });
-
-  it('names none in a page that links none', () => {
-    expect(stylesheetOf(site(SHA))).toBeUndefined();
-  });
-
-  it('names none for a link that is not a stylesheet', () => {
-    expect(
-      stylesheetOf('<link rel="alternate" href="/_astro/x.css">'),
-    ).toBeUndefined();
-  });
-
-  it('names the stylesheet whatever the order of its attributes', () => {
-    expect(stylesheetOf(`<link href="${STYLESHEET}" rel="stylesheet">`)).toBe(
-      STYLESHEET,
-    );
-  });
-});
-
-describe('stylesheetProblems (#673)', () => {
-  const label = `web ${STYLESHEET}`;
-
-  it('accepts CSS with noindex', () => {
-    const judged = stylesheetJudgement(
-      label,
-      probe(200, 'body{}', { 'content-type': CSS, ...noindex }),
-    );
-    expect(judged.problems).toEqual([]);
-  });
-
-  it('fails a stylesheet served as a page', () => {
-    expect(
-      stylesheetProblems(
-        label,
-        probe(200, '<html>', { 'content-type': 'text/html', ...noindex }),
-      ),
-    ).toEqual([`${label}: Content-Type is "text/html", expected text/css`]);
-  });
-
-  it('fails a stylesheet without the noindex header', () => {
-    expect(
-      stylesheetProblems(label, probe(200, 'body{}', { 'content-type': CSS })),
-    ).toEqual([`${label}: X-Robots-Tag is null, expected "${NO_INDEX}"`]);
-  });
-
-  it('fails a non-200 and judges nothing after it', () => {
-    const judged = stylesheetJudgement(label, probe(404, '', noindex));
-    expect(judged).toEqual({
-      checked: ['status'],
-      problems: [`${label}: status 404 with the password, expected 200`],
-    });
-  });
-});
-
-/**
- * Node's fetch throws `TypeError: fetch failed` and keeps the real reason (a
- * DNS miss, a reset, a TLS refusal) in `cause` (#1101: a dev deploy failed
- * naming only "fetch failed").
- */
 describe('failureReason (#1101)', () => {
   it("names the cause's code and message", () => {
     const cause = Object.assign(new Error('read ECONNRESET'), {
@@ -718,14 +619,12 @@ describe('verifyDev', () => {
   /** The site Worker's own address, which shows the site being built (#673). */
   let siteServer: Server;
   let siteBase = '';
-  /** The front door serves the site being built in place of the holding page. */
-  let plantSite = false;
+  /** The front door serves the holding page in place of the site being built. */
+  let plantHolding = false;
   /** The site's own address serves the holding page in place of the site. */
   let siteServesHolding = false;
   /** The site's own address serves its pages to anyone. */
   let ungatedSite = false;
-  /** The status the holding page's stylesheet answers with. */
-  let styleStatus = 200;
   let served = SHA;
   let gated = true;
   let tagged = true;
@@ -836,11 +735,6 @@ describe('verifyDev', () => {
         res.end('export {};');
         return;
       }
-      if (role === 'web' && req.url === STYLESHEET && authorised) {
-        res.writeHead(styleStatus, { 'content-type': CSS, ...tag });
-        res.end('body{}');
-        return;
-      }
       if (req.url === '/robots.txt') {
         if (dropRobots) {
           req.socket.destroy();
@@ -889,14 +783,9 @@ describe('verifyDev', () => {
         res.end(noScript ? page(commit) : shell(commit));
       else if (role === 'site')
         res.end(siteServesHolding ? holding(commit) : site(commit));
-      // The site Worker shows the holding page at its door only; at its own
-      // address it shows the site being built.
-      else
-        res.end(
-          plantSite || door !== 'dev.yaweloidle.com'
-            ? site(commit)
-            : holding(commit),
-        );
+      // The site Worker shows the site being built at its door and at its
+      // own address (#1078).
+      else res.end(plantHolding ? holding(commit) : site(commit));
     };
 
   const listen = async (handler: Server): Promise<string> => {
@@ -929,10 +818,9 @@ describe('verifyDev', () => {
   });
 
   const reset = () => {
-    plantSite = false;
+    plantHolding = false;
     siteServesHolding = false;
     ungatedSite = false;
-    styleStatus = 200;
     served = SHA;
     gated = true;
     tagged = true;
@@ -1124,7 +1012,6 @@ describe('verifyDev', () => {
       ...SITE_PAGES,
       ...PREVIEW_PAGES.map((path) => `site:${path}`),
       '/robots.txt',
-      STYLESHEET,
       SCRIPT,
       '/play/',
       'site:/',
@@ -1138,7 +1025,6 @@ describe('verifyDev', () => {
       ...SITE_PAGES.map(() => basicAuthorization(PASSWORD)),
       ...PREVIEW_PAGES.map(() => basicAuthorization(PASSWORD)),
       '',
-      basicAuthorization(PASSWORD),
       basicAuthorization(PASSWORD),
       '',
       '',
@@ -1156,7 +1042,6 @@ describe('verifyDev', () => {
       ...SITE_PAGES.map(front),
       ...PREVIEW_PAGES.map((path) => `site:${path} -`),
       front('/robots.txt'),
-      front(STYLESHEET),
       front(SCRIPT),
       front('/play/'),
       'site:/ -',
@@ -1173,21 +1058,12 @@ describe('verifyDev', () => {
     expect(PREVIEW_PAGES).toEqual(['/', '/id/', '/roadmap']);
   });
 
-  it('fails a front door serving the site being built in place of the holding page (#673)', async () => {
+  it('fails a front door serving the holding page in place of the site being built (#1078)', async () => {
     reset();
-    plantSite = true;
+    plantHolding = true;
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'web: not the holding page: no data-coming-soon mark',
-      'web /id/: not the holding page: no data-coming-soon mark',
-      'web: no stylesheet in the page',
-    ]);
-  });
-
-  it('fails a holding page whose stylesheet is not served (#673)', async () => {
-    reset();
-    styleStatus = 404;
-    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      `web ${STYLESHEET}: status 404 with the password, expected 200`,
+      'web: not the site being built: no data-dev-strip mark',
+      'web /id/: not the site being built: no data-dev-strip mark',
     ]);
   });
 
@@ -1242,7 +1118,7 @@ describe('verifyDev', () => {
     // test before it ran (measured on #332).
     // The roadmap's health is no longer among the last look's probes: its
     // own job judges it once a check after the deploy exists (#708).
-    expect(requests, 'two looks of nine probes, then one of fifteen').toBe(33);
+    expect(requests, 'two looks of nine probes, then one of fourteen').toBe(32);
     expect(problems).toEqual([]);
   });
 
@@ -1314,8 +1190,8 @@ describe('verifyDev', () => {
     // test before it ran (measured on #332).
     expect(
       requests,
-      'two stale looks of four probes, then one of fifteen',
-    ).toBe(23);
+      'two stale looks of four probes, then one of fourteen',
+    ).toBe(22);
     expect(problems).toEqual([]);
   });
 
@@ -1358,7 +1234,7 @@ describe('verifyDev', () => {
       'web without credentials: answered 302, expected 401; the password gate is not in front of it',
       'web without credentials: no Basic WWW-Authenticate challenge',
     ]);
-    expect(requests, 'one look of fifteen probes').toBe(15);
+    expect(requests, 'one look of fourteen probes').toBe(14);
   });
 
   it('fails at once when a host that has answered drops a connection', async () => {
@@ -1381,7 +1257,7 @@ describe('verifyDev', () => {
         new RegExp(`^robots\\.txt: request to ${base}/robots\\.txt failed: `),
       ),
     ]);
-    expect(requests, 'one look of fifteen probes').toBe(15);
+    expect(requests, 'one look of fourteen probes').toBe(14);
   });
 
   it('fails when the noindex header is missing everywhere', async () => {
@@ -1398,7 +1274,6 @@ describe('verifyDev', () => {
         (path) =>
           `site ${path}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       ),
-      `web ${STYLESHEET}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       `web ${SCRIPT}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
     ]);
   });
@@ -1464,7 +1339,7 @@ describe('verifyDev', () => {
     // Every kind of message: a judged leak, a wait, judged answers, failed requests.
     expect(leaking).toHaveLength(6);
     expect(stale).toHaveLength(3);
-    expect(untagged).toHaveLength(9);
+    expect(untagged).toHaveLength(8);
     expect(unreachable).toHaveLength(3);
     expect(roadmapWaited).toHaveLength(2);
     expect(roadmapUnreachable).toHaveLength(1);
