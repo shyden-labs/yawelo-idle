@@ -5,9 +5,17 @@
     "version": "1.0.0",
     "summary": "The public roadmap's data, read from the project board.",
     "description": "Read-only. The public roadmap page draws itself from these two operations: a JSON snapshot of the board, and a WebSocket that sends each new snapshot as the board changes. Both answer on the site's own address.",
-    "license": { "name": "Apache-2.0", "identifier": "Apache-2.0" }
+    "license": {
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
+    }
   },
-  "servers": [{ "url": "/", "description": "This site" }],
+  "servers": [
+    {
+      "url": "/",
+      "description": "This site"
+    }
+  ],
   "paths": {
     "/api/roadmap.json": {
       "get": {
@@ -18,27 +26,39 @@
           "200": {
             "description": "The latest snapshot.",
             "headers": {
-              "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Snapshot" }
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/DoorRequired"
+          },
+          "405": {
+            "$ref": "#/components/responses/GetOnly"
           },
           "503": {
             "description": "The board has not been read successfully yet.",
             "headers": {
-              "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Unreadable" }
+                "schema": {
+                  "$ref": "#/components/schemas/Unreadable"
+                }
               }
             }
-          },
-          "401": { "$ref": "#/components/responses/PasswordNeeded" },
-          "405": { "$ref": "#/components/responses/GetOnly" }
+          }
         }
       }
     },
@@ -52,7 +72,10 @@
             "name": "Upgrade",
             "in": "header",
             "required": true,
-            "schema": { "type": "string", "const": "websocket" }
+            "schema": {
+              "type": "string",
+              "const": "websocket"
+            }
           }
         ],
         "responses": {
@@ -60,9 +83,17 @@
             "description": "Switching to the WebSocket protocol. Each message is a Snapshot as JSON.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Snapshot" }
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/DoorRequired"
+          },
+          "405": {
+            "$ref": "#/components/responses/GetOnly"
           },
           "426": {
             "description": "The request did not ask for a WebSocket upgrade.",
@@ -74,9 +105,7 @@
                 }
               }
             }
-          },
-          "401": { "$ref": "#/components/responses/PasswordNeeded" },
-          "405": { "$ref": "#/components/responses/GetOnly" }
+          }
         }
       }
     }
@@ -85,31 +114,38 @@
     "headers": {
       "NoStore": {
         "description": "Never cached: each request reads the latest snapshot.",
-        "schema": { "type": "string", "const": "no-store" }
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
       }
     },
     "responses": {
-      "PasswordNeeded": {
-        "description": "Only on the development site, which sits behind a password. The public site never answers 401.",
+      "GetOnly": {
+        "description": "Any method but GET (or HEAD) is refused.",
         "headers": {
-          "WWW-Authenticate": {
-            "schema": { "type": "string", "pattern": "^Basic realm=" }
-          },
-          "Cache-Control": { "$ref": "#/components/headers/NoStore" }
+          "Allow": {
+            "schema": {
+              "type": "string",
+              "const": "GET, HEAD"
+            }
+          }
+        }
+      },
+      "DoorRequired": {
+        "description": "Only on the development site, which its door alone reaches: the door adds a secret to every request it passes on, and a request without it is refused before anything else. The public site never answers 403.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
         },
         "content": {
           "text/plain": {
             "schema": {
               "type": "string",
-              "description": "One sentence saying this is a test environment."
+              "const": "forbidden"
             }
           }
-        }
-      },
-      "GetOnly": {
-        "description": "Any method but GET (or HEAD) is refused.",
-        "headers": {
-          "Allow": { "schema": { "type": "string", "const": "GET, HEAD" } }
         }
       }
     },
@@ -146,9 +182,13 @@
           },
           "items": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Item" }
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            }
           },
-          "progress": { "$ref": "#/components/schemas/Progress" }
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          }
         }
       },
       "Item": {
@@ -181,8 +221,14 @@
             "minimum": 0,
             "description": "An epic's milestone number; null for stories and for epics with no milestone."
           },
-          "state": { "type": "string", "enum": ["OPEN", "CLOSED"] },
-          "closedAt": { "type": ["string", "null"], "format": "date-time" },
+          "state": {
+            "type": "string",
+            "enum": ["OPEN", "CLOSED"]
+          },
+          "closedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
           "estimate": {
             "type": ["number", "null"],
             "description": "Story points, or null when not scored."
@@ -215,14 +261,23 @@
             "additionalProperties": false,
             "required": ["closed", "total", "pace"],
             "properties": {
-              "closed": { "type": "integer", "minimum": 0 },
-              "total": { "type": "integer", "minimum": 0 },
+              "closed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
               "pace": {
                 "type": "array",
                 "description": "Stories closed on each of the last 7 days, oldest first.",
                 "minItems": 7,
                 "maxItems": 7,
-                "items": { "type": "integer", "minimum": 0 }
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
               }
             }
           },
@@ -239,16 +294,30 @@
                   "pace"
                 ],
                 "properties": {
-                  "available": { "const": true },
-                  "openPoints": { "type": "number", "minimum": 0 },
-                  "assumedClosed": { "type": "number", "minimum": 0 },
-                  "scoredMean": { "type": "number", "minimum": 0 },
+                  "available": {
+                    "const": true
+                  },
+                  "openPoints": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "assumedClosed": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "scoredMean": {
+                    "type": "number",
+                    "minimum": 0
+                  },
                   "pace": {
                     "type": "array",
                     "description": "Points closed on each of the last 7 days, oldest first.",
                     "minItems": 7,
                     "maxItems": 7,
-                    "items": { "type": "number", "minimum": 0 }
+                    "items": {
+                      "type": "number",
+                      "minimum": 0
+                    }
                   }
                 }
               },
@@ -257,9 +326,17 @@
                 "additionalProperties": false,
                 "required": ["available", "scored", "open"],
                 "properties": {
-                  "available": { "const": false },
-                  "scored": { "type": "integer", "minimum": 0 },
-                  "open": { "type": "integer", "minimum": 0 }
+                  "available": {
+                    "const": false
+                  },
+                  "scored": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "open": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
                 }
               }
             ]

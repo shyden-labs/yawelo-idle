@@ -4,7 +4,7 @@
     "title": "Yawelo Idle private operations API",
     "version": "1.0.0",
     "summary": "The roadmap's health report and the GitHub webhook, for the operator only.",
-    "description": "Private. Served on the development site only, behind its password; the public site answers 404 for the health report and serves no copy of this page or spec. The webhook is called by GitHub alone and refuses any delivery not signed with the webhook secret, so trying it here shows its 401.",
+    "description": "Private. Served on the development site only, behind its door; the public site answers 404 for the health report and serves no copy of this page or spec. The webhook is called by GitHub alone and refuses any delivery not signed with the webhook secret, so trying it here shows its 401.",
     "license": {
       "name": "Apache-2.0",
       "identifier": "Apache-2.0"
@@ -38,8 +38,8 @@
               }
             }
           },
-          "401": {
-            "$ref": "#/components/responses/PasswordNeeded"
+          "403": {
+            "$ref": "#/components/responses/DoorRequired"
           },
           "404": {
             "description": "Only on the public site, whatever the method: the report is internal."
@@ -100,6 +100,9 @@
           "401": {
             "description": "The signature is missing or wrong."
           },
+          "403": {
+            "$ref": "#/components/responses/DoorRequired"
+          },
           "405": {
             "description": "Any method but POST is refused.",
             "headers": {
@@ -129,15 +132,20 @@
       }
     },
     "responses": {
-      "PasswordNeeded": {
-        "description": "The development site sits behind a password.",
+      "GetOnly": {
+        "description": "Any method but GET (or HEAD) is refused.",
         "headers": {
-          "WWW-Authenticate": {
+          "Allow": {
             "schema": {
               "type": "string",
-              "pattern": "^Basic realm="
+              "const": "GET, HEAD"
             }
-          },
+          }
+        }
+      },
+      "DoorRequired": {
+        "description": "Only on the development site, which its door alone reaches: the door adds a secret to every request it passes on, and a request without it is refused before anything else. The public site never answers 403.",
+        "headers": {
           "Cache-Control": {
             "$ref": "#/components/headers/NoStore"
           }
@@ -146,18 +154,7 @@
           "text/plain": {
             "schema": {
               "type": "string",
-              "description": "One sentence saying this is a test environment."
-            }
-          }
-        }
-      },
-      "GetOnly": {
-        "description": "Any method but GET (or HEAD) is refused.",
-        "headers": {
-          "Allow": {
-            "schema": {
-              "type": "string",
-              "const": "GET, HEAD"
+              "const": "forbidden"
             }
           }
         }
