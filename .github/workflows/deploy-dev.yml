@@ -170,14 +170,13 @@ jobs:
         run: npm run build --workspace @yawelo-idle/site
       # The site's secrets reach the Worker from the dev environment's
       # secrets, uploaded with the version itself, so no one types one into
-      # Cloudflare (#357): the dev password, and the roadmap's webhook secret
-      # and App key (#341). The script puts the file in a new directory in the
+      # Cloudflare (#357): the roadmap's webhook secret and App key (#341), and
+      # the door secret (#784). The script puts the file in a new directory in the
       # system's temp, outside the checkout, and prints where (SonarCloud
       # S8707 on #943); bash's -e stops the step if the write fails.
-      - name: Write the site's secrets file (the dev password, the roadmap's webhook secret and App key, the dev door secret)
+      - name: Write the site's secrets file (the roadmap's webhook secret and App key, the dev door secret)
         id: site-secrets
         env:
-          DEV_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
           ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
           ROADMAP_APP_KEY: ${{ secrets.ROADMAP_APP_KEY }}
           DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}

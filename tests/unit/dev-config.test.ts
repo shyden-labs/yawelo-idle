@@ -490,7 +490,6 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
     );
     expect(write).toBeGreaterThanOrEqual(0);
     expect(steps[write]?.env).toEqual({
-      DEV_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       ROADMAP_WEBHOOK_SECRET: '${{ secrets.ROADMAP_WEBHOOK_SECRET }}',
       ROADMAP_APP_KEY: '${{ secrets.ROADMAP_APP_KEY }}',
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
