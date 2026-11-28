@@ -4,7 +4,7 @@
  *     ORIGIN_DOMAIN=… DEV_DOOR_SECRET=… TEST_DOOR_SECRET=… DEV_PASS_KEYS=… \
  *       node scripts/door-secrets.ts
  *
- * deploy-door.yml then runs `wrangler deploy --secrets-file <path>`, which
+ * deploy-prod.yml then runs `wrangler deploy --secrets-file <path>`, which
  * uploads them with the door itself (apps/door/worker/door.ts reads them).
  * Each is kept in one place, a `production` environment secret (SOURCES),
  * except DEV_PASS_KEYS (#1078): the sign-in's public keys, a `production`

@@ -62,13 +62,6 @@ const CALLS = [
     start: 'the package root apps/site',
   },
   {
-    step: 'deploy-door.yml / deploy / Deploy the front door',
-    command: 'deploy',
-    from: '.',
-    configArgs: ['--config', 'apps/door/wrangler.jsonc'],
-    start: 'the repository root',
-  },
-  {
     step: 'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
     command: 'deploy',
     from: '.',
@@ -80,6 +73,13 @@ const CALLS = [
     command: 'deploy',
     from: '.',
     configArgs: ['--config', 'apps/sync-worker/reserve/wrangler.jsonc'],
+    start: 'the repository root',
+  },
+  {
+    step: 'deploy-prod.yml / deploy / Deploy the front door',
+    command: 'deploy',
+    from: '.',
+    configArgs: ['--config', 'apps/door/wrangler.jsonc'],
     start: 'the repository root',
   },
   {

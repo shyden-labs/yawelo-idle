@@ -92,16 +92,16 @@ export const WRANGLER_STEPS: readonly (MeantConfig & { step: string })[] = [
     config: 'apps/site/wrangler.jsonc',
   },
   {
-    step: 'deploy-door.yml / deploy / Deploy the front door',
-    config: 'apps/door/wrangler.jsonc',
-  },
-  {
     step: 'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
     config: 'apps/site/holding/wrangler.jsonc',
   },
   {
     step: 'deploy-prod.yml / deploy / Deploy the API reserve, tagged with this commit',
     config: 'apps/sync-worker/reserve/wrangler.jsonc',
+  },
+  {
+    step: 'deploy-prod.yml / deploy / Deploy the front door',
+    config: 'apps/door/wrangler.jsonc',
   },
   {
     step: "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
