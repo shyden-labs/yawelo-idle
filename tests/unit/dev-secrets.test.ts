@@ -38,7 +38,11 @@ describe('writeSecretsFile', () => {
       ...VALUES,
       DEV_PASSWORD: 'leftover',
     } as Parameters<typeof writeSecretsFile>[0]);
-    expect(Object.keys(JSON.parse(readFileSync(path, 'utf8')))).toEqual([
+    const written = JSON.parse(readFileSync(path, 'utf8')) as Record<
+      string,
+      string
+    >;
+    expect(Object.keys(written)).toEqual([
       'ROADMAP_WEBHOOK_SECRET',
       'ROADMAP_APP_KEY',
       'DOOR_SECRET',
