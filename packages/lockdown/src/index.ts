@@ -245,6 +245,23 @@ export async function gateWebRequest(
 }
 
 /**
+ * The site Worker's marking once its door is the gate (#1078 AC3): no
+ * password, the origin refusing any request its door did not send
+ * (apps/door/worker/origin.ts). On the production host the request is served
+ * untouched; on any other host `/robots.txt` is blocking and every other
+ * response carries noindex.
+ */
+export async function markWebRequest(
+  request: Request,
+  serve: Serve,
+): Promise<Response> {
+  const { hostname, pathname } = new URL(request.url);
+  if (isProdHost(hostname, PROD_HOSTNAME)) return serve(request);
+  if (pathname === '/robots.txt') return robotsResponse();
+  return withNoIndex(await serve(request));
+}
+
+/**
  * The sync Worker's marking, with no password (operator decision). On the
  * production API host the request is served untouched; on any other host
  * `/robots.txt` is blocking and every other response carries noindex.

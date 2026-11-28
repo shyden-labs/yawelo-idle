@@ -10,6 +10,7 @@ import {
   gateWebRequest,
   isProdHost,
   markApiRequest,
+  markWebRequest,
   type Serve,
 } from '../src/index';
 
@@ -257,6 +258,43 @@ describe('markApiRequest', () => {
       const { serve, calls } = recordingServe();
       const response = await markApiRequest(
         request(`https://api.yaweloidle.com${path}`),
+        serve,
+      );
+      expect(response.headers.get('X-Robots-Tag')).toBeNull();
+      expect(calls).toHaveLength(1);
+    },
+  );
+});
+
+/**
+ * The site Worker's marking once the door is its gate (#1078 AC3): no
+ * password, the origin refusing any request its door did not send.
+ */
+describe('markWebRequest (#1078)', () => {
+  const site = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
+
+  it('serves a non-prod page with no credentials, noindex added', async () => {
+    const { serve, calls } = recordingServe();
+    const response = await markWebRequest(request(`${site}/`), serve);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
+    expect(response.headers.get('WWW-Authenticate')).toBeNull();
+    expect(calls).toEqual([`${site}/`]);
+  });
+
+  it('serves blocking robots.txt on a non-prod host, serving nothing', async () => {
+    const { serve, calls } = recordingServe();
+    const response = await markWebRequest(request(`${site}/robots.txt`), serve);
+    expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
+    expect(calls).toEqual([]);
+  });
+
+  it.each(['/', '/robots.txt'])(
+    'leaves the production host untouched at %s',
+    async (path) => {
+      const { serve, calls } = recordingServe();
+      const response = await markWebRequest(
+        request(`https://yaweloidle.com${path}`),
         serve,
       );
       expect(response.headers.get('X-Robots-Tag')).toBeNull();
