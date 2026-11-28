@@ -54,7 +54,7 @@
       "post": {
         "operationId": "postGitHubWebhook",
         "summary": "A GitHub webhook delivery",
-        "description": "GitHub's organisation webhook. Not behind the password: the signature is checked first, then only this board's and this repository's events cause a read of the board. A delivery over 1 MiB is refused before its signature is checked.",
+        "description": "GitHub's organisation webhook. The door passes it on unchecked, adding its secret: the signature is checked first, then only this board's and this repository's events cause a read of the board. A delivery over 1 MiB is refused before its signature is checked.",
         "parameters": [
           {
             "name": "X-Hub-Signature-256",
@@ -132,19 +132,8 @@
       }
     },
     "responses": {
-      "GetOnly": {
-        "description": "Any method but GET (or HEAD) is refused.",
-        "headers": {
-          "Allow": {
-            "schema": {
-              "type": "string",
-              "const": "GET, HEAD"
-            }
-          }
-        }
-      },
       "DoorRequired": {
-        "description": "Only on the development site, which its door alone reaches: the door adds a secret to every request it passes on, and a request without it is refused before anything else. The public site never answers 403.",
+        "description": "The development site's door alone reaches it: a request without the door's secret is refused before anything else.",
         "headers": {
           "Cache-Control": {
             "$ref": "#/components/headers/NoStore"
@@ -155,6 +144,17 @@
             "schema": {
               "type": "string",
               "const": "forbidden"
+            }
+          }
+        }
+      },
+      "GetOnly": {
+        "description": "Any method but GET (or HEAD) is refused.",
+        "headers": {
+          "Allow": {
+            "schema": {
+              "type": "string",
+              "const": "GET, HEAD"
             }
           }
         }

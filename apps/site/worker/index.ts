@@ -87,7 +87,7 @@ async function hook(
 
 /**
  * `/api/private/*` (#589): a bare 404 on the public host, whatever the
- * method; on dev, once past the password, the spec from the Worker and the
+ * method; on dev, through the door, the spec from the Worker and the
  * docs page from the prerendered pages.
  */
 async function privateDocs(request: Request, env: SiteEnv): Promise<Response> {

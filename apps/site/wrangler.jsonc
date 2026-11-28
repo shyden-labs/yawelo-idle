@@ -1,5 +1,5 @@
-// The DEV site Worker (website spec §7.2, #332, #673), all behind the shared
-// dev password (#39, W15): /play/* forwarded to the game Worker by service
+// The DEV site Worker (website spec §7.2, #332, #673), all behind its door,
+// the dev site's only gate (#1078 AC3): /play/* forwarded to the game Worker by service
 // binding, the roadmap API and webhook, and the pages: the prerendered site
 // being built, from ./dist, through the front door, dev.yaweloidle.com
 // (#1013), and at the workers.dev address alike (Shyden, 2026-11-28, #1078).
