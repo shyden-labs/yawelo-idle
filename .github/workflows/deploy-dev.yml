@@ -234,6 +234,51 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
+      # Both doors check a DEV pass (#1078 AC1), so the door check gets a
+      # machine pass for each from the shared sign-in, as the browser suites
+      # do, masked and kept in the job's environment (#1155).
+      - name: Get a DEV pass for the site’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS_SITE=$pass" >> "$GITHUB_ENV"
+      - name: Get a DEV pass for the API’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev-api.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS_API=$pass" >> "$GITHUB_ENV"
       # The front door in front of the real Workers, once verify-dev
       # has seen this commit served (#816): path, query, method and body
       # reach them unchanged (#1013).
