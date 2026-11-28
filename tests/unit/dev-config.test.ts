@@ -189,9 +189,16 @@ describe('the dev Workers’ deploy configs', () => {
     const next = steps[at + 3] ?? {};
     expect(runOf(next)).toBe('node scripts/verify-dev-hosts.ts');
     expect(next.env).toEqual({
-      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       ROADMAP_WEBHOOK_SECRET: '${{ secrets.ROADMAP_WEBHOOK_SECRET }}',
     });
+  });
+
+  it('hands no step the retired dev password: the door is the only gate (#1078 AC3)', () => {
+    const text = readFileSync(
+      join(ROOT, '.github/workflows/deploy-dev.yml'),
+      'utf8',
+    );
+    expect(text.match(/DEV_BASIC_AUTH_PASSWORD/g) ?? []).toEqual([]);
   });
 
   it('names the site’s dev hostname as the dev environment’s address, in both jobs (#429)', () => {
@@ -589,11 +596,10 @@ describe('the roadmap, judged once the deployed code has checked the board (#708
     expect(job?.['timeout-minutes']).toBe(15);
   });
 
-  it('hands the check the deploy time, the site Worker’s own address, the door secret and the password (#1078)', () => {
+  it('hands the check the deploy time, the site Worker’s own address and the door secret, no password (#1078)', () => {
     const site = byName('yawelo-idle-site-dev').name;
     expect(roadmapStep()?.env).toStrictEqual({
       DEV_WEB_URL: `https://${site}.${DEV_WORKERS_SUBDOMAIN}.workers.dev/`,
-      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
       DEPLOYED_AT: '${{ needs.deploy.outputs.deployed-at }}',
     });
