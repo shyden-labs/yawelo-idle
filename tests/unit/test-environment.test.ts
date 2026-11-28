@@ -68,11 +68,23 @@ describe("TEST's holding page config (#784 AC2)", () => {
     expect(holding().name).toBe('yawelo-idle-holding-test');
   });
 
-  it('is the dev copy in every other setting: same script, files, address and door switch', () => {
-    expect({ ...holding(), name: 'any' }).toEqual({
-      ...devCopy(),
-      name: 'any',
-    });
+  // The dev copy requires its door (#1078 AC3); TEST's origin does once its
+  // own door goes live (#784 AC4), so the switch is the one other difference.
+  const withoutSwitch = (config: ReturnType<typeof holding>) => ({
+    ...config,
+    name: 'any',
+    vars: { ...config.vars, DOOR_REQUIRED: 'any' },
+  });
+
+  it('is the dev copy in every other setting: same script, files and address', () => {
+    expect(withoutSwitch(holding())).toEqual(withoutSwitch(devCopy()));
+  });
+
+  it('admits every request until its own door goes live (#784 AC4), where the dev copy requires its door', () => {
+    expect([
+      holding().vars.DOOR_REQUIRED,
+      devCopy().vars.DOOR_REQUIRED,
+    ]).toEqual(['false', 'true']);
   });
 });
 

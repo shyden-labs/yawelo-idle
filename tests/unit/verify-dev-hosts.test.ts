@@ -16,7 +16,6 @@ import {
  */
 
 const INPUTS = {
-  password: 'pw',
   sitePass: 'site-pass',
   apiPass: 'api-pass',
   webhookSecret: 'secret',
@@ -51,10 +50,9 @@ function hosts(override: Override = {}): Fetch {
       });
     };
     if (url === `${SITE_HOST}/play?q=1`) {
+      // The door is the only gate (#1078): no password is sent at all.
       const authorised =
-        pass === 'site-pass' &&
-        new Headers(init.headers).get('Authorization') ===
-          `Basic ${btoa('tester:pw')}`;
+        pass === 'site-pass' && !new Headers(init.headers).has('Authorization');
       return Promise.resolve(
         answer(
           authorised
@@ -103,10 +101,10 @@ describe('verifyDevHosts (#816)', () => {
     ]);
   });
 
-  it('names a wrong login, which the site answers 401', async () => {
+  it('names a wrong site pass, which the door answers 401', async () => {
     const problems = await verifyDevHosts(hosts(), {
       ...INPUTS,
-      password: 'no',
+      sitePass: 'no',
     });
     expect(problems).toEqual([
       `${SITE_HOST}/play?q=1: expected the game's 307 to /play/?q=1, got 401 to null`,
@@ -176,7 +174,6 @@ describe('verifyDevHosts (#816)', () => {
 
 describe('inputsFrom (#1155)', () => {
   const ENV = {
-    DEV_BASIC_AUTH_PASSWORD: 'pw',
     DEV_PASS_SITE: 'site-pass',
     DEV_PASS_API: 'api-pass',
     ROADMAP_WEBHOOK_SECRET: 'secret',

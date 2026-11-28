@@ -1,10 +1,10 @@
 /**
  * The holding page's dev copy (#621 AC8) behind its door (#784 AC4): its
  * files are served only to a request carrying the dev door secret, which the
- * door adds, and the dev site passes on when it shows the holding page at its
- * own door. Run before its files (`run_worker_first`), so no file, nor the
- * 404 page, answers without the check. DOOR_REQUIRED is "false" until the
- * go-live (apps/door/worker/origin.ts).
+ * door adds. Run before its files (`run_worker_first`), so no file, nor the
+ * 404 page, answers without the check (apps/door/worker/origin.ts). The dev
+ * copy requires its door (#1078 AC3); TEST's admits every request until its
+ * own door goes live (#784 AC4).
  *
  * Its types are declared here rather than taken from the Workers types: the
  * root typecheck reads this file, through its unit test, with Node's.

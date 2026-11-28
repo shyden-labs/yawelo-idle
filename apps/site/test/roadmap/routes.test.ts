@@ -2,7 +2,7 @@ import { connect } from 'node:net';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
-import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
+import { throughDoor, roadmapWorld, sign, type RoadmapWorld } from './harness';
 
 /**
  * The site Worker's roadmap routes (#341): the webhook's door at
@@ -14,7 +14,6 @@ import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
  * done (test/roadmap-worker/test-worker.ts).
  */
 const HOST = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
-const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 
 let world: RoadmapWorld;
 const resetFake: RoadmapWorld['resetFake'] = () => world.resetFake();
@@ -38,7 +37,7 @@ afterAll(async () => {
 // The harness takes miniflare's RequestInit, not the DOM's.
 type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
-  world.server.fetch(`${HOST}${path}`, init);
+  world.server.fetch(`${HOST}${path}`, throughDoor(init));
 
 const HOOK_HEADERS = {
   'X-GitHub-Event': 'issues',
@@ -131,9 +130,9 @@ describe('/hooks/github', () => {
   it('hands the delivery’s card and time to the roadmap, which counts a read behind it as late', async () => {
     const staleReads = async () =>
       (
-        (await (
-          await call('/api/roadmap/health', { headers: AUTH })
-        ).json()) as { staleReads: number }
+        (await (await call('/api/roadmap/health')).json()) as {
+          staleReads: number;
+        }
       ).staleReads;
     const before = await staleReads();
     const response = await deliver('issues', {
@@ -207,12 +206,16 @@ describe('/hooks/github', () => {
 });
 
 describe('/api/roadmap*', () => {
-  it('keeps the roadmap behind the dev password', async () => {
-    expect((await call('/api/roadmap.json')).status).toBe(401);
+  it('keeps the roadmap behind the door on dev', async () => {
+    const response = await world.server.fetch(`${HOST}/api/roadmap.json`);
+    expect([response.status, await response.text()]).toEqual([
+      403,
+      'forbidden',
+    ]);
   });
 
   it('serves the snapshot as JSON, never cached', async () => {
-    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const response = await call('/api/roadmap.json');
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const snapshot = (await response.json()) as { version: number };
@@ -220,7 +223,7 @@ describe('/api/roadmap*', () => {
   });
 
   it('serves nothing the public page does not show (#840)', async () => {
-    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const response = await call('/api/roadmap.json');
     const served = await response.text();
     expect({
       postLaunchStory: served.includes('"number":7,'),
@@ -241,7 +244,7 @@ describe('/api/roadmap*', () => {
 
   /** The snapshot's card for issue `number`, as the Worker serves it. */
   const servedItem = async (number: number) => {
-    const response = await call('/api/roadmap.json', { headers: AUTH });
+    const response = await call('/api/roadmap.json');
     const snapshot = (await response.json()) as {
       items: { number: number }[];
     };
@@ -265,7 +268,7 @@ describe('/api/roadmap*', () => {
   });
 
   it('serves the health as JSON, never cached', async () => {
-    const response = await call('/api/roadmap/health', { headers: AUTH });
+    const response = await call('/api/roadmap/health');
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.json()).toMatchObject({
@@ -274,9 +277,9 @@ describe('/api/roadmap*', () => {
     });
   });
 
-  it('upgrades the live path to a WebSocket behind the password', async () => {
+  it('upgrades the live path to a WebSocket through the door', async () => {
     const response = await call('/api/roadmap/live', {
-      headers: { ...AUTH, Upgrade: 'websocket' },
+      headers: { Upgrade: 'websocket' },
     });
     expect(response.status).toBe(101);
     response.webSocket?.accept();
@@ -297,10 +300,11 @@ describe('the roadmap pages carry the held snapshot (#1104)', () => {
   it.each(['/roadmap', '/id/roadmap'])(
     '%s carries the snapshot /api/roadmap.json serves, safe inside its script, and its no-script line says the map needs JavaScript',
     async (path) => {
-      const served = (await (
-        await call('/api/roadmap.json', { headers: AUTH })
-      ).json()) as { version: number; items: unknown };
-      const page = await call(path, { headers: AUTH });
+      const served = (await (await call('/api/roadmap.json')).json()) as {
+        version: number;
+        items: unknown;
+      };
+      const page = await call(path);
       const html = await page.text();
       const carried = CARRIED.exec(html)?.[1];
       const parsed =

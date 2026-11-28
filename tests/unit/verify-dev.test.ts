@@ -8,7 +8,6 @@ import {
 import type { AddressInfo } from 'node:net';
 import {
   NO_INDEX,
-  basicAuthorization,
   failureReason,
   gateJudgement,
   gameShellJudgement,
@@ -51,7 +50,6 @@ warm.close();
 
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const OLD = '1f660b30f75d081ae6559d175e5c0c3e26acb84c';
-const PASSWORD = 'pä:ss';
 /** The dev door secret CI holds to stand in for the door (#1078). */
 const DOOR_SECRET = 'door-sëcret';
 const ROBOTS = '# blocked\nUser-agent: *\nDisallow: /\n';
@@ -145,49 +143,40 @@ describe('failureReason (#1101)', () => {
   });
 });
 
-describe('basicAuthorization', () => {
-  it('encodes the password as UTF-8 after a fixed username', () => {
-    const header = basicAuthorization(PASSWORD);
-    expect(header.startsWith('Basic ')).toBe(true);
-    const bytes = Uint8Array.from(atob(header.slice(6)), (c) =>
-      c.charCodeAt(0),
-    );
-    expect(new TextDecoder().decode(bytes)).toBe(`verify-dev:${PASSWORD}`);
-  });
-});
-
 describe('gateProblems', () => {
-  it('accepts a 401 Basic challenge with no app in it', () => {
-    const judged = gateJudgement('web', probe(401, 'testers only', challenge));
-    expect(judged.problems).toEqual([]);
+  it("accepts the origin's 403 refusal with no app in it", () => {
+    expect(gateJudgement('web', probe(403, 'forbidden')).problems).toEqual([]);
   });
 
-  it('fails a 200, naming the missing gate', () => {
+  it('fails a 200, naming the missing door', () => {
     expect(gateProblems('web', probe(200, page(SHA)))).toEqual([
-      'web: answered 200, expected 401; the password gate is not in front of it',
-      'web: no Basic WWW-Authenticate challenge',
+      'web: answered 200, expected 403; the door is not in front of it',
       'web: the response carries app markup',
     ]);
   });
 
-  it.each([
-    ['a non-Basic challenge', { 'www-authenticate': 'Bearer' }],
-    ['no challenge at all', {}],
-  ])('fails a 401 with %s', (_case, headers) => {
-    expect(gateProblems('web', probe(401, '', headers))).toEqual([
-      'web: no Basic WWW-Authenticate challenge',
+  it('fails the retired password challenge, which is not the door (#1078)', () => {
+    expect(gateProblems('web', probe(401, 'testers only', challenge))).toEqual([
+      'web: answered 401, expected 403; the door is not in front of it',
+      'web: still asks for a password',
     ]);
   });
 
-  it('fails a 401 that still carries the page', () => {
-    expect(gateProblems('web', probe(401, page(SHA), challenge))).toEqual([
+  it('fails a 403 that still asks for a password', () => {
+    expect(gateProblems('web', probe(403, 'forbidden', challenge))).toEqual([
+      'web: still asks for a password',
+    ]);
+  });
+
+  it('fails a 403 that still carries the page', () => {
+    expect(gateProblems('web', probe(403, page(SHA)))).toEqual([
       'web: the response carries app markup',
     ]);
   });
 
-  it('fails a redirect, which is not the challenge', () => {
-    expect(gateProblems('web', probe(302, '', challenge))).toEqual([
-      'web: answered 302, expected 401; the password gate is not in front of it',
+  it('fails a redirect, which is not the refusal', () => {
+    expect(gateProblems('web', probe(302, ''))).toEqual([
+      'web: answered 302, expected 403; the door is not in front of it',
     ]);
   });
 });
@@ -224,7 +213,7 @@ describe('robotsProblems', () => {
 
   it('fails a challenge in place of robots.txt', () => {
     expect(robotsProblems(probe(401, ROBOTS))).toEqual([
-      'robots.txt: status 401 without credentials, expected 200',
+      'robots.txt: status 401 through the door, expected 200',
     ]);
   });
 });
@@ -252,7 +241,7 @@ describe('webProblems', () => {
       'web: no yawelo-idle-commit meta tag in the page',
     ]);
     expect(webProblems(probe(401, '', noindex), SHA)).toEqual([
-      'web: status 401 with the password, expected 200',
+      'web: status 401 through the door, expected 200',
     ]);
   });
 });
@@ -280,7 +269,7 @@ describe('scriptProblems (#332)', () => {
   it('fails a non-200 and judges nothing after it', () => {
     expect(scriptJudgement('web /x.js', probe(404))).toEqual({
       checked: ['status'],
-      problems: ['web /x.js: status 404 with the password, expected 200'],
+      problems: ['web /x.js: status 404 through the door, expected 200'],
     });
   });
 
@@ -610,7 +599,7 @@ describe('roadmapProblems (#341)', () => {
 /**
  * verifyDev end to end over real HTTP: a local server stands in for both dev
  * hosts. `/health` is the ungated sync API; every other path is the web host,
- * which answers the Basic challenge unless the password is right, except
+ * which refuses 403 without its door secret (#1078), except
  * robots.txt. The `let`s below switch it between healthy and broken states.
  */
 describe('verifyDev', () => {
@@ -648,7 +637,7 @@ describe('verifyDev', () => {
   /** How many requests to `stalePath` find OLD before it turns current (#581). */
   let stalePathLooks = Number.POSITIVE_INFINITY;
   let stalePathSeen = 0;
-  /** A page path that answers `failStatus` with the password (#581). */
+  /** A page path that answers `failStatus` through the door (#581). */
   let failPath = '';
   let failStatus = 500;
   /** A page path served to anyone, as if the gate did not cover it. */
@@ -660,7 +649,8 @@ describe('verifyDev', () => {
   const seenUrls: string[] = [];
   let webStale = 0;
   let healthStale = 0;
-  const seenAuthorization: string[] = [];
+  /** Each request's door secret, or '' without one (#1078). */
+  const seenSecrets: string[] = [];
   /** Each request's door name, or '-' without the right secret (#1078). */
   const seenDoors: string[] = [];
   /** What /api/roadmap/health answers to an authorised request (#341). */
@@ -680,8 +670,8 @@ describe('verifyDev', () => {
       const tag: Record<string, string> = tagged
         ? { 'x-robots-tag': NO_INDEX }
         : {};
-      const authorization = req.headers.authorization ?? '';
-      seenAuthorization.push(authorization);
+      const secret = String(req.headers['x-yawelo-door-secret'] ?? '');
+      seenSecrets.push(secret);
       // The origins believe a door's name only alongside its secret, as
       // apps/door/worker/origin.ts doorOf does (#1078).
       const door =
@@ -689,7 +679,8 @@ describe('verifyDev', () => {
           ? String(req.headers['x-yawelo-door'] ?? '-')
           : '-';
       seenDoors.push(`${role}:${req.url ?? ''} ${door}`);
-      const authorised = authorization === basicAuthorization(PASSWORD);
+      // The origins require their door (#1078): its secret is the only key.
+      const authorised = secret === DOOR_SECRET;
       if (req.url === '/health') {
         // The sync Worker, behind its door (origin.ts behindDoor).
         if (door !== 'dev-api.yaweloidle.com') {
@@ -735,7 +726,7 @@ describe('verifyDev', () => {
         res.end('export {};');
         return;
       }
-      if (req.url === '/robots.txt') {
+      if (req.url === '/robots.txt' && authorised) {
         if (dropRobots) {
           req.socket.destroy();
           return;
@@ -753,14 +744,14 @@ describe('verifyDev', () => {
       }
       const ungated = role === 'site' ? ungatedSite : req.url === ungatedPath;
       if (gated && !authorised && !ungated) {
-        if (redirectGateOnce && authorization === '') {
+        if (redirectGateOnce && secret === '') {
           redirectGateOnce = false;
           res.writeHead(302, { location: '/login', ...tag });
           res.end();
           return;
         }
-        res.writeHead(401, { ...challenge, ...tag });
-        res.end('testers only');
+        res.writeHead(403, { 'content-type': 'text/plain', ...tag });
+        res.end('forbidden');
         return;
       }
       webStale += 1;
@@ -813,7 +804,6 @@ describe('verifyDev', () => {
     syncUrl: base,
     gameUrl: `${base}/retired-game/`,
     sha: SHA,
-    password: PASSWORD,
     doorSecret: DOOR_SECRET,
   });
 
@@ -844,7 +834,7 @@ describe('verifyDev', () => {
     seenUrls.length = 0;
     webStale = 0;
     healthStale = 0;
-    seenAuthorization.length = 0;
+    seenSecrets.length = 0;
     seenDoors.length = 0;
     roadmap = {
       lastEventAt: null,
@@ -870,7 +860,7 @@ describe('verifyDev', () => {
     const replaced = (at: number) =>
       `roadmap: last check ${before(at)} was made before the deploy at ${new Date(at).toISOString()}, by the code that deploy replaced`;
 
-    it('visits once, then waits past checks the old code made and judges the first one after the deploy, with the password', async () => {
+    it('visits once, then waits past checks the old code made and judges the first one after the deploy, through the door', async () => {
       reset();
       const at = deployed();
       roadmapLooks = [
@@ -893,11 +883,11 @@ describe('verifyDev', () => {
         ROADMAP,
         ROADMAP,
       ]);
-      expect(seenAuthorization).toEqual([
-        basicAuthorization(PASSWORD),
-        basicAuthorization(PASSWORD),
-        basicAuthorization(PASSWORD),
-        basicAuthorization(PASSWORD),
+      expect(seenSecrets).toEqual([
+        DOOR_SECRET,
+        DOOR_SECRET,
+        DOOR_SECRET,
+        DOOR_SECRET,
       ]);
       // At the site Worker's own address, standing in for its door (#1078):
       // once the origins require the door, nothing else would be let in.
@@ -1017,15 +1007,16 @@ describe('verifyDev', () => {
       'site:/',
       '/retired-game/',
     ]);
-    expect(seenAuthorization).toEqual([
+    // No password anywhere: the door secret is the only key (#1078).
+    expect(seenSecrets).toEqual([
       '',
-      basicAuthorization(`${PASSWORD}x`),
-      basicAuthorization(PASSWORD),
-      '',
-      ...SITE_PAGES.map(() => basicAuthorization(PASSWORD)),
-      ...PREVIEW_PAGES.map(() => basicAuthorization(PASSWORD)),
-      '',
-      basicAuthorization(PASSWORD),
+      `${DOOR_SECRET}x`,
+      DOOR_SECRET,
+      DOOR_SECRET,
+      ...SITE_PAGES.map(() => DOOR_SECRET),
+      ...PREVIEW_PAGES.map(() => DOOR_SECRET),
+      DOOR_SECRET,
+      DOOR_SECRET,
       '',
       '',
       '',
@@ -1035,15 +1026,15 @@ describe('verifyDev', () => {
     // site being built and the retired game address carry no door at all.
     const front = (path: string) => `web:${path} dev.yaweloidle.com`;
     expect(seenDoors).toEqual([
-      front('/'),
-      front('/'),
+      'web:/ -',
+      'web:/ -',
       front('/'),
       'web:/health dev-api.yaweloidle.com',
       ...SITE_PAGES.map(front),
       ...PREVIEW_PAGES.map((path) => `site:${path} -`),
       front('/robots.txt'),
       front(SCRIPT),
-      front('/play/'),
+      'web:/play/ -',
       'site:/ -',
       'web:/retired-game/ -',
     ]);
@@ -1082,9 +1073,8 @@ describe('verifyDev', () => {
     reset();
     ungatedSite = true;
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'site without credentials: answered 200, expected 401; the password gate is not in front of it',
-      'site without credentials: no Basic WWW-Authenticate challenge',
-      'site without credentials: the response carries app markup',
+      'site without the door secret: answered 200, expected 403; the door is not in front of it',
+      'site without the door secret: the response carries app markup',
     ]);
   });
 
@@ -1126,7 +1116,7 @@ describe('verifyDev', () => {
     reset();
     failPath = '/roadmap';
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'site /roadmap: status 500 with the password, expected 200',
+      'site /roadmap: status 500 through the door, expected 200',
     ]);
     expect(requests, 'one look of nine probes').toBe(9);
   });
@@ -1136,9 +1126,8 @@ describe('verifyDev', () => {
     ungatedPath = '/play/';
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     expect(problems).toEqual([
-      'game without credentials: answered 200, expected 401; the password gate is not in front of it',
-      'game without credentials: no Basic WWW-Authenticate challenge',
-      'game without credentials: the response carries app markup',
+      'game without the door secret: answered 200, expected 403; the door is not in front of it',
+      'game without the door secret: the response carries app markup',
     ]);
   });
 
@@ -1174,10 +1163,10 @@ describe('verifyDev', () => {
     gated = false;
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     expect(problems).toContain(
-      'web without credentials: answered 200, expected 401; the password gate is not in front of it',
+      'web without the door secret: answered 200, expected 403; the door is not in front of it',
     );
     expect(problems).toContain(
-      'web with a wrong password: answered 200, expected 401; the password gate is not in front of it',
+      'web with a wrong door secret: answered 200, expected 403; the door is not in front of it',
     );
     expect(requests, 'the two gate probes of the first look').toBe(2);
   });
@@ -1211,7 +1200,7 @@ describe('verifyDev', () => {
     staleLooks = 5;
     authorisedStatus = 500;
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'web: status 500 with the password, expected 200',
+      'web: status 500 through the door, expected 200',
     ]);
     expect(requests, 'one look of four probes').toBe(4);
   });
@@ -1222,7 +1211,7 @@ describe('verifyDev', () => {
     served = OLD;
     const problems = await verifyDev(target(), { polls: 3, pollMs: 0 });
     expect(problems).toContain(
-      'web without credentials: answered 200, expected 401; the password gate is not in front of it',
+      'web without the door secret: answered 200, expected 403; the door is not in front of it',
     );
     expect(requests, 'the two gate probes of the first look').toBe(2);
   });
@@ -1231,8 +1220,7 @@ describe('verifyDev', () => {
     reset();
     redirectGateOnce = true;
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'web without credentials: answered 302, expected 401; the password gate is not in front of it',
-      'web without credentials: no Basic WWW-Authenticate challenge',
+      'web without the door secret: answered 302, expected 403; the door is not in front of it',
     ]);
     expect(requests, 'one look of fourteen probes').toBe(14);
   });
@@ -1311,7 +1299,7 @@ describe('verifyDev', () => {
     expect(requests, 'the sync host, looked at twice').toBe(2);
   });
 
-  it('never puts the password in a problem', async () => {
+  it('never puts the door secret in a problem', async () => {
     const once = { polls: 1, pollMs: 0 };
     reset();
     gated = false;
@@ -1337,7 +1325,7 @@ describe('verifyDev', () => {
       once,
     );
     // Every kind of message: a judged leak, a wait, judged answers, failed requests.
-    expect(leaking).toHaveLength(6);
+    expect(leaking).toHaveLength(4);
     expect(stale).toHaveLength(3);
     expect(untagged).toHaveLength(8);
     expect(unreachable).toHaveLength(3);
@@ -1351,12 +1339,7 @@ describe('verifyDev', () => {
       ...roadmapWaited,
       ...roadmapUnreachable,
     ];
-    const credential = basicAuthorization(PASSWORD).slice(6);
-    const showingPassword = reported.filter((p) => p.includes(PASSWORD));
     const showingDoorSecret = reported.filter((p) => p.includes(DOOR_SECRET));
     expect(showingDoorSecret).toEqual([]);
-    const showingCredential = reported.filter((p) => p.includes(credential));
-    expect(showingPassword).toEqual([]);
-    expect(showingCredential).toEqual([]);
   });
 });

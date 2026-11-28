@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { SECRETS, throughDoor } from './door';
 
 /**
  * POST /v1/content-reports against real local D1 (#52 AC1 to AC4, AC6 to AC8;
@@ -15,7 +16,7 @@ const server = createTestHarness({
   workers: [
     {
       configPath: './wrangler.jsonc',
-      secrets: { RATE_KEY: 'harness-rate-key' },
+      secrets: SECRETS,
     },
   ],
 });
@@ -59,15 +60,18 @@ const nextAddress = () => {
 };
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
-  server.fetch('https://sync.test/v1/content-reports', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'cf-connecting-ip': nextAddress(),
-      ...headers,
-    },
-    body: JSON.stringify(body),
-  });
+  server.fetch(
+    'https://sync.test/v1/content-reports',
+    throughDoor({
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'cf-connecting-ip': nextAddress(),
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    }),
+  );
 
 const reportsOf = async (installId: string) =>
   (
@@ -279,6 +283,7 @@ describe('GET /v1/content-reports/health (#52 AC7)', () => {
   it('answers 200 when D1 answers', async () => {
     const response = await server.fetch(
       'https://sync.test/v1/content-reports/health',
+      throughDoor(),
     );
     expect.soft(response.status).toBe(200);
     expect.soft(await response.json()).toEqual({ ok: true });

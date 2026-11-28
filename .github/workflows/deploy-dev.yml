@@ -1,7 +1,7 @@
 # Deploys develop to the dev environment on every merge (spec §13): the D1
 # database (created on the first deploy, #357, bound by id, #391) and its
 # migrations, then the sync Worker, then the game, the holding page's dev copy
-# and the site Worker (the password gate in front, spec D9, #39, #332; its
+# and the site Worker (in front, behind its door, spec D9, #332, #1078; its
 # front door shows the site being built, #1078), all in the non-PROD account
 # (#784). The front door Worker (apps/door, deployed by deploy-prod.yml with each release, #1152)
 # serves them at dev.yaweloidle.com, dev-api.yaweloidle.com and
@@ -126,8 +126,8 @@ jobs:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
         run: npm run build --workspace @yawelo-idle/web
       # The game first: the site Worker's GAME binding names it (#332). It
-      # has no address of its own (`workers_dev: false`), so it holds no
-      # password: the site Worker's gate stands in front of it.
+      # has no address of its own (`workers_dev: false`), so it needs no
+      # door: the site Worker, behind its own, stands in front of it.
       - name: Deploy the game Worker
         working-directory: apps/web
         env:
@@ -147,25 +147,34 @@ jobs:
       # Named from the repository root: from its subfolder, npx runs wrangler
       # at apps/site, which reads the dev site's config instead (run
       # 38889757344 redeployed the dev site here).
+      # Its door secret, uploaded with the version itself (#1078 AC3): the
+      # Worker refuses any request its door did not send.
+      - name: Write the holding page's dev copy's secrets file (the dev door secret)
+        id: holding-secrets
+        env:
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+        run: |
+          path="$(node scripts/holding-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
       - name: Deploy the holding page's dev copy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
+          SECRETS_FILE: ${{ steps.holding-secrets.outputs.path }}
+        run: npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc --secrets-file "$SECRETS_FILE"
       - name: Build the site, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
         run: npm run build --workspace @yawelo-idle/site
       # The site's secrets reach the Worker from the dev environment's
       # secrets, uploaded with the version itself, so no one types one into
-      # Cloudflare (#357): the dev password, and the roadmap's webhook secret
-      # and App key (#341). The script puts the file in a new directory in the
+      # Cloudflare (#357): the roadmap's webhook secret and App key (#341), and
+      # the door secret (#784). The script puts the file in a new directory in the
       # system's temp, outside the checkout, and prints where (SonarCloud
       # S8707 on #943); bash's -e stops the step if the write fails.
-      - name: Write the site's secrets file (the dev password, the roadmap's webhook secret and App key, the dev door secret)
+      - name: Write the site's secrets file (the roadmap's webhook secret and App key, the dev door secret)
         id: site-secrets
         env:
-          DEV_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
           ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
           ROADMAP_APP_KEY: ${{ secrets.ROADMAP_APP_KEY }}
           DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
@@ -209,7 +218,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-      - name: Verify dev is password-gated, serves this commit, shows the holding page, and D1 answers
+      - name: Verify dev is behind its door, serves this commit, shows the site being built, and D1 answers
         env:
           # The origins' own addresses, never a door (#1078, #784 AC1b): once
           # the doors check the DEV pass, no CI request could pass them. The
@@ -218,12 +227,12 @@ jobs:
           DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           DEV_SYNC_URL: https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev
           DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
-          # The same address with no door: the site being built (#673).
+          # The same address, its door secret and no door's name: the site
+          # being built (#673, #1078).
           DEV_SITE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           # The game's own address, which must serve nothing (#332).
           DEV_GAME_URL: https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev/
           EXPECTED_SHA: ${{ github.sha }}
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
       # Both doors check a DEV pass (#1078 AC1), so the door check gets a
       # machine pass for each from the shared sign-in, as the browser suites
@@ -275,7 +284,6 @@ jobs:
       # reach them unchanged (#1013).
       - name: Verify the dev hostnames reach the real Workers unchanged
         env:
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
           ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
         run: node scripts/verify-dev-hosts.ts
 
@@ -308,7 +316,6 @@ jobs:
         timeout-minutes: 13
         env:
           DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
           DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           DEPLOYED_AT: ${{ needs.deploy.outputs.deployed-at }}
         run: node scripts/verify-roadmap.ts
@@ -350,7 +357,7 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
-      # fresh every run: this job holds the dev password, so it restores
+      # fresh every run: this job holds a DEV pass, so it restores
       # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
       # Downloaded fresh, so Microsoft's download speed sets its time: 16
       # passing installs in deploy-dev's 8 successful develop runs to
@@ -395,19 +402,18 @@ jobs:
           ")
           echo "::add-mask::$pass"
           echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
-      - name: Smoke the game on dev (every supported target, behind the dev password)
+      - name: Smoke the game on dev (every supported target, through the dev door)
         id: suite
         # A first limit since Edge joined (#1003), until its first runs are
         # measured (#476): then at least 3 times the slowest.
         timeout-minutes: 2
         env:
           WEB_SMOKE_URL: https://dev.yaweloidle.com/
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
       # Each failing test's screenshot and page snapshot (#888), only when
       # the suite itself failed: a step before it failing leaves nothing to
       # upload. No trace is kept (playwright.web.config.ts): it would carry
-      # the dev password into this public artifact.
+      # the DEV pass into this public artifact.
       - name: Upload the failing tests' screenshots and page snapshots
         if: ${{ failure() && steps.suite.outcome == 'failure' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -454,7 +460,7 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
       # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
-      # fresh every run: this job holds the dev password, so it restores
+      # fresh every run: this job holds a DEV pass, so it restores
       # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
       # Downloaded fresh, so Microsoft's download speed sets its time: 16
       # passing installs in deploy-dev's 8 successful develop runs to
@@ -499,19 +505,18 @@ jobs:
           ")
           echo "::add-mask::$pass"
           echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
-      - name: Drive the roadmap page on dev (every supported target, behind the dev password)
+      - name: Drive the roadmap page on dev (every supported target, through the site's dev door)
         id: suite
         # A first limit, until its first run is measured (#476): then at
         # least 3 times its slowest run.
         timeout-minutes: 3
         env:
-          SITE_SMOKE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          SITE_SMOKE_URL: https://dev.yaweloidle.com/
         run: npm run test:site:dev
       # Each failing test's screenshot and page snapshot (#864), only when
       # the suite itself failed: a step before it failing leaves nothing to
       # upload. No trace is kept (tests/site/smoke-config.ts): it would
-      # carry the dev password into this public artifact.
+      # carry the DEV pass into this public artifact.
       - name: Upload the failing tests' screenshots and page snapshots
         if: ${{ failure() && steps.suite.outcome == 'failure' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -578,5 +583,5 @@ jobs:
         run: >-
           gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
           -f state=success -f context=dev-verified
-          -f description="Live on dev: password-gated, this commit, game behind the site, D1 answers, smoke clean, holding copy noindex, roadmap fresh"
+          -f description="Live on dev: behind its door, this commit, game behind the site, D1 answers, smoke clean, holding copy noindex, roadmap fresh"
           -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

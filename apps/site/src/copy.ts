@@ -3,7 +3,7 @@
  * (#334) is read from `COPY_EN`, its one home; the rest are placeholders
  * until the home page is built from that copy (#335), and the Indonesian
  * until it is translated with its D18 evidence (#338). Dev is
- * password-gated until then, and production waits for both (epic #331).
+ * behind its door until then, and production waits for both (epic #331).
  *
  * The production holding page (#621) shows only `comingSoon`, `tagline`, the
  * 404 lines and `homeLink`. Their Indonesian was read back by Google Cloud
@@ -16,7 +16,7 @@ import type { LegalLocale, LegalPage, Locale, LocalisedPage } from './i18n';
 /**
  * The voyage map's labels (#827). Placeholder English, not yet approved by
  * Shyden; his approval, then the Indonesian with its D18 evidence, is #830.
- * Until then both locales carry this English: dev is password-gated and
+ * Until then both locales carry this English: dev is behind its door and
  * production waits for #830. `{n}` and `{points}` are filled in by the page.
  */
 export interface VoyageCopy {

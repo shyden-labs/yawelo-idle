@@ -1,5 +1,5 @@
-// The DEV site Worker (website spec §7.2, #332, #673), all behind the shared
-// dev password (#39, W15): /play/* forwarded to the game Worker by service
+// The DEV site Worker (website spec §7.2, #332, #673), all behind its door,
+// the dev site's only gate (#1078 AC3): /play/* forwarded to the game Worker by service
 // binding, the roadmap API and webhook, and the pages: the prerendered site
 // being built, from ./dist, through the front door, dev.yaweloidle.com
 // (#1013), and at the workers.dev address alike (Shyden, 2026-11-28, #1078).
@@ -45,9 +45,9 @@
     "ROADMAP_BOARD_ID": "PVT_kwDOEOcG584BlRWb",
     "ROADMAP_BOARD_TITLE": "Yawelo Idle Stories",
     "ROADMAP_REPO": "shyden-labs/yawelo-idle",
-    // "false" until the doors go live on 2026-11-15 (#784 AC4); the deploy
-    // then sets "true" with DOOR_SECRET, and any other value requires the door.
-    "DOOR_REQUIRED": "false",
+    // The origin refuses a request without its door secret (#784 AC4,
+    // #1078 AC3); only "false" admits every request.
+    "DOOR_REQUIRED": "true",
   },
   // The Worker version, so a deploy's first visit reads the board with the
   // new code (#1074).

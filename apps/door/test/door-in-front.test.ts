@@ -22,7 +22,6 @@ const ORIGIN_DOMAIN = 'origins.invalid';
 const SYNC_WORKER = 'yawelo-idle-sync-dev';
 const SITE_WORKER = 'yawelo-idle-site-dev';
 const HOLDING_WORKER = 'yawelo-idle-holding-dev';
-const DEV_PASSWORD = randomBytes(16).toString('hex');
 
 const doorTo = (worker: string): string => {
   const found = [...DOORS].find(([, door]) => door.worker === worker);
@@ -60,7 +59,7 @@ const origins = createTestHarness({
     {
       configPath: './site/wrangler.jsonc',
       vars: behindItsDoor.vars,
-      secrets: { ...behindItsDoor.secrets, DEV_PASSWORD },
+      secrets: behindItsDoor.secrets,
     },
     { configPath: './web/wrangler.jsonc' },
     // The holding page's dev copy as its real config deploys it, but serving
@@ -268,10 +267,8 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
     expect(response.status).toBe(403);
   });
 
-  const upgrade = {
-    Upgrade: 'websocket',
-    Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}`,
-  };
+  // No password: the door is the dev site's only gate (#1078).
+  const upgrade = { Upgrade: 'websocket' };
 
   it('accepts the live roadmap’s WebSocket upgrade straight, with the secret', async () => {
     const response = await straightTo(SITE_WORKER, '/api/roadmap/live', {
@@ -315,14 +312,15 @@ describe('the holding page’s dev copy behind its door (#784 AC4)', () => {
     }).toEqual({ status: 200, page: true, doorErrors: [] });
   });
 
-  it('answers through the dev site’s door with the holding page, the site passing the secret on', async () => {
-    const response = await throughDoor(SITE_WORKER, '/', {
-      Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}`,
-    });
+  it('leaves the dev site’s door to the site being built, no password asked (#1078)', async () => {
+    const response = await throughDoor(SITE_WORKER, '/');
+    const page = await response.text();
     expect({
       status: response.status,
-      page: (await response.text()).includes('<html'),
-    }).toEqual({ status: 200, page: true });
+      challenge: response.headers.get('WWW-Authenticate'),
+      built: page.includes(' data-dev-strip>'),
+      holding: page.includes(' data-coming-soon>'),
+    }).toEqual({ status: 200, challenge: null, built: true, holding: false });
   });
 
   it('refuses a request straight to it without the secret, 403', async () => {

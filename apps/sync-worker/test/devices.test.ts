@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { SECRETS, throughDoor } from './door';
 
 /**
  * POST /v1/devices (#163; spec §6.6, D6): an anonymous device registers and
@@ -16,7 +17,7 @@ const server = createTestHarness({
   workers: [
     {
       configPath: './wrangler.jsonc',
-      secrets: { RATE_KEY: 'harness-rate-key' },
+      secrets: SECRETS,
     },
   ],
 });
@@ -41,11 +42,14 @@ afterAll(async () => {
 });
 
 const register = (body: string, method = 'POST') =>
-  server.fetch('https://sync.test/v1/devices', {
-    method,
-    headers: { 'content-type': 'application/json' },
-    ...(method === 'GET' ? {} : { body }),
-  });
+  server.fetch(
+    'https://sync.test/v1/devices',
+    throughDoor({
+      method,
+      headers: { 'content-type': 'application/json' },
+      ...(method === 'GET' ? {} : { body }),
+    }),
+  );
 
 interface Registered {
   readonly playerId: string;

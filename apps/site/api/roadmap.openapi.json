@@ -37,7 +37,7 @@
               }
             }
           },
-          "401": { "$ref": "#/components/responses/PasswordNeeded" },
+          "403": { "$ref": "#/components/responses/DoorRequired" },
           "405": { "$ref": "#/components/responses/GetOnly" }
         }
       }
@@ -75,7 +75,7 @@
               }
             }
           },
-          "401": { "$ref": "#/components/responses/PasswordNeeded" },
+          "403": { "$ref": "#/components/responses/DoorRequired" },
           "405": { "$ref": "#/components/responses/GetOnly" }
         }
       }
@@ -89,20 +89,14 @@
       }
     },
     "responses": {
-      "PasswordNeeded": {
-        "description": "Only on the development site, which sits behind a password. The public site never answers 401.",
+      "DoorRequired": {
+        "description": "Only on the development site, which its door alone reaches: the door adds a secret to every request it passes on, and the site refuses a request without it before anything else. The public site never answers 403.",
         "headers": {
-          "WWW-Authenticate": {
-            "schema": { "type": "string", "pattern": "^Basic realm=" }
-          },
           "Cache-Control": { "$ref": "#/components/headers/NoStore" }
         },
         "content": {
           "text/plain": {
-            "schema": {
-              "type": "string",
-              "description": "One sentence saying this is a test environment."
-            }
+            "schema": { "type": "string", "const": "forbidden" }
           }
         }
       },
