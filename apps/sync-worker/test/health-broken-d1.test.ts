@@ -3,6 +3,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { unstable_startWorker } from 'wrangler';
+import { SECRETS, throughDoor } from './door';
 
 /**
  * The real sync Worker against a really broken D1 (#817; Shyden's ruling on
@@ -42,8 +43,11 @@ const logs: Log[] = [];
 const start = () =>
   unstable_startWorker({
     config: CONFIG,
-    // The key request counts are hashed under (#164 AC2), as the deploy sets it.
-    bindings: { RATE_KEY: { type: 'secret_text', value: 'harness-rate-key' } },
+    // The deploy's secrets (test/door.ts), as test-only values.
+    bindings: {
+      RATE_KEY: { type: 'secret_text', value: SECRETS.RATE_KEY },
+      DOOR_SECRET: { type: 'secret_text', value: SECRETS.DOOR_SECRET },
+    },
     dev: {
       persist,
       server: { port: 0 },
@@ -63,7 +67,7 @@ interface Answer {
 const health = async (
   worker: Awaited<ReturnType<typeof start>>,
 ): Promise<Answer> => {
-  const response = await worker.fetch('http://sync.test/health');
+  const response = await worker.fetch('http://sync.test/health', throughDoor());
   return {
     status: response.status,
     cacheControl: response.headers.get('cache-control'),
