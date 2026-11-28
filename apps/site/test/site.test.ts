@@ -561,7 +561,10 @@ describe('the private API docs, dev only (#589)', () => {
   });
 
   it('answers 404 for POST on the production host', async () => {
-    const response = await server.fetch(`${PROD}${DOCS}`, { method: 'POST' });
+    const response = await server.fetch(`${PROD}${DOCS}`, {
+      method: 'POST',
+      headers: { [DOOR_SECRET_HEADER]: DOOR_SECRET },
+    });
     expect(response.status).toBe(404);
   });
 
