@@ -14,21 +14,11 @@ import { devPassState } from './tests/dev-pass-cookie';
  *
  * `npm run test:web:dev` runs the same tests against the address in
  * `WEB_SMOKE_URL` (deploy-dev sets it to dev, after verify has seen this
- * commit served there; #123 DoD). It builds and starts nothing, and answers
- * dev's 401 password challenge with the dev password. Playwright answers the
- * challenge itself: measured against a gate shaped like packages/lockdown's in
- * all three engines (#123), an answered challenge logs nothing, while an
- * unanswered one logs a failed load in Chromium and WebKit. The credentials
- * carry no `origin`: measured on HTTPS's default port, WebKit refuses a
- * password scoped to `https://host` or `https://host:443` (401), while
- * Chromium and Firefox accept both. They carry no `send` either: `send` reaches
- * Playwright's API requests, not the browser's. The game's policy keeps the
- * page on dev's own origin, so no other origin can ask for the password.
+ * commit served there; #123 DoD). It builds and starts nothing. Dev's door
+ * is its gate (#1078): the suite carries the CI-minted DEV pass as a cookie on
+ * the door it tests, and sends no password.
  */
 const PORT = 8791;
-
-/** The site's dev gate checks the password alone; any username passes. */
-const USERNAME = 'smoke';
 
 export function webSmokeConfig(
   env: Readonly<Record<string, string | undefined>>,
@@ -55,11 +45,6 @@ export function webSmokeConfig(
       },
     });
   }
-  const password = env['DEV_BASIC_AUTH_PASSWORD'];
-  if (password === undefined)
-    throw new Error(
-      'WEB_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not: dev answers every request with its password gate',
-    );
   const devPass = env['DEV_PASS'];
   if (devPass === undefined)
     throw new Error(
@@ -70,14 +55,10 @@ export function webSmokeConfig(
     use: {
       baseURL: target,
       storageState: devPassState(new URL(target).hostname, devPass),
-      httpCredentials: {
-        username: USERNAME,
-        password,
-      },
       // A failing test leaves a screenshot beside Playwright's page snapshot
       // in test-results, which deploy-dev uploads (#888). Never a trace or a
-      // video: a trace records each request's headers, the dev password's
-      // Authorization among them, and the upload is public.
+      // video: a trace records each request's headers, the DEV pass's
+      // cookie among them, and the upload is public.
       screenshot: 'only-on-failure',
       trace: 'off',
       video: 'off',

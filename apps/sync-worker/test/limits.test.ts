@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { SECRETS, throughDoor } from './door';
 
 /**
  * Request limits counted in D1 (#164 AC2, AC5; spec §12.9): exact at the
@@ -15,7 +16,7 @@ const server = createTestHarness({
   workers: [
     {
       configPath: './wrangler.jsonc',
-      secrets: { RATE_KEY: 'harness-rate-key' },
+      secrets: SECRETS,
     },
   ],
 });
@@ -52,13 +53,16 @@ const countRows = async (): Promise<CountRow[]> =>
   ).results;
 
 const register = () =>
-  server.fetch('https://sync.test/v1/devices', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: '{}',
-  });
+  server.fetch(
+    'https://sync.test/v1/devices',
+    throughDoor({
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }),
+  );
 
-const health = () => server.fetch('https://sync.test/health');
+const health = () => server.fetch('https://sync.test/health', throughDoor());
 
 describe('request limits in D1 (#164 AC2, AC5)', () => {
   it('accepts the 10th registration in an hour and answers the 11th with 429 and the wait, in one row', async () => {

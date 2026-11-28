@@ -45,6 +45,7 @@ const SCRIPTS = [
   'scripts/file-story.ts',
   'scripts/google-read-back.ts',
   'scripts/holding-dev.ts',
+  'scripts/holding-secrets.ts',
   'scripts/licence-check.ts',
   'scripts/lint.ts',
   'scripts/npm-audit.ts',

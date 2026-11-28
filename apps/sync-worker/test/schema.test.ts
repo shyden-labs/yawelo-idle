@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { SECRETS } from './door';
 
 /**
  * The first server tables (#162, spec §6.6 and §6.7): the migrations in
@@ -15,7 +16,7 @@ const server = createTestHarness({
   workers: [
     {
       configPath: './wrangler.jsonc',
-      secrets: { RATE_KEY: 'harness-rate-key' },
+      secrets: SECRETS,
     },
   ],
 });

@@ -17,7 +17,6 @@ import { DESKTOP_BROWSERS } from '../desktop-targets';
 const DEV = {
   WEB_SMOKE_URL: 'https://dev.yaweloidle.com/',
   SITE_SMOKE_URL: 'https://dev.shyden.co.uk/',
-  DEV_BASIC_AUTH_PASSWORD: 'the dev password',
   DEV_PASS: 'the machine pass',
 };
 

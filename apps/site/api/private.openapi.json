@@ -4,7 +4,7 @@
     "title": "Yawelo Idle private operations API",
     "version": "1.0.0",
     "summary": "The roadmap's health report and the GitHub webhook, for the operator only.",
-    "description": "Private. Served on the development site only, behind its password; the public site answers 404 for the health report and serves no copy of this page or spec. The webhook is called by GitHub alone and refuses any delivery not signed with the webhook secret, so trying it here shows its 401.",
+    "description": "Private. Served on the development site only, behind its door; the public site answers 404 for the health report and serves no copy of this page or spec. The webhook is called by GitHub alone and refuses any delivery not signed with the webhook secret, so trying it here shows its 401.",
     "license": {
       "name": "Apache-2.0",
       "identifier": "Apache-2.0"
@@ -38,8 +38,8 @@
               }
             }
           },
-          "401": {
-            "$ref": "#/components/responses/PasswordNeeded"
+          "403": {
+            "$ref": "#/components/responses/DoorRequired"
           },
           "404": {
             "description": "Only on the public site, whatever the method: the report is internal."
@@ -54,7 +54,7 @@
       "post": {
         "operationId": "postGitHubWebhook",
         "summary": "A GitHub webhook delivery",
-        "description": "GitHub's organisation webhook. Not behind the password: the signature is checked first, then only this board's and this repository's events cause a read of the board. A delivery over 1 MiB is refused before its signature is checked.",
+        "description": "GitHub's organisation webhook. The door passes it on unchecked, adding its secret: the signature is checked first, then only this board's and this repository's events cause a read of the board. A delivery over 1 MiB is refused before its signature is checked.",
         "parameters": [
           {
             "name": "X-Hub-Signature-256",
@@ -100,6 +100,9 @@
           "401": {
             "description": "The signature is missing or wrong."
           },
+          "403": {
+            "$ref": "#/components/responses/DoorRequired"
+          },
           "405": {
             "description": "Any method but POST is refused.",
             "headers": {
@@ -129,15 +132,9 @@
       }
     },
     "responses": {
-      "PasswordNeeded": {
-        "description": "The development site sits behind a password.",
+      "DoorRequired": {
+        "description": "The development site's door alone reaches it: a request without the door's secret is refused before anything else.",
         "headers": {
-          "WWW-Authenticate": {
-            "schema": {
-              "type": "string",
-              "pattern": "^Basic realm="
-            }
-          },
           "Cache-Control": {
             "$ref": "#/components/headers/NoStore"
           }
@@ -146,7 +143,7 @@
           "text/plain": {
             "schema": {
               "type": "string",
-              "description": "One sentence saying this is a test environment."
+              "const": "forbidden"
             }
           }
         }

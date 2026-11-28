@@ -121,11 +121,16 @@ describe('the dev Workers’ deploy configs', () => {
     });
   });
 
-  it('admits every request to the holding page’s dev copy until the doors go live, as the other origins do (#784 AC4)', () => {
-    expect(byName('yawelo-idle-holding-dev').vars).toEqual({
-      DOOR_REQUIRED: 'false',
-    });
-  });
+  it.each([
+    'yawelo-idle-site-dev',
+    'yawelo-idle-sync-dev',
+    'yawelo-idle-holding-dev',
+  ])(
+    'has %s refuse a request without its door secret, with no password behind it (#784 AC4, #1078 AC3)',
+    (name) => {
+      expect(byName(name).vars).toMatchObject({ DOOR_REQUIRED: 'true' });
+    },
+  );
 
   it('serves the sync Worker on workers.dev with no route (#395)', () => {
     expect(byName('yawelo-idle-sync-dev').routes).toBeUndefined();
@@ -184,9 +189,16 @@ describe('the dev Workers’ deploy configs', () => {
     const next = steps[at + 3] ?? {};
     expect(runOf(next)).toBe('node scripts/verify-dev-hosts.ts');
     expect(next.env).toEqual({
-      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       ROADMAP_WEBHOOK_SECRET: '${{ secrets.ROADMAP_WEBHOOK_SECRET }}',
     });
+  });
+
+  it('hands no step the retired dev password: the door is the only gate (#1078 AC3)', () => {
+    const text = readFileSync(
+      join(ROOT, '.github/workflows/deploy-dev.yml'),
+      'utf8',
+    );
+    expect(text.match(/DEV_BASIC_AUTH_PASSWORD/g) ?? []).toEqual([]);
   });
 
   it('names the site’s dev hostname as the dev environment’s address, in both jobs (#429)', () => {
@@ -387,7 +399,7 @@ describe('the dev Cloudflare tokens, proven and held only where they are used (#
       // reads the dev site's config (deploy-dev run 38889757344). Before
       // the site Worker, whose HOLDING binding names it (#673).
       holds(
-        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc --secrets-file "$SECRETS_FILE"',
       ),
       holds('npx --no wrangler deploy --secrets-file "$SECRETS_FILE"'),
     ]);
@@ -436,6 +448,37 @@ describe('the sync Worker’s secrets, uploaded by the deploy (#164 AC2)', () =>
   });
 });
 
+describe('the holding page’s dev copy’s door secret, uploaded by the deploy (#1078 AC3)', () => {
+  it('is written from the dev environment secret, then deployed with the holding page’s dev copy', () => {
+    const steps = deploySteps();
+    const write = steps.findIndex(
+      (step) =>
+        runOf(step) ===
+        'path="$(node scripts/holding-secrets.ts)"\necho "path=$path" >> "$GITHUB_OUTPUT"',
+    );
+    const deploy = steps.findIndex((step) =>
+      runOf(step).startsWith(
+        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+      ),
+    );
+    expect({
+      written: write >= 0,
+      id: steps[write]?.id,
+      env: steps[write]?.env,
+      deployedAfter: deploy > write,
+      run: runOf(steps[deploy] ?? {}),
+      file: steps[deploy]?.env?.['SECRETS_FILE'],
+    }).toEqual({
+      written: true,
+      id: 'holding-secrets',
+      env: { DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}' },
+      deployedAfter: true,
+      run: 'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc --secrets-file "$SECRETS_FILE"',
+      file: '${{ steps.holding-secrets.outputs.path }}',
+    });
+  });
+});
+
 describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
   it('is written from the dev environment secret, then deployed with the site Worker (#332)', () => {
     const steps = deploySteps();
@@ -457,7 +500,6 @@ describe('the dev secrets, uploaded by the deploy (#357, #341)', () => {
     );
     expect(write).toBeGreaterThanOrEqual(0);
     expect(steps[write]?.env).toEqual({
-      DEV_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       ROADMAP_WEBHOOK_SECRET: '${{ secrets.ROADMAP_WEBHOOK_SECRET }}',
       ROADMAP_APP_KEY: '${{ secrets.ROADMAP_APP_KEY }}',
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
@@ -479,7 +521,7 @@ describe('the game and the site, deployed in binding order (#332 AC7)', () => {
     deploySteps().findIndex(
       (step) =>
         runOf(step) ===
-        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc',
+        'npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc --secrets-file "$SECRETS_FILE"',
     );
 
   it('deploys the game before the site, whose GAME binding names it', () => {
@@ -554,11 +596,10 @@ describe('the roadmap, judged once the deployed code has checked the board (#708
     expect(job?.['timeout-minutes']).toBe(15);
   });
 
-  it('hands the check the deploy time, the site Worker’s own address, the door secret and the password (#1078)', () => {
+  it('hands the check the deploy time, the site Worker’s own address and the door secret, no password (#1078)', () => {
     const site = byName('yawelo-idle-site-dev').name;
     expect(roadmapStep()?.env).toStrictEqual({
       DEV_WEB_URL: `https://${site}.${DEV_WORKERS_SUBDOMAIN}.workers.dev/`,
-      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
       DEPLOYED_AT: '${{ needs.deploy.outputs.deployed-at }}',
     });

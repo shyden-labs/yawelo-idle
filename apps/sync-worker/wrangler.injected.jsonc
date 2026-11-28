@@ -13,9 +13,9 @@
     "COMMIT": "local",
     // The sign-up switch (#1079), as wrangler.jsonc sets it.
     "SIGNUPS": "open",
-    // "false" until the doors go live on 2026-11-15 (#784 AC4); the deploy
-    // then sets "true" with DOOR_SECRET, and any other value requires the door.
-    "DOOR_REQUIRED": "false",
+    // The origin refuses a request without its door secret (#784 AC4,
+    // #1078 AC3); only "false" admits every request.
+    "DOOR_REQUIRED": "true",
   },
   "d1_databases": [
     {

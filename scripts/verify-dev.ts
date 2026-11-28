@@ -2,27 +2,28 @@
  * Verifies a dev deploy from the outside, the way a tester's browser sees it.
  *
  * `wrangler deploy` exiting 0 says an upload happened. It does not say the
- * live URL serves THIS commit, that D1 answers, or that the password gate
- * (#39) still keeps the public out. Each of those is checked here:
+ * live URL serves THIS commit, that D1 answers, or that the origin still
+ * requires its door (#1078 AC3) and so keeps the public out. Each of those is
+ * checked here, CI standing in for the door with its secret:
  *
- * 1. The web host answers 401 with a Basic challenge and none of the app,
- *    both without credentials and with a wrong password.
- * 2. Its robots.txt blocks every crawler, without credentials.
- * 3. With the password, the page carries `yawelo-idle-commit` = the expected SHA
+ * 1. The web host answers 403 with none of the app and no password asked,
+ *    both without the door secret and with a wrong one.
+ * 2. Its robots.txt blocks every crawler, through the door.
+ * 3. Through the door, the page carries `yawelo-idle-commit` = the expected SHA
  *    and the noindex header, and is the site being built (Shyden,
  *    2026-11-28, #1078): its mark.
  * 4. The sync API's /health reports ok, that SHA and db "ok", with the
- *    noindex header (the API is not password-gated, by operator decision).
+ *    noindex header, through its own door.
  * 5. The front door's other pages (`SITE_PAGES`: the Indonesian page
  *    and the game at /play/, forwarded by service binding) each carry that
- *    SHA and noindex with the password, the game refuses a caller without
- *    it, and the script the game shell loads is served as JavaScript (#332).
+ *    SHA and noindex through the door, the game refuses a caller without
+ *    the door secret, and the script the game shell loads is served as JavaScript (#332).
  * 6. The game Worker's own workers.dev address serves nothing: the site
  *    Worker's binding is its only way in, so nothing reaches the game
  *    around the gate (#332).
  * 7. The site being built, at the site Worker's own address
  *    (`PREVIEW_PAGES`: home, Indonesian and the roadmap), carries that SHA,
- *    noindex and its own mark with the password, and refuses a caller
+ *    noindex and its own mark with the door secret, and refuses a caller
  *    without it (#673).
  *
  * Nothing is retried (Refs #83). The one wait is for a named condition: both
@@ -33,14 +34,15 @@
  * run (a new Custom Domain's DNS on its first deploy). Anything else fails at
  * once, by name: a status other than 200, a missing stamp, a dropped
  * connection from a host that has answered, and above all a page served
- * WITHOUT the password, which is a leak at any look. Once both hosts and
+ * WITHOUT the door secret, which is a leak at any look. Once both hosts and
  * every page serve the commit, every check is judged once, on that look's
  * own answers.
  *
- * The password is sent, never printed: no problem message carries a header.
+ * The door secret is sent, never printed: no problem message carries a header.
  */
 
 import { CONTENT_SECURITY_POLICY } from '../apps/web/worker/policy.ts';
+import { DOOR_SECRET_HEADER } from '../apps/door/worker/doors.ts';
 import { standInFor } from './door-stand-in.ts';
 
 export interface Probe {
@@ -58,7 +60,6 @@ export interface Target {
   /** The game Worker's own workers.dev address, retired by #332. */
   gameUrl: string;
   sha: string;
-  password: string;
 }
 
 /**
@@ -96,12 +97,6 @@ const SITE_MARK = /<[a-z][^>]*\sdata-dev-strip[\s>=]/;
 /** Any sign that a response carries the app rather than a challenge. */
 const APP_MARKUP = /<(?:!doctype|html|meta|script)\b/i;
 
-export function basicAuthorization(password: string): string {
-  const bytes = new TextEncoder().encode(`verify-dev:${password}`);
-  return `Basic ${btoa(String.fromCharCode(...bytes))}`;
-}
-
-/** Problems with a response that should be the password challenge. */
 /**
  * What one judgement ran and found (#372): the checks it judged, by name, and
  * the problems they found. A check that fails a gate (a wrong status, a body
@@ -138,16 +133,17 @@ export function gateJudgement(label: string, probe: Probe): Judgement {
     {
       name: 'status',
       problem: () =>
-        probe.status === 401
+        probe.status === 403
           ? undefined
-          : `${label}: answered ${String(probe.status)}, expected 401; the password gate is not in front of it`,
+          : `${label}: answered ${String(probe.status)}, expected 403; the door is not in front of it`,
     },
     {
-      name: 'challenge',
+      // The password gate is retired (#1078): the door is the only gate.
+      name: 'no password',
       problem: () =>
-        /^Basic /i.test(probe.headers.get('www-authenticate') ?? '')
+        probe.headers.get('www-authenticate') === null
           ? undefined
-          : `${label}: no Basic WWW-Authenticate challenge`,
+          : `${label}: still asks for a password`,
     },
     {
       name: 'markup',
@@ -163,7 +159,7 @@ export function gateProblems(label: string, probe: Probe): string[] {
   return [...gateJudgement(label, probe).problems];
 }
 
-/** A gate probe that came back 2xx served content without the password. */
+/** A gate probe that came back 2xx served content without the door. */
 export function leaked(probe: Probe): boolean {
   return probe.status >= 200 && probe.status < 300;
 }
@@ -176,7 +172,7 @@ export function robotsJudgement(probe: Probe): Judgement {
       problem: () =>
         probe.status === 200
           ? undefined
-          : `robots.txt: status ${String(probe.status)} without credentials, expected 200`,
+          : `robots.txt: status ${String(probe.status)} through the door, expected 200`,
     },
     {
       name: 'blocks every crawler',
@@ -210,7 +206,7 @@ function webChecks(probe: Probe, sha: string, label: string): Check[] {
       problem: () =>
         probe.status === 200
           ? undefined
-          : `${label}: status ${String(probe.status)} with the password, expected 200`,
+          : `${label}: status ${String(probe.status)} through the door, expected 200`,
     },
     {
       name: 'commit',
@@ -312,7 +308,7 @@ export function gameShellProblems(
   return [...gameShellJudgement(probe, sha, label).problems];
 }
 
-/** A script the game shell loads, read with the password (#332). */
+/** A script the game shell loads, read through the door (#332). */
 export function scriptJudgement(label: string, probe: Probe): Judgement {
   return judge([
     {
@@ -321,7 +317,7 @@ export function scriptJudgement(label: string, probe: Probe): Judgement {
       problem: () =>
         probe.status === 200
           ? undefined
-          : `${label}: status ${String(probe.status)} with the password, expected 200`,
+          : `${label}: status ${String(probe.status)} through the door, expected 200`,
     },
     {
       name: 'content type',
@@ -541,7 +537,7 @@ export function roadmapProblems(
  * fails at once. At the last look it fails naming the last check it saw.
  */
 export async function verifyRoadmap(
-  target: Pick<DevTarget, 'webUrl' | 'password' | 'doorSecret'>,
+  target: Pick<DevTarget, 'webUrl' | 'doorSecret'>,
   deployedAtMs: number,
   { polls, pollMs }: Wait,
 ): Promise<string[]> {
@@ -555,10 +551,7 @@ export async function verifyRoadmap(
     );
   const url = new URL('/api/roadmap/health', target.webUrl).href;
   // At the site Worker's own address, standing in for its door (#1078).
-  const headers = {
-    Authorization: basicAuthorization(target.password),
-    ...standInFor(FRONT_WORKER, target.doorSecret),
-  };
+  const headers = standInFor(FRONT_WORKER, target.doorSecret);
   // The visit only starts a read; its answer is not judged. A visit that
   // fails outright shows up below as a health record with no check after
   // the deploy, named at the last look.
@@ -665,7 +658,7 @@ type Reported = { commit: string } | { problem: string };
 function webCommit(probe: Probe, label = 'web'): Reported {
   if (probe.status !== 200)
     return {
-      problem: `${label}: status ${String(probe.status)} with the password, expected 200`,
+      problem: `${label}: status ${String(probe.status)} through the door, expected 200`,
     };
   const stamp = COMMIT_STAMP.exec(probe.body)?.[1];
   return stamp === undefined
@@ -710,10 +703,9 @@ export async function verifyDev(
     );
   const healthUrl = new URL('/health', target.syncUrl).href;
   const robotsUrl = new URL('/robots.txt', target.webUrl).href;
-  const right = { Authorization: basicAuthorization(target.password) };
-  // Appending to the real password guarantees a different one.
-  const wrong = { Authorization: basicAuthorization(`${target.password}x`) };
   const front = standInFor(FRONT_WORKER, target.doorSecret);
+  // Appending to the real secret guarantees a different one.
+  const wrong = standInFor(FRONT_WORKER, `${target.doorSecret}x`);
   const syncDoor = standInFor(SYNC_WORKER, target.doorSecret);
 
   /** Hosts that have answered in this run: a later failed request from one is a failure, not a wait. */
@@ -750,25 +742,21 @@ export async function verifyDev(
   let waiting: string[] = [];
   for (let poll = 1; poll <= polls; poll += 1) {
     const gate = [
-      await look('web', 'web without credentials', target.webUrl, front, (p) =>
-        gateProblems('web without credentials', p),
+      await look('web', 'web without the door secret', target.webUrl, {}, (p) =>
+        gateProblems('web without the door secret', p),
       ),
       await look(
         'web',
-        'web with a wrong password',
+        'web with a wrong door secret',
         target.webUrl,
-        { ...front, ...wrong },
-        (p) => gateProblems('web with a wrong password', p),
+        wrong,
+        (p) => gateProblems('web with a wrong door secret', p),
       ),
     ];
     if (gate.some(({ answer }) => answer !== null && leaked(answer)))
       return gate.flatMap((outcome) => outcome.problems);
-    const web = await look(
-      'web',
-      'web',
-      target.webUrl,
-      { ...front, ...right },
-      (p) => siteProblems(p, target.sha, 'web'),
+    const web = await look('web', 'web', target.webUrl, front, (p) =>
+      siteProblems(p, target.sha, 'web'),
     );
     const sync = await look('sync', 'sync', healthUrl, syncDoor, (p) =>
       healthProblems(p, target.sha),
@@ -794,7 +782,7 @@ export async function verifyDev(
       // Every other page judged waits for the commit too (#581): a Workers
       // version rolls out per request, so /roadmap served the previous commit
       // 2 s after the home page served this one (deploy-dev run 38333791614).
-      const pages = await lookAtPages(look, target, right, front);
+      const pages = await lookAtPages(look, target, front);
       const standings = pages.map((page) =>
         standing(
           page,
@@ -823,7 +811,7 @@ export async function verifyDev(
           web,
           sync,
           ...pages,
-          ...(await lookAtTheRest(look, target, right, front, pages)),
+          ...(await lookAtTheRest(look, target, front, pages)),
         ].flatMap((outcome) => outcome.problems);
       }
     }
@@ -853,15 +841,16 @@ type Look = (
 /**
  * Check 5's and 7's pages, at each look once both hosts serve the expected
  * commit: each of `SITE_PAGES` on the front door, then each of
- * `PREVIEW_PAGES` at the site Worker's own address, with the password, in
- * order.
+ * `PREVIEW_PAGES` at the site Worker's own address, with its door secret and
+ * no door's name, in order.
  */
 async function lookAtPages(
   look: Look,
-  target: Target,
-  right: Record<string, string>,
+  target: DevTarget,
   front: Record<string, string>,
 ): Promise<PageLook[]> {
+  // Its own address, named by no door: the secret alone lets it in (#1078).
+  const own = { [DOOR_SECRET_HEADER]: target.doorSecret };
   const outcomes: PageLook[] = [];
   for (const path of SITE_PAGES) {
     const label = `web ${path}`;
@@ -869,7 +858,7 @@ async function lookAtPages(
       'web',
       label,
       new URL(path, target.webUrl).href,
-      { ...front, ...right },
+      front,
       (p) =>
         path === GAME_SHELL
           ? gameShellProblems(p, target.sha, label)
@@ -883,7 +872,7 @@ async function lookAtPages(
       'site',
       label,
       new URL(path, target.siteUrl).href,
-      right,
+      own,
       (p) => siteProblems(p, target.sha, label),
     );
     outcomes.push({ ...outcome, label });
@@ -902,12 +891,10 @@ async function lookAtPages(
 async function lookAtTheRest(
   look: Look,
   target: Target,
-  right: Record<string, string>,
   front: Record<string, string>,
   pages: readonly PageLook[],
 ): Promise<Outcome[]> {
   const at = (path: string) => new URL(path, target.webUrl).href;
-  const authorised = { ...front, ...right };
   const outcomes: Outcome[] = [];
   const shell =
     pages.find(({ label }) => label === `web ${GAME_SHELL}`)?.answer?.body ??
@@ -916,14 +903,18 @@ async function lookAtTheRest(
   outcomes.push(
     script === undefined
       ? { problems: ['web /play/: no game script in the page'], answer: null }
-      : await look('web', `web ${script}`, at(script), authorised, (p) =>
+      : await look('web', `web ${script}`, at(script), front, (p) =>
           scriptProblems(`web ${script}`, p),
         ),
-    await look('web', 'game without credentials', at('/play/'), front, (p) =>
-      gateProblems('game without credentials', p),
+    await look('web', 'game without the door secret', at('/play/'), {}, (p) =>
+      gateProblems('game without the door secret', p),
     ),
-    await look('site', 'site without credentials', target.siteUrl, {}, (p) =>
-      gateProblems('site without credentials', p),
+    await look(
+      'site',
+      'site without the door secret',
+      target.siteUrl,
+      {},
+      (p) => gateProblems('site without the door secret', p),
     ),
     await check('game address', target.gameUrl, {}, retiredProblems),
   );
@@ -946,7 +937,6 @@ if (import.meta.main) {
       syncUrl: required('DEV_SYNC_URL'),
       gameUrl: required('DEV_GAME_URL'),
       sha: required('EXPECTED_SHA'),
-      password: required('DEV_BASIC_AUTH_PASSWORD'),
       doorSecret: required('DEV_DOOR_SECRET'),
     },
     { polls: 36, pollMs: 5_000 },
@@ -956,6 +946,6 @@ if (import.meta.main) {
     process.exit(1);
   }
   console.log(
-    '✓ dev is password-gated, blocks crawlers, serves the expected commit on every page and the game, shows the site being built on the front door and at its own address, keeps the game behind the site, and D1 answers',
+    '✓ dev is behind its door, blocks crawlers, serves the expected commit on every page and the game, shows the site being built on the front door and at its own address, keeps the game behind the site, and D1 answers',
   );
 }

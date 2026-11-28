@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, expect, it } from 'vitest';
-import { PASSWORD, roadmapWorld, type RoadmapWorld } from './harness';
+import { throughDoor, roadmapWorld, type RoadmapWorld } from './harness';
 import { judged, privateJudge } from '../../api/judge';
 
 /**
@@ -29,7 +29,7 @@ it('answers 503 with a plain sentence, never the error text, when the board has 
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
     'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap.json',
-    { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
+    throughDoor(),
   );
   expect(response.status).toBe(503);
   expect(response.headers.get('Cache-Control')).toBe('no-store');
@@ -43,7 +43,7 @@ it('answers its 503 as the API spec says (#588)', async () => {
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
     'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap.json',
-    { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
+    throughDoor(),
   );
   expect(response.status).toBe(503);
   expect(await judged('/api/roadmap.json', 'get', response)).toEqual([]);
@@ -54,6 +54,7 @@ it('keeps the health report, error text and all, off the production host (#846)'
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
     'https://yaweloidle.com/api/roadmap/health',
+    throughDoor(),
   );
   expect([response.status, await response.text()]).toEqual([404, '']);
 });
@@ -63,7 +64,7 @@ it('reports the failed read’s error text on the dev health report, as the priv
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
     'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/api/roadmap/health',
-    { headers: { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` } },
+    throughDoor(),
   );
   expect(response.status).toBe(200);
   const body = (await response.clone().json()) as { readError: unknown };

@@ -38,7 +38,6 @@ export const PING = JSON.stringify({
 });
 
 export interface Inputs {
-  readonly password: string;
   /** A machine DEV pass for the site's door, and one for the API's (#1155). */
   readonly sitePass: string;
   readonly apiPass: string;
@@ -56,13 +55,12 @@ const sign = (secret: string, body: string): string =>
 /** Every problem the deployed doors show; none means they passed. */
 export async function verifyDevHosts(
   fetchFn: Fetch,
-  { password, sitePass, apiPass, webhookSecret }: Inputs,
+  { sitePass, apiPass, webhookSecret }: Inputs,
 ): Promise<string[]> {
   const problems: string[] = [];
-  const login = `Basic ${btoa(`tester:${password}`)}`;
 
   const play = await fetchFn(`${SITE_HOST}/play?q=1`, {
-    headers: { Authorization: login, [PASS_HEADER]: sitePass },
+    headers: { [PASS_HEADER]: sitePass },
     redirect: 'manual',
   });
   if (play.status !== 307 || play.headers.get('Location') !== '/play/?q=1')
@@ -117,7 +115,6 @@ export function inputsFrom(
     return value;
   };
   return {
-    password: required('DEV_BASIC_AUTH_PASSWORD'),
     sitePass: required('DEV_PASS_SITE'),
     apiPass: required('DEV_PASS_API'),
     webhookSecret: required('ROADMAP_WEBHOOK_SECRET'),

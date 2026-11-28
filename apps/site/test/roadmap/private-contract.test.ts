@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
 import { HOOK_PATH, ROADMAP_PATHS } from '../../worker/routes';
-import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
+import { throughDoor, roadmapWorld, sign, type RoadmapWorld } from './harness';
 import { privateJudge, privateSpec } from '../../api/judge';
 
 /**
@@ -15,7 +15,6 @@ import { privateJudge, privateSpec } from '../../api/judge';
  */
 const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
 const PROD = 'https://yaweloidle.com';
-const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const HEALTH = ROADMAP_PATHS.health;
 const { judged } = privateJudge;
 
@@ -38,7 +37,8 @@ afterAll(async () => {
 });
 
 type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
-const call = (url: string, init: Init = {}) => world.server.fetch(url, init);
+const call = (url: string, init: Init = {}) =>
+  world.server.fetch(url, throughDoor(init));
 
 /** A delivery of `body` to the dev webhook, signed unless told otherwise. */
 async function deliver(
@@ -82,21 +82,20 @@ describe('the spec', () => {
 
 describe(`GET ${HEALTH}`, () => {
   it('answers on the dev host as the spec says', async () => {
-    const response = await call(`${DEV}${HEALTH}`, { headers: AUTH });
+    const response = await call(`${DEV}${HEALTH}`);
     expect(response.status).toBe(200);
     expect(await judged(HEALTH, 'get', response)).toEqual([]);
   });
 
-  it('refuses a dev caller without the password as the spec says', async () => {
-    const response = await call(`${DEV}${HEALTH}`);
-    expect(response.status).toBe(401);
+  it('refuses a dev caller without the door secret as the spec says', async () => {
+    const response = await world.server.fetch(`${DEV}${HEALTH}`);
+    expect(response.status).toBe(403);
     expect(await judged(HEALTH, 'get', response)).toEqual([]);
   });
 
   it('refuses POST on dev with 405 as the spec says', async () => {
     const response = await call(`${DEV}${HEALTH}`, {
       method: 'POST',
-      headers: AUTH,
     });
     expect(response.status).toBe(405);
     expect(await judged(HEALTH, 'get', response)).toEqual([]);

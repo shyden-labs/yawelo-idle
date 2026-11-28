@@ -12,6 +12,7 @@ import {
 } from '../github-fake/contract';
 import { fakeGitHub } from '../github-fake/fake-github';
 import { serveFake } from './github-server';
+import { DOOR_SECRET_HEADER } from '../../../door/worker/door';
 
 /**
  * One roadmap test file's world (#341), in wrangler's own harness (#506):
@@ -20,7 +21,24 @@ import { serveFake } from './github-server';
  * a stand-in game, and a fresh RSA key pair for the App, so no private key is
  * ever committed. Each file makes its own, so no state crosses files.
  */
-export const PASSWORD = 'test-only-password';
+export const DOOR_SECRET = 'test-only-door-secret';
+
+/**
+ * `init` as the door sends it: the dev origin requires its door (#1078), and
+ * the door adds the door secret to every request it passes on, the webhook
+ * included. A request made without this one skipped the door.
+ */
+export function throughDoor<T extends { headers?: unknown }>(
+  init: T = {} as T,
+): T & { headers: Record<string, string> } {
+  return {
+    ...init,
+    headers: {
+      [DOOR_SECRET_HEADER]: DOOR_SECRET,
+      ...(init.headers as Record<string, string> | undefined),
+    },
+  };
+}
 export const WEBHOOK_SECRET = 'test-webhook-secret';
 
 export type RoadmapWorld = ReturnType<typeof roadmapWorld>;
@@ -64,7 +82,7 @@ export function roadmapWorld({ appKey = true }: { appKey?: boolean } = {}) {
               TEST_FAKE_GITHUB: served.url,
             },
             secrets: {
-              DEV_PASSWORD: PASSWORD,
+              DOOR_SECRET,
               ROADMAP_WEBHOOK_SECRET: WEBHOOK_SECRET,
               ...(appKey ? { ROADMAP_APP_KEY: keys.privateKey } : {}),
             },

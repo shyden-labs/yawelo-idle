@@ -11,16 +11,15 @@ import { DOORS } from '../../door/worker/door';
 export const HOOK_PATH = '/hooks/github';
 
 /**
- * Paths a caller without the password must reach. GitHub's webhook cannot
- * send Basic credentials, and each delivery is signed instead (#341).
+ * Paths the door passes on without a DEV pass (apps/door/worker/doors.ts
+ * `openPost`): GitHub's webhook cannot sign in, and each delivery is signed
+ * instead (#341). The site still requires the door's secret on them (#1078).
  */
 export const EXEMPT_PATHS: readonly string[] = [HOOK_PATH];
 
 /**
- * The roadmap's paths (#341), behind the password on dev like every page.
- * Not every engine sends its cached Basic credentials on the socket upgrade
- * (WebKit on Linux answered 401, deploy-dev run 41398540143, #829); the dev
- * login cookie carries the socket through.
+ * The roadmap's paths (#341), behind the door on dev like every page: the
+ * DEV pass is a cookie, which every browser sends on the socket upgrade too.
  */
 export const ROADMAP_PATHS = {
   snapshot: '/api/roadmap.json',
@@ -55,7 +54,7 @@ export function isGamePath(pathname: string): boolean {
  * Whether the private paths are served on `hostname`: the roadmap's health
  * report (#846: its timings, counters and raw error text are internal) and
  * the private API docs (#589). Never on the public host; on dev they stay
- * behind the password, for dev verify and the operator.
+ * behind the door, for dev verify and the operator.
  */
 export function servesPrivate(hostname: string): boolean {
   return !isProdHost(hostname, PROD_HOSTNAME);

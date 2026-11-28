@@ -21,9 +21,8 @@
     "not_found_handling": "404-page",
   },
   "vars": {
-    // "false" until the doors go live on 2026-11-15, as the other origins:
-    // the deploy then sets "true" with DOOR_SECRET, and any other value
-    // requires the door.
-    "DOOR_REQUIRED": "false",
+    // The origin refuses a request without its door secret (#784 AC4,
+    // #1078 AC3); only "false" admits every request.
+    "DOOR_REQUIRED": "true",
   },
 }

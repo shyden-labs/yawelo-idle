@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'jsonc-parser';
 import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { SECRETS, throughDoor } from './door';
 
 /**
  * The dev sync Worker, served by wrangler's test harness from the real
@@ -20,27 +21,27 @@ const INJECTED = 'yawelo-idle-sync-injected';
 const server = createTestHarness({
   root: ROOT,
   workers: [
-    // The key request counts are hashed under (#164 AC2), as the deploy sets it.
     {
       configPath: './wrangler.jsonc',
-      secrets: { RATE_KEY: 'harness-rate-key' },
+      secrets: SECRETS,
     },
     {
       configPath: './wrangler.injected.jsonc',
-      secrets: { RATE_KEY: 'harness-rate-key' },
+      secrets: SECRETS,
     },
   ],
 });
 
-type Init = Parameters<typeof server.fetch>[1];
-
-const call = (path: string, init?: Init) =>
-  server.fetch(`https://sync.test${path}`, init);
+const call = (path: string, init?: { readonly method: string }) =>
+  server.fetch(`https://sync.test${path}`, throughDoor(init));
 
 const inject = (change: string, path = '/health') =>
   server
     .getWorker(INJECTED)
-    .fetch(`https://sync.test${path}`, { headers: { 'x-inject': change } });
+    .fetch(
+      `https://sync.test${path}`,
+      throughDoor({ headers: { 'x-inject': change } }),
+    );
 
 const config = (file: string): Record<string, unknown> =>
   parse(readFileSync(`${ROOT}${file}`, 'utf8')) as Record<string, unknown>;
@@ -115,7 +116,7 @@ describe('GET /health', () => {
 
 describe('non-prod marking (#39)', () => {
   const host = (origin: string, path: string) =>
-    server.fetch(`${origin}${path}`);
+    server.fetch(`${origin}${path}`, throughDoor());
 
   it.each(['/health', '/missing'])(
     'marks %s noindex on the dev API host, with no password asked',

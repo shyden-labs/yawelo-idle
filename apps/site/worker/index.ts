@@ -1,22 +1,22 @@
 /**
- * The site Worker, the front door (website spec §7.2): every request passes
- * the non-prod gate (#39) except `/hooks/github`, then `/play` and `/play/*`
+ * The site Worker, the front door (website spec §7.2): behind its door, which
+ * is the dev site's only gate (#1078 AC3), every page off production is
+ * marked noindex, then `/play` and `/play/*`
  * go to the game Worker through the GAME service binding, `/api/roadmap*` to
  * the `Roadmap` Durable Object (#341), `/api/private/*` to the private API
  * docs on dev alone (#589), and everything else to the site's own
  * prerendered pages, the site being built, through the door and at this
  * Worker's own address alike (Shyden, 2026-11-28, #1078). A visit reads the board once the last read is 10 minutes old (#1074).
  *
- * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
- * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
- * #341); a missing password locks the gate and a missing webhook secret
- * refuses every delivery. `DOOR_SECRET` (#784) is uploaded with them.
+ * `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker secrets, uploaded
+ * by the deploy from the `dev` environment's secrets (#357, #341); a missing
+ * webhook secret refuses every delivery. `DOOR_SECRET` (#784) is uploaded with them.
  *
  * Behind its door (#784 AC4), a request without this environment's door
  * secret is refused before anything else, the webhook path included
- * (apps/door/worker/origin.ts). DOOR_REQUIRED is "false" until the go-live.
+ * (apps/door/worker/origin.ts).
  */
-import { gateWebRequest } from '@yawelo-idle/lockdown';
+import { markWebRequest } from '@yawelo-idle/lockdown';
 import { refusal, workerEqual } from '../../door/worker/origin';
 import type { RoadmapEnv } from './roadmap';
 import {
@@ -40,7 +40,6 @@ export { Roadmap } from './roadmap';
 
 interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */
-  readonly DEV_PASSWORD?: string;
   readonly ROADMAP_WEBHOOK_SECRET?: string;
   /** This environment's door secret (#784), which every door request carries. */
   readonly DOOR_SECRET?: string;
@@ -88,7 +87,7 @@ async function hook(
 
 /**
  * `/api/private/*` (#589): a bare 404 on the public host, whatever the
- * method; on dev, once past the password, the spec from the Worker and the
+ * method; on dev, through the door, the spec from the Worker and the
  * docs page from the prerendered pages.
  */
 async function privateDocs(request: Request, env: SiteEnv): Promise<Response> {
@@ -123,7 +122,7 @@ export default {
     if (refused !== undefined) return refused;
     const { pathname } = new URL(request.url);
     if (pathname === HOOK_PATH) return hook(request, env, ctx);
-    return gateWebRequest(request, env.DEV_PASSWORD, (allowed) => {
+    return markWebRequest(request, (allowed) => {
       const { pathname: path } = new URL(allowed.url);
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
