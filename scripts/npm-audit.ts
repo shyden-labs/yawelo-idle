@@ -7,6 +7,7 @@
  * reported to Shyden, one issue per problem.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
+import { byCodeUnit } from '../packages/core/src/order.ts';
 import type { Gh } from './board-progress.ts';
 import { report } from './issue-report.ts';
 
@@ -60,7 +61,7 @@ export function judgeAudit(
   const problems: string[] = [];
   for (const [id, advisory] of advisories) {
     if (exceptions.some((entry) => entry.id === id)) continue;
-    const packages = [...advisory.packages].sort().join(', ');
+    const packages = [...advisory.packages].sort(byCodeUnit).join(', ');
     problems.push(
       `${id} (${advisory.severity}, ${packages}) has no recorded exception`,
     );

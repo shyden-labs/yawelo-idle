@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reachVerdict } from '../../scripts/token-reach';
+import { fetchFailure, reachVerdict } from '../../scripts/token-reach';
 
 /**
  * The dev deploy proves its Cloudflare token reaches the dev account and
@@ -102,5 +102,26 @@ describe('reachVerdict', () => {
       ok: false,
       reason: 'the listing holds an account with no id: {"name":"no id"}',
     });
+  });
+});
+
+describe('what token-reach prints is one line (#1007)', () => {
+  it('keeps a refusal reason with a line break on one line', () => {
+    const { reason } = reachVerdict(
+      {
+        success: false,
+        errors: [{ code: 1000, message: 'bad\n::warning::planted' }],
+      },
+      DEV,
+    );
+    expect(reason).toBe(
+      'Cloudflare refused the listing: 1000 bad ::warning::planted',
+    );
+  });
+
+  it('keeps a listing that did not arrive on one line', () => {
+    expect(fetchFailure(new SyntaxError('not JSON\n::warning::planted'))).toBe(
+      '::error::the account listing did not arrive: not JSON ::warning::planted',
+    );
   });
 });

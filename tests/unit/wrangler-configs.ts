@@ -4,13 +4,12 @@ import { unstable_readConfig } from 'wrangler';
 
 /**
  * The dev deploy configs: four Workers (one the holding page's dev copy,
- * #621) and the Pages hostname adapter.
+ * #621).
  * dev-config.test.ts reads these four by name; that they are every wrangler
  * config in the repo is a walk of the tree, held by the guards suite
  * (tests/guards/wrangler-configs.test.ts, #530).
  */
 export const WRANGLER_CONFIGS = [
-  'apps/dev-hosts/wrangler.jsonc',
   'apps/site/holding-dev/wrangler.jsonc',
   'apps/site/wrangler.jsonc',
   'apps/sync-worker/wrangler.jsonc',
@@ -20,13 +19,24 @@ export const WRANGLER_CONFIGS = [
 /**
  * The production deploy configs: the front door (#784), a bindingless
  * forwarding Worker that door-config.test.ts reads, and the holding page
- * (#621), an assets-only Worker that prod-config.test.ts reads. Both are in
+ * (#621), an assets-only Worker that prod-config.test.ts reads, and the API
+ * reserve (#1013), another that api-reserve.test.ts reads. All are in
  * the production account; the guards suite's walk counts them with the dev
  * configs.
  */
 export const PROD_WRANGLER_CONFIGS = [
   'apps/door/wrangler.jsonc',
   'apps/site/holding/wrangler.jsonc',
+  'apps/sync-worker/reserve/wrangler.jsonc',
+] as const;
+
+/**
+ * The TEST deploy configs (#784 AC2): the holding page's locked-down copy in
+ * the non-PROD account, deployed from each release/* cut by deploy-test.yml
+ * and read by test-environment.test.ts.
+ */
+export const TEST_WRANGLER_CONFIGS = [
+  'apps/site/holding-test/wrangler.jsonc',
 ] as const;
 
 /** Every wrangler config under `dir`, found on disk rather than listed. */
@@ -59,8 +69,6 @@ export interface DeployConfig {
   durable_objects: unknown;
   migrations: unknown;
   triggers: unknown;
-  /** Pages only (#429); wrangler resolves it to an absolute path. */
-  pages_build_output_dir: unknown;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -84,7 +92,6 @@ export function readDeployConfig(path: string): DeployConfig {
     durable_objects,
     migrations,
     triggers,
-    pages_build_output_dir,
   } = raw;
   if (typeof name !== 'string') throw new Error(`${path}: no name`);
   if (main !== undefined && typeof main !== 'string')
@@ -107,6 +114,5 @@ export function readDeployConfig(path: string): DeployConfig {
     durable_objects,
     migrations,
     triggers,
-    pages_build_output_dir,
   };
 }

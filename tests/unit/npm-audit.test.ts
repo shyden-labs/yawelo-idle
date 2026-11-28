@@ -102,7 +102,9 @@ describe('the audit judge', () => {
 });
 
 describe('the recorded exceptions', () => {
-  it('hold none since GitHub withdrew the deepmerge advisory on 2026-11-16 (#991)', () => {
+  // GitHub withdrew the picomatch advisory GHSA-fc5q-39xc-vjpf on
+  // 2026-11-18 (#1018), so its exception matched no finding and was dropped.
+  it('are none (#1018)', () => {
     expect(EXCEPTIONS).toEqual([]);
   });
 });

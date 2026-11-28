@@ -5,7 +5,7 @@ import { DEV_MEDIA, MEDIA_ORIGIN, PROD_MEDIA, PROMO, mediaUrl } from './media';
 /**
  * The promo media's one home (#713): the files are tracked in apps/site/media/
  * and served from the Cloudflare R2 bucket `yawelo-idle-media` on
- * media.shyden.co.uk, which answers byte ranges. Shyden uploads a new file by
+ * media.yaweloidle.com, which answers byte ranges. Shyden uploads a new file by
  * hand (2026-10-20, "By hand + checklist"), so the folder's README is the
  * checklist, and every deploy's verify compares each served file with its
  * tracked copy.
@@ -13,8 +13,8 @@ import { DEV_MEDIA, MEDIA_ORIGIN, PROD_MEDIA, PROMO, mediaUrl } from './media';
 const FOLDER = new URL('../media/', import.meta.url);
 
 describe('the promo media', () => {
-  it('are served from media.shyden.co.uk, on the same site as both pages that show them', () => {
-    expect(MEDIA_ORIGIN).toBe('https://media.shyden.co.uk');
+  it('are served from media.yaweloidle.com, in Yawelo’s own account (#1013)', () => {
+    expect(MEDIA_ORIGIN).toBe('https://media.yaweloidle.com');
   });
 
   it('are the poster, the MP4 and the WebM, each with its content type, MP4 before WebM', () => {
@@ -27,27 +27,30 @@ describe('the promo media', () => {
 
   it('name each file at its address on the media host', () => {
     expect(mediaUrl('yawelo-idle-promo.mp4')).toBe(
-      'https://media.shyden.co.uk/yawelo-idle-promo.mp4',
+      'https://media.yaweloidle.com/yawelo-idle-promo.mp4',
     );
   });
 
+  // CORP cross-origin (#1013, agreed with the shyden.co.uk session on
+  // 2026-11-17): yaweloidle.com and shyden.co.uk are different sites and
+  // both pages show the promo files, which are public marketing.
   it('are judged on production by both headers of the zone rule, and a 416 that names the size', () => {
     expect(PROD_MEDIA).toEqual({
-      origin: 'https://media.shyden.co.uk',
+      origin: 'https://media.yaweloidle.com',
       headers: {
-        'cross-origin-resource-policy': 'same-site',
+        'cross-origin-resource-policy': 'cross-origin',
         'x-content-type-options': 'nosniff',
       },
     });
   });
 
   // Measured 2026-10-26 (#768) from Biznet's own DNS and from DNS over
-  // HTTPS: dev-media.shyden.co.uk answers 200, 206 on bytes=0-1 and 416 past
+  // HTTPS: the old dev-media.shyden.co.uk answered 200, 206 on bytes=0-1 and 416 past
   // the end with the size, each with both headers, as production does.
   it('are judged on the dev store exactly as on production, apart from the origin', () => {
     expect(DEV_MEDIA).toEqual({
       ...PROD_MEDIA,
-      origin: 'https://dev-media.shyden.co.uk',
+      origin: 'https://dev-media.yaweloidle.com',
     });
   });
 
@@ -59,7 +62,37 @@ describe('the promo media', () => {
       'yawelo-idle-promo.webm',
     ]);
   });
+
+  // #622: every browser takes the MP4 first (#621), so its size is what a
+  // phone on slow data waits for, and a player can start before the whole
+  // file arrives only when the index (moov) comes before the media (mdat).
+  it('hold an MP4 under 2 MB', () => {
+    const bytes = readFileSync(new URL('yawelo-idle-promo.mp4', FOLDER)).length;
+    expect(bytes).toBeLessThan(2_000_000);
+  });
+
+  it('hold an MP4 whose index (moov) comes before its media (mdat)', () => {
+    const order = topLevelBoxes(
+      readFileSync(new URL('yawelo-idle-promo.mp4', FOLDER)),
+    );
+    expect(order).toContain('moov');
+    expect(order).toContain('mdat');
+    expect(order.indexOf('moov')).toBeLessThan(order.indexOf('mdat'));
+  });
 });
+
+/** The four-letter types of an MP4's top-level boxes, in file order. */
+const topLevelBoxes = (file: Buffer): string[] => {
+  const types: string[] = [];
+  let at = 0;
+  while (at + 8 <= file.length) {
+    const size = file.readUInt32BE(at);
+    types.push(file.toString('latin1', at + 4, at + 8));
+    if (size === 0) break; // the box runs to the end of the file
+    at += size === 1 ? Number(file.readBigUInt64BE(at + 8)) : size;
+  }
+  return types;
+};
 
 /**
  * The entries of the holding page's public folder that could put a promo

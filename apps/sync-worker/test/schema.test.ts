@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 
 /**
  * The first server tables (#162, spec §6.6 and §6.7): the migrations in
@@ -11,7 +11,13 @@ const ROOT = new URL('..', import.meta.url).pathname;
 
 const server = createTestHarness({
   root: ROOT,
-  workers: [{ configPath: './wrangler.jsonc' }],
+  // The key request counts are hashed under (#164 AC2), as the deploy sets it.
+  workers: [
+    {
+      configPath: './wrangler.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
+  ],
 });
 
 let db: D1Database;
@@ -100,7 +106,7 @@ const addPlayer = (id: string) =>
     .bind(id)
     .run();
 
-describe('the migrations create exactly the first tables (#162 AC1, AC2)', () => {
+describe('the migrations create exactly these tables (#162 AC1, AC2; #164 AC5; #52)', () => {
   it('and no others', async () => {
     const tables = await rows<{ name: string }>(
       `SELECT name FROM sqlite_schema WHERE type = 'table'
@@ -109,12 +115,55 @@ describe('the migrations create exactly the first tables (#162 AC1, AC2)', () =>
        ORDER BY name`,
     );
     expect(tables.map((t) => t.name)).toEqual([
+      'content_report_quota',
+      'content_reports',
       'devices',
       'pairings',
       'players',
+      'rate_counts',
       'save_versions',
       'saves',
     ]);
+  });
+
+  it('content_reports (#52 AC4: no IP, user agent, name or email column)', async () => {
+    expect
+      .soft(await columnsOf('content_reports'))
+      .toEqual([
+        col('id', 'TEXT', 1, 1),
+        col('created_at', 'INTEGER', 1),
+        col('course', 'TEXT', 1),
+        col('kind', 'TEXT', 1),
+        col('item_id', 'TEXT', 1),
+        col('problem', 'TEXT', 1),
+        col('suggestion', 'TEXT', 0),
+        col('note', 'TEXT', 0),
+        col('app_version', 'TEXT', 1),
+        col('content_version', 'TEXT', 1),
+        col('install_id', 'TEXT', 1),
+      ]);
+    expect.soft(await foreignKeysOf('content_reports')).toEqual([]);
+    expect
+      .soft((await indexesOf('content_reports')).sort())
+      .toEqual([
+        'created_at',
+        'unique id',
+        'unique install_id,course,kind,item_id',
+      ]);
+  });
+
+  it('content_report_quota', async () => {
+    expect
+      .soft(await columnsOf('content_report_quota'))
+      .toEqual([
+        col('install_id', 'TEXT', 1, 1),
+        col('utc_day', 'TEXT', 1, 2),
+        col('n', 'INTEGER', 1),
+      ]);
+    expect.soft(await foreignKeysOf('content_report_quota')).toEqual([]);
+    expect
+      .soft((await indexesOf('content_report_quota')).sort())
+      .toEqual(['unique install_id,utc_day']);
   });
 
   it('players', async () => {

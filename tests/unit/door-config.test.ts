@@ -55,7 +55,6 @@ describe('the front door Worker’s config (#784 AC1c)', () => {
       'services',
       'durable_objects',
       'migrations',
-      'triggers',
     ]);
   });
 

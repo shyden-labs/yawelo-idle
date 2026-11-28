@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomBytes } from 'node:crypto';
-import { createTestHarness, unstable_startWorker } from 'wrangler';
+import { randomBytes, type webcrypto } from 'node:crypto';
+import { unstable_startWorker } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
+import { coveredStartWorker } from '../../../tests/support/covered-start-worker';
 import { DOOR_SECRET_HEADER, DOORS } from '../worker/door';
+import { PASS_HEADER, SIGNIN_ORIGIN } from '../worker/dev-pass/door';
+import { mintPass, type SigningKey } from '../worker/dev-pass/pass';
 
 /**
  * The real door in front of the real Workers, both in local workerd (#784
@@ -47,7 +51,12 @@ const behindItsDoor = {
 const origins = createTestHarness({
   root: new URL('../..', import.meta.url).pathname,
   workers: [
-    { configPath: './sync-worker/wrangler.jsonc', ...behindItsDoor },
+    {
+      configPath: './sync-worker/wrangler.jsonc',
+      vars: behindItsDoor.vars,
+      // The key request counts are hashed under (#164 AC2).
+      secrets: { ...behindItsDoor.secrets, RATE_KEY: 'harness-rate-key' },
+    },
     {
       configPath: './site/wrangler.jsonc',
       vars: behindItsDoor.vars,
@@ -86,6 +95,31 @@ const straightTo = (
 
 type Door = Awaited<ReturnType<typeof unstable_startWorker>>;
 let door: Door | undefined;
+
+/**
+ * The DEV pass signing key for this run (#1078): the door is given its public
+ * half as DEV_PASS_KEYS, as the deploy gives it the sign-in's.
+ */
+let signing: SigningKey | undefined;
+let publicKeys = '';
+
+/** A request through a dev door, carrying a valid DEV pass for that door. */
+const throughDoor = async (
+  worker: string,
+  path: string,
+  headers: Record<string, string> = {},
+) => {
+  if (signing === undefined) throw new Error('no signing key');
+  const host = doorTo(worker);
+  const pass = await mintPass(
+    { aud: host, sub: 'harness@example.com', kind: 'machine' },
+    signing,
+    Math.floor(Date.now() / 1000),
+  );
+  return started(door).fetch(`https://${host}${path}`, {
+    headers: { ...headers, [PASS_HEADER]: pass },
+  });
+};
 
 const started = (worker: Door | undefined): Door => {
   if (worker === undefined) throw new Error('the door did not start');
@@ -128,30 +162,42 @@ const toOrigin = async (request: Request) => {
 };
 
 beforeAll(async () => {
+  const pair = (await crypto.subtle.generateKey('Ed25519', true, [
+    'sign',
+    'verify',
+  ])) as webcrypto.CryptoKeyPair;
+  signing = { kid: 'harness', privateKey: pair.privateKey };
+  const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+  publicKeys = JSON.stringify({ harness: jwk.x });
   await origins.listen();
-  door = await unstable_startWorker({
-    config: new URL('../wrangler.jsonc', import.meta.url).pathname,
-    bindings: {
-      ORIGIN_DOMAIN: { type: 'plain_text', value: ORIGIN_DOMAIN },
-      DEV_DOOR_SECRET: { type: 'secret_text', value: SECRET },
-      TEST_DOOR_SECRET: {
-        type: 'secret_text',
-        value: randomBytes(32).toString('hex'),
+  // Counted under coverage from its instrumented build (#1093 AC2).
+  door = await coveredStartWorker(
+    {
+      config: new URL('../wrangler.jsonc', import.meta.url).pathname,
+      bindings: {
+        ORIGIN_DOMAIN: { type: 'plain_text', value: ORIGIN_DOMAIN },
+        DEV_PASS_KEYS: { type: 'plain_text', value: publicKeys },
+        DEV_DOOR_SECRET: { type: 'secret_text', value: SECRET },
+        TEST_DOOR_SECRET: {
+          type: 'secret_text',
+          value: randomBytes(32).toString('hex'),
+        },
+      },
+      dev: {
+        server: { port: 0 },
+        inspector: false,
+        watch: false,
+        outboundService: toOrigin,
+        // Keep each request's own host: by default wrangler rewrites every
+        // request to the first route's host (dev.), measured in PR #940's run
+        // on 105ad6ee, where a request to the sync Worker's door reached the
+        // site's (installed wrangler, getUserWorkerInnerUrlOverrides).
+        inferOriginFromRoutes: false,
+        structuredLogsHandler: (log: Log) => doorLogs.push(log),
       },
     },
-    dev: {
-      server: { port: 0 },
-      inspector: false,
-      watch: false,
-      outboundService: toOrigin,
-      // Keep each request's own host: by default wrangler rewrites every
-      // request to the first route's host (dev.), measured in PR #940's run
-      // on 105ad6ee, where a request to the sync Worker's door reached the
-      // site's (installed wrangler, getUserWorkerInnerUrlOverrides).
-      inferOriginFromRoutes: false,
-      structuredLogsHandler: (log: Log) => doorLogs.push(log),
-    },
-  });
+    { start: unstable_startWorker },
+  );
 });
 
 afterAll(async () => {
@@ -161,9 +207,7 @@ afterAll(async () => {
 
 describe('the sync Worker behind its door (#784 AC4)', () => {
   it('answers through its door, which adds the secret', async () => {
-    const response = await started(door).fetch(
-      `https://${doorTo(SYNC_WORKER)}/health`,
-    );
+    const response = await throughDoor(SYNC_WORKER, '/health');
     // Status, body and the door's error logs in one comparison, so a
     // failure shows why the door answered as it did.
     expect({
@@ -204,9 +248,7 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
 
   it('lets a request through its door past the door check', async () => {
     // The webhook path answers before the dev password: a GET is 405.
-    const response = await started(door).fetch(
-      `https://${doorTo(SITE_WORKER)}${HOOK}`,
-    );
+    const response = await throughDoor(SITE_WORKER, HOOK);
     expect({
       status: response.status,
       allow: response.headers.get('allow'),
@@ -246,9 +288,10 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
   });
 
   it('passes the live roadmap’s WebSocket upgrade through its door', async () => {
-    const response = await started(door).fetch(
-      `https://${doorTo(SITE_WORKER)}/api/roadmap/live`,
-      { headers: upgrade },
+    const response = await throughDoor(
+      SITE_WORKER,
+      '/api/roadmap/live',
+      upgrade,
     );
     const socket = response.webSocket;
     socket?.accept();
@@ -264,9 +307,7 @@ describe('the dev site Worker behind its door (#784 AC4)', () => {
 
 describe('the holding page’s dev copy behind its door (#784 AC4)', () => {
   it('answers through its own door with the holding page', async () => {
-    const response = await started(door).fetch(
-      `https://${doorTo(HOLDING_WORKER)}/`,
-    );
+    const response = await throughDoor(HOLDING_WORKER, '/');
     expect({
       status: response.status,
       page: (await response.text()).includes('<html'),
@@ -275,10 +316,9 @@ describe('the holding page’s dev copy behind its door (#784 AC4)', () => {
   });
 
   it('answers through the dev site’s door with the holding page, the site passing the secret on', async () => {
-    const response = await started(door).fetch(
-      `https://${doorTo(SITE_WORKER)}/`,
-      { headers: { Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}` } },
-    );
+    const response = await throughDoor(SITE_WORKER, '/', {
+      Authorization: `Basic ${btoa(`dev:${DEV_PASSWORD}`)}`,
+    });
     expect({
       status: response.status,
       page: (await response.text()).includes('<html'),
@@ -309,5 +349,43 @@ describe('the holding page’s dev copy behind its door (#784 AC4)', () => {
       headers: { [DOOR_SECRET_HEADER]: SECRET },
     });
     expect(response.status).toBe(200);
+  });
+});
+
+describe('the DEV pass at the dev doors (#1078 AC1)', () => {
+  it('sends a page request with no pass to sign in, reaching no origin', async () => {
+    const host = doorTo(SITE_WORKER);
+    const response = await started(door).fetch(`https://${host}/play`, {
+      headers: { accept: 'text/html' },
+      redirect: 'manual',
+    });
+    expect({
+      status: response.status,
+      location: response.headers.get('location'),
+    }).toEqual({
+      status: 302,
+      location: `${SIGNIN_ORIGIN}/pass?for=${host}&back=%2Fplay`,
+    });
+  });
+
+  it('refuses an API request with no pass, 401', async () => {
+    const response = await started(door).fetch(
+      `https://${doorTo(SYNC_WORKER)}/health`,
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it('refuses a pass made for another dev door, 401', async () => {
+    if (signing === undefined) throw new Error('no signing key');
+    const pass = await mintPass(
+      { aud: doorTo(SITE_WORKER), sub: 'harness@example.com', kind: 'machine' },
+      signing,
+      Math.floor(Date.now() / 1000),
+    );
+    const response = await started(door).fetch(
+      `https://${doorTo(SYNC_WORKER)}/health`,
+      { headers: { [PASS_HEADER]: pass } },
+    );
+    expect(response.status).toBe(401);
   });
 });

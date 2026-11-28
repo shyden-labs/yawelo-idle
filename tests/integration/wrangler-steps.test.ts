@@ -81,8 +81,10 @@ const DRY_RUNS = [
   'deploy-dev.yml / deploy / Deploy the game Worker',
   "deploy-dev.yml / deploy / Deploy the holding page's dev copy",
   'deploy-dev.yml / deploy / Deploy the site Worker with its secrets',
-  'deploy-door.yml / deploy / Deploy the front door',
   'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
+  'deploy-prod.yml / deploy / Deploy the API reserve, tagged with this commit',
+  'deploy-prod.yml / deploy / Deploy the front door',
+  "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
 ];
 
 describe('every wrangler call reads the config it means (#627)', () => {

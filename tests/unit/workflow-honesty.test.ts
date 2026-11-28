@@ -29,8 +29,8 @@ describe('every workflow', () => {
       'ci.yml',
       'dependabot-daily.yml',
       'deploy-dev.yml',
-      'deploy-door.yml',
       'deploy-prod.yml',
+      'deploy-test.yml',
       'dev-behind-develop.yml',
       'door-check.yml',
       'logs.yml',
@@ -98,7 +98,8 @@ describe('sonarcloud.yml', () => {
       >;
     };
 
-  it('runs on pull requests as two jobs, each with exactly its keys', () => {
+  // Each push to develop too, so SonarCloud's main branch holds real figures (#1004).
+  it('runs on pull requests and on pushes to develop as two jobs, each with exactly its keys', () => {
     const { on, jobs } = doc();
     expect({
       on,
@@ -106,7 +107,7 @@ describe('sonarcloud.yml', () => {
         Object.entries(jobs).map(([id, job]) => [id, Object.keys(job)]),
       ),
     }).toEqual({
-      on: { pull_request: null },
+      on: { pull_request: null, push: { branches: ['develop'] } },
       jobs: {
         'sonar-coverage': [
           'runs-on',
@@ -154,9 +155,18 @@ describe('sonarcloud.yml', () => {
     const text = read('sonarcloud.yml');
     expect({
       measures: text.includes('run: npm run test:coverage'),
+      // The Worker suites, counted in their own runtime (#1093), run inside
+      // `npm run test:coverage` now, which judges Worker code by them
+      // (#1103): no second step runs them again.
+      measuresWorkersAgain: text.includes('npm run test:worker:coverage'),
       uploads: text.includes('uses: actions/upload-artifact@'),
       downloads: text.includes('uses: actions/download-artifact@'),
-    }).toEqual({ measures: true, uploads: true, downloads: true });
+    }).toEqual({
+      measures: true,
+      measuresWorkersAgain: false,
+      uploads: true,
+      downloads: true,
+    });
   });
 
   // A docs-only change measures nothing (#360), so its scan runs without a

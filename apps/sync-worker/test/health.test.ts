@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'jsonc-parser';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 
 /**
  * The dev sync Worker, served by wrangler's test harness from the real
@@ -20,8 +20,15 @@ const INJECTED = 'yawelo-idle-sync-injected';
 const server = createTestHarness({
   root: ROOT,
   workers: [
-    { configPath: './wrangler.jsonc' },
-    { configPath: './wrangler.injected.jsonc' },
+    // The key request counts are hashed under (#164 AC2), as the deploy sets it.
+    {
+      configPath: './wrangler.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
+    {
+      configPath: './wrangler.injected.jsonc',
+      secrets: { RATE_KEY: 'harness-rate-key' },
+    },
   ],
 });
 
@@ -134,16 +141,10 @@ describe('non-prod marking (#39)', () => {
   });
 
   it('leaves the production API host unmarked, robots.txt included', async () => {
-    const health = await host(
-      'https://api.yawelo-idle.shyden.co.uk',
-      '/health',
-    );
+    const health = await host('https://api.yaweloidle.com', '/health');
     expect(health.status).toBe(200);
     expect(health.headers.get('x-robots-tag')).toBeNull();
-    const robots = await host(
-      'https://api.yawelo-idle.shyden.co.uk',
-      '/robots.txt',
-    );
+    const robots = await host('https://api.yaweloidle.com', '/robots.txt');
     expect(robots.status).toBe(404);
     expect(robots.headers.get('x-robots-tag')).toBeNull();
   });

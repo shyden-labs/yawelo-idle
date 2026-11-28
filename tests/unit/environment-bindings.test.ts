@@ -8,6 +8,7 @@ import {
 } from './environment-bindings';
 import {
   PROD_WRANGLER_CONFIGS,
+  TEST_WRANGLER_CONFIGS,
   readDeployConfig,
   WRANGLER_CONFIGS,
 } from './wrangler-configs';
@@ -61,11 +62,6 @@ describe('a Worker bound to its own environment (#784 AC1a)', () => {
     expect(crossEnvironmentBindings(worker('a-dev', service('b-dev')))).toEqual(
       [],
     );
-  });
-  it('reads the dev hostname adapter as dev', () => {
-    expect(
-      crossEnvironmentBindings(worker('a-dev-hosts', service('b-dev'))),
-    ).toEqual([]);
   });
 });
 
@@ -130,10 +126,10 @@ describe('a Worker bound to another environment (#784 AC1a)', () => {
       'a-dev (dev): Worker b belongs to production',
     ]);
   });
-  it('refuses the dev hostname adapter calling a test Worker', () => {
+  it('reads a name ending -dev-hosts as production, the adapter retired (#1013)', () => {
     expect(
-      crossEnvironmentBindings(worker('a-dev-hosts', service('b-test'))),
-    ).toEqual(['a-dev-hosts (dev): Worker b-test belongs to test']);
+      crossEnvironmentBindings(worker('a-dev-hosts', service('b-dev'))),
+    ).toEqual(['a-dev-hosts (production): Worker b-dev belongs to dev']);
   });
   it('reports every crossed binding, not only the first', () => {
     expect(
@@ -257,7 +253,11 @@ describe('the configs as wrangler reads them (#784 AC1a)', () => {
 });
 
 describe('every deploy config in the repo (#784 AC1a)', () => {
-  for (const file of [...WRANGLER_CONFIGS, ...PROD_WRANGLER_CONFIGS]) {
+  for (const file of [
+    ...WRANGLER_CONFIGS,
+    ...TEST_WRANGLER_CONFIGS,
+    ...PROD_WRANGLER_CONFIGS,
+  ]) {
     it(`${file} crosses no environment`, () => {
       expect(
         crossEnvironmentBindings(readDeployConfig(join(ROOT, file))),

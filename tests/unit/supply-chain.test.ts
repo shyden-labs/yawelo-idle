@@ -417,6 +417,34 @@ describe('no dependency runs an install script (#788)', () => {
 });
 
 /**
+ * A workflow runs only the tools the lockfile installed (#1006). Plain `npx x`
+ * downloads `x` from the registry when no local copy is found, at whatever
+ * version is newest, in a job that may hold a deploy token. `npx --no` refuses
+ * instead, so a missing install fails the step by name.
+ */
+const workflowNpx = () =>
+  workflowFiles().flatMap((file) =>
+    readFileSync(join(WORKFLOWS, file), 'utf8')
+      .split('\n')
+      .map((text, i) => ({ where: `${file}:${String(i + 1)}`, text }))
+      .filter(({ text }) => !text.trim().startsWith('#'))
+      .filter(({ text }) => /\bnpx\s/.test(text)),
+  );
+
+describe('a workflow never downloads a tool npx cannot find (#1006)', () => {
+  it('there are npx calls to check', () => {
+    // Measured 10 after #1013 removed the dev adapter's two Pages calls.
+    // Lower it only in the commit that removes one.
+    expect(workflowNpx().length).toBeGreaterThan(9);
+  });
+
+  // runtime population: the npx lines are read from the workflows at run time
+  it.each(workflowNpx())('$where runs npx --no', ({ text }) => {
+    expect(text).toMatch(/\bnpx --no\s/);
+  });
+});
+
+/**
  * The coverage tool is pinned to the test runner (#728). `@vitest/coverage-v8`
  * peers on one exact Vitest version, and Vitest warns that "running mixed
  * versions is not supported" when they differ. So a Vitest bump that leaves

@@ -1,3 +1,4 @@
+import { connect } from 'node:net';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FIXTURE_REPO } from '../../../../packages/progress/test/board-fixture';
 import { FAKE_BOARD_ID } from '../github-fake/contract';
@@ -7,8 +8,8 @@ import { PASSWORD, roadmapWorld, sign, type RoadmapWorld } from './harness';
  * The site Worker's roadmap routes (#341): the webhook's door at
  * `/hooks/github` (outside the dev password, guarded by its signature), the
  * three `/api/roadmap*` paths behind the password (R6, measured 2026-10-06:
- * every engine sends cached Basic credentials on the socket upgrade), and the
- * cron. Called through wrangler's harness (#506) with a dev hostname so the
+ * every engine sends cached Basic credentials on the socket upgrade). There
+ * is no cron (#1074): the roadmap reads on visit. Called through wrangler's harness (#506) with a dev hostname so the
  * gate applies; each call returns once the work it handed to `waitUntil` is
  * done (test/roadmap-worker/test-worker.ts).
  */
@@ -38,6 +39,54 @@ afterAll(async () => {
 type Init = NonNullable<Parameters<typeof world.server.fetch>[1]>;
 const call = (path: string, init: Init = {}) =>
   world.server.fetch(`${HOST}${path}`, init);
+
+const HOOK_HEADERS = {
+  'X-GitHub-Event': 'issues',
+  'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
+};
+
+/**
+ * Raw HTTP/1.1: a POST to /hooks/github declaring `length` and sending
+ * `sent` bytes of body after the headers. The first status code that comes
+ * back, or why none came within 5 s. A reset after that status is not read:
+ * a server may close as soon as it has answered (#1107).
+ */
+async function statusOfRawPost(
+  length: number | string,
+  sent: number,
+): Promise<string> {
+  const { url } = await world.server.listen();
+  return new Promise((resolve) => {
+    const socket = connect(Number(url.port), url.hostname);
+    const done = (outcome: string) => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(outcome);
+    };
+    const timer = setTimeout(() => {
+      done('no answer in 5 s');
+    }, 5000);
+    socket.on('connect', () => {
+      const lines = [
+        'POST /hooks/github HTTP/1.1',
+        `Host: ${new URL(HOST).host}`,
+        `Content-Length: ${String(length)}`,
+        ...Object.entries(HOOK_HEADERS).map(([k, v]) => `${k}: ${v}`),
+      ];
+      socket.write(`${lines.join('\r\n')}\r\n\r\n`);
+      if (sent > 0) socket.write(Buffer.alloc(sent, 'x'));
+    });
+    socket.once('data', (data: Buffer) => {
+      done(
+        /^HTTP\/1\.1 (\d{3})/.exec(data.toString('latin1'))?.[1] ??
+          'no status line',
+      );
+    });
+    socket.on('error', (error: NodeJS.ErrnoException) => {
+      done(`socket error ${error.code ?? error.message}`);
+    });
+  });
+}
 
 async function deliver(event: string, payload: unknown, signature?: string) {
   const body = JSON.stringify(payload);
@@ -144,16 +193,10 @@ describe('/hooks/github', () => {
     expect(response.status).toBe(400);
   });
 
-  it('refuses a body over 1 MiB before checking its signature', async () => {
-    const response = await call('/hooks/github', {
-      method: 'POST',
-      body: 'x'.repeat(1_048_577),
-      headers: {
-        'X-GitHub-Event': 'issues',
-        'X-Hub-Signature-256': `sha256=${'0'.repeat(64)}`,
-      },
-    });
-    expect(response.status).toBe(413);
+  // A length that is not a number must never read as small (#1107's
+  // security review): the request is refused before the Worker sees it.
+  it('refuses a declared length that is not a number with 400', async () => {
+    expect(await statusOfRawPost('abc', 0)).toBe('400');
   });
 
   it('refuses any method but POST, naming POST', async () => {
@@ -241,9 +284,53 @@ describe('/api/roadmap*', () => {
   });
 });
 
-describe('the cron', () => {
-  it('reads the whole board on its schedule', async () => {
-    await world.server.getWorker().scheduled({ cron: '*/10 * * * *' });
-    expect(await boardReads()).toBe(1);
-  });
+/**
+ * The roadmap pages carry the held board (#1104 AC1): the site Worker writes
+ * the Roadmap object's snapshot into the page's HTML at request time, so the
+ * map draws at once with no loading line. The route and its measured cost are
+ * on the ticket (comment 7217629209).
+ */
+describe('the roadmap pages carry the held snapshot (#1104)', () => {
+  const CARRIED =
+    /<script type="application\/json" id="roadmap-snapshot">([\s\S]*?)<\/script>/;
+
+  it.each(['/roadmap', '/id/roadmap'])(
+    '%s carries the snapshot /api/roadmap.json serves, safe inside its script, and its no-script line says the map needs JavaScript',
+    async (path) => {
+      const served = (await (
+        await call('/api/roadmap.json', { headers: AUTH })
+      ).json()) as { version: number; items: unknown };
+      const page = await call(path, { headers: AUTH });
+      const html = await page.text();
+      const carried = CARRIED.exec(html)?.[1];
+      const parsed =
+        carried === undefined
+          ? undefined
+          : (JSON.parse(carried) as { version: number; items: unknown });
+      expect({
+        status: page.status,
+        cache: page.headers.get('Cache-Control'),
+        version: parsed?.version,
+        items: parsed?.items,
+        // A `<` in a title would end the script early: each is written <.
+        rawAngles: carried?.includes('<'),
+        noScript:
+          /<noscript>[\s\S]*The map needs JavaScript to show\.[\s\S]*<\/noscript>/.test(
+            html,
+          ),
+        oldLines: [
+          'Reading the board…',
+          'The roadmap could not be read just now.',
+        ].filter((line) => html.includes(line)),
+      }).toEqual({
+        status: 200,
+        cache: 'no-store',
+        version: served.version,
+        items: served.items,
+        rawAngles: false,
+        noScript: true,
+        oldLines: [],
+      });
+    },
+  );
 });

@@ -2,12 +2,12 @@
 # database (created on the first deploy, #357, bound by id, #391) and its
 # migrations, then the sync Worker, then the game, the holding page's dev copy
 # and the site Worker (the password gate in front, spec D9, #39, #332; its
-# front door shows the holding page, #673), then the Pages hostname adapter
-# that serves them at dev.yawelo-idle.shyden.co.uk,
-# dev-api.yawelo-idle.shyden.co.uk (#429) and
-# dev-holding.yawelo-idle.shyden.co.uk (#768), all in the dev-only "Shyden Labs
-# Dev" account (#395), then a verify that reads them back at those names and
-# reads the site being built at the site Worker's workers.dev address.
+# front door shows the site being built, #1078), all in the non-PROD account
+# (#784). The front door Worker (apps/door, deployed by deploy-prod.yml with each release, #1152)
+# serves them at dev.yaweloidle.com, dev-api.yaweloidle.com and
+# dev-holding.yaweloidle.com (#1013). The checks read them back at the
+# Workers' own workers.dev addresses, standing in for the door with the door
+# secret (#1078): CI never goes through a door (#784 AC1b).
 #
 # Every Cloudflare secret is a `dev` ENVIRONMENT secret, and `dev` admits only
 # the develop branch, so a fork PR or any other branch cannot reach them
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     # When the deploy finished, for verify-roadmap (#708).
     outputs:
       deployed-at: ${{ steps.deployed.outputs.at }}
@@ -66,7 +66,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       - run: npm ci
       # Before anything uses the token, prove it reaches the dev-only "Shyden
       # Labs Dev" account and nothing else (#395): Cloudflare cannot narrow a
@@ -102,13 +101,26 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc
+        run: npx --no wrangler d1 migrations apply yawelo-idle-dev --remote --config wrangler.deploy.jsonc
+      # The sync Worker's secrets reach it from the dev environment's secrets,
+      # uploaded with the version itself (#164 AC2): the door secret, so it
+      # believes the caller's address the door names, and the key request
+      # counts are hashed under.
+      - name: Write the sync Worker's secrets file (the dev door secret, the request-count key)
+        id: sync-secrets
+        env:
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          DEV_RATE_KEY: ${{ secrets.DEV_RATE_KEY }}
+        run: |
+          path="$(node scripts/sync-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
       - name: Deploy the sync Worker, stamped with this commit
         working-directory: apps/sync-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}"
+          SECRETS_FILE: ${{ steps.sync-secrets.outputs.path }}
+        run: npx --no wrangler deploy --config wrangler.deploy.jsonc --var "COMMIT:${GITHUB_SHA}" --secrets-file "$SECRETS_FILE"
       - name: Build the game, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
@@ -121,13 +133,11 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy
+        run: npx --no wrangler deploy
       # The holding page's dev copy (#621 AC8): the production holding build,
       # crawlers blocked and every response noindex, at
-      # dev-holding.yawelo-idle.shyden.co.uk through the dev hostname adapter
-      # (#768), so Shyden checks it on his phones before a release. Before
-      # the site Worker, whose HOLDING binding names it: the dev front door
-      # shows it (#673).
+      # dev-holding.yaweloidle.com through the front door
+      # (#768, #1013), so Shyden checks it on his phones before a release.
       - name: Build the holding page, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
@@ -141,7 +151,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
+        run: npx --no wrangler deploy --config apps/site/holding-dev/wrangler.jsonc
       - name: Build the site, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}
@@ -168,53 +178,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.NONPROD_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.NONPROD_CLOUDFLARE_ACCOUNT_ID }}
           SECRETS_FILE: ${{ steps.site-secrets.outputs.path }}
-        run: npx wrangler deploy --secrets-file "$SECRETS_FILE"
-      # The dev hostnames (#429): a Pages project whose one Function forwards
-      # each request to the site, the sync Worker or the holding page's dev
-      # copy by host, so it goes after all three. Its custom domains were attached once and are read back by the
-      # verify below. Git keeps no empty directory, so the empty static one
-      # Pages uploads is made here.
-      # The hostname adapter's Pages project stays in Shyden Labs Dev beside
-      # its custom domains (#784, Shyden 2026-11-16), so its steps alone hold
-      # that account's token. It reaches the Workers over HTTPS, as their
-      # door, with the dev door secret.
-      - name: Prove the Shyden Labs Dev token reaches its account alone
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/token-reach.ts
-      - name: Write the hostname adapter's secrets file (the dev door secret)
-        id: dev-hosts-secrets
-        env:
-          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
-        run: |
-          path="$(node scripts/dev-hosts-secrets.ts)"
-          echo "path=$path" >> "$GITHUB_OUTPUT"
-      - name: Upload the hostname adapter's secret to its Pages project
-        working-directory: apps/dev-hosts
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SECRETS_FILE: ${{ steps.dev-hosts-secrets.outputs.path }}
-        # `--no`: only the wrangler installed from the lockfile, never a
-        # download (SonarCloud githubactions:S8543).
-        run: npx --no wrangler pages secret bulk "$SECRETS_FILE"
-      - name: Make the hostname adapter's empty static directory
-        working-directory: apps/dev-hosts
-        run: mkdir -p public
-      # The dev hostname adapter (apps/dev-hosts: dev.yawelo-idle and
-      # dev-api.yawelo-idle only), deployed with the dev token to the dev
-      # account (#395). `--branch main` because main is the Pages project's
-      # production branch (read 2026-10-06, #429), Pages' word for the slot
-      # its custom domains serve, not the game's production (#672). Wrangler
-      # otherwise takes the branch from git, `develop` here, and makes a
-      # preview deployment, which the custom domains do not serve.
-      - name: Deploy the dev hostname adapter to its Pages main branch (dev account)
-        working-directory: apps/dev-hosts
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler pages deploy --branch main --commit-hash "$GITHUB_SHA"
+        run: npx --no wrangler deploy --secrets-file "$SECRETS_FILE"
       # Last, so every deploy above has returned: a roadmap check that began
       # before this time may be the previous site Worker's, and verify-roadmap
       # waits past it (#708).
@@ -230,7 +194,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -247,20 +211,68 @@ jobs:
           node-version: ${{ steps.node.outputs.version }}
       - name: Verify dev is password-gated, serves this commit, shows the holding page, and D1 answers
         env:
-          # The dev hostnames, through the Pages adapter (#429).
-          DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
-          DEV_SYNC_URL: https://dev-api.yawelo-idle.shyden.co.uk
-          # The site Worker's own address, where the site being built stays
-          # while the front door shows the holding page (#673).
+          # The origins' own addresses, never a door (#1078, #784 AC1b): once
+          # the doors check the DEV pass, no CI request could pass them. The
+          # door secret lets verify-dev stand in for the door, so the site
+          # Worker shows its door's holding page (scripts/door-stand-in.ts).
+          DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
+          DEV_SYNC_URL: https://yawelo-idle-sync-dev.yawelo-idle-non-prod.workers.dev
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          # The same address with no door: the site being built (#673).
           DEV_SITE_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           # The game's own address, which must serve nothing (#332).
           DEV_GAME_URL: https://yawelo-idle-web-dev.yawelo-idle-non-prod.workers.dev/
           EXPECTED_SHA: ${{ github.sha }}
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: node scripts/verify-dev.ts
-      # The hostname adapter in front of the real Workers, once verify-dev
+      # Both doors check a DEV pass (#1078 AC1), so the door check gets a
+      # machine pass for each from the shared sign-in, as the browser suites
+      # do, masked and kept in the job's environment (#1155).
+      - name: Get a DEV pass for the site’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS_SITE=$pass" >> "$GITHUB_ENV"
+      - name: Get a DEV pass for the API’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev-api.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS_API=$pass" >> "$GITHUB_ENV"
+      # The front door in front of the real Workers, once verify-dev
       # has seen this commit served (#816): path, query, method and body
-      # reach them unchanged, and its own pages.dev address reaches none.
+      # reach them unchanged (#1013).
       - name: Verify the dev hostnames reach the real Workers unchanged
         env:
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
@@ -277,7 +289,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -295,24 +307,29 @@ jobs:
       - name: Verify the roadmap as the deployed code checked it (waits up to 12 minutes for its first check)
         timeout-minutes: 13
         env:
-          DEV_WEB_URL: https://dev.yawelo-idle.shyden.co.uk/
+          DEV_WEB_URL: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           DEPLOYED_AT: ${{ needs.deploy.outputs.deployed-at }}
         run: node scripts/verify-roadmap.ts
 
   # The game's browser smoke (tests/web), re-run against dev once verify has
   # seen this commit served there (#123 DoD). Same pinned image as CI's
-  # build-and-test, which carries all three browsers, so nothing is installed.
+  # browsers job: it carries Chromium, Firefox and WebKit, and Edge is
+  # downloaded first, as root, since the image lacks it (#1003).
   smoke:
     needs: verify
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d
-      options: --user 1001
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     environment:
       name: dev
-      url: https://dev.yawelo-idle.shyden.co.uk
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -327,14 +344,64 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
+      # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
+      # fresh every run: this job holds the dev password, so it restores
+      # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
+      # Downloaded fresh, so Microsoft's download speed sets its time: 16
+      # passing installs in deploy-dev's 8 successful develop runs to
+      # 2026-11-27 took 16–123 s (run 45779937070's site-smoke fetched 221 MB
+      # at 2.2 MB/s), so 3 times the slowest is 369 s (#476, #1115 AC3). The
+      # inner 370 s fires before the step's 7 minutes, so a stall names the
+      # download it was on.
+      - name: Install Edge (Playwright's image lacks it)
+        timeout-minutes: 7
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 370 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 370 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
+      # The site's dev door checks a DEV pass (#1078 AC1): a machine pass from
+      # the shared sign-in, asked with Yawelo's own Cloudflare Access service
+      # token (yawelo-idle-ci). Masked at once, and handed to the suite only
+      # through the job's environment file; the suite sends it as a
+      # host-only cookie on the door (tests/dev-pass-cookie.ts).
+      - name: Get a DEV pass for the site’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
       - name: Smoke the game on dev (every supported target, behind the dev password)
         id: suite
-        # One measured limit, at least 3 times its slowest run (#476).
-        timeout-minutes: 1
+        # A first limit since Edge joined (#1003), until its first runs are
+        # measured (#476): then at least 3 times the slowest.
+        timeout-minutes: 2
         env:
-          WEB_SMOKE_URL: https://dev.yawelo-idle.shyden.co.uk/
+          WEB_SMOKE_URL: https://dev.yaweloidle.com/
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
       # Each failing test's screenshot and page snapshot (#888), only when
@@ -359,8 +426,11 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d
-      options: --user 1001
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    # Firefox refuses to start as root in a home another user owns (PR
+    # #1054): Playwright's own advice is HOME=/root.
+    env:
+      HOME: /root
     environment:
       name: dev
       url: https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev/roadmap
@@ -378,8 +448,57 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
+      # Root's git refuses a workspace the runner's user checked out ("not in
+      # a git directory"), and npm ci's prepare runs git (PR #1054).
+      - name: Mark the workspace safe for root's git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: npm ci
+      # Playwright's image lacks Edge (Shyden, 2026-11-20, #1003). Downloaded
+      # fresh every run: this job holds the dev password, so it restores
+      # nothing from a cache (repo-template#224; tests/unit/edge-install-trusted.test.ts).
+      # Downloaded fresh, so Microsoft's download speed sets its time: 16
+      # passing installs in deploy-dev's 8 successful develop runs to
+      # 2026-11-27 took 16–123 s (run 45779937070's site-smoke fetched 221 MB
+      # at 2.2 MB/s), so 3 times the slowest is 369 s (#476, #1115 AC3). The
+      # inner 370 s fires before the step's 7 minutes, so a stall names the
+      # download it was on.
+      - name: Install Edge (Playwright's image lacks it)
+        timeout-minutes: 7
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          timeout --kill-after=5 370 npx --no playwright install --with-deps msedge 2>&1 | tee "$RUNNER_TEMP/edge-install.log" || status=$?
+          if [ "$status" = 124 ]; then
+            echo "::error::Edge install stalled at 370 s; its last download was: $(grep -E '^Get:' "$RUNNER_TEMP/edge-install.log" | tail -n 1)"
+          fi
+          exit "$status"
+      # The site's dev door checks a DEV pass (#1078 AC1): a machine pass from
+      # the shared sign-in, asked with Yawelo's own Cloudflare Access service
+      # token (yawelo-idle-ci). Masked at once, and handed to the suite only
+      # through the job's environment file; the suite sends it as a
+      # host-only cookie on the door (tests/dev-pass-cookie.ts).
+      - name: Get a DEV pass for the site’s dev door
+        timeout-minutes: 1
+        shell: bash
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pass=$(node --input-type=module -e "
+            const answer = await fetch('https://dev-signin.shyden.co.uk/machine?for=dev.yaweloidle.com', {
+              method: 'POST',
+              headers: {
+                'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+                'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+              },
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!answer.ok) throw new Error('the sign-in answered ' + answer.status + ' to the machine pass request');
+            process.stdout.write((await answer.json()).pass);
+          ")
+          echo "::add-mask::$pass"
+          echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
       - name: Drive the roadmap page on dev (every supported target, behind the dev password)
         id: suite
         # A first limit, until its first run is measured (#476): then at
@@ -404,12 +523,17 @@ jobs:
 
   # The holding page's dev copy (#621 AC8), checked from outside against
   # what this commit builds: noindex on every response, crawlers blocked. It
-  # needs no secret, so it names no environment.
+  # reads the copy at its own workers.dev address, standing in for its door
+  # with the door secret (#1078), so it runs in the dev environment.
   verify-holding:
     needs: deploy
     runs-on: ubuntu-26.04
     # verify-prod waits at most 60 looks, 10 s apart, then judges once.
     timeout-minutes: 15
+    # The dev environment holds DEV_DOOR_SECRET, the door's stand-in (#1078).
+    environment:
+      name: dev
+      url: https://dev.yaweloidle.com
     permissions:
       contents: read
     steps:
@@ -424,7 +548,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
+          # No cache: this job holds the door secret (#1120).
       - run: npm ci
       - name: Build the holding page this commit deployed
         env:
@@ -434,7 +558,8 @@ jobs:
         run: node scripts/holding-dev.ts
       - name: Verify the holding page's dev copy serves this commit, noindex, crawlers blocked
         env:
-          DEV_HOLDING_URL: https://dev-holding.yawelo-idle.shyden.co.uk
+          DEV_HOLDING_URL: https://yawelo-idle-holding-dev.yawelo-idle-non-prod.workers.dev
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/verify-prod.ts --dev-copy
 

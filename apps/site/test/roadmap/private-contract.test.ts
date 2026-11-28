@@ -14,7 +14,7 @@ import { privateJudge, privateSpec } from '../../api/judge';
  * production host, where the health report is a bare 404 (#846).
  */
 const DEV = 'https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev';
-const PROD = 'https://yawelo-idle.shyden.co.uk';
+const PROD = 'https://yaweloidle.com';
 const AUTH = { Authorization: `Basic ${btoa(`tester:${PASSWORD}`)}` };
 const HEALTH = ROADMAP_PATHS.health;
 const { judged } = privateJudge;
@@ -155,11 +155,9 @@ describe(`POST ${HOOK_PATH}`, () => {
     expect(await judged(HOOK_PATH, 'post', response)).toEqual([]);
   });
 
-  it('refuses a body over 1 MiB with 413 as the spec says', async () => {
-    const response = await deliver('x'.repeat(1_048_577));
-    expect(response.status).toBe(413);
-    expect(await judged(HOOK_PATH, 'post', response)).toEqual([]);
-  });
+  // A body over 1 MiB is judged in-process (worker/hook-contract.test.ts,
+  // #1107): over this harness's socket the server could close before the
+  // client finished sending it.
 
   it('answers the same on the production host, outside any password', async () => {
     const body = JSON.stringify({ zen: 'Keep it simple.' });

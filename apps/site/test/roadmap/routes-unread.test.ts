@@ -53,7 +53,7 @@ it('keeps the health report, error text and all, off the production host (#846)'
   await world.resetFake();
   await world.configureFake({ graphqlStatus: 502 });
   const response = await world.server.fetch(
-    'https://yawelo-idle.shyden.co.uk/api/roadmap/health',
+    'https://yaweloidle.com/api/roadmap/health',
   );
   expect([response.status, await response.text()]).toEqual([404, '']);
 });

@@ -3,19 +3,14 @@
  * the non-prod gate (#39) except `/hooks/github`, then `/play` and `/play/*`
  * go to the game Worker through the GAME service binding, `/api/roadmap*` to
  * the `Roadmap` Durable Object (#341), `/api/private/*` to the private API
- * docs on dev alone (#589), and everything else to the pages: on
- * the dev front door the holding page's dev copy, through the HOLDING
- * service binding, so dev shows what production shows (#673); on this
- * Worker's own address the site's own prerendered pages, the site being
- * built. The cron reads the board every 10 minutes.
+ * docs on dev alone (#589), and everything else to the site's own
+ * prerendered pages, the site being built, through the door and at this
+ * Worker's own address alike (Shyden, 2026-11-28, #1078). A visit reads the board once the last read is 10 minutes old (#1074).
  *
  * `DEV_PASSWORD`, `ROADMAP_WEBHOOK_SECRET` and `ROADMAP_APP_KEY` are Worker
  * secrets, uploaded by the deploy from the `dev` environment's secrets (#357,
  * #341); a missing password locks the gate and a missing webhook secret
- * refuses every delivery. `DOOR_SECRET` (#784) is uploaded with them: while
- * DOOR_REQUIRED is "false" it only lets the site believe the door a request
- * names, which the dev hostname adapter sends while it stands in for the
- * doors (apps/dev-hosts/hosts.ts).
+ * refuses every delivery. `DOOR_SECRET` (#784) is uploaded with them.
  *
  * Behind its door (#784 AC4), a request without this environment's door
  * secret is refused before anything else, the webhook path included
@@ -23,7 +18,7 @@
  */
 import { gateWebRequest } from '@yawelo-idle/lockdown';
 import { refusal, workerEqual } from '../../door/worker/origin';
-import { Roadmap, type RoadmapEnv } from './roadmap';
+import type { RoadmapEnv } from './roadmap';
 import {
   HOOK_PATH,
   isGamePath,
@@ -32,14 +27,16 @@ import {
   isPrivatePath,
   PRIVATE_PATHS,
   servesPrivate,
-  servePages,
   UNREADABLE,
 } from './routes';
 import { classifyEvent, verifySignature } from './webhook';
 import { eventWitness } from './witness';
+import { declaredOverCap, readUpToCap } from './body';
+import { isSupportPath, serveSupport } from './support';
+import { carryBoard } from './carry';
 import privateSpec from '../api/private.openapi.json';
 
-export { Roadmap };
+export { Roadmap } from './roadmap';
 
 interface SiteEnv extends RoadmapEnv {
   /** Secrets, so `wrangler types` cannot see them; absent means refused. */
@@ -48,9 +45,6 @@ interface SiteEnv extends RoadmapEnv {
   /** This environment's door secret (#784), which every door request carries. */
   readonly DOOR_SECRET?: string;
 }
-
-/** GitHub's issue payloads are tens of kilobytes; nothing it sends nears this. */
-const MAX_HOOK_BYTES = 1_048_576;
 
 const roadmap = (env: SiteEnv) => env.ROADMAP.getByName('board');
 
@@ -65,11 +59,14 @@ async function hook(
 ): Promise<Response> {
   if (request.method !== 'POST')
     return new Response(null, { status: 405, headers: { Allow: 'POST' } });
-  const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > MAX_HOOK_BYTES) return new Response(null, { status: 413 });
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_HOOK_BYTES)
+  // A declared length is refused before reading.
+  if (declaredOverCap(request.headers))
     return new Response(null, { status: 413 });
+  const body =
+    request.body === null
+      ? new ArrayBuffer(0)
+      : await readUpToCap(request.body as ReadableStream<Uint8Array>);
+  if (body === 413) return new Response(null, { status: 413 });
   const signature = request.headers.get('X-Hub-Signature-256');
   if (!(await verifySignature(env.ROADMAP_WEBHOOK_SECRET, body, signature)))
     return new Response(null, { status: 401 });
@@ -131,19 +128,13 @@ export default {
       if (isGamePath(path)) return env.GAME.fetch(allowed);
       if (isRoadmapPath(path)) return api(allowed, env);
       if (isPrivatePath(path)) return privateDocs(allowed, env);
-      // The holding page on the dev front door or through the dev site's
-      // door (#673, #784), the door believed only with this Worker's door
-      // secret, compared in constant time; else the site being built.
-      return servePages(
-        allowed,
-        env.DOOR_SECRET,
-        workerEqual,
-        env.HOLDING,
-        env.ASSETS,
+      if (isSupportPath(path))
+        return serveSupport(allowed, env.ASSETS, env.SHYDESK_HOST);
+      // The site being built, through the door and at this Worker's own
+      // address alike (Shyden, 2026-11-28, #1078).
+      return env.ASSETS.fetch(allowed).then((page) =>
+        carryBoard(path, page, () => roadmap(env).snapshot()),
       );
     });
-  },
-  scheduled(_controller, env, ctx): void {
-    ctx.waitUntil(roadmap(env).check());
   },
 } satisfies ExportedHandler<SiteEnv>;

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  ATTRIBUTION,
   checkLicences,
   describeFindings,
   judge,
@@ -42,6 +43,19 @@ describe('weak copyleft', () => {
       'LGPL-3.0-or-later',
       'MPL-2.0',
     ]);
+  });
+});
+
+// Shyden, 2026-11-09: refuse only what would go against our own licence.
+// A build tool's data under an attribution licence does not (#1093:
+// caniuse-lite, which istanbul's Babel brings).
+describe('attribution licences', () => {
+  it('are allowed for build and test tools only', () => {
+    expect(ATTRIBUTION).toEqual(['CC-BY-4.0']);
+    expect(judge('CC-BY-4.0', 'build')).toBeUndefined();
+    expect(judge('CC-BY-4.0', 'shipped')).toBe(
+      'it ships to players, so it must be permissive',
+    );
   });
 });
 

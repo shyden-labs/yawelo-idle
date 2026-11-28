@@ -11,55 +11,33 @@
  * origins at their workers.dev addresses, never through a door (#784 AC1b).
  */
 
-/** The header carrying the door secret; any value a caller sent is replaced. */
-export const DOOR_SECRET_HEADER = 'x-yawelo-door-secret';
+import { handleDevDoor } from './dev-pass/door';
+import type { PublicKeys } from './dev-pass/pass';
+// The headers live beside the door map, which has no imports, so scripts
+// that stand in for a door load them under Node's own loader (#1078).
+import {
+  DOOR_CLIENT_HEADER,
+  DOOR_HOST_HEADER,
+  DOOR_SECRET_HEADER,
+  DOORS,
+  type Environment,
+} from './doors';
 
-/**
- * The header naming the door a request came through, so an origin can answer
- * by door (the dev site shows the holding page at its door). Trusted by an
- * origin only alongside a valid secret; any value a caller sent is replaced.
- */
-export const DOOR_HOST_HEADER = 'x-yawelo-door';
+export { DOOR_CLIENT_HEADER, DOOR_HOST_HEADER, DOOR_SECRET_HEADER };
 
-export type Environment = 'dev' | 'test';
+export { DOORS, type Door, type Environment } from './doors';
 
-export interface Door {
-  /** The Worker this door reaches, by its name in the non-PROD account. */
-  readonly worker: string;
-  /** Whose door secret the request carries. */
-  readonly environment: Environment;
-}
-
-/**
- * Every door, by host. Doors sit on PROD's zone, yaweloidle.com (Shyden,
- * 2026-11-09). A Map, not an object literal: a lookup by an arbitrary host
- * must not find a key every plain object inherits, such as `constructor`.
- */
-export const DOORS: ReadonlyMap<string, Door> = new Map([
-  [
-    'dev.yaweloidle.com',
-    { worker: 'yawelo-idle-site-dev', environment: 'dev' },
-  ],
-  [
-    'dev-api.yaweloidle.com',
-    { worker: 'yawelo-idle-sync-dev', environment: 'dev' },
-  ],
-  [
-    'dev-holding.yaweloidle.com',
-    { worker: 'yawelo-idle-holding-dev', environment: 'dev' },
-  ],
-  [
-    'test.yaweloidle.com',
-    { worker: 'yawelo-idle-site-test', environment: 'test' },
-  ],
-]);
-
-/** What the deploy gives the door: no binding, only these three values. */
+/** What the deploy gives the door: no binding, only these four values. */
 export interface DoorEnv {
   /** The non-PROD account's workers.dev domain, `<subdomain>.workers.dev`. */
   readonly ORIGIN_DOMAIN: string;
   readonly DEV_DOOR_SECRET: string;
   readonly TEST_DOOR_SECRET: string;
+  /**
+   * The DEV pass public keys, JSON `{ "<kid>": "<x>" }` (#1078): the sign-in's
+   * keys, a set so a rotation can overlap (repo-template docs/dev-pass.md).
+   */
+  readonly DEV_PASS_KEYS: string;
 }
 
 export type Fetch = (request: Request) => Promise<Response>;
@@ -72,11 +50,35 @@ const SECRET_OF: Readonly<Record<Environment, keyof DoorEnv>> = {
 const answer = (status: number, body: string): Response =>
   new Response(body, { status, headers: { 'cache-control': 'no-store' } });
 
+/** The DEV pass keys from their JSON, or undefined unless a set of named keys. */
+function parseKeys(json: string | undefined): PublicKeys | undefined {
+  if (!json) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+    return undefined;
+  const entries = Object.entries(parsed);
+  if (entries.length === 0) return undefined;
+  if (!entries.every(([, x]) => typeof x === 'string' && x !== ''))
+    return undefined;
+  return parsed as PublicKeys;
+}
+
 /**
  * Passes `request` through its door, or answers without reaching any origin:
  * 404 for a host that is no door, 500 naming a value the deploy left unset.
- * The origin's answer comes back as it is, so a WebSocket upgrade (the live
- * roadmap, apps/site/worker/roadmap.ts) passes through, and a redirect is the
+ * A dev door first checks the DEV pass (#1078, repo-template#207): with no
+ * valid pass for this door the request goes no further, and the origin never
+ * sees a pass. The test door checks none. A door's `openPost` paths take a
+ * POST with no pass (the origin checks its caller), and a door whose pages
+ * `embeds` another product's piece swaps the visitor's pass for its embed
+ * pass through the sign-in. The origin's answer comes back as
+ * it is, so a WebSocket upgrade (the live roadmap,
+ * apps/site/worker/roadmap.ts) passes through, and a redirect is the
  * caller's to follow.
  */
 export async function pass(
@@ -92,13 +94,40 @@ export async function pass(
   for (const name of ['ORIGIN_DOMAIN', secretName] as const)
     if (!env[name]) return answer(500, `door not configured: ${name}`);
 
-  const target = new URL(request.url);
-  target.protocol = 'https:';
-  target.hostname = `${door.worker}.${env.ORIGIN_DOMAIN}`;
-  target.port = '';
-  const forwarded = new Request(target, request);
-  const headers = new Headers(forwarded.headers);
-  headers.set(DOOR_SECRET_HEADER, env[secretName]);
-  headers.set(DOOR_HOST_HEADER, host);
-  return fetch(new Request(forwarded, { headers, redirect: 'manual' }));
+  const forward = (incoming: Request): Promise<Response> => {
+    const target = new URL(incoming.url);
+    target.protocol = 'https:';
+    target.hostname = `${door.worker}.${env.ORIGIN_DOMAIN}`;
+    target.port = '';
+    const forwarded = new Request(target, incoming);
+    const headers = new Headers(forwarded.headers);
+    headers.set(DOOR_SECRET_HEADER, env[secretName]);
+    headers.set(DOOR_HOST_HEADER, host);
+    const client = incoming.headers.get('cf-connecting-ip');
+    if (client === null) headers.delete(DOOR_CLIENT_HEADER);
+    else headers.set(DOOR_CLIENT_HEADER, client);
+    return fetch(new Request(forwarded, { headers, redirect: 'manual' }));
+  };
+  if (door.environment === 'test') return forward(request);
+  if (
+    request.method === 'POST' &&
+    door.openPost?.includes(new URL(request.url).pathname) === true
+  )
+    return forward(request);
+
+  const keys = parseKeys(env.DEV_PASS_KEYS);
+  if (keys === undefined)
+    return answer(500, 'door not configured: DEV_PASS_KEYS');
+  return handleDevDoor(
+    request,
+    {
+      host,
+      keys,
+      secretHeader: DOOR_SECRET_HEADER,
+      secret: env[secretName],
+      now: Math.floor(Date.now() / 1000),
+      ...(door.embeds === true ? { signin: fetch } : {}),
+    },
+    forward,
+  );
 }

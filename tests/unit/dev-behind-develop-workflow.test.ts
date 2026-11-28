@@ -52,7 +52,7 @@ describe('the daily dev-behind-develop check (#497 AC1, AC4)', () => {
     const job = onlyJob(FILE, 'check');
     expect(job.environment).toBeUndefined();
     expect(job.steps?.at(-1)?.env).toEqual({
-      DEV_SYNC_URL: 'https://dev-api.yawelo-idle.shyden.co.uk',
+      DEV_SYNC_URL: 'https://dev-api.yaweloidle.com',
       GITHUB_TOKEN: '${{ github.token }}',
       STAND_IN_SERVED: '${{ inputs.stand_in_served }}',
     });

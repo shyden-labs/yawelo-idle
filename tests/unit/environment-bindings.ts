@@ -5,7 +5,7 @@ import { parse } from 'jsonc-parser';
  * #784 AC1(a): no environment may be bound to another's D1, R2, KV or Worker.
  * A Worker Editor can deploy a binding with no permission on what it binds, so
  * the config is the only place to stop it. An environment is read from the name:
- * `-dev` (and the dev hostname adapter's `-dev-hosts`) is dev, `-test` is test,
+ * `-dev` is dev, `-test` is test,
  * anything else is production.
  */
 export interface EnvironmentBindings {
@@ -18,7 +18,7 @@ export interface EnvironmentBindings {
 }
 
 function environmentOf(name: string): 'dev' | 'test' | 'production' {
-  if (/-dev(-hosts)?$/.test(name)) return 'dev';
+  if (name.endsWith('-dev')) return 'dev';
   if (name.endsWith('-test')) return 'test';
   return 'production';
 }
@@ -134,6 +134,8 @@ const KNOWN_KEYS = new Set([
   'services',
   'triggers',
   'vars',
+  // The Worker's own version id (#1074): it reaches no other Worker or store.
+  'version_metadata',
   'workers_dev',
 ]);
 

@@ -1,0 +1,78 @@
+---
+/**
+ * The support and ticket pages (#860): Yawelo Idle's own words around
+ * ShyDesk's shared piece, which ShyDesk serves and runs from its own host
+ * (Shyden, 2026-11-22). The page names ShyDesk's host by a placeholder the
+ * site Worker replaces for its environment (worker/support.ts), with the
+ * page's security policy. The piece's colours are set on its element with
+ * ShyDesk's --shydesk-* properties: the page's own CSS does not reach into
+ * its shadow root.
+ */
+import Base from '../layouts/Base.astro';
+import { COPY } from '../copy';
+import type { Locale } from '../i18n';
+import { SHYDESK_SENTINEL } from '../../worker/support';
+
+interface Props {
+  locale: Locale;
+  view: 'contact' | 'ticket';
+}
+const { locale, view } = Astro.props;
+const copy = COPY[locale];
+const page = view === 'contact' ? 'support' : 'supportTicket';
+const intro =
+  view === 'contact' ? copy.support.intro : copy.support.ticketIntro;
+const embed = `${SHYDESK_SENTINEL}/embed.js`;
+---
+
+<Base locale={locale} page={page} title={copy.titles[page]}>
+  <h1>{copy.titles[page]}</h1>
+  <p data-support-intro>{intro}</p>
+  <shydesk-support
+    product="yawelo-idle"
+    view={view}
+    lang={locale}
+  ></shydesk-support>
+  <p data-support-failed hidden>
+    {copy.support.failed}
+  </p>
+  <script is:inline src={embed} defer></script>
+  <script>
+    import '../support/page';
+  </script>
+</Base>
+
+<style is:global>
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0 auto;
+    max-width: 42rem;
+    padding: 1rem;
+    background: #050816;
+    color: #f4f8ff;
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+  }
+
+  a {
+    color: #7ff3cf;
+  }
+
+  shydesk-support {
+    display: block;
+    --shydesk-font: system-ui, sans-serif;
+    --shydesk-text: #f4f8ff;
+    --shydesk-background: #0c1838;
+    --shydesk-accent: #7ff3cf;
+    --shydesk-accent-text: #04201a;
+    --shydesk-border: #b7c4e0;
+    --shydesk-error: #ff9b9b;
+  }
+
+  [data-support-failed] {
+    color: #ff9b9b;
+  }
+</style>

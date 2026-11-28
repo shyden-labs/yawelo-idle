@@ -154,7 +154,7 @@ const branchNames = (branch: string, n: number) =>
 
 /** Whether `text` names ticket `n` as `#n`, never `#120` or `other/repo#n`. */
 const textNames = (text: string, n: number) =>
-  new RegExp(`(?<![\\w/#])#${String(n)}(?!\\d)`).test(text);
+  new RegExp(String.raw`(?<![\w/#])#${String(n)}(?!\d)`).test(text);
 
 /**
  * Whether the gate passes, and the lines it prints: a summary with every
@@ -270,7 +270,7 @@ export function boardOrphans(
         return e.merged_at !== null;
       });
       if (closed.length === 0) return 'unclosed';
-      return closed.some((merged) => merged) ? 'merged' : 'abandoned';
+      return closed.some(Boolean) ? 'merged' : 'abandoned';
     });
 
   /** What names `ticket`, or `null` for an orphan. */

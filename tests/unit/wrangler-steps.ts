@@ -50,7 +50,7 @@ export interface ConfigRead {
   /** A config named on the command line that is not on disk, absolute. */
   missing?: string;
   name?: string;
-  /** The assets (or Pages output) directory, absolute; null for none. */
+  /** The assets directory, absolute; null for none. */
   assets?: string | null;
 }
 
@@ -92,20 +92,20 @@ export const WRANGLER_STEPS: readonly (MeantConfig & { step: string })[] = [
     config: 'apps/site/wrangler.jsonc',
   },
   {
-    step: "deploy-dev.yml / deploy / Upload the hostname adapter's secret to its Pages project",
-    config: 'apps/dev-hosts/wrangler.jsonc',
+    step: 'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
+    config: 'apps/site/holding/wrangler.jsonc',
   },
   {
-    step: 'deploy-dev.yml / deploy / Deploy the dev hostname adapter to its Pages main branch (dev account)',
-    config: 'apps/dev-hosts/wrangler.jsonc',
+    step: 'deploy-prod.yml / deploy / Deploy the API reserve, tagged with this commit',
+    config: 'apps/sync-worker/reserve/wrangler.jsonc',
   },
   {
-    step: 'deploy-door.yml / deploy / Deploy the front door',
+    step: 'deploy-prod.yml / deploy / Deploy the front door',
     config: 'apps/door/wrangler.jsonc',
   },
   {
-    step: 'deploy-prod.yml / deploy / Deploy the holding page, tagged with this commit',
-    config: 'apps/site/holding/wrangler.jsonc',
+    step: "deploy-test.yml / deploy / Deploy TEST's holding page, tagged with this commit",
+    config: 'apps/site/holding-test/wrangler.jsonc',
   },
   {
     step: 'rollback-prod.yml / rollback / Find the version tagged with that commit',
@@ -313,7 +313,7 @@ export function describeMeant(root: string, meant: MeantConfig): string {
 }
 
 /**
- * The assets (or Pages output) directory a tracked config means, absolute;
+ * The assets directory a tracked config means, absolute;
  * null for none. wrangler reads `assets.directory` from the config's folder.
  */
 export function assetsOf(root: string, meant: MeantConfig): string | null {
@@ -322,21 +322,19 @@ export function assetsOf(root: string, meant: MeantConfig): string | null {
 }
 
 /**
- * The assets (or Pages output) directory of a config wrangler read from
+ * The assets directory of a config wrangler read from
  * `configPath`, absolute; null for none. One home for the meant side and the
  * integration probe's read side.
  */
 export function assetsIn(
   configPath: string,
-  config: { assets?: unknown; pages_build_output_dir?: unknown },
+  config: { assets?: unknown },
 ): string | null {
   const directory = isRecord(config.assets)
     ? config.assets.directory
     : undefined;
-  if (typeof directory === 'string')
-    return resolve(dirname(configPath), directory);
-  return typeof config.pages_build_output_dir === 'string'
-    ? config.pages_build_output_dir
+  return typeof directory === 'string'
+    ? resolve(dirname(configPath), directory)
     : null;
 }
 

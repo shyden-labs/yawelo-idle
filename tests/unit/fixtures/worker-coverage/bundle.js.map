@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["fixture-worker.ts"],
+  "sourcesContent": ["// The Worker tests/unit/worker-coverage.test.ts instruments (#1093). Its\n// bundle and map beside it come from esbuild, as wrangler's dry run makes them:\n// npx esbuild tests/unit/fixtures/worker-coverage/fixture-worker.ts --bundle\n//   --format=esm --sourcemap --outfile=tests/unit/fixtures/worker-coverage/bundle.js\nexport class Counter {\n  hello(): string {\n    return 'hi';\n  }\n}\n\nexport default {\n  fetch(request: Request): Response {\n    if (new URL(request.url).pathname === '/a') {\n      return new Response('a');\n    }\n    return new Response('other');\n  },\n  scheduled(): string {\n    return 'ran';\n  },\n};\n"],
+  "mappings": ";AAIO,IAAM,UAAN,MAAc;AAAA,EACnB,QAAgB;AACd,WAAO;AAAA,EACT;AACF;AAEA,IAAO,yBAAQ;AAAA,EACb,MAAM,SAA4B;AAChC,QAAI,IAAI,IAAI,QAAQ,GAAG,EAAE,aAAa,MAAM;AAC1C,aAAO,IAAI,SAAS,GAAG;AAAA,IACzB;AACA,WAAO,IAAI,SAAS,OAAO;AAAA,EAC7B;AAAA,EACA,YAAoB;AAClB,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

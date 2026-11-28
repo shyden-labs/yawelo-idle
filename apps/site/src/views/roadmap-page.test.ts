@@ -15,39 +15,40 @@ const importsOf = (path: string): string[] =>
   ].map((match) => match[1] ?? '');
 
 describe('the roadmap page’s imports (#827)', () => {
-  it('are the base layout, the voyage map, the copy and the locale type', () => {
+  it('are the base layout, the voyage map, the copy, the carried board’s id (#1104) and the locale type', () => {
     expect(importsOf('./Roadmap.astro')).toEqual([
       '../layouts/Base.astro',
       '../roadmap/VoyageMap.svelte',
       '../copy',
+      '../roadmap/carried',
       '../i18n',
     ]);
   });
 
-  it('reach nothing of the home page from the voyage map', () => {
+  it('reach nothing of the home page from the voyage map (#1068)', () => {
     expect(importsOf('../roadmap/VoyageMap.svelte')).toEqual([
       '@yawelo-idle/progress',
       '../copy',
-      './Island.svelte',
-      './RoadmapSummary.svelte',
+      '../i18n',
+      './drawing',
+      './features',
+      './layout',
       './live',
-      './voyage',
-    ]);
-  });
-
-  it('reach nothing of the home page from an island', () => {
-    expect(importsOf('../roadmap/Island.svelte')).toEqual([
-      '../copy',
-      './voyage',
-    ]);
-  });
-
-  it('reach nothing of the home page from the summary (#828)', () => {
-    expect(importsOf('../roadmap/RoadmapSummary.svelte')).toEqual([
-      '@yawelo-idle/progress',
-      '../copy',
+      './carried',
+      './reopen',
+      './season',
+      './Shape.svelte',
+      './stages',
       './summary',
+      './updated',
       './voyage',
+    ]);
+  });
+
+  it('reach nothing of the home page from a shape of the picture (#1068)', () => {
+    expect(importsOf('../roadmap/Shape.svelte')).toEqual([
+      './drawing',
+      './Shape.svelte',
     ]);
   });
 });

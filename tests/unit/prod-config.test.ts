@@ -11,7 +11,7 @@ import { headerRules, type HeaderRules } from '../../scripts/headers-file';
 
 /**
  * The production holding page (#621): an assets-only Worker in the
- * production account, served at yawelo-idle.shyden.co.uk, with its security
+ * production account, served at yaweloidle.com (#1013), with its security
  * headers, its robots file, its approved words and its video's terms.
  * Configs are read the way wrangler reads them (comments stripped), so no
  * comment can satisfy or trip a pin.
@@ -44,6 +44,7 @@ describe('the production holding page Worker (#621 AC2)', () => {
     expect([...PROD_WRANGLER_CONFIGS]).toEqual([
       'apps/door/wrangler.jsonc',
       'apps/site/holding/wrangler.jsonc',
+      'apps/sync-worker/reserve/wrangler.jsonc',
     ]);
   });
 
@@ -64,7 +65,6 @@ describe('the production holding page Worker (#621 AC2)', () => {
     expect(CODE_FIELDS.filter((field) => holds(dev[field]))).toEqual([
       'main',
       'durable_objects',
-      'triggers',
       'services',
       'vars',
     ]);
@@ -79,10 +79,10 @@ describe('the production holding page Worker (#621 AC2)', () => {
     });
   });
 
-  it('is reached only at yawelo-idle.shyden.co.uk, as a Custom Domain, with no workers.dev or preview address', () => {
+  it('is reached only at yaweloidle.com (#1013), as a Custom Domain, with no workers.dev or preview address', () => {
     const config = readDeployConfig(join(HOLDING, 'wrangler.jsonc'));
     expect(config.routes).toEqual([
-      { pattern: 'yawelo-idle.shyden.co.uk', custom_domain: true },
+      { pattern: 'yaweloidle.com', custom_domain: true },
     ]);
     expect(config.workers_dev).toBe(false);
     expect(config.preview_urls).toBe(false);
@@ -93,9 +93,9 @@ describe('the holding page’s security headers (#621 AC2)', () => {
   const rules = (): HeaderRules =>
     headerRules(read('apps/site/holding/public/_headers'));
 
-  it('sets a content security policy with no inline script or style, taking images and media from the media host alone (#713), on every path', () => {
+  it('sets a content security policy with no inline script or style, taking media from the media host alone (#713) and images from there and its own tab icon (#1055), on every path', () => {
     expect(rules().get('/*')?.get('content-security-policy')).toBe(
-      "default-src 'none'; script-src 'self'; style-src 'self'; img-src https://media.shyden.co.uk; media-src https://media.shyden.co.uk; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://media.yaweloidle.com; media-src https://media.yaweloidle.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     );
   });
 
@@ -108,8 +108,8 @@ describe('the holding page’s security headers (#621 AC2)', () => {
     );
   });
 
-  // The media moved to media.shyden.co.uk (#713), whose zone rule sets
-  // Cross-Origin-Resource-Policy: same-site; verify-prod checks it live.
+  // The media are on media.yaweloidle.com (#713, #1013), whose zone rule sets
+  // Cross-Origin-Resource-Policy: cross-origin; verify-prod checks it live.
   it('declares only the every-path rule, since the page serves no media of its own', () => {
     expect([...rules().keys()]).toEqual(['/*']);
   });

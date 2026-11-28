@@ -1,21 +1,26 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
-  ADAPTER_OWN,
   API_HOST,
+  inputsFrom,
   SITE_HOST,
   verifyDevHosts,
   type Fetch,
 } from '../../scripts/verify-dev-hosts';
 
 /**
- * scripts/verify-dev-hosts.ts (#816) judged against a stand-in of the dev
- * hosts, so each way the real ones could go wrong is seen to be named. The
+ * scripts/verify-dev-hosts.ts (#816, #1013) judged against a stand-in of the
+ * dev doors, so each way the real ones could go wrong is seen to be named. The
  * stand-in checks the webhook signature over the body it receives, as the
  * site Worker does, so a script that signed wrongly would fail too.
  */
 
-const INPUTS = { password: 'pw', webhookSecret: 'secret' };
+const INPUTS = {
+  password: 'pw',
+  sitePass: 'site-pass',
+  apiPass: 'api-pass',
+  webhookSecret: 'secret',
+};
 
 interface Answer {
   readonly status: number;
@@ -23,10 +28,21 @@ interface Answer {
   readonly body?: string;
 }
 
-type Override = Partial<Record<'play' | 'post' | 'hook' | 'own', Answer>>;
+type Override = Partial<Record<'play' | 'post' | 'hook', Answer>>;
 
+/** Each request's URL and the DEV pass it carried, '-' for none. */
+let passes: string[] = [];
+
+/**
+ * The doors check a DEV pass (#1078 AC1): each answers 401 to a request
+ * without its own door's pass, as the real ones do (deploy-dev run
+ * 46105526525, #1155); the webhook path is an open POST at the door.
+ */
 function hosts(override: Override = {}): Fetch {
+  passes = [];
   return (url, init) => {
+    const pass = new Headers(init.headers).get('X-Dev-Pass');
+    passes.push(`${url} ${pass ?? '-'}`);
     const answer = (fallback: Answer, key: keyof Override): Response => {
       const a = override[key] ?? fallback;
       return new Response(a.status === 204 ? null : (a.body ?? ''), {
@@ -36,8 +52,9 @@ function hosts(override: Override = {}): Fetch {
     };
     if (url === `${SITE_HOST}/play?q=1`) {
       const authorised =
+        pass === 'site-pass' &&
         new Headers(init.headers).get('Authorization') ===
-        `Basic ${btoa('tester:pw')}`;
+          `Basic ${btoa('tester:pw')}`;
       return Promise.resolve(
         answer(
           authorised
@@ -49,7 +66,9 @@ function hosts(override: Override = {}): Fetch {
     }
     if (url === `${API_HOST}/health` && init.method === 'POST')
       return Promise.resolve(
-        answer({ status: 405, headers: { Allow: 'GET' } }, 'post'),
+        pass === 'api-pass'
+          ? answer({ status: 405, headers: { Allow: 'GET' } }, 'post')
+          : new Response(null, { status: 401 }),
       );
     if (url === `${SITE_HOST}/hooks/github`) {
       const body = typeof init.body === 'string' ? init.body : '';
@@ -58,13 +77,18 @@ function hosts(override: Override = {}): Fetch {
         new Headers(init.headers).get('X-Hub-Signature-256') === expected;
       return Promise.resolve(answer({ status: signed ? 204 : 401 }, 'hook'));
     }
-    if (url === `${ADAPTER_OWN}/`)
-      return Promise.resolve(answer({ status: 404, body: 'not found' }, 'own'));
     return Promise.reject(new Error(`unexpected request: ${url}`));
   };
 }
 
 describe('verifyDevHosts (#816)', () => {
+  it('reads the dev doors on yaweloidle.com, never an old host (#1013)', () => {
+    expect([SITE_HOST, API_HOST]).toEqual([
+      'https://dev.yaweloidle.com',
+      'https://dev-api.yaweloidle.com',
+    ]);
+  });
+
   it('finds nothing when every host answers as the real Workers do', async () => {
     expect(await verifyDevHosts(hosts(), INPUTS)).toEqual([]);
   });
@@ -86,6 +110,36 @@ describe('verifyDevHosts (#816)', () => {
     });
     expect(problems).toEqual([
       `${SITE_HOST}/play?q=1: expected the game's 307 to /play/?q=1, got 401 to null`,
+    ]);
+  });
+
+  it('sends each door its own DEV pass, and the webhook none (#1155)', async () => {
+    await verifyDevHosts(hosts(), INPUTS);
+    expect(passes).toEqual([
+      `${SITE_HOST}/play?q=1 site-pass`,
+      `${API_HOST}/health api-pass`,
+      `${SITE_HOST}/hooks/github -`,
+      `${SITE_HOST}/hooks/github -`,
+    ]);
+  });
+
+  it('names a site door that refuses the pass (#1155)', async () => {
+    const problems = await verifyDevHosts(hosts(), {
+      ...INPUTS,
+      sitePass: 'stale',
+    });
+    expect(problems).toEqual([
+      `${SITE_HOST}/play?q=1: expected the game's 307 to /play/?q=1, got 401 to null`,
+    ]);
+  });
+
+  it('names an API door that refuses the pass (#1155)', async () => {
+    const problems = await verifyDevHosts(hosts(), {
+      ...INPUTS,
+      apiPass: 'stale',
+    });
+    expect(problems).toEqual([
+      `${API_HOST}/health POST: expected the sync Worker's 405 allowing GET, got 401 allowing null`,
     ]);
   });
 
@@ -118,24 +172,29 @@ describe('verifyDevHosts (#816)', () => {
       `${SITE_HOST}/hooks/github: a ping one byte longer than its signature should be refused 401, got 204`,
     ]);
   });
+});
 
-  it('names the adapter’s own address reaching a Worker', async () => {
-    const problems = await verifyDevHosts(
-      hosts({ own: { status: 200, body: 'a page' } }),
-      INPUTS,
-    );
-    expect(problems).toEqual([
-      `${ADAPTER_OWN}/: expected the adapter's 404 "not found", got 200`,
-    ]);
+describe('inputsFrom (#1155)', () => {
+  const ENV = {
+    DEV_BASIC_AUTH_PASSWORD: 'pw',
+    DEV_PASS_SITE: 'site-pass',
+    DEV_PASS_API: 'api-pass',
+    ROADMAP_WEBHOOK_SECRET: 'secret',
+  };
+
+  it('reads every input from its variable', () => {
+    expect(inputsFrom(ENV)).toEqual(INPUTS);
   });
 
-  it('names a 404 that is not the adapter’s own', async () => {
-    const problems = await verifyDevHosts(
-      hosts({ own: { status: 404, body: 'Cloudflare: no such project' } }),
-      INPUTS,
+  it.each(Object.keys(ENV))('refuses a missing %s, naming it', (name) => {
+    expect(() => inputsFrom({ ...ENV, [name]: undefined })).toThrow(
+      `${name} is not set`,
     );
-    expect(problems).toEqual([
-      `${ADAPTER_OWN}/: expected the adapter's 404 "not found", got 404`,
-    ]);
+  });
+
+  it.each(Object.keys(ENV))('refuses an empty %s, naming it', (name) => {
+    expect(() => inputsFrom({ ...ENV, [name]: '' })).toThrow(
+      `${name} is not set`,
+    );
   });
 });

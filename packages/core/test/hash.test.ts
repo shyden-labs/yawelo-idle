@@ -3,7 +3,8 @@ import { syntheticCourse } from '../fixtures/synthetic-course';
 import { HOUR_MS, wallMs, type WallMs } from '../src/clock';
 import type { Course } from '../src/course';
 import type { GameEvent } from '../src/events';
-import { canonical, stateHash } from '../src/hash';
+import { createHash } from 'node:crypto';
+import { canonical, canonicalHash, stateHash } from '../src/hash';
 import { replay } from '../src/log';
 import { newWordMemory } from '../src/memory';
 import { Num } from '../src/num';
@@ -287,3 +288,18 @@ const NEW_GAME_HASH =
   'bb53f45ea0d321816ce63613f26fb7c9e2f74be5db685ea7922acbd1e3aecc3b';
 /** The lived state holds 60 numbers (measured in #34); the floor is 59. */
 const NUMERIC_FLOOR = 59;
+
+// The content build's version (#106) hashes plain data the same way.
+describe('canonicalHash (#106)', () => {
+  it('is SHA-256 of the canonical form, as 64 lowercase hex digits', () => {
+    const value = { b: [1, 'two'], a: { c: null, d: true } };
+    expect(canonicalHash(value)).toBe(
+      createHash('sha256').update(canonical(value), 'utf8').digest('hex'),
+    );
+  });
+
+  it('is what stateHash gives for a state', () => {
+    const state = initialState(START, 34);
+    expect(canonicalHash(state)).toBe(stateHash(state));
+  });
+});

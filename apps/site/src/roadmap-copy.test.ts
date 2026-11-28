@@ -2,16 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { COPY } from './copy';
 
 /**
- * The roadmap page's own words (#830 AC1): the intro, what "launch" means
- * and how to read the percentage, approved by Shyden on 2026-11-13 as
- * drafted on the ticket, and their Indonesian with the note that ticket
- * titles and island summaries stay English. The Indonesian's evidence is in
+ * The roadmap page's own words (#830 AC1) for the voyage map (#1068): the
+ * intro and how to read the bar, approved by Shyden on 2026-11-24, and what
+ * "launch" means, approved on 2026-11-13. The Indonesian page carries no note
+ * about ticket titles: the map shows none, its summaries are Indonesian, and
+ * the map's own note says island names stay English. The Indonesian's
+ * evidence is in docs/translations/2026-11-24-roadmap-words-id.md and
  * docs/translations/2026-11-14-roadmap-id.md.
  */
 describe('the roadmap page’s text in English (#830)', () => {
-  it('opens with the approved intro', () => {
+  it('opens by saying what the map shows', () => {
     expect(COPY.en.voyage.intro).toBe(
-      'This is where the work on Yawelo Idle stands, read live from the development board. It updates by itself as work moves, with no need to reload.',
+      'This map shows how far Yawelo Idle has come on its way to launch. Each island is one stage of building the game. Tap or click an island to see what it brings.',
     );
   });
 
@@ -21,9 +23,9 @@ describe('the roadmap page’s text in English (#830)', () => {
     );
   });
 
-  it('says how to read the percentage', () => {
+  it('says how to read the bar', () => {
     expect(COPY.en.voyage.howToRead).toBe(
-      'The percentage counts finished stories out of all the stories planned so far. A story is one piece of work. New stories are added as the game grows, so the figure can fall as well as rise. Points show the size of the work left: a bigger job has more points. The date is a forecast from the last seven days’ pace, not a promise.',
+      'The bar shows how much of the planned work is done. New work is added as the game grows, so the bar can move back as well as forward.',
     );
   });
 
@@ -33,9 +35,9 @@ describe('the roadmap page’s text in English (#830)', () => {
 });
 
 describe('the roadmap page’s text in Indonesian (#830)', () => {
-  it('opens with the intro', () => {
+  it('opens by saying what the map shows', () => {
     expect(COPY.id.voyage.intro).toBe(
-      'Inilah perkembangan pengerjaan Yawelo Idle, dibaca langsung dari papan pengembangan. Halaman ini diperbarui sendiri saat pekerjaan berjalan, tanpa perlu dimuat ulang.',
+      'Peta ini menunjukkan sejauh mana Yawelo Idle telah berjalan menuju peluncuran. Setiap pulau adalah satu tahap pembuatan game. Ketuk atau klik sebuah pulau untuk melihat apa yang dibawanya.',
     );
   });
 
@@ -45,15 +47,39 @@ describe('the roadmap page’s text in Indonesian (#830)', () => {
     );
   });
 
-  it('says how to read the percentage', () => {
+  it('says how to read the bar', () => {
     expect(COPY.id.voyage.howToRead).toBe(
-      'Persentase ini menghitung cerita yang sudah selesai dari semua cerita yang direncanakan sejauh ini. Satu cerita adalah satu bagian pekerjaan. Cerita baru ditambahkan seiring game berkembang, jadi angkanya bisa turun maupun naik. Poin menunjukkan besarnya pekerjaan yang tersisa: pekerjaan yang lebih besar punya poin lebih banyak. Tanggalnya adalah perkiraan dari laju tujuh hari terakhir, bukan janji.',
+      'Bilah ini menunjukkan berapa banyak pekerjaan yang direncanakan sudah selesai. Pekerjaan baru ditambahkan seiring game berkembang, jadi bilahnya bisa mundur maupun maju.',
     );
   });
 
-  it('notes that ticket titles and island summaries stay English', () => {
-    expect(COPY.id.voyage.englishNote).toBe(
-      'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.',
-    );
+  it('carries no note about ticket titles, since the map shows none', () => {
+    expect(COPY.id.voyage.englishNote).toBeNull();
   });
+});
+
+/**
+ * The map's words when it cannot draw (#1104 AC2): no loading or failure line
+ * reaches visitors, and a visitor without JavaScript is told the map needs it
+ * (Shyden, 2026-11-27: "Say JS is needed", the line as he saw it). Like the
+ * map's other labels, an English placeholder on both pages for now.
+ */
+describe('the voyage map says nothing of loading or failing (#1104)', () => {
+  const voyage = (locale: 'en' | 'id'): Record<string, unknown> =>
+    COPY[locale].voyage as unknown as Record<string, unknown>;
+
+  it.each(['en', 'id'] as const)(
+    'has no loading or failure line on the %s page, and says the map needs JavaScript',
+    (locale) => {
+      expect({
+        loading: voyage(locale)['loading'],
+        failed: voyage(locale)['failed'],
+        needsScript: voyage(locale)['needsScript'],
+      }).toEqual({
+        loading: undefined,
+        failed: undefined,
+        needsScript: 'The map needs JavaScript to show.',
+      });
+    },
+  );
 });

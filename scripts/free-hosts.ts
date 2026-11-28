@@ -11,6 +11,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { byCodeUnit } from '../packages/core/src/order.ts';
 
 export const FREE_HOSTS: readonly string[] = [
   'r2.dev',
@@ -35,7 +36,7 @@ const ADDRESS = new RegExp(
 export function freeHostProblems(
   files: Readonly<Record<string, string>>,
 ): string[] {
-  const paths = Object.keys(files).sort();
+  const paths = Object.keys(files).sort(byCodeUnit);
   if (paths.length === 0) return ['no built files to check'];
   return paths.flatMap((path) => {
     const found = new Set(

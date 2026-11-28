@@ -16,7 +16,7 @@
  * PLANT_FAILING_DOOR stands in three 5xx answers for that door: the planted
  * failure that proves the check speaks, on GitHub itself.
  */
-import { DOORS } from '../apps/door/worker/door.ts';
+import { DOORS } from '../apps/door/worker/doors.ts';
 import { report, type Outage } from './issue-report.ts';
 import { runGh } from './npm-audit.ts';
 

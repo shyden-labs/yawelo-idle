@@ -8,6 +8,8 @@ It is built once for the web and shipped to browsers (PWA), Steam (Electron) and
 
 **Pre-alpha: design complete, foundations in progress.** Nothing is playable yet. Work is tracked on the [Yawelo Idle Stories](https://github.com/orgs/shyden-labs/projects/4) board.
 
+Progress towards launch, with an estimated date, is on the [Road to Launch](https://claude.ai/artifact/KcGNj2UbzSdtcGjvyzMCyb) page.
+
 ## Read first
 
 - [Design spec](docs/superpowers/specs/2026-10-01-yawelo-idle-design.md): the source of truth. It covers the core loop, progression, content, architecture, fair play and testing.
@@ -30,7 +32,7 @@ npm run build
 
 Every change follows test-driven development, and each ticket gets its own branch with a PR into `develop`. Third-party GitHub Actions are pinned to full commit SHAs, Dependabot opens its PRs against `develop`, and `tests/unit/supply-chain.test.ts` enforces both.
 
-Every merge to `develop` deploys dev (web and sync Workers, D1) and verifies it live before marking it `dev-verified`. Dev is at `https://dev.yawelo-idle.shyden.co.uk`, behind the shared Shyden Labs dev password, showing the holding page production shows, with the game at `/play/`; the site being built is at `https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev` behind the same password (#673); with the sync API at `https://dev-api.yawelo-idle.shyden.co.uk`. The Workers and the D1 database live in Yawelo Idle's non-PROD Cloudflare account, beside TEST only, so no dev credential can reach production (#395, #784). The dev names are carried by a Pages project, `apps/dev-hosts`, still in the shared "Shyden Labs Dev" account, which passes each request on to its Worker's workers.dev address as that Worker's front door would, with the dev door secret (#429, #784).
+Every merge to `develop` deploys dev (web and sync Workers, D1) and verifies it live before marking it `dev-verified`. Dev is at `https://dev.yaweloidle.com`, behind the shared Shyden Labs dev password, showing the holding page production shows, with the game at `/play/`; the site being built is at `https://yawelo-idle-site-dev.yawelo-idle-non-prod.workers.dev` behind the same password (#673); with the sync API at `https://dev-api.yaweloidle.com`. The Workers and the D1 database live in Yawelo Idle's non-PROD Cloudflare account, beside TEST only, so no dev credential can reach production (#395, #784). The dev names are carried by a Pages project, `apps/dev-hosts`, still in the shared "Shyden Labs Dev" account, which passes each request on to its Worker's workers.dev address as that Worker's front door would, with the dev door secret (#429, #784).
 
 ## Licences
 

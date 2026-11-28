@@ -9,14 +9,13 @@ import type { AddressInfo } from 'node:net';
 import {
   NO_INDEX,
   basicAuthorization,
+  failureReason,
   gateJudgement,
   gameShellJudgement,
   gameShellProblems,
   gateProblems,
   healthJudgement,
   healthProblems,
-  holdingJudgement,
-  holdingProblems,
   leaked,
   PREVIEW_PAGES,
   roadmapJudgement,
@@ -31,9 +30,6 @@ import {
   SITE_PAGES,
   siteJudgement,
   siteProblems,
-  stylesheetJudgement,
-  stylesheetOf,
-  stylesheetProblems,
   verifyDev,
   webJudgement,
   webProblems,
@@ -56,6 +52,8 @@ warm.close();
 const SHA = 'd547bd669678987eb85b5807d1a26ea55eaeb987';
 const OLD = '1f660b30f75d081ae6559d175e5c0c3e26acb84c';
 const PASSWORD = 'pä:ss';
+/** The dev door secret CI holds to stand in for the door (#1078). */
+const DOOR_SECRET = 'door-sëcret';
 const ROBOTS = '# blocked\nUser-agent: *\nDisallow: /\n';
 const page = (sha: string) =>
   `<!doctype html><html><head><meta name="yawelo-idle-commit" content="${sha}" /></head></html>`;
@@ -76,7 +74,6 @@ const shell = (sha: string) =>
 const noindex = { 'x-robots-tag': NO_INDEX };
 const policy = { 'content-security-policy': CONTENT_SECURITY_POLICY };
 const STYLESHEET = '/_astro/Holding.Bd-ZPiSZ.css';
-const CSS = 'text/css; charset=utf-8';
 /** The holding page as its build writes it (Holding.astro, #673). */
 const holding = (sha: string) =>
   page(sha)
@@ -95,37 +92,6 @@ const site = (sha: string) =>
     '<body><p class="dev-strip" data-dev-strip>In development</p></body></html>',
   );
 
-describe('holdingProblems (#673)', () => {
-  it('accepts the holding page with its commit, noindex and mark', () => {
-    const judged = holdingJudgement(probe(200, holding(SHA), noindex), SHA);
-    expect(judged.problems).toEqual([]);
-  });
-
-  it('fails the site being built served in its place', () => {
-    expect(holdingProblems(probe(200, site(SHA), noindex), SHA)).toEqual([
-      'web: not the holding page: no data-coming-soon mark',
-    ]);
-  });
-
-  it('fails a page that names the mark only in its text', () => {
-    const text = page(SHA).replace(
-      '</html>',
-      '<body><p>data-coming-soon</p></body></html>',
-    );
-    expect(holdingProblems(probe(200, text, noindex), SHA)).toEqual([
-      'web: not the holding page: no data-coming-soon mark',
-    ]);
-  });
-
-  it('fails a non-200 and judges nothing after it', () => {
-    const judged = holdingJudgement(probe(404, holding(SHA), noindex), SHA);
-    expect(judged).toEqual({
-      checked: ['status'],
-      problems: ['web: status 404 with the password, expected 200'],
-    });
-  });
-});
-
 describe('siteProblems (#673)', () => {
   it('accepts the site being built with its commit, noindex and mark', () => {
     const judged = siteJudgement(probe(200, site(SHA), noindex), SHA, 'site /');
@@ -139,60 +105,43 @@ describe('siteProblems (#673)', () => {
   });
 });
 
-describe('stylesheetOf (#673)', () => {
-  it('names the stylesheet the page links', () => {
-    expect(stylesheetOf(holding(SHA))).toBe(STYLESHEET);
-  });
-
-  it('names none in a page that links none', () => {
-    expect(stylesheetOf(site(SHA))).toBeUndefined();
-  });
-
-  it('names none for a link that is not a stylesheet', () => {
-    expect(
-      stylesheetOf('<link rel="alternate" href="/_astro/x.css">'),
-    ).toBeUndefined();
-  });
-
-  it('names the stylesheet whatever the order of its attributes', () => {
-    expect(stylesheetOf(`<link href="${STYLESHEET}" rel="stylesheet">`)).toBe(
-      STYLESHEET,
-    );
-  });
-});
-
-describe('stylesheetProblems (#673)', () => {
-  const label = `web ${STYLESHEET}`;
-
-  it('accepts CSS with noindex', () => {
-    const judged = stylesheetJudgement(
-      label,
-      probe(200, 'body{}', { 'content-type': CSS, ...noindex }),
-    );
-    expect(judged.problems).toEqual([]);
-  });
-
-  it('fails a stylesheet served as a page', () => {
-    expect(
-      stylesheetProblems(
-        label,
-        probe(200, '<html>', { 'content-type': 'text/html', ...noindex }),
-      ),
-    ).toEqual([`${label}: Content-Type is "text/html", expected text/css`]);
-  });
-
-  it('fails a stylesheet without the noindex header', () => {
-    expect(
-      stylesheetProblems(label, probe(200, 'body{}', { 'content-type': CSS })),
-    ).toEqual([`${label}: X-Robots-Tag is null, expected "${NO_INDEX}"`]);
-  });
-
-  it('fails a non-200 and judges nothing after it', () => {
-    const judged = stylesheetJudgement(label, probe(404, '', noindex));
-    expect(judged).toEqual({
-      checked: ['status'],
-      problems: [`${label}: status 404 with the password, expected 200`],
+describe('failureReason (#1101)', () => {
+  it("names the cause's code and message", () => {
+    const cause = Object.assign(new Error('read ECONNRESET'), {
+      code: 'ECONNRESET',
     });
+    expect(failureReason(new TypeError('fetch failed', { cause }))).toBe(
+      'fetch failed (ECONNRESET: read ECONNRESET)',
+    );
+  });
+
+  it('names a cause with no code by its message', () => {
+    const cause = new Error('other side closed');
+    expect(failureReason(new TypeError('fetch failed', { cause }))).toBe(
+      'fetch failed (other side closed)',
+    );
+  });
+
+  it('names a cause that is not an Error as text', () => {
+    expect(
+      failureReason(new TypeError('fetch failed', { cause: 'socket hang up' })),
+    ).toBe('fetch failed (socket hang up)');
+  });
+
+  it('names a cause that is a plain object by its JSON, not [object Object]', () => {
+    expect(
+      failureReason(
+        new TypeError('fetch failed', { cause: { code: 'UND_ERR_SOCKET' } }),
+      ),
+    ).toBe('fetch failed ({"code":"UND_ERR_SOCKET"})');
+  });
+
+  it('reads as the message alone when there is no cause', () => {
+    expect(failureReason(new Error('fetch failed'))).toBe('fetch failed');
+  });
+
+  it('reads a thrown value that is not an Error as text', () => {
+    expect(failureReason('aborted')).toBe('aborted');
   });
 });
 
@@ -496,7 +445,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
+      'roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift 2026-10-06T12:41:00.000Z, last event 2026-10-06T12:58:00.000Z, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -510,7 +459,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
+      'roadmap: drift 2 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift missing, last event null, last check 2026-10-06T12:51:00.000Z)',
     ]);
   });
 
@@ -572,7 +521,7 @@ describe('roadmapProblems (#341)', () => {
         DEPLOYED,
       ),
     ).toEqual([
-      'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago: the cron is not running',
+      'roadmap: last check 2026-10-06T12:39:59.000Z, more than 20 minutes ago, though verify visited the roadmap first',
     ]);
   });
 
@@ -589,7 +538,7 @@ describe('roadmapProblems (#341)', () => {
     expect(
       roadmapProblems(health({ lastCheckAt: null }), NOW, DEPLOYED),
     ).toEqual([
-      'roadmap: last check null, more than 20 minutes ago: the cron is not running',
+      'roadmap: last check null, more than 20 minutes ago, though verify visited the roadmap first',
     ]);
   });
 
@@ -633,7 +582,7 @@ describe('roadmapProblems (#341)', () => {
     ).toEqual({
       checked: ALL_ROADMAP_CHECKS,
       problems: [
-        'roadmap: last check soon, more than 20 minutes ago: the cron is not running',
+        'roadmap: last check soon, more than 20 minutes ago, though verify visited the roadmap first',
       ],
     });
   });
@@ -670,14 +619,12 @@ describe('verifyDev', () => {
   /** The site Worker's own address, which shows the site being built (#673). */
   let siteServer: Server;
   let siteBase = '';
-  /** The front door serves the site being built in place of the holding page. */
-  let plantSite = false;
+  /** The front door serves the holding page in place of the site being built. */
+  let plantHolding = false;
   /** The site's own address serves the holding page in place of the site. */
   let siteServesHolding = false;
   /** The site's own address serves its pages to anyone. */
   let ungatedSite = false;
-  /** The status the holding page's stylesheet answers with. */
-  let styleStatus = 200;
   let served = SHA;
   let gated = true;
   let tagged = true;
@@ -714,6 +661,8 @@ describe('verifyDev', () => {
   let webStale = 0;
   let healthStale = 0;
   const seenAuthorization: string[] = [];
+  /** Each request's door name, or '-' without the right secret (#1078). */
+  const seenDoors: string[] = [];
   /** What /api/roadmap/health answers to an authorised request (#341). */
   let roadmap: Record<string, unknown> = {};
   /** Records answered first, one per look, before `roadmap` (#708). */
@@ -733,8 +682,21 @@ describe('verifyDev', () => {
         : {};
       const authorization = req.headers.authorization ?? '';
       seenAuthorization.push(authorization);
+      // The origins believe a door's name only alongside its secret, as
+      // apps/door/worker/origin.ts doorOf does (#1078).
+      const door =
+        req.headers['x-yawelo-door-secret'] === DOOR_SECRET
+          ? String(req.headers['x-yawelo-door'] ?? '-')
+          : '-';
+      seenDoors.push(`${role}:${req.url ?? ''} ${door}`);
       const authorised = authorization === basicAuthorization(PASSWORD);
       if (req.url === '/health') {
+        // The sync Worker, behind its door (origin.ts behindDoor).
+        if (door !== 'dev-api.yaweloidle.com') {
+          res.writeHead(403, { 'content-type': 'text/plain', ...tag });
+          res.end('behind the door');
+          return;
+        }
         healthStale += 1;
         const commit = healthStale <= staleLooks ? OLD : served;
         res.writeHead(200, { 'content-type': 'application/json', ...tag });
@@ -771,11 +733,6 @@ describe('verifyDev', () => {
           ...gamePolicy,
         });
         res.end('export {};');
-        return;
-      }
-      if (role === 'web' && req.url === STYLESHEET && authorised) {
-        res.writeHead(styleStatus, { 'content-type': CSS, ...tag });
-        res.end('body{}');
         return;
       }
       if (req.url === '/robots.txt') {
@@ -826,7 +783,9 @@ describe('verifyDev', () => {
         res.end(noScript ? page(commit) : shell(commit));
       else if (role === 'site')
         res.end(siteServesHolding ? holding(commit) : site(commit));
-      else res.end(plantSite ? site(commit) : holding(commit));
+      // The site Worker shows the site being built at its door and at its
+      // own address (#1078).
+      else res.end(plantHolding ? holding(commit) : site(commit));
     };
 
   const listen = async (handler: Server): Promise<string> => {
@@ -855,13 +814,13 @@ describe('verifyDev', () => {
     gameUrl: `${base}/retired-game/`,
     sha: SHA,
     password: PASSWORD,
+    doorSecret: DOOR_SECRET,
   });
 
   const reset = () => {
-    plantSite = false;
+    plantHolding = false;
     siteServesHolding = false;
     ungatedSite = false;
-    styleStatus = 200;
     served = SHA;
     gated = true;
     tagged = true;
@@ -886,6 +845,7 @@ describe('verifyDev', () => {
     webStale = 0;
     healthStale = 0;
     seenAuthorization.length = 0;
+    seenDoors.length = 0;
     roadmap = {
       lastEventAt: null,
       lastCheckAt: new Date().toISOString(),
@@ -910,7 +870,7 @@ describe('verifyDev', () => {
     const replaced = (at: number) =>
       `roadmap: last check ${before(at)} was made before the deploy at ${new Date(at).toISOString()}, by the code that deploy replaced`;
 
-    it('waits past checks the old code made, then judges the first one after the deploy, with the password', async () => {
+    it('visits once, then waits past checks the old code made and judges the first one after the deploy, with the password', async () => {
       reset();
       const at = deployed();
       roadmapLooks = [
@@ -925,10 +885,30 @@ describe('verifyDev', () => {
       // test before they were checked (measured on #332).
       const looked = looks();
       expect(looked).toBe(3);
+      // One visit first, so the deployed code reads the board (#1074): with
+      // no cron, nothing else would make a check after the deploy.
+      expect(seenUrls.filter((url) => url.startsWith('/api/roadmap'))).toEqual([
+        '/api/roadmap.json',
+        ROADMAP,
+        ROADMAP,
+        ROADMAP,
+      ]);
       expect(seenAuthorization).toEqual([
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
         basicAuthorization(PASSWORD),
+        basicAuthorization(PASSWORD),
+      ]);
+      // At the site Worker's own address, standing in for its door (#1078):
+      // once the origins require the door, nothing else would be let in.
+      const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+      expect(
+        seenDoors.filter((seen) => seen.startsWith('web:/api/roadmap')),
+      ).toEqual([
+        front('/api/roadmap.json'),
+        front(ROADMAP),
+        front(ROADMAP),
+        front(ROADMAP),
       ]);
       expect(problems).toEqual([]);
     });
@@ -957,7 +937,7 @@ describe('verifyDev', () => {
       expect(
         await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
       ).toEqual([
-        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through the 10-minute check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
+        `roadmap: drift 1 since a webhook last delivered a change: a board change reached the roadmap only through a visit’s check, so a webhook was missed (last drift 2026-10-19T00:50:00.000Z, last event null, last check ${String(roadmap.lastCheckAt)})`,
       ]);
       expect(looks()).toBe(1);
     });
@@ -988,7 +968,11 @@ describe('verifyDev', () => {
       expect(
         await verifyRoadmap(target(), deployed(), { polls: 3, pollMs: 0 }),
       ).toEqual([
-        `roadmap: request to ${new URL(ROADMAP, base).href} failed: fetch failed`,
+        expect.stringMatching(
+          new RegExp(
+            `^roadmap: request to ${new URL(ROADMAP, base).href.replaceAll('.', '\\.')} failed: fetch failed \\(.+\\)$`,
+          ),
+        ),
       ]);
       expect(looks()).toBe(1);
     });
@@ -1028,7 +1012,6 @@ describe('verifyDev', () => {
       ...SITE_PAGES,
       ...PREVIEW_PAGES.map((path) => `site:${path}`),
       '/robots.txt',
-      STYLESHEET,
       SCRIPT,
       '/play/',
       'site:/',
@@ -1043,10 +1026,26 @@ describe('verifyDev', () => {
       ...PREVIEW_PAGES.map(() => basicAuthorization(PASSWORD)),
       '',
       basicAuthorization(PASSWORD),
-      basicAuthorization(PASSWORD),
       '',
       '',
       '',
+    ]);
+    // CI stands in for the door at the origins' own addresses (#1078): the
+    // front door's looks name dev.yaweloidle.com, sync's dev-api, and the
+    // site being built and the retired game address carry no door at all.
+    const front = (path: string) => `web:${path} dev.yaweloidle.com`;
+    expect(seenDoors).toEqual([
+      front('/'),
+      front('/'),
+      front('/'),
+      'web:/health dev-api.yaweloidle.com',
+      ...SITE_PAGES.map(front),
+      ...PREVIEW_PAGES.map((path) => `site:${path} -`),
+      front('/robots.txt'),
+      front(SCRIPT),
+      front('/play/'),
+      'site:/ -',
+      'web:/retired-game/ -',
     ]);
     expect(problems).toEqual([]);
   });
@@ -1059,21 +1058,12 @@ describe('verifyDev', () => {
     expect(PREVIEW_PAGES).toEqual(['/', '/id/', '/roadmap']);
   });
 
-  it('fails a front door serving the site being built in place of the holding page (#673)', async () => {
+  it('fails a front door serving the holding page in place of the site being built (#1078)', async () => {
     reset();
-    plantSite = true;
+    plantHolding = true;
     expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      'web: not the holding page: no data-coming-soon mark',
-      'web /id/: not the holding page: no data-coming-soon mark',
-      'web: no stylesheet in the page',
-    ]);
-  });
-
-  it('fails a holding page whose stylesheet is not served (#673)', async () => {
-    reset();
-    styleStatus = 404;
-    expect(await verifyDev(target(), { polls: 3, pollMs: 0 })).toEqual([
-      `web ${STYLESHEET}: status 404 with the password, expected 200`,
+      'web: not the site being built: no data-dev-strip mark',
+      'web /id/: not the site being built: no data-dev-strip mark',
     ]);
   });
 
@@ -1128,7 +1118,7 @@ describe('verifyDev', () => {
     // test before it ran (measured on #332).
     // The roadmap's health is no longer among the last look's probes: its
     // own job judges it once a check after the deploy exists (#708).
-    expect(requests, 'two looks of nine probes, then one of fifteen').toBe(33);
+    expect(requests, 'two looks of nine probes, then one of fourteen').toBe(32);
     expect(problems).toEqual([]);
   });
 
@@ -1200,8 +1190,8 @@ describe('verifyDev', () => {
     // test before it ran (measured on #332).
     expect(
       requests,
-      'two stale looks of four probes, then one of fifteen',
-    ).toBe(23);
+      'two stale looks of four probes, then one of fourteen',
+    ).toBe(22);
     expect(problems).toEqual([]);
   });
 
@@ -1244,7 +1234,7 @@ describe('verifyDev', () => {
       'web without credentials: answered 302, expected 401; the password gate is not in front of it',
       'web without credentials: no Basic WWW-Authenticate challenge',
     ]);
-    expect(requests, 'one look of fifteen probes').toBe(15);
+    expect(requests, 'one look of fourteen probes').toBe(14);
   });
 
   it('fails at once when a host that has answered drops a connection', async () => {
@@ -1267,7 +1257,7 @@ describe('verifyDev', () => {
         new RegExp(`^robots\\.txt: request to ${base}/robots\\.txt failed: `),
       ),
     ]);
-    expect(requests, 'one look of fifteen probes').toBe(15);
+    expect(requests, 'one look of fourteen probes').toBe(14);
   });
 
   it('fails when the noindex header is missing everywhere', async () => {
@@ -1284,7 +1274,6 @@ describe('verifyDev', () => {
         (path) =>
           `site ${path}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       ),
-      `web ${STYLESHEET}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
       `web ${SCRIPT}: X-Robots-Tag is null, expected "noindex, nofollow, noarchive"`,
     ]);
   });
@@ -1350,7 +1339,7 @@ describe('verifyDev', () => {
     // Every kind of message: a judged leak, a wait, judged answers, failed requests.
     expect(leaking).toHaveLength(6);
     expect(stale).toHaveLength(3);
-    expect(untagged).toHaveLength(9);
+    expect(untagged).toHaveLength(8);
     expect(unreachable).toHaveLength(3);
     expect(roadmapWaited).toHaveLength(2);
     expect(roadmapUnreachable).toHaveLength(1);
@@ -1364,6 +1353,8 @@ describe('verifyDev', () => {
     ];
     const credential = basicAuthorization(PASSWORD).slice(6);
     const showingPassword = reported.filter((p) => p.includes(PASSWORD));
+    const showingDoorSecret = reported.filter((p) => p.includes(DOOR_SECRET));
+    expect(showingDoorSecret).toEqual([]);
     const showingCredential = reported.filter((p) => p.includes(credential));
     expect(showingPassword).toEqual([]);
     expect(showingCredential).toEqual([]);

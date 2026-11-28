@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from 'wrangler';
+import { createTestHarness } from '../../../tests/support/create-covered-harness';
 import {
   BLOCKING_ROBOTS_TXT,
   challengeResponse,
@@ -19,12 +19,12 @@ import {
 import { DOOR_HOST_HEADER, DOOR_SECRET_HEADER } from '../../door/worker/door';
 import {
   EXEMPT_PATHS,
-  HOLDING_DOOR,
-  HOLDING_HOST,
+  SITE_DOOR,
   PRIVATE_PATHS,
   ROADMAP_PATHS,
 } from '../worker/routes';
 import { CONTENT_SECURITY_POLICY as GAME_POLICY } from '../../web/worker/policy';
+import { supportPolicy } from '../worker/support';
 
 /**
  * The dev site Worker, served by wrangler's test harness from the real
@@ -56,19 +56,9 @@ const server = createTestHarness({
     {
       configPath: './wrangler.jsonc',
       secrets: { DEV_PASSWORD: PASSWORD, DOOR_SECRET },
-      bindingOverrides: { HOLDING: 'holding-copy' },
     },
     // The real game Worker, the service wrangler.jsonc's GAME binding names.
     { configPath: '../web/wrangler.jsonc' },
-    // The holding page's build, served as assets only, as its dev copy is
-    // (apps/site/holding-dev/wrangler.jsonc, #673).
-    {
-      config: {
-        name: 'holding-copy',
-        compatibility_date: '2026-10-20',
-        assets: { directory: './dist-holding', not_found_handling: '404-page' },
-      },
-    },
   ],
 });
 
@@ -113,9 +103,13 @@ const PAGES: [Locale, Page][] = [
   ['en', 'home'],
   ['en', 'roadmap'],
   ['en', 'privacy'],
+  ['en', 'support'],
+  ['en', 'supportTicket'],
   ['id', 'home'],
   ['id', 'roadmap'],
   ['id', 'privacy'],
+  ['id', 'support'],
+  ['id', 'supportTicket'],
 ];
 
 /** A page's title: a legal page's comes from `LEGAL`, apart from the general copy. */
@@ -315,16 +309,17 @@ describe('the placeholder pages, in both languages (#332 AC1, AC2)', () => {
 });
 
 describe('the roadmap page’s own text, in its language (#830)', () => {
-  /** The Indonesian page's note that the board's own text stays English. */
-  const NOTE =
+  /**
+   * The old Indonesian note that ticket titles and island summaries stayed
+   * English. The voyage map (#1068) shows no ticket titles and its summaries
+   * are Indonesian, so neither page shows it (#830, 2026-11-24).
+   */
+  const OLD_NOTE =
     'Judul tiket dan ringkasan pulau di halaman ini tetap dalam bahasa Inggris.';
 
-  it.each([
-    ['en', false],
-    ['id', true],
-  ] as const)(
-    'the %s roadmap says what it shows, what launch means and how to read it (note shown: %s)',
-    async (locale, noted) => {
+  it.each(['en', 'id'] as const)(
+    'the %s roadmap says what it shows, what launch means and how to read it, with no ticket-titles note',
+    async (locale) => {
       const html = await (
         await get(`${DEV}${pagePath(locale, 'roadmap')}`, authorised)
       ).text();
@@ -333,8 +328,8 @@ describe('the roadmap page’s own text, in its language (#830)', () => {
         html.includes(`<p lang="${locale}">${intro}</p>`),
         html.includes(`<p lang="${locale}">${launch}</p>`),
         html.includes(`<p lang="${locale}">${howToRead}</p>`),
-        html.includes(`<p lang="${locale}">${NOTE}</p>`),
-      ]).toEqual([true, true, true, noted]);
+        html.includes(OLD_NOTE),
+      ]).toEqual([true, true, true, false]);
     },
   );
 });
@@ -353,63 +348,65 @@ describe('legal pages are English and Indonesian (#928)', () => {
       expect(html).toContain(
         `<p data-governing-language>${LEGAL[locale][page].governs}</p>`,
       );
+      // The request counts line (#164 AC2), as the page escapes it.
+      expect(html).toContain(
+        `<p data-request-counts>${LEGAL[locale][page].requestCounts.replaceAll("'", '&#39;')}</p>`,
+      );
       expect(html).not.toContain('data-english-only-note');
     },
   );
 });
 
-/** The dev front door: the holding page, with the game and the roadmap kept (#673). */
-const FRONT = `https://${HOLDING_HOST}`;
+/**
+ * The dev front door, dev.yaweloidle.com: the site being built, with the game
+ * and the roadmap (Shyden, 2026-11-28, #1078: "Built site on dev"; the holding
+ * page production shows is at dev-holding). The door reaches this Worker at
+ * its workers.dev address with the door secret and its own name (#784).
+ */
+const front = (path: string, headers: Record<string, string> = {}) =>
+  get(`${DEV}${path}`, {
+    [DOOR_SECRET_HEADER]: DOOR_SECRET,
+    [DOOR_HOST_HEADER]: SITE_DOOR,
+    ...headers,
+  });
 
-describe('the dev front door shows the holding page production shows (#673)', () => {
+describe('the dev front door shows the site being built (#1078)', () => {
   it.each(['/', '/id/'])(
-    'shows the holding page at %s with the password, noindex added',
+    'shows the site being built at %s with the password, noindex added',
     async (path) => {
-      const response = await get(`${FRONT}${path}`, authorised);
+      const response = await front(path, authorised);
       expect(response.status).toBe(200);
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
       const html = await response.text();
-      expect(html).toContain(' data-coming-soon>');
+      expect(html).toContain(' data-dev-strip>');
+      expect(html).not.toContain(' data-coming-soon>');
     },
   );
-
-  it('serves the stylesheet the holding page links, as CSS', async () => {
-    const html = await (await get(`${FRONT}/`, authorised)).text();
-    // Matched on the page, never on the href: toMatch throws on a missing
-    // href before it adds this message, so the failure would not say why.
-    const link =
-      /<link rel="stylesheet" href="(\/_astro\/Holding\.[^"]+\.css)">/;
-    expect(html, 'the Holding stylesheet').toMatch(link);
-    const href = link.exec(html)?.[1];
-    const response = await get(`${FRONT}${String(href)}`, authorised);
-    expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
-  });
 
   it.each(['/', '/id/', '/no/such/page'])(
     'refuses %s on the front door without credentials',
     async (path) => {
-      const response = await get(`${FRONT}${path}`);
+      const response = await front(path);
       expect(response.status).toBe(401);
       expect(await response.text()).toBe(await challengeResponse().text());
     },
   );
 
   it('serves blocking robots.txt on the front door without credentials', async () => {
-    const response = await get(`${FRONT}/robots.txt`);
+    const response = await front('/robots.txt');
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(BLOCKING_ROBOTS_TXT);
   });
 
   it('forwards the game on the front door', async () => {
-    const response = await get(`${FRONT}/play/`, authorised);
+    const response = await front('/play/', authorised);
     expect(response.status).toBe(200);
     expect(fromGame(response)).toBe(true);
     expect(await response.text()).toBe(GAME_SHELL);
   });
 
-  it('answers the roadmap’s health on the front door, not the holding page', async () => {
-    const response = await get(`${FRONT}${ROADMAP_PATHS.health}`, authorised);
+  it('answers the roadmap’s health on the front door, not a page', async () => {
+    const response = await front(ROADMAP_PATHS.health, authorised);
     expect(response.headers.get('Content-Type')).toMatch(
       /^application\/json\b/,
     );
@@ -418,7 +415,7 @@ describe('the dev front door shows the holding page production shows (#673)', ()
   it.each(EXEMPT_PATHS)(
     'takes %s on the front door without credentials, POST only',
     async (path) => {
-      const response = await get(`${FRONT}${path}`);
+      const response = await front(path);
       expect(response.status).toBe(405);
       expect(response.headers.get('Allow')).toBe('POST');
     },
@@ -435,17 +432,19 @@ describe('the dev front door shows the holding page production shows (#673)', ()
  * and the door's name is believed only with the door secret. The door host
  * is read from routes.ts, never written out (#784 AC1b).
  */
-describe('through the dev site’s door, the holding page (#784)', () => {
+describe('through the dev site’s door, the site being built (#784, #1078)', () => {
   const through = (secret: string) => ({
     ...authorised,
     [DOOR_SECRET_HEADER]: secret,
-    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+    [DOOR_HOST_HEADER]: SITE_DOOR,
   });
 
-  it('shows the holding page at the workers.dev address with the door secret', async () => {
+  it('shows the site being built at the workers.dev address with the door secret', async () => {
     const response = await get(`${DEV}/`, through(DOOR_SECRET));
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain(' data-coming-soon>');
+    const html = await response.text();
+    expect(html).toContain(' data-dev-strip>');
+    expect(html).not.toContain(' data-coming-soon>');
   });
 
   it('keeps the site being built when the door secret is wrong', async () => {
@@ -580,7 +579,7 @@ describe('the private API docs, dev only (#589)', () => {
   });
 
   it('keeps the page behind the password on the dev front door', async () => {
-    expect((await get(`https://${HOLDING_HOST}${DOCS}`)).status).toBe(401);
+    expect((await front(DOCS)).status).toBe(401);
   });
 
   it('refuses a wrong password on dev', async () => {
@@ -638,5 +637,108 @@ describe('the private API docs, dev only (#589)', () => {
         .map((f) => `${root}${f}`),
     );
     expect(linking).toEqual([]);
+  });
+});
+
+/**
+ * The support pages (#860): ShyDesk's piece, loaded from ShyDesk's own dev
+ * host (relayed by shydesk-b1, 2026-11-22), on the site being built and
+ * through the dev front door (#860; it shows the site being built everywhere since #1078)
+ * (Shyden, 2026-11-22: "let /support through the doors").
+ */
+describe('the support pages (#860)', () => {
+  const SHYDESK_DEV = 'https://shydesk.shydesk-non-prod.workers.dev';
+  const SUPPORT: [Locale, Page, 'contact' | 'ticket'][] = [
+    ['en', 'support', 'contact'],
+    ['en', 'supportTicket', 'ticket'],
+    ['id', 'support', 'contact'],
+    ['id', 'supportTicket', 'ticket'],
+  ];
+
+  it.each(SUPPORT)(
+    '%s %s embeds ShyDesk’s %s view from ShyDesk’s dev host, with its own words, through the front door',
+    async (locale, page, view) => {
+      const response = await front(pagePath(locale, page), authorised);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Security-Policy')).toBe(
+        supportPolicy(SHYDESK_DEV),
+      );
+      const html = await response.text();
+      expect(html).not.toContain(' data-coming-soon>');
+      expect(html).toContain(
+        `<script src="${SHYDESK_DEV}/embed.js" defer></script>`,
+      );
+      expect(html).toContain(
+        `<shydesk-support product="yawelo-idle" view="${view}" lang="${locale}"`,
+      );
+      expect(html).toContain(
+        `<h1>${COPY[locale].titles[page as 'support']}</h1>`,
+      );
+      const intro =
+        view === 'contact'
+          ? COPY[locale].support.intro
+          : COPY[locale].support.ticketIntro;
+      expect(html).toContain(`<p data-support-intro>${intro}</p>`);
+      expect(html).toContain(
+        `<p data-support-failed hidden>${COPY[locale].support.failed}</p>`,
+      );
+    },
+  );
+
+  it('serves the stylesheet the support page links through the front door, as CSS', async () => {
+    const html = await (await front('/support', authorised)).text();
+    const link = /<link rel="stylesheet" href="(\/_site\/[^"]+\.css)">/;
+    expect(html, 'a stylesheet under /_site/').toMatch(link);
+    const href = link.exec(html)?.[1];
+    const response = await front(String(href), authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
+  });
+
+  it('serves the script the support page runs through the front door, as JavaScript', async () => {
+    const html = await (await front('/support', authorised)).text();
+    const script =
+      /<script type="module" src="(\/_site\/[^"]+\.js)"><\/script>/;
+    expect(html, 'a module script under /_site/').toMatch(script);
+    const src = script.exec(html)?.[1];
+    const response = await front(String(src), authorised);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toMatch(
+      /^(text|application)\/javascript\b/,
+    );
+  });
+
+  it('sends a browser preferring Indonesian from the ticket address to the Indonesian ticket page', async () => {
+    const response = await front('/support/ticket', {
+      ...authorised,
+      'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
+      'Sec-Fetch-Site': 'cross-site',
+    });
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe('/id/support/ticket');
+  });
+
+  it('keeps the English ticket page for a reader who switched to it on the site', async () => {
+    const response = await front('/support/ticket', {
+      ...authorised,
+      'Accept-Language': 'id-ID,id;q=0.9',
+      'Sec-Fetch-Site': 'same-origin',
+    });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('view="ticket" lang="en"');
+  });
+
+  it.each([DEV, PROD])(
+    'forwards nothing at %s/support-api/embed.js (AC3)',
+    async (origin) => {
+      const response = await get(`${origin}/support-api/embed.js`, authorised);
+      expect(response.status).toBe(404);
+      expect(response.headers.get('Content-Type')).toMatch(/^text\/html\b/);
+    },
+  );
+
+  it('forwards nothing at /support-api/embed.js through the front door (AC3)', async () => {
+    const response = await front('/support-api/embed.js', authorised);
+    expect(response.status).toBe(404);
   });
 });

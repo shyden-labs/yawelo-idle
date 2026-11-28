@@ -4,7 +4,12 @@
 # the deploy job waits for Shyden's approval in the `production` environment,
 # which admits main alone. It deploys the holding page as the assets-only
 # Worker yawelo-idle-site in the production account, tagged with the commit
-# so rollback-prod.yml can return to it, and verifies it from outside.
+# so rollback-prod.yml can return to it, and verifies it from outside. Only
+# when every check passes does it deploy the front door (apps/door, #784)
+# and check that from outside too. All of it is one job, so a release asks
+# for one approval: GitHub asks again for every job naming an environment
+# (Shyden, 2026-11-28, #1152: "only 1 manual approval step required. deploy
+# the door after the deploy-prod verification is successful").
 #
 # Every Cloudflare secret here is a `production` ENVIRONMENT secret, never a
 # repository secret, and no dev workflow names that environment
@@ -36,10 +41,13 @@ jobs:
     # main alone as well.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    # The deploys take about 2 minutes; verify-prod and verify-api each wait
+    # at most 60 looks, 10 s apart, for a new Custom Domain's DNS and
+    # certificate, then judge every check once.
+    timeout-minutes: 30
     environment:
       name: production
-      url: https://yawelo-idle.shyden.co.uk
+      url: https://yaweloidle.com
     # The token is given only to the steps that call Cloudflare, so npm ci's
     # install scripts and the build never hold it.
     env:
@@ -56,10 +64,9 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
       - run: npm ci
-      # The production token must reach the production account (the one that
-      # holds the shyden.co.uk zone) and nothing else.
+      # The production token must reach the production account (Yawelo's own,
+      # which holds the yaweloidle.com zone, #1013) and nothing else.
       - name: Prove the production token reaches the production account alone
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -76,35 +83,49 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"
-
-  verify:
-    needs: deploy
-    runs-on: ubuntu-26.04
-    # verify-prod waits at most 60 looks, 10 s apart, for a new Custom
-    # Domain's DNS and certificate, then judges every check once.
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # The exact Node, from the one file Dependabot bumps (#793, shyden-labs/repo-template#143).
-      - name: Read the exact Node version (docker/node/Dockerfile)
-        id: node
-        run: |
-          version=$(sed -nE 's/^FROM node:([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docker/node/Dockerfile)
-          test -n "$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ steps.node.outputs.version }}
-          cache: 'npm'
-      - run: npm ci
-      # The verify compares production with what this commit builds.
-      - name: Build the holding page this commit released
+        run: npx --no wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"
+      # The production API address, reserved until the production sync Worker
+      # exists (#1013 AC1, #252). Its files are static, so the commit stamp the
+      # verify waits for is written here and never committed.
+      - name: Stamp the API reserve with this commit
+        run: printf '%s\n' "$GITHUB_SHA" > apps/sync-worker/reserve/public/commit.txt
+      - name: Deploy the API reserve, tagged with this commit
         env:
-          YAWELO_IDLE_COMMIT: ${{ github.sha }}
-        run: npm run build:holding --workspace @yawelo-idle/site
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --no wrangler deploy --config apps/sync-worker/reserve/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"
+      # The checks compare production with the holding page built above,
+      # from this commit, and hold no secret.
       - name: Verify production serves this commit, its headers, 404 pages and the video
         env:
-          PROD_URL: https://yawelo-idle.shyden.co.uk
+          PROD_URL: https://yaweloidle.com
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/verify-prod.ts
+      - name: Verify the API address is reserved, serving this commit
+        env:
+          API_URL: https://api.yaweloidle.com
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/verify-api.ts
+      # The door goes live only after the site and API passed every check.
+      # The script picks the file's place itself, a new directory in the
+      # system's temp, and prints it (SonarCloud S8707 on #943); bash's -e
+      # stops the step if the write fails.
+      - name: Write the door's secrets file
+        id: door-secrets
+        env:
+          ORIGIN_DOMAIN: ${{ secrets.DOOR_ORIGIN_DOMAIN }}
+          DEV_DOOR_SECRET: ${{ secrets.DEV_DOOR_SECRET }}
+          TEST_DOOR_SECRET: ${{ secrets.TEST_DOOR_SECRET }}
+          # The DEV pass public keys (#1078): public, so a variable.
+          DEV_PASS_KEYS: ${{ vars.DEV_PASS_KEYS }}
+        run: |
+          path="$(node scripts/door-secrets.ts)"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+      - name: Deploy the front door
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SECRETS_FILE: ${{ steps.door-secrets.outputs.path }}
+        run: npx --no wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"
+      - name: Verify the front door refuses no pass and forwards TEST
+        run: node scripts/verify-door.ts

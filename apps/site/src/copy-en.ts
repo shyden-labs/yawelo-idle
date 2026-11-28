@@ -12,6 +12,13 @@
 import { line, t } from './copy-line';
 import { digits, duration, rankList, rankName, words } from './figures';
 
+/** The support pages' Indonesian evidence (#860). */
+const SUPPORT_ID = 'file:docs/translations/2026-11-22-support-id.md';
+/** The voyage map's Indonesian evidence (#1068). */
+const MAP_ID = 'file:docs/translations/2026-11-22-roadmap-map-id.md';
+/** The roadmap's "Last updated" line's Indonesian evidence (#1074). */
+const UPDATED_ID = 'file:docs/translations/2026-11-23-roadmap-updated-id.md';
+
 export const COPY_EN = {
   devStrip: line(
     'In development: what you see may change, and the released game could be completely different.',
@@ -303,18 +310,16 @@ export const COPY_EN = {
   roadmap: {
     title: line('Roadmap', 'site §5'),
     intro: line(
-      'This is where the work on Yawelo Idle stands, read live from the development board. It updates by itself as work moves, with no need to reload.',
-      'W5',
-      'site §5',
-      'file:docs/translations/2026-11-14-roadmap-id.md',
+      'This map shows how far Yawelo Idle has come on its way to launch. Each island is one stage of building the game. Tap or click an island to see what it brings.',
+      'file:docs/translations/2026-11-24-roadmap-words-id.md',
     ),
     launch: line(
       'Launch is the day Yawelo Idle opens to everyone, free to play in your browser.',
       'file:docs/translations/2026-11-14-roadmap-id.md',
     ),
     howToRead: line(
-      'The percentage counts finished stories out of all the stories planned so far. A story is one piece of work. New stories are added as the game grows, so the figure can fall as well as rise. Points show the size of the work left: a bigger job has more points. The date is a forecast from the last seven days’ pace, not a promise.',
-      'file:docs/translations/2026-11-14-roadmap-id.md',
+      'The bar shows how much of the planned work is done. New work is added as the game grows, so the bar can move back as well as forward.',
+      'file:docs/translations/2026-11-24-roadmap-words-id.md',
     ),
     byTickets: line('By stories', 'site §5'),
     byEffort: line('By effort', 'site §5'),
@@ -323,6 +328,25 @@ export const COPY_EN = {
     done: line('Done', 'site §5'),
     live: line('Live', 'site §5'),
     reconnecting: line('Reconnecting…', 'site §5'),
+  },
+
+  /** The voyage map (#1068), approved by Shyden 2026-11-22 (comments on #1068). */
+  map: {
+    label: line('The voyage to launch', MAP_ID),
+    done: line('Done', MAP_ID),
+    underWay: line('Under way, {percent}% done', MAP_ID),
+    notStarted: line('Not started yet', MAP_ID),
+    brings: line('What this brings', MAP_ID),
+    close: line('Close', MAP_ID),
+    bar: line('{percent}% of the work to launch is done', MAP_ID),
+    season1: line('Expected launch: first half of {year}', MAP_ID),
+    season2: line('Expected launch: second half of {year}', MAP_ID),
+    seasonNote: line(
+      'This is an estimate, not a promise. It can change as the game is built: some parts take longer than planned, and ideas from players can add new work.',
+      MAP_ID,
+    ),
+    /** Shyden's ruling, 2026-11-23 (#1074): date, time and the visitor's zone. */
+    lastUpdated: line('Last updated {date}, {time} {zone}', UPDATED_ID),
   },
 
   privacy: {
@@ -337,6 +361,24 @@ export const COPY_EN = {
       'W17',
       'site §3',
       'site §6.3',
+    ),
+  },
+
+  /** The support and ticket pages around ShyDesk's piece (#860, approved 2026-11-22). */
+  support: {
+    title: line('Support', SUPPORT_ID),
+    intro: line(
+      'Ask a question or report a problem with Yawelo Idle. You can add photos or a video. Replies arrive by email, with a link back to your ticket.',
+      SUPPORT_ID,
+    ),
+    failed: line(
+      'The support form did not load. Check your connection, then reload this page.',
+      SUPPORT_ID,
+    ),
+    ticketTitle: line('Your support ticket', SUPPORT_ID),
+    ticketIntro: line(
+      'Read the replies and answer them here. Keep the link from your email private: anyone who has it can open this ticket.',
+      SUPPORT_ID,
     ),
   },
 

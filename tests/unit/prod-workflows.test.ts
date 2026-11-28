@@ -117,32 +117,58 @@ describe('the production release (#621 AC4)', () => {
     );
     expect(deploy['working-directory']).toBeUndefined();
     expect(deploy.run).toBe(
-      'npx wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
+      'npx --no wrangler deploy --config apps/site/holding/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
     );
-  });
-
-  it('builds the released holding page for the verify to compare with', () => {
-    const build = step(
-      'deploy-prod.yml',
-      'verify',
-      'Build the holding page this commit released',
-    );
-    expect(build.run).toBe(
-      'npm run build:holding --workspace @yawelo-idle/site',
-    );
-    expect(build.env).toEqual({ YAWELO_IDLE_COMMIT: '${{ github.sha }}' });
   });
 
   it('verifies the live page from outside after the deploy', () => {
-    expect(job('deploy-prod.yml', 'verify').needs).toBe('deploy');
     const verify = step(
       'deploy-prod.yml',
-      'verify',
+      'deploy',
       'Verify production serves this commit, its headers, 404 pages and the video',
     );
     expect(verify.run).toBe('node scripts/verify-prod.ts');
     expect(verify.env).toEqual({
-      PROD_URL: 'https://yawelo-idle.shyden.co.uk',
+      PROD_URL: 'https://yaweloidle.com',
+      EXPECTED_SHA: '${{ github.sha }}',
+    });
+  });
+
+  // The API address, reserved until the production sync Worker exists
+  // (#1013 AC1, #252): its files are static, so the commit stamp is written
+  // into them at deploy time and never committed.
+  it('stamps the API reserve with the released commit', () => {
+    const stamp = step(
+      'deploy-prod.yml',
+      'deploy',
+      'Stamp the API reserve with this commit',
+    );
+    expect(stamp.run).toBe(
+      'printf \'%s\\n\' "$GITHUB_SHA" > apps/sync-worker/reserve/public/commit.txt',
+    );
+  });
+
+  it('deploys the API reserve config, named from the repository root, tagged with the commit', () => {
+    const deploy = step(
+      'deploy-prod.yml',
+      'deploy',
+      'Deploy the API reserve, tagged with this commit',
+    );
+    expect(deploy['working-directory']).toBeUndefined();
+    expect(deploy.run).toBe(
+      'npx --no wrangler deploy --config apps/sync-worker/reserve/wrangler.jsonc --tag "$GITHUB_SHA" --message "release $GITHUB_SHA"',
+    );
+  });
+
+  it('verifies the reserved API address from outside after the deploy', () => {
+    const verify = step(
+      'deploy-prod.yml',
+      'deploy',
+      'Verify the API address is reserved, serving this commit',
+    );
+    expect(verify.run).toBe('node scripts/verify-api.ts');
+    expect(verify.env).toEqual({
+      API_URL: 'https://api.yaweloidle.com',
       EXPECTED_SHA: '${{ github.sha }}',
     });
   });
@@ -170,7 +196,7 @@ describe('the production rollback (#621 AC6)', () => {
     expect(find['working-directory']).toBeUndefined();
     expect(find.env?.['COMMIT']).toBe('${{ inputs.commit }}');
     expect(find.run).toContain(
-      'npx wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
+      'npx --no wrangler versions list --config apps/site/holding/wrangler.jsonc --json > "$RUNNER_TEMP/versions.json"',
     );
     expect(find.run).toContain(
       'node scripts/prod-version.ts "$RUNNER_TEMP/versions.json" "$COMMIT"',
@@ -185,7 +211,7 @@ describe('the production rollback (#621 AC6)', () => {
     );
     expect(roll['working-directory']).toBeUndefined();
     expect(roll.run).toBe(
-      'npx wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
+      'npx --no wrangler rollback "$VERSION" --config apps/site/holding/wrangler.jsonc --message "rollback to $COMMIT" --yes',
     );
   });
 
@@ -208,37 +234,43 @@ describe('the production rollback (#621 AC6)', () => {
   });
 });
 
-describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from main)', () => {
-  it('runs only by hand', () => {
-    expect(Object.keys(workflow('deploy-door.yml').on)).toEqual([
-      'workflow_dispatch',
-    ]);
+describe('the front door deploys with the release, after the site is verified (#1152)', () => {
+  // Shyden, 2026-11-28: "these 2 actions should be part of the same workflow
+  // ... with only 1 manual approval step required. deploy the door after the
+  // deploy-prod verification is successful". GitHub asks for an approval per
+  // job naming an environment, so everything runs in the one approved job.
+  const names = (): (string | undefined)[] =>
+    (job('deploy-prod.yml', 'deploy').steps ?? []).map((each) => each.name);
+
+  it('has no workflow of its own any more', () => {
+    expect(readdirSync(WORKFLOWS)).not.toContain('deploy-door.yml');
   });
 
-  it('deploys only from main, in the production environment Shyden approves', () => {
-    const deploy = job('deploy-door.yml', 'deploy');
-    expect(deploy.if).toBe("github.ref == 'refs/heads/main'");
-    expect(environmentOf(deploy)).toBe('production');
+  it('asks for one approval: only the deploy job names the production environment', () => {
+    const jobs = Object.entries(workflow('deploy-prod.yml').jobs)
+      .filter(([, each]) => environmentOf(each) === 'production')
+      .map(([name]) => name);
+    expect(jobs).toEqual(['deploy']);
   });
 
-  it('proves the token reaches the production account alone before anything else touches Cloudflare', () => {
-    const names = (job('deploy-door.yml', 'deploy').steps ?? []).map(
-      (each) => each.name,
-    );
-    const prove =
-      'Prove the production token reaches the production account alone';
-    expect(names.indexOf(prove)).toBeGreaterThan(-1);
-    expect(names.indexOf(prove)).toBeLessThan(
-      names.indexOf("Write the door's secrets file"),
-    );
-    expect(step('deploy-door.yml', 'deploy', prove).run).toBe(
-      'node scripts/token-reach.ts',
-    );
+  it('deploys the door only after every site and API check, then checks the door', () => {
+    const order = [
+      'Deploy the holding page, tagged with this commit',
+      'Deploy the API reserve, tagged with this commit',
+      'Verify production serves this commit, its headers, 404 pages and the video',
+      'Verify the API address is reserved, serving this commit',
+      "Write the door's secrets file",
+      'Deploy the front door',
+      'Verify the front door refuses no pass and forwards TEST',
+    ];
+    const at = order.map((name) => names().indexOf(name));
+    expect(at.every((index) => index > -1)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
   });
 
   it('writes the secrets file from production environment secrets, holding no Cloudflare token', () => {
     const write = step(
-      'deploy-door.yml',
+      'deploy-prod.yml',
       'deploy',
       "Write the door's secrets file",
     );
@@ -246,6 +278,8 @@ describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from 
       ORIGIN_DOMAIN: '${{ secrets.DOOR_ORIGIN_DOMAIN }}',
       DEV_DOOR_SECRET: '${{ secrets.DEV_DOOR_SECRET }}',
       TEST_DOOR_SECRET: '${{ secrets.TEST_DOOR_SECRET }}',
+      // Public keys, so a variable (#1078); the door gets them in its file.
+      DEV_PASS_KEYS: '${{ vars.DEV_PASS_KEYS }}',
     });
     // The script names the file's path itself (SonarCloud S8707 on #943):
     // a failed write stops the step, and the path goes to the deploy.
@@ -256,29 +290,26 @@ describe('the front door deploy (#784; Shyden, 2026-11-10: its own button, from 
   });
 
   it('deploys the door config, named from the repository root, with its secrets, tagged with the commit', () => {
-    const deploy = step('deploy-door.yml', 'deploy', 'Deploy the front door');
+    const deploy = step('deploy-prod.yml', 'deploy', 'Deploy the front door');
     expect(deploy['working-directory']).toBeUndefined();
-    expect(deploy.env?.['SECRETS_FILE']).toBe(
-      '${{ steps.door-secrets.outputs.path }}',
-    );
-    expect(deploy.run).toBe(
-      'npx wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
-    );
-  });
-
-  it('installs without running any install script', () => {
-    const runs = (job('deploy-door.yml', 'deploy').steps ?? []).map(
-      (each) => each.run,
-    );
-    expect(runs).toContain('npm ci --ignore-scripts');
-    expect(runs).not.toContain('npm ci');
-  });
-
-  it('queues behind any production deploy or rollback', () => {
-    expect(workflow('deploy-door.yml').concurrency).toEqual({
-      group: 'deploy-prod',
-      'cancel-in-progress': false,
+    expect(deploy.env).toEqual({
+      CLOUDFLARE_API_TOKEN: '${{ secrets.CLOUDFLARE_API_TOKEN }}',
+      CLOUDFLARE_ACCOUNT_ID: '${{ secrets.CLOUDFLARE_ACCOUNT_ID }}',
+      SECRETS_FILE: '${{ steps.door-secrets.outputs.path }}',
     });
+    expect(deploy.run).toBe(
+      'npx --no wrangler deploy --config apps/door/wrangler.jsonc --secrets-file "$SECRETS_FILE" --tag "$GITHUB_SHA" --message "door $GITHUB_SHA"',
+    );
+  });
+
+  it('checks the live door from outside, holding no secret', () => {
+    const verify = step(
+      'deploy-prod.yml',
+      'deploy',
+      'Verify the front door refuses no pass and forwards TEST',
+    );
+    expect(verify.run).toBe('node scripts/verify-door.ts');
+    expect(verify.env).toBeUndefined();
   });
 });
 
@@ -295,7 +326,7 @@ describe('deploys and rollbacks never overlap (#621)', () => {
 });
 
 describe('dev can never deploy production (#621 AC7)', () => {
-  it('names the production environment only in the three production workflows', () => {
+  it('names the production environment only in the two production workflows', () => {
     // runtime population: the workflows on disk, so a new one is judged too.
     const files = readdirSync(WORKFLOWS)
       .filter((file) => /\.ya?ml$/.test(file))
@@ -306,10 +337,6 @@ describe('dev can never deploy production (#621 AC7)', () => {
       ),
     );
     expect(files).toContain('deploy-dev.yml');
-    expect(naming).toEqual([
-      'deploy-door.yml',
-      'deploy-prod.yml',
-      'rollback-prod.yml',
-    ]);
+    expect(naming).toEqual(['deploy-prod.yml', 'rollback-prod.yml']);
   });
 });

@@ -3,6 +3,7 @@
  * TypeScript with no DOM, timers, network or system clock, so the same code
  * runs in browsers, Electron, Capacitor and Workers and replays identically.
  */
+export { byCodeUnit } from './order.ts';
 export { exp, expm1, ln, log10, log1p, pow } from './det-math.ts';
 export { Num, type NumTuple } from './num.ts';
 export {
@@ -122,7 +123,7 @@ export {
   type Unfold,
   type UnfoldFlag,
 } from './unfold.ts';
-export { stateHash } from './hash.ts';
+export { canonicalHash, stateHash } from './hash.ts';
 export { apply, replay, type Refusal, type Replayed } from './log.ts';
 export {
   EVENT_TYPES,
