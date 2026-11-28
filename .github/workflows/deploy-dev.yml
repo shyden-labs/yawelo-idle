@@ -2,7 +2,7 @@
 # database (created on the first deploy, #357, bound by id, #391) and its
 # migrations, then the sync Worker, then the game, the holding page's dev copy
 # and the site Worker (the password gate in front, spec D9, #39, #332; its
-# front door shows the holding page, #673), all in the non-PROD account
+# front door shows the site being built, #1078), all in the non-PROD account
 # (#784). The front door Worker (apps/door, deployed by deploy-prod.yml with each release, #1152)
 # serves them at dev.yaweloidle.com, dev-api.yaweloidle.com and
 # dev-holding.yaweloidle.com (#1013). The checks read them back at the
@@ -137,9 +137,7 @@ jobs:
       # The holding page's dev copy (#621 AC8): the production holding build,
       # crawlers blocked and every response noindex, at
       # dev-holding.yaweloidle.com through the front door
-      # (#768, #1013), so Shyden checks it on his phones before a release. Before
-      # the site Worker, whose HOLDING binding names it: the dev front door
-      # shows it (#673).
+      # (#768, #1013), so Shyden checks it on his phones before a release.
       - name: Build the holding page, stamped with this commit
         env:
           YAWELO_IDLE_COMMIT: ${{ github.sha }}

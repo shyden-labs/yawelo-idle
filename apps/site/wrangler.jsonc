@@ -1,9 +1,8 @@
 // The DEV site Worker (website spec §7.2, #332, #673), all behind the shared
 // dev password (#39, W15): /play/* forwarded to the game Worker by service
-// binding, the roadmap API and webhook, and the pages. Through the front
-// door, dev.yaweloidle.com (#1013), the pages are the holding page production
-// shows (HOLDING below); at the workers.dev address they are the prerendered
-// site being built, from ./dist.
+// binding, the roadmap API and webhook, and the pages: the prerendered site
+// being built, from ./dist, through the front door, dev.yaweloidle.com
+// (#1013), and at the workers.dev address alike (Shyden, 2026-11-28, #1078).
 //
 // Cloudflare serves a matching asset WITHOUT invoking a Worker unless
 // `run_worker_first` is set, so the gate in worker/index.ts would never see
@@ -30,13 +29,8 @@
     "not_found_handling": "404-page",
   },
   // The game Worker has no address of its own; this binding is its only way
-  // in, so it is deployed first. HOLDING is the holding page's dev copy,
-  // which the dev front door shows in place of the site being built (#673),
-  // so it is deployed first too.
-  "services": [
-    { "binding": "GAME", "service": "yawelo-idle-web-dev" },
-    { "binding": "HOLDING", "service": "yawelo-idle-holding-dev" },
-  ],
+  // in, so it is deployed first.
+  "services": [{ "binding": "GAME", "service": "yawelo-idle-web-dev" }],
   // The live roadmap (#341): the one board it reads, as the read-only App
   // yawelo-idle-roadmap; its snapshot lives in the Roadmap Durable Object
   // (SQLite storage, the only kind on the Free plan, spec §10 R1), and a

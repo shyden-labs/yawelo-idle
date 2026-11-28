@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../../apps/site/src/copy';
 import type { Locale } from '../../apps/site/src/i18n';
-import { HOLDING_DOOR } from '../../apps/site/worker/routes';
+import { SITE_DOOR } from '../../apps/site/worker/routes';
 import { supportPolicy } from '../../apps/site/worker/support';
 
 /**
@@ -11,7 +11,7 @@ import { supportPolicy } from '../../apps/site/worker/support';
  * it; Yawelo Idle forwards nothing (Shyden, 2026-11-22). Real clicks only
  * (global real-tests rule).
  */
-const DOOR = `https://${HOLDING_DOOR}`;
+const DOOR = `https://${SITE_DOOR}`;
 const SHYDESK_DEV = 'https://shydesk.shydesk-non-prod.workers.dev';
 const TURNSTILE = 'https://challenges.cloudflare.com';
 /**

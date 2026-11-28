@@ -19,7 +19,7 @@ import {
 import { DOOR_HOST_HEADER, DOOR_SECRET_HEADER } from '../../door/worker/door';
 import {
   EXEMPT_PATHS,
-  HOLDING_DOOR,
+  SITE_DOOR,
   PRIVATE_PATHS,
   ROADMAP_PATHS,
 } from '../worker/routes';
@@ -56,19 +56,9 @@ const server = createTestHarness({
     {
       configPath: './wrangler.jsonc',
       secrets: { DEV_PASSWORD: PASSWORD, DOOR_SECRET },
-      bindingOverrides: { HOLDING: 'holding-copy' },
     },
     // The real game Worker, the service wrangler.jsonc's GAME binding names.
     { configPath: '../web/wrangler.jsonc' },
-    // The holding page's build, served as assets only, as its dev copy is
-    // (apps/site/holding-dev/wrangler.jsonc, #673).
-    {
-      config: {
-        name: 'holding-copy',
-        compatibility_date: '2026-10-20',
-        assets: { directory: './dist-holding', not_found_handling: '404-page' },
-      },
-    },
   ],
 });
 
@@ -368,41 +358,30 @@ describe('legal pages are English and Indonesian (#928)', () => {
 });
 
 /**
- * The dev front door, dev.yaweloidle.com (#673, #1013): the holding page,
- * with the game and the roadmap kept. The door reaches this Worker at its
- * workers.dev address with the door secret and its own name (#784).
+ * The dev front door, dev.yaweloidle.com: the site being built, with the game
+ * and the roadmap (Shyden, 2026-11-28, #1078: "Built site on dev"; the holding
+ * page production shows is at dev-holding). The door reaches this Worker at
+ * its workers.dev address with the door secret and its own name (#784).
  */
 const front = (path: string, headers: Record<string, string> = {}) =>
   get(`${DEV}${path}`, {
     [DOOR_SECRET_HEADER]: DOOR_SECRET,
-    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+    [DOOR_HOST_HEADER]: SITE_DOOR,
     ...headers,
   });
 
-describe('the dev front door shows the holding page production shows (#673)', () => {
+describe('the dev front door shows the site being built (#1078)', () => {
   it.each(['/', '/id/'])(
-    'shows the holding page at %s with the password, noindex added',
+    'shows the site being built at %s with the password, noindex added',
     async (path) => {
       const response = await front(path, authorised);
       expect(response.status).toBe(200);
       expect(response.headers.get('X-Robots-Tag')).toBe(NO_INDEX);
       const html = await response.text();
-      expect(html).toContain(' data-coming-soon>');
+      expect(html).toContain(' data-dev-strip>');
+      expect(html).not.toContain(' data-coming-soon>');
     },
   );
-
-  it('serves the stylesheet the holding page links, as CSS', async () => {
-    const html = await (await front('/', authorised)).text();
-    // Matched on the page, never on the href: toMatch throws on a missing
-    // href before it adds this message, so the failure would not say why.
-    const link =
-      /<link rel="stylesheet" href="(\/_astro\/Holding\.[^"]+\.css)">/;
-    expect(html, 'the Holding stylesheet').toMatch(link);
-    const href = link.exec(html)?.[1];
-    const response = await front(String(href), authorised);
-    expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toMatch(/^text\/css\b/);
-  });
 
   it.each(['/', '/id/', '/no/such/page'])(
     'refuses %s on the front door without credentials',
@@ -426,7 +405,7 @@ describe('the dev front door shows the holding page production shows (#673)', ()
     expect(await response.text()).toBe(GAME_SHELL);
   });
 
-  it('answers the roadmap’s health on the front door, not the holding page', async () => {
+  it('answers the roadmap’s health on the front door, not a page', async () => {
     const response = await front(ROADMAP_PATHS.health, authorised);
     expect(response.headers.get('Content-Type')).toMatch(
       /^application\/json\b/,
@@ -453,17 +432,19 @@ describe('the dev front door shows the holding page production shows (#673)', ()
  * and the door's name is believed only with the door secret. The door host
  * is read from routes.ts, never written out (#784 AC1b).
  */
-describe('through the dev site’s door, the holding page (#784)', () => {
+describe('through the dev site’s door, the site being built (#784, #1078)', () => {
   const through = (secret: string) => ({
     ...authorised,
     [DOOR_SECRET_HEADER]: secret,
-    [DOOR_HOST_HEADER]: HOLDING_DOOR,
+    [DOOR_HOST_HEADER]: SITE_DOOR,
   });
 
-  it('shows the holding page at the workers.dev address with the door secret', async () => {
+  it('shows the site being built at the workers.dev address with the door secret', async () => {
     const response = await get(`${DEV}/`, through(DOOR_SECRET));
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain(' data-coming-soon>');
+    const html = await response.text();
+    expect(html).toContain(' data-dev-strip>');
+    expect(html).not.toContain(' data-coming-soon>');
   });
 
   it('keeps the site being built when the door secret is wrong', async () => {
@@ -662,7 +643,7 @@ describe('the private API docs, dev only (#589)', () => {
 /**
  * The support pages (#860): ShyDesk's piece, loaded from ShyDesk's own dev
  * host (relayed by shydesk-b1, 2026-11-22), on the site being built and
- * through the dev front door, which shows the holding page everywhere else
+ * through the dev front door (#860; it shows the site being built everywhere since #1078)
  * (Shyden, 2026-11-22: "let /support through the doors").
  */
 describe('the support pages (#860)', () => {

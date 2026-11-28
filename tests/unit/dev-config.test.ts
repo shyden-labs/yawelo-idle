@@ -94,10 +94,9 @@ describe('the dev Workers’ deploy configs', () => {
     expect(game.routes).toBeUndefined();
   });
 
-  it('binds the game and the holding page’s dev copy, and nothing else, to the site Worker (#332, #673)', () => {
+  it('binds the game, and nothing else, to the site Worker: no holding page behind its door (#332, #1078)', () => {
     expect(byName('yawelo-idle-site-dev').services).toEqual([
       { binding: 'GAME', service: byName('yawelo-idle-web-dev').name },
-      { binding: 'HOLDING', service: byName('yawelo-idle-holding-dev').name },
     ]);
   });
 

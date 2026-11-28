@@ -46,11 +46,6 @@ export function isSupportPath(pathname: string): boolean {
   return SUPPORT_PATHS.has(pathname);
 }
 
-/** What goes through the holding door to the site being built. */
-export function passesTheDoor(pathname: string): boolean {
-  return isSupportPath(pathname) || pathname.startsWith(SITE_FILES);
-}
-
 /** The support pages' security policy: the site, ShyDesk's host, Turnstile and the analytics beacon only. */
 export function supportPolicy(host: string): string {
   return [
