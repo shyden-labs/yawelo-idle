@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { press } from '../press';
+import { foreignTo } from './beacon';
 
 /**
- * The private API docs on dev (#589; Shyden, 2026-11-04: "Dev only, dev
- * password"): Swagger UI, served from the site's own origin, renders the
+ * The private API docs on dev (#589; Shyden, 2026-11-04: "Dev only"), behind
+ * the dev door (#1078): Swagger UI, served from the site's own origin, renders the
  * private spec, and "Try it out" calls the real health report and the real
  * webhook on the same origin. Real clicks and key presses only (global
  * real-tests rule).
@@ -22,9 +23,7 @@ test('the docs load from the site’s own origin, list the health report and the
   ).toBeVisible();
   const origin = new URL(page.url()).origin;
   expect.soft(requested.length).toBeGreaterThan(0);
-  expect
-    .soft(requested.filter((url) => new URL(url).origin !== origin))
-    .toEqual([]);
+  expect.soft(foreignTo(origin, requested)).toEqual([]);
 
   await expect
     .soft(page.locator('.opblock-summary-path'))
