@@ -361,14 +361,13 @@ jobs:
           ")
           echo "::add-mask::$pass"
           echo "DEV_PASS=$pass" >> "$GITHUB_ENV"
-      - name: Smoke the game on dev (every supported target, behind the dev password)
+      - name: Smoke the game on dev (every supported target, through the dev door)
         id: suite
         # A first limit since Edge joined (#1003), until its first runs are
         # measured (#476): then at least 3 times the slowest.
         timeout-minutes: 2
         env:
           WEB_SMOKE_URL: https://dev.yaweloidle.com/
-          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npm run test:web:dev
       # Each failing test's screenshot and page snapshot (#888), only when
       # the suite itself failed: a step before it failing leaves nothing to

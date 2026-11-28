@@ -51,7 +51,6 @@ const DEV_URL = 'https://dev.yaweloidle.com/';
 const dev = () =>
   webSmokeConfig({
     WEB_SMOKE_URL: DEV_URL,
-    DEV_BASIC_AUTH_PASSWORD: 'the dev password',
     DEV_PASS: 'the machine pass',
   });
 
@@ -132,21 +131,10 @@ describe('the web smoke suite (#123 AC3)', () => {
 });
 
 describe('the web smoke suite against dev (#123 DoD)', () => {
-  it('targets the address it is given, answers its password challenge, and starts no server', () => {
+  it('targets the address it is given, sends no password, and starts no server: the door is the gate (#1078 AC3)', () => {
     expect(dev().use?.baseURL).toBe(DEV_URL);
-    // No `origin`: WebKit refuses a password scoped to an origin on HTTPS's
-    // default port, and no `send`: it reaches only Playwright's API requests.
-    expect(dev().use?.httpCredentials).toEqual({
-      username: 'smoke',
-      password: 'the dev password',
-    });
+    expect(dev().use?.httpCredentials).toBeUndefined();
     expect(dev().webServer).toBeUndefined();
-  });
-
-  it('refuses a dev address without the dev password', () => {
-    expect(() => webSmokeConfig({ WEB_SMOKE_URL: DEV_URL })).toThrow(
-      /WEB_SMOKE_URL is set but DEV_BASIC_AUTH_PASSWORD is not/,
-    );
   });
 
   it('carries the DEV pass as a cookie on the door it tests, and in no header (#1078 AC1)', () => {
@@ -155,12 +143,9 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
   });
 
   it('refuses a dev address without a DEV pass (#1078 AC1)', () => {
-    expect(() =>
-      webSmokeConfig({
-        WEB_SMOKE_URL: DEV_URL,
-        DEV_BASIC_AUTH_PASSWORD: 'the dev password',
-      }),
-    ).toThrow(/WEB_SMOKE_URL is set but DEV_PASS is not/);
+    expect(() => webSmokeConfig({ WEB_SMOKE_URL: DEV_URL })).toThrow(
+      /WEB_SMOKE_URL is set but DEV_PASS is not/,
+    );
   });
 
   it('runs on every desktop browser (#883, #1003), retrying nothing', () => {
@@ -178,7 +163,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     );
   });
 
-  it('runs once in deploy-dev, after verify, in CI’s Playwright image, with the dev environment’s password', () => {
+  it('runs once in deploy-dev, after verify, in CI’s Playwright image, with no password (#1078 AC3)', () => {
     const running = jobsRunning('npm run test:web:dev');
     expect(running.map(([name]) => name)).toEqual(['smoke']);
     const job = deployDev.jobs['smoke'];
@@ -191,10 +176,7 @@ describe('the web smoke suite against dev (#123 DoD)', () => {
     const steps = job?.steps ?? [];
     const smoke = steps.filter((s) => runOf(s) === 'npm run test:web:dev');
     expect(smoke).toHaveLength(1);
-    expect(smoke[0]?.env).toEqual({
-      WEB_SMOKE_URL: DEV_URL,
-      DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
-    });
+    expect(smoke[0]?.env).toEqual({ WEB_SMOKE_URL: DEV_URL });
     expectEdgeInstalledBefore(job, 'npm run test:web:dev');
   });
 
