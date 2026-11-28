@@ -14,6 +14,9 @@
  *
  * Which host reaches which Worker, and every look-alike host, are tested on
  * the door's own logic (apps/door).
+ * The doors check a DEV pass (#1078 AC1): each request carries a machine
+ * pass for its own door, minted by the job (#1155); the webhook goes with
+ * none, as GitHub sends it, the door letting that POST through.
  * Nothing is retried; each problem is named, with no header printed.
  */
 import { createHmac } from 'node:crypto';
@@ -36,8 +39,14 @@ export const PING = JSON.stringify({
 
 export interface Inputs {
   readonly password: string;
+  /** A machine DEV pass for the site's door, and one for the API's (#1155). */
+  readonly sitePass: string;
+  readonly apiPass: string;
   readonly webhookSecret: string;
 }
+
+/** The door's DEV pass header (apps/door/worker/dev-pass/door.ts). */
+const PASS_HEADER = 'X-Dev-Pass';
 
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -47,13 +56,13 @@ const sign = (secret: string, body: string): string =>
 /** Every problem the deployed doors show; none means they passed. */
 export async function verifyDevHosts(
   fetchFn: Fetch,
-  { password, webhookSecret }: Inputs,
+  { password, sitePass, apiPass, webhookSecret }: Inputs,
 ): Promise<string[]> {
   const problems: string[] = [];
   const login = `Basic ${btoa(`tester:${password}`)}`;
 
   const play = await fetchFn(`${SITE_HOST}/play?q=1`, {
-    headers: { Authorization: login },
+    headers: { Authorization: login, [PASS_HEADER]: sitePass },
     redirect: 'manual',
   });
   if (play.status !== 307 || play.headers.get('Location') !== '/play/?q=1')
@@ -63,6 +72,7 @@ export async function verifyDevHosts(
 
   const post = await fetchFn(`${API_HOST}/health`, {
     method: 'POST',
+    headers: { [PASS_HEADER]: apiPass },
     redirect: 'manual',
   });
   if (post.status !== 405 || post.headers.get('Allow') !== 'GET')
@@ -96,18 +106,26 @@ export async function verifyDevHosts(
   return problems;
 }
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value === '')
-    throw new Error(`${name} is not set`);
-  return value;
+/** The run's inputs from `env`, refusing any unset or empty one by name. */
+export function inputsFrom(
+  env: Readonly<Record<string, string | undefined>>,
+): Inputs {
+  const required = (name: string): string => {
+    const value = env[name];
+    if (value === undefined || value === '')
+      throw new Error(`${name} is not set`);
+    return value;
+  };
+  return {
+    password: required('DEV_BASIC_AUTH_PASSWORD'),
+    sitePass: required('DEV_PASS_SITE'),
+    apiPass: required('DEV_PASS_API'),
+    webhookSecret: required('ROADMAP_WEBHOOK_SECRET'),
+  };
 }
 
 if (import.meta.main) {
-  const problems = await verifyDevHosts(fetch, {
-    password: required('DEV_BASIC_AUTH_PASSWORD'),
-    webhookSecret: required('ROADMAP_WEBHOOK_SECRET'),
-  });
+  const problems = await verifyDevHosts(fetch, inputsFrom(process.env));
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);
   console.log('dev doors: path, query, method and body reach the real Workers');

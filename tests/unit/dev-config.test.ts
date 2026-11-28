@@ -172,13 +172,17 @@ describe('the dev Workers’ deploy configs', () => {
     ).toEqual([]);
   });
 
-  it('checks the dev hostnames against the real Workers straight after verify-dev, with the login and the webhook secret (#816)', () => {
+  it('checks the dev hostnames against the real Workers after verify-dev and its two DEV passes, with the login and the webhook secret (#816, #1155)', () => {
     const steps = verifySteps();
     const at = steps.findIndex(
       (step) => runOf(step) === 'node scripts/verify-dev.ts',
     );
     expect(at).toBeGreaterThanOrEqual(0);
-    const next = steps[at + 1] ?? {};
+    expect(steps.slice(at + 1, at + 3).map((step) => step.name)).toEqual([
+      'Get a DEV pass for the site’s dev door',
+      'Get a DEV pass for the API’s dev door',
+    ]);
+    const next = steps[at + 3] ?? {};
     expect(runOf(next)).toBe('node scripts/verify-dev-hosts.ts');
     expect(next.env).toEqual({
       DEV_BASIC_AUTH_PASSWORD: '${{ secrets.DEV_BASIC_AUTH_PASSWORD }}',
