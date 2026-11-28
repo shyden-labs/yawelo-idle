@@ -1,33 +1,33 @@
 # Handover: Yawelo Idle
 
-**Written:** 2026-11-28 19:35 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at 7c950984 (#1157). main at e9345241. No Colima, simulator or USB claim held. board-next: #1078 (P0); #1123 (P0) in hand because it stopped develop's deploy.
+**Written:** 2026-11-28 20:50 WIB, session `yawelo-idle-a7`. Branch `handover/2026-10-17-d`. develop at 6d2734e3 (#1159). main at e9345241. No Colima, simulator or USB claim held. board-next: #1078 (P0).
 
 ## In flight
 
-| Item                   | State                                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **#1159** (#1123)      | Branch `1123-no-email-steps`, worktree `../yawelo-idle-1123`, head 3fc9bd2d, CI running (`~/.claude/scripts/pr-verdict.sh 1159`; this session's waiter dies on /clear). The scan counts the characters it reads and the test judges the count (2.0 to 4.5 per character, limit 8), no clock. Red first, mutations once, laptop unit 15136/15137 at load 21 to 95 (the one failure #1158). |
-| **#986** (#160, draft) | Branch `160-save-backups`, worktree `../yawelo-idle-160`, head 1d6f3b00: develop merged in (two conflicts kept both sides), Sonar S3358 + S9382 fixed (Sonar now 0 open). Every check green, but **behind** develop.                                                                                                                                                                      |
-| develop deploy         | deploy-dev run 46143489283 (7c950984) **failed at Unit tests** on the #1123 test (12.22 vs 10): nothing of #1157 is deployed yet. The next develop merge redeploys it.                                                                                                                                                                                                                    |
+| Item                  | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **#1078 docs beacon** | Branch `1078-docs-beacon`, worktree `../yawelo-idle-1078c`, **local commit 25796072, not pushed, no PR**. develop's deploy-dev 46146286886 deployed and verify passed, but site-smoke failed 8 tests (api-docs + private-api-docs × 4 browsers), each on one request alone: Cloudflare's injected Web Analytics beacon (#451, W17), now seen because smoke goes through the dev door. Fix: `tests/site/beacon.ts` (shared `BEACON`, `foreignTo`), both docs specs use it, support.spec imports it. **Prettier, eslint and typecheck NOT yet run** (the test lock held them). |
+| **#986** (#160)       | Head eea6ad3b, every check green (116 steps, the one skip the Edge cache save; save-backups spec ran on all 4 browsers), Sonar 0, body updated, still draft. Merge after the beacon fix so develop's deploy can go green.                                                                                                                                                                                                                                                                                                                                                    |
+| Test lock             | Held by shyden.co.uk's device run (pid 45672) since 12:29Z; its ETA ~15:05Z, low confidence. shyden-co-uk-ff will message on release.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 ## Done this session
 
-- #1157 merged 7c950984 (one missed harness call fixed, 93168858: the production-host POST check now sends the door secret like its siblings). Every step green on its head by name, the only skip the Edge cache save. Worktree and branches removed.
-- Filed #1158 (P0, 2): the voyage map socket-drop test failed once in the full suite under load, error not captured.
+- #1157 merged 7c950984; #1159 merged 6d2734e3 (#1123: the no-email scan counts characters read, limit 8, measured 2.0 to 4.5). develop's Unit tests green on 6d2734e3. #1123 still open: close once develop's deploy is green, saying its AC2 "old regex restored" was stood in by a quadratic mutation.
+- Filed #1158 (P0, 2): voyage map socket-drop test failed once under load.
 
 ## Resume steps
 
-1. `ListAgents`; `node scripts/board-next.ts PVT_kwDOEOcG584BlRWb "Yawelo Idle Stories"` from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
-2. `~/.claude/scripts/pr-verdict.sh 1159`; read every step green on the head SHA by name, mark ready, squash-merge (`--match-head-commit` from a file). Then remove worktree `../yawelo-idle-1123` and its branches.
-3. Read develop's deploy-dev by step name: Unit tests, verify ("Verify dev is behind its door, …"), verify-roadmap, site-smoke (dev.yaweloidle.com with the DEV pass). Green: close #1123 by hand with the evidence (AC2's "old regex restored" was stood in by a quadratic mutation of the hand scan; say so).
-4. #986: `gh pr update-branch 986`, wait for green, update its body (it still says "red stage"), mark ready, squash-merge. #160 stays open (AC6 every target; wiring into the game is not in it).
+1. `ListAgents`; board-next from `../yawelo-idle-dev-scripts` (detach to origin/develop first).
+2. In `../yawelo-idle-1078c`: `npx prettier --check tests/site`, `npx eslint tests/site`, typecheck (`npm run typecheck`); fix and amend if needed (unpushed). Run the unit suite, push, open the PR (`Refs #1078`), read CI by step, merge.
+3. Then `gh pr update-branch 986`, wait green, mark ready, squash-merge. Remove both worktrees and branches.
+4. Read develop's deploy-dev by step: Unit tests, verify, verify-roadmap, site-smoke. Green: close #1123 with the evidence.
 5. Then (Shyden): check the site Worker holds no leftover `DEV_PASSWORD` secret, then delete `DEV_BASIC_AUTH_PASSWORD` from the dev environment. Then #1078 AC5.
 
 ## Parked for Shyden
 
-- Safari/Firefox/Edge sign-in once AC3 is live (#1078 AC5).
+- Safari/Firefox/Edge sign-in (#1078 AC5).
 - Buttondown (#343): once the second free account exists, its API key goes in as a dev environment secret. The live `yawelo` account's keys stay untouched.
-- After part (b) deploys: delete `DEV_BASIC_AUTH_PASSWORD` from the dev environment.
+- Delete `DEV_BASIC_AUTH_PASSWORD` from the dev environment.
 - #1152 AC4: read the next release's deploy-prod run, then close.
 
 ## Devices
