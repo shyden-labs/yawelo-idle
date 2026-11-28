@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { BUILDS, emailProblems, main } from '../../scripts/no-email.ts';
+import {
+  BUILDS,
+  emailProblems,
+  main,
+  readsToScan,
+} from '../../scripts/no-email.ts';
 import { runOf } from './workflow-steps';
 
 /**
@@ -134,46 +139,49 @@ describe('where an address starts and ends (#1106: the same matches as the old p
 
 // Each page below took the old backtracking pattern 0.9 to 9.6 s at 40,000
 // characters (measured 2026-11-25): its time grew with the square of the
-// length (Sonar S8786). The test measures growth, not elapsed time against a
-// constant (#1123: a fixed 100 ms limit failed at 158 ms on a laptop with
-// load 32 and 3 GB swapped): the fastest of five reads at 10,000 and at
-// 40,000 characters, on the same machine in the same test. Four times the
-// text takes about four times as long when the scan is linear and about
-// sixteen when it is quadratic. Each read is timed by this process's own CPU
-// time, not the wall clock: at load 180 every one of five wall-clock reads of
-// the long page was stretched by other processes (ratios 11.3, 12.7 and
-// 96.3, #1123), while CPU time counts only the scan's own work.
-const SHORT = 10_000;
-const LONG = 40_000;
-const READS = 5;
-const MAX_GROWTH = 10;
-const fastest = (text: string): number =>
-  Math.min(
-    ...Array.from({ length: READS }, () => {
-      const start = process.cpuUsage();
-      shownIn(text);
-      const used = process.cpuUsage(start);
-      return (used.user + used.system) / 1000;
-    }),
-  );
-const growth = (page: (n: number) => string): number =>
-  fastest(page(LONG)) / Math.max(fastest(page(SHORT)), 0.01);
+// length (Sonar S8786). The test counts the characters the scan reads, never
+// the time it takes (#1123): CPU-time ratios still overshot their limit inside
+// the full suite under load (10.7 and 12.2 against 10, 2026-11-28), while a
+// count is the same on every machine. A linear scan reads each character a
+// fixed number of times; the old pattern read each one about as many times
+// as the page is long.
+const LENGTH = 40_000;
+const MAX_READS_PER_CHARACTER = 32;
+const perCharacter = (text: string): number => readsToScan(text) / text.length;
 
-describe('a long page is checked in time that grows with its length (#1106, #1123)', () => {
-  it('reads letters with no @ in time that grows linearly', () => {
-    expect(growth((n) => 'a'.repeat(n))).toBeLessThan(MAX_GROWTH);
+describe('a long page is read a fixed number of times per character (#1106, #1123)', () => {
+  it('counts at least one read of every character, so a count of nothing cannot pass', () => {
+    expect(perCharacter('a'.repeat(LENGTH))).toBeGreaterThanOrEqual(1);
   });
 
-  it('reads an @ followed by one-letter labels in time that grows linearly', () => {
-    expect(growth((n) => `x@${'a.'.repeat(n)}`)).toBeLessThan(MAX_GROWTH);
+  it('reads letters with no @ a fixed number of times each', () => {
+    expect(perCharacter('a'.repeat(LENGTH))).toBeLessThanOrEqual(
+      MAX_READS_PER_CHARACTER,
+    );
   });
 
-  it('reads an @ followed by full stops in time that grows linearly', () => {
-    expect(growth((n) => `x@a${'.'.repeat(n)}`)).toBeLessThan(MAX_GROWTH);
+  it('reads a run of near-misses of mailto: a fixed number of times each', () => {
+    expect(perCharacter('mailt'.repeat(LENGTH / 5))).toBeLessThanOrEqual(
+      MAX_READS_PER_CHARACTER,
+    );
   });
 
-  it('reads an @ followed by labels ending in a digit in time that grows linearly', () => {
-    expect(growth((n) => `x@a${'b.1'.repeat(n)}`)).toBeLessThan(MAX_GROWTH);
+  it('reads an @ followed by one-letter labels a fixed number of times each', () => {
+    expect(perCharacter(`x@${'a.'.repeat(LENGTH / 2)}`)).toBeLessThanOrEqual(
+      MAX_READS_PER_CHARACTER,
+    );
+  });
+
+  it('reads an @ followed by full stops a fixed number of times each', () => {
+    expect(perCharacter(`x@a${'.'.repeat(LENGTH)}`)).toBeLessThanOrEqual(
+      MAX_READS_PER_CHARACTER,
+    );
+  });
+
+  it('reads an @ followed by labels ending in a digit a fixed number of times each', () => {
+    expect(perCharacter(`x@a${'b.1'.repeat(LENGTH / 3)}`)).toBeLessThanOrEqual(
+      MAX_READS_PER_CHARACTER,
+    );
   });
 });
 

@@ -135,6 +135,11 @@ export function shownAddresses(text: string): string[] {
   return found;
 }
 
+/** How many characters reading `text` takes: the scan's work, by count. */
+export function readsToScan(_text: string): number {
+  throw new Error('readsToScan: not written yet (#1123)');
+}
+
 /**
  * One problem per distinct address in each page, and one per expected page
  * the build lacks, sorted by path.
